@@ -1,0 +1,7 @@
+split class declaration and definition
+implement special ids with classes
+
+custom allocator for vectors 
+
+Future: 
+shared_ptr
