@@ -10,7 +10,7 @@
 class Halo_t
 {
 public:
-  List_t <ParticleReference_t> ParticleReferenceList;
+  List_t <HBTInt> ParticleReferenceList;
   Halo_t(): ParticleReferenceList()
   {
   }
@@ -21,7 +21,7 @@ class TrackParticle_t
 {
 public:
   HBTInt TrackId;
-  ParticleReference_t TrackParticleReference;
+  HBTInt TrackParticleReference;
   HBTInt SnapshotIndexOfLatestInfall; //the last snapshot when it was a central, only considering past snapshots.
   HBTInt SnapshotIndexOfLatestMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
@@ -29,23 +29,19 @@ public:
   TrackParticle_t()
   {
 	TrackId=-1;
-	TrackParticleReference=ParticleReference_t();
+	TrackParticleReference=HBTInt();
 	SnapshotIndexOfLatestInfall=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfLatestMaxMass=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
   }
-  void SetTrackParticle(const ParticleReference_t & particle)
+  void SetTrackParticle(const HBTInt reference)
   {
-	TrackParticleReference=particle;
+	TrackParticleReference=reference;
   }
   void SetTrackId(const HBTInt track_id)
   {
 	TrackId=track_id;
-  }
-  Particle_t &RetrieveTrackParticleFromSnapshot(Snapshot_t & snapshot)
-  {
-	return snapshot.ParticleList[TrackParticleReference];
   }
 };
 class SubHalo_t: public Halo_t, public TrackParticle_t

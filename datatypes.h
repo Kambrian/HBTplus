@@ -57,41 +57,7 @@ typedef int HBTInt;
 #define FLAG_LOAD_POS 0b010
 #define FLAG_LOAD_VEL 0b100
 
-//auxiliary datatype
-template <class T>
-class XYZ
-{
-  T data[3];
-public:
-  XYZ(T x=0., T y=0., T z=0.) //:data{x,y,z}
-  {
-	data[0]=x;
-	data[1]=y;
-	data[2]=z;
-  }
-  XYZ(const XYZ <T> &s)
-  {
-	memcpy(data, s.data, sizeof(T)*3);
-  }
-  T * address()
-  {
-	return data;
-  }
-  T & operator [](int i)
-  {
-	return data[i];
-  }
-};
-template <class T>
-std::ostream& operator << (std::ostream& o, XYZ <T> &a)
-{
-   o << "(" << a[0] << ", " << a[1] << ", " << a[2] << ")";
-   return o;
-};
-typedef XYZ <HBTReal> HBTxyz;
-typedef XYZ <float> Float_xyz;
-typedef XYZ <double> Double_xyz;
-// typedef HBTReal HBTxyz[3];  //3-d pos/vel data
+typedef HBTReal HBTxyz[3];  //3-d pos/vel data
 
 namespace SpecialConst
 {
@@ -107,18 +73,11 @@ namespace SpecialConst
 //   const Particle_t NullParticle(NullParticleId, NullParticleId, NullCoordinate, NullCoordinate);
 };
 
-struct ParticleReference_t
-{
-  union 
-  {
-	HBTInt Id;
-	HBTInt Index;
-  };
-};
-
-class Particle_t: public ParticleReference_t
+class Particle_t:
 {
 public:
+  HBTInt ParticleId;
+  HBTInt ParticleIndex;
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
 };
@@ -129,21 +88,17 @@ class List_t
   HBTInt N;
 public:
   T * Data;
-  List_t(HBTInt n=0, T *data=NULL)
+  List_t(HBTInt n=0, T *data=nullptr)
   {
 	N=n;
-	if(data)//memory can be shared, not always allocated. ToDo: implement shared_ptr?
+	if(nullptr!=data)//memory can be shared, not always allocated. ToDo: implement shared_ptr?
 	  Data=data;
 	else
 	  Data=new T[n];
   }
-  T & operator [](HBTInt i)
+  T & operator [](HBTInt index)
   {
-	return Data[i];
-  }
-  T & operator [](ParticleReference_t ref)
-  {
-	return Data[ref.Index];
+	return Data[index];
   }
   HBTInt Size()
   {
