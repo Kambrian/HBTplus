@@ -9,8 +9,15 @@
 #include <vector>
 using namespace std;
 
-#define NumberOfConfigEntries 5
+#include "datatypes.h"
 
+namespace PhysicalConst
+{//initialized after reading parameter file.
+  static HBTReal G;
+  static HBTReal H0;
+}
+
+#define NumberOfConfigEntries 9
 class Parameter_t
 {
 public:
@@ -19,11 +26,17 @@ public:
   string HaloPath;
   string SubhaloPath;
   int MinNumPartOfSub;
-  Parameter_t(): MinNumPartOfSub(10)
+  HBTReal MassInMsunh;
+  HBTReal LengthInMpch;
+  HBTReal VelInKmS;
+  HBTReal BoxSize; //to check the unit of snapshot according to the BoxSize in header
+  bool IsSet[NumberOfConfigEntries];
+  Parameter_t(): IsSet()
   {
   }
   void ParseConfigFile(char * param_file);
   void SetParameterValue(const string &line);
+  void CheckUnsetParameters();
 };
 
 extern Parameter_t HBTConfig;

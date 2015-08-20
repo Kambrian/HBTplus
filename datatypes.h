@@ -69,13 +69,12 @@ namespace SpecialConst
   
   const HBTInt UniverseHaloId=-200; //the universe as a halo, to contain particles that does not belong to any halo
   
-  const HBTxyz NullCoordinate(0.,0.,0.);
+  const HBTxyz NullCoordinate{0.,0.,0.};
 //   const Particle_t NullParticle(NullParticleId, NullParticleId, NullCoordinate, NullCoordinate);
 };
 
-class Particle_t:
+struct Particle_t
 {
-public:
   HBTInt ParticleId;
   HBTInt ParticleIndex;
   HBTxyz ComovingPosition;
@@ -88,10 +87,10 @@ class List_t
   HBTInt N;
 public:
   T * Data;
-  List_t(HBTInt n=0, T *data=nullptr)
+  List_t(HBTInt n=0, T *data=NULL)
   {
 	N=n;
-	if(nullptr!=data)//memory can be shared, not always allocated. ToDo: implement shared_ptr?
+	if(data)//memory can be shared, not always allocated. ToDo: implement shared_ptr?
 	  Data=data;
 	else
 	  Data=new T[n];

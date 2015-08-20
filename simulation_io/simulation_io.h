@@ -4,18 +4,20 @@
 #include <iostream>
 #include <sstream>
 #include "../datatypes.h"
+#include "../config_parser.h"
 
-#define NumberOfParticleTypes 6
+#define NUMBER_OF_PARTICLE_TYPES 6
+#define SNAPSHOT_HEADER_SIZE 256
 
 struct SnapshotHeader_t
 {
-  int      npart[NumberOfParticleTypes];
-  double   mass[NumberOfParticleTypes];
+  int      npart[NUMBER_OF_PARTICLE_TYPES];
+  double   mass[NUMBER_OF_PARTICLE_TYPES];
   double   time;
   double   redshift;
   int      flag_sfr;
   int      flag_feedback;
-  unsigned npartTotal[NumberOfParticleTypes];  //differ from standard. to be able to hold large integers
+  unsigned npartTotal[NUMBER_OF_PARTICLE_TYPES];  //differ from standard. to be able to hold large integers
   int      flag_cooling;
   int      num_files;
   double   BoxSize;
@@ -23,13 +25,13 @@ struct SnapshotHeader_t
   double   OmegaLambda;
   double   HubbleParam; 
   double Hz;//current Hubble param in internal units, BT extension
-  int SnapshotIndex; //current snapshot
-  char     fill[256- NumberOfParticleTypes*4- NumberOfParticleTypes*8- 2*8- 2*4- NumberOfParticleTypes*4- 2*4 - 4*8 -8 - 4];  /* fills to 256 Bytes */
+  char     fill[SNAPSHOT_HEADER_SIZE- NUMBER_OF_PARTICLE_TYPES*4- NUMBER_OF_PARTICLE_TYPES*8- 2*8- 2*4- NUMBER_OF_PARTICLE_TYPES*4- 2*4 - 4*8 -8];  /* fills to 256 Bytes */
 };
 
 class Snapshot_t
 {
   SnapshotHeader_t Header;
+  int SnapshotIndex;
   HBTInt NumberOfParticles;
   HBTInt * ParticleId; //better hide this from the user!!!!! 
   HBTxyz * ComovingPosition;
@@ -40,15 +42,17 @@ class Snapshot_t
   void LoadPosition();
   void LoadVelocity();
   void LoadHeader(int iFile);
+  bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
 public:
   Snapshot_t()
   {
-	Header.SnapshotIndex=SpecialConst::NullSnapshotId;
+	SnapshotIndex=SpecialConst::NullSnapshotId;
 	NumberOfParticles=0;
-	ParticleId=nullptr;
-	ComovingPosition=nullptr;
-	PhysicalVelocity=nullptr;
+	ParticleId=NULL;
+	ComovingPosition=NULL;
+	PhysicalVelocity=NULL;
   }
+  void GetSnapshotFileName(Parameter_t &param, int ifile, string &filename);
   void FormatSnapshotNumber(std::stringstream &ss);
   void Clear();
   void SetSnapshotIndex(int snapshot_index);

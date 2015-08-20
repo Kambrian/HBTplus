@@ -142,16 +142,6 @@ void vec_cross(HBTReal a[3],HBTReal b[3],HBTReal c[3])
 	c[1]=a[0]*b[2]-a[2]*b[0];
 	c[2]=a[0]*b[1]-a[1]*b[0];
 }
-HBTInt try_readfile(char * filename)
-{// return 1 when file can be read; 0 otherwise.
-	FILE *fp;
-	if(fp=fopen(filename,"r"))
-	{
-		 fclose(fp);
-		 return 1;
-	 }
-	return 0;
-}
 
 /* From Numerical Recipes*/
 HBTReal psort(HBTInt k, HBTInt numel, HBTReal arr[])
