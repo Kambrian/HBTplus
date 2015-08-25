@@ -9,11 +9,11 @@ void Parameter_t::SetParameterValue(const string &line)
 //   transform(name.begin(),name.end(),name.begin(),::tolower);
 #define TrySetPar(var,i) if(name==#var){ ss>>var; IsSet[i]=true; cout<<#var<<" = "<<var<<endl;}
   TrySetPar(SnapshotPath,0)
-  else TrySetPar(SnapshotFileBase,1)
-  else TrySetPar(HaloPath,2)
-  else TrySetPar(SubhaloPath,3)
-  else TrySetPar(BoxSize,4)
-  else TrySetPar(MaxSnapshotIndex,5)
+  else TrySetPar(HaloPath,1)
+  else TrySetPar(SubhaloPath,2)
+  else TrySetPar(SnapshotFileBase,3)
+  else TrySetPar(MaxSnapshotIndex,4)
+  else TrySetPar(BoxSize,5)
 #undef TrySetPar		
 #define TrySetPar(var) if(name==#var){ ss>>var; cout<<#var<<" = "<<var<<endl;}	
   else TrySetPar(MinNumPartOfSub)

@@ -22,11 +22,11 @@ class Parameter_t
 {
 public:
   string SnapshotPath;
-  string SnapshotFileBase;
   string HaloPath;
   string SubhaloPath;
-  HBTReal BoxSize; //to check the unit of snapshot according to the BoxSize in header
+  string SnapshotFileBase;
   int MaxSnapshotIndex;
+  HBTReal BoxSize; //to check the unit of snapshot according to the BoxSize in header
   bool IsSet[NumberOfCompulsaryConfigEntries];
   
   int MinSnapshotIndex;

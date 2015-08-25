@@ -3,5 +3,5 @@
 int main()
 {
 	Parameter_t config;
-	config.ParseConfigFile("test.conf");
+	config.ParseConfigFile("../HBT.conf");
 }
