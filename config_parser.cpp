@@ -1,6 +1,10 @@
 #include <cstdlib>
 #include "config_parser.h"
 
+HBTReal PhysicalConst::G;
+HBTReal PhysicalConst::H0;
+Parameter_t HBTConfig;
+
 void Parameter_t::SetParameterValue(const string &line)
 {
   stringstream ss(line);
@@ -63,4 +67,3 @@ void Parameter_t::CheckUnsetParameters()
   }
 }
 
-Parameter_t HBTConfig;

@@ -156,7 +156,7 @@ void Snapshot_t::LoadHeader(Parameter_t & param, int ifile=1)
   
 }
 
-void Snapshot_t::Load(int snapshot_index, Parameter_t & param, bool load_id=true, bool load_position=true, bool load_velocity=true)
+void Snapshot_t::Load(int snapshot_index, Parameter_t & param, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true)
 {
   SetSnapshotIndex(param, snapshot_index);
   LoadHeader(param);
@@ -166,6 +166,8 @@ void Snapshot_t::Load(int snapshot_index, Parameter_t & param, bool load_id=true
 	LoadPosition(param);
   if(load_velocity)
 	LoadVelocity(param);
+  if(load_mass)
+	if(0.==Header.mass[1]) LoadMass(param);
 }
 
 size_t Snapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before=0, const size_t n_skip_after=0)
@@ -186,7 +188,7 @@ size_t Snapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const s
 	  
 	  return block_member_size;
 }
-void * Snapshot_t::LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension=1)
+void * Snapshot_t::LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension=1, bool is_massblock=false)
 {
   char * buf=static_cast<char *>(::operator new(element_size*NumberOfParticles*dimension));
   //#pragma omp parallel //can do task parallelization here.
@@ -201,9 +203,16 @@ void * Snapshot_t::LoadBlock(Parameter_t &param, int block_id, size_t element_si
 	ReadFileHeader(fp, header);
 	for(int iblock=0;iblock<block_id;iblock++)
 	  SkipBlock(fp);
-	size_t n_read=header.npart[1], n_skip_before=header.npart[0], n_skip_after=0;
-	for(int i=2;i<NUMBER_OF_PARTICLE_TYPES;i++) 
-	  n_skip_after+=header.npart[i];
+	size_t n_read=header.npart[1], n_skip_before=0, n_skip_after=0;
+#define MassDataPresent(i) (0==header.mass[i])
+	if(!is_massblock||MassDataPresent(0))
+	  n_skip_before=header.npart[0];
+	for(int i=2;i<NUMBER_OF_PARTICLE_TYPES;i++)
+	{
+	 if(!is_massblock||MassDataPresent(i))
+		n_skip_after+=header.npart[i];
+	}
+#undef MassDataPresent
 	size_t buf_member_size=ReadBlock(fp, buf+OffsetOfDMParticleInFiles[iFile]*dimension*element_size, n_read*dimension, n_skip_before*dimension, n_skip_after*dimension);
 	assert(buf_member_size==element_size);
 	
@@ -231,6 +240,7 @@ void AssignBlock(T *dest, const U *source, size_t n)
 #define BLOCK_ID_POS 0
 #define BLOCK_ID_VEL 1
 #define BLOCK_ID_PID 2
+#define BLOCK_ID_MASS 3
 
 void Snapshot_t::LoadId(Parameter_t &param)
 {//only do this after LoadHeader().
@@ -311,29 +321,30 @@ void Snapshot_t::LoadVelocity(Parameter_t &param)
 	  PhysicalVelocity[i][j]*=velocity_scale;
 }
 
+void Snapshot_t::LoadMass(Parameter_t &param)
+{
+  void * buf=LoadBlock(param, BLOCK_ID_MASS, RealTypeSize, 1, true);
+  
+  if(sizeof(HBTReal)==RealTypeSize)
+	ParticleMass=static_cast<HBTReal *>(buf);
+  else
+  {
+	ParticleMass=static_cast<HBTReal *>(::operator new(sizeof(HBTReal)*NumberOfParticles));
+	if(sizeof(HBTReal)==RealTypeSize)
+	  AssignBlock(ParticleMass, static_cast<float *>(buf), NumberOfParticles);
+	else
+	  AssignBlock(ParticleMass, static_cast<double *>(buf), NumberOfParticles);
+	::operator delete(buf);
+  }  
+}
+
 void Snapshot_t::Clear()
 {
   ::operator delete(ParticleId);
   ::operator delete(ComovingPosition);
   ::operator delete(PhysicalVelocity);
+  ::operator delete(ParticleMass);
   NumberOfParticles=0;
-}
-
-HBTInt Snapshot_t::GetNumberOfParticles()
-{
-  return NumberOfParticles;
-}
-HBTInt Snapshot_t::GetParticleId(HBTInt index)
-{
-  return ParticleId[index];
-}
-HBTxyz& Snapshot_t::GetComovingPosition(HBTInt index)
-{
-  return ComovingPosition[index];
-}
-HBTxyz& Snapshot_t::GetPhysicalVelocity(HBTInt index)
-{
-  return PhysicalVelocity[index];
 }
 
 #ifdef TEST_SIMU_IO
@@ -343,9 +354,10 @@ int main(int argc, char **argv)
 {
   HBTConfig.ParseConfigFile(argv[1]);
   Snapshot_t snapshot;
-  snapshot.Load(0, HBTConfig);
+  snapshot.Load(0, HBTConfig, true, true, false, true);
   cout<<snapshot.GetNumberOfParticles()<<endl;
-  cout<<snapshot.GetParticleId(0)<<endl<<snapshot.GetComovingPosition(0)<<endl;
+  cout<<snapshot.GetParticleId(10)<<endl<<snapshot.GetComovingPosition(10)<<endl;
+  cout<<snapshot.GetParticleMass(10)<<','<<snapshot.GetParticleMass(100)<<endl;
   snapshot.Clear();
   return 0;
 }

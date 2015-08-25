@@ -13,8 +13,8 @@ using namespace std;
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
-  static HBTReal G;
-  static HBTReal H0;
+  extern HBTReal G;
+  extern HBTReal H0;
 }
 
 #define NumberOfCompulsaryConfigEntries 6

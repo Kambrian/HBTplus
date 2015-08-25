@@ -46,17 +46,19 @@ class Snapshot_t
   HBTInt * ParticleId; //better hide this from the user!!!!! 
   HBTxyz * ComovingPosition;
   HBTxyz * PhysicalVelocity;
+  HBTReal * ParticleMass;
   
   void SetSnapshotIndex(Parameter_t &param, int snapshot_index);
   void LoadId(Parameter_t & param);
   void LoadPosition(Parameter_t & param);
   void LoadVelocity(Parameter_t & param);
+  void LoadMass(Parameter_t & param);
   void LoadHeader(Parameter_t & param, int ifile);
   bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
   HBTInt ReadNumberOfDMParticles(Parameter_t & param, int ifile);
   size_t SkipBlock(FILE *fp);
   size_t ReadBlock(FILE *fp, void *buf, const size_t n_read, const size_t n_skip_before, const size_t n_skip_after);
-  void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension);
+  void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension, bool is_massblock);
 public:
   Snapshot_t()
   {
@@ -68,6 +70,7 @@ public:
 	ParticleId=NULL;
 	ComovingPosition=NULL;
 	PhysicalVelocity=NULL;
+	ParticleMass=NULL;
   }
   void GetSnapshotFileName(Parameter_t &param, int ifile, string &filename);
   void FormatSnapshotNumber(std::stringstream &ss);
@@ -76,8 +79,9 @@ public:
   HBTInt GetParticleId(HBTInt index);
   HBTxyz &GetComovingPosition(HBTInt index);
   HBTxyz &GetPhysicalVelocity(HBTInt index);
+  HBTReal GetParticleMass(HBTInt index);
   HBTInt GetNumberOfParticles();
-  void Load(int snapshot_index, Parameter_t & param, bool load_id, bool load_position, bool load_velocity);
+  void Load(int snapshot_index, Parameter_t & param, bool load_id, bool load_position, bool load_velocity, bool load_mass);
 };
 
 inline int Snapshot_t::GetSnapshotIndex()
@@ -90,5 +94,27 @@ inline void Snapshot_t::SetSnapshotIndex(Parameter_t & param, int snapshot_index
 //   assert(SpecialConst::NullSnapshotId!=snapshot_index);
   SnapshotIndex=snapshot_index; 
 }
-
+inline HBTInt Snapshot_t::GetNumberOfParticles()
+{
+  return NumberOfParticles;
+}
+inline HBTInt Snapshot_t::GetParticleId(HBTInt index)
+{
+  return ParticleId[index];
+}
+inline HBTxyz& Snapshot_t::GetComovingPosition(HBTInt index)
+{
+  return ComovingPosition[index];
+}
+inline HBTxyz& Snapshot_t::GetPhysicalVelocity(HBTInt index)
+{
+  return PhysicalVelocity[index];
+}
+inline HBTReal Snapshot_t::GetParticleMass(HBTInt index)
+{
+  if(Header.mass[1])
+	return Header.mass[1];
+  else
+	return ParticleMass[index];
+}
 #endif
