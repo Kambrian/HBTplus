@@ -3,43 +3,43 @@ using namespace std;
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <typeinfo>
+#include <assert.h>
 #include <cstdlib>
 #include <cstdio>
 
 #include "simulation_io.h"
 #include "../mymath.h"
 
-#define myfread(a,b,c,d) fread_swap(a,b,c,d,ByteOrder)
+#define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
+#define SkipPositionBlock SkipBlock
+#define SkipVelocityBlock SkipBlock	 
+#define SkipIdBlock SkipBlock
+#define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
+inline size_t Snapshot_t::SkipBlock(FILE *fp)
+{
+  int blocksize,blocksize2;
+  
+  ReadBlockSize(blocksize);	  
+  fseek(fp, blocksize, SEEK_CUR);
+  ReadBlockSize(blocksize2);
+  assert(blocksize==blocksize2);
+  return blocksize;
+}
 
 void Snapshot_t::FormatSnapshotNumber(stringstream &ss)
 {
   ss << setw(3) << setfill('0') << SnapshotIndex;
 }
-int Snapshot_t::GetSnapshotIndex()
-{
-  return SnapshotIndex;
-}
-void Snapshot_t::SetSnapshotIndex(int snapshot_index)
-{
-  SnapshotIndex=snapshot_index;
-}
-void Snapshot_t::CheckSnapshotIndexIsValid()
-{
-  if(SpecialConst::NullSnapshotId==SnapshotIndex)
-  {
-	cerr<<"Snapshot number not set!\n";
-	exit(1);
-  }
-}
 void Snapshot_t::GetSnapshotFileName(Parameter_t &param, int ifile, string &filename)
 {
   FILE *fp;
   char buf[1024];
-  sprintf(buf,"%s/snapdir_%03d/%s_%03d.%d",param.SnapshotPath,SnapshotIndex,param.SnapshotFileBase,SnapshotIndex,ifile);
+  sprintf(buf,"%s/snapdir_%03d/%s_%03d.%d",param.SnapshotPath.c_str(),SnapshotIndex,param.SnapshotFileBase.c_str(),SnapshotIndex,ifile);
   if(ifile==0)
-	if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d",param.SnapshotPath,param.SnapshotFileBase,SnapshotIndex); //try the other convention
-  if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d.%d",param.SnapshotPath,param.SnapshotFileBase,SnapshotIndex,ifile); //try the other convention
-  if(!file_exist(buf)) sprintf(buf,"%s/%d/%s.%d",param.SnapshotPath,SnapshotIndex,param.SnapshotFileBase,ifile);//for BJL's RAMSES output
+	if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d",param.SnapshotPath.c_str(),param.SnapshotFileBase.c_str(),SnapshotIndex); //try the other convention
+  if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d.%d",param.SnapshotPath.c_str(),param.SnapshotFileBase.c_str(),SnapshotIndex,ifile); //try the other convention
+  if(!file_exist(buf)) sprintf(buf,"%s/%d/%s.%d",param.SnapshotPath.c_str(),SnapshotIndex,param.SnapshotFileBase.c_str(),ifile);//for BJL's RAMSES output
   if(!file_exist(buf))
   {
 	cerr<<"Failed to find a snapshot file at "<<buf<<endl;
@@ -50,17 +50,16 @@ void Snapshot_t::GetSnapshotFileName(Parameter_t &param, int ifile, string &file
 bool Snapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
 {
   //read the header part, assign header extensions, and check byteorder
-
   int headersize(SNAPSHOT_HEADER_SIZE),headersize_byteswap(SNAPSHOT_HEADER_SIZE);
   swap_Nbyte(&headersize_byteswap,1,sizeof(headersize_byteswap));
 
-  bool ByteOrder;
+  bool NeedByteSwap;
   int dummy,dummy2;
   fread(&dummy,sizeof(dummy),1,fp);
   if(dummy==headersize)
-	ByteOrder=false;
+	NeedByteSwap=false;
   else if(dummy==headersize_byteswap)
-	ByteOrder=true;
+	NeedByteSwap=true;
   else
   {
 	fprintf(stderr,"endianness check failed for header\n file format not expected:%d;%d,%d\n",dummy,headersize,headersize_byteswap);
@@ -90,25 +89,29 @@ bool Snapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
 	exit(1);
   } 
   
-  /*extend and examine the header*/	  
-  header.Hz=PhysicalConst::H0 * sqrt(header.Omega0 / (header.time * header.time * header.time) 
-  + (1 - header.Omega0 - header.OmegaLambda) / (header.time * header.time)
-  + header.OmegaLambda);//Hubble param for the current catalogue;
-  
-  return ByteOrder;
+  return NeedByteSwap;
 }
-
+HBTInt Snapshot_t::ReadNumberOfDMParticles(Parameter_t & param, int ifile)
+{
+  FILE * fp;
+  string filename;
+  GetSnapshotFileName(param, ifile, filename);
+  myfopen(fp, filename.c_str(), "r");
+  SnapshotHeader_t header;
+  ReadFileHeader(fp, header);
+  fclose(fp);
+  return header.npart[1];
+}
 void Snapshot_t::LoadHeader(Parameter_t & param, int ifile=1)
 {
   //read the header part, assign header extensions, and check byteorder
-  CheckSnapshotIndexIsValid();
 
   FILE *fp; 
   string filename;
   GetSnapshotFileName(param, ifile, filename);
-  myfopen(fp, filename, "r");
   
-  ByteOrder=ReadFileHeader(fp, Header);
+  myfopen(fp, filename.c_str(), "r");
+  NeedByteSwap=ReadFileHeader(fp, Header);
   
   if(Header.BoxSize!=param.BoxSize)
   {
@@ -116,10 +119,46 @@ void Snapshot_t::LoadHeader(Parameter_t & param, int ifile=1)
 	cerr<<"Maybe the length unit differ? Excpected unit: "<<param.LengthInMpch<<" Msol/h\n";
 	exit(1);
   }
+  
+  //set datatypes
+  HBTInt NumPartInFile=0;
+  for(int i=0;i<NUMBER_OF_PARTICLE_TYPES;i++) 
+	NumPartInFile+=Header.npart[i];
+  int blocksize=SkipPositionBlock(fp);
+  RealTypeSize=blocksize/NumPartInFile/3;
+  assert(sizeof(float)==RealTypeSize||sizeof(double)==RealTypeSize);
+  blocksize=SkipVelocityBlock(fp);
+  assert(blocksize==RealTypeSize*NumPartInFile*3);
+  
+  if(param.SnapshotHasIdBlock)
+  {
+	blocksize=SkipIdBlock(fp);
+	IntTypeSize=blocksize/NumPartInFile;
+	assert(sizeof(int)==IntTypeSize||sizeof(long)==IntTypeSize);
+// 	assert(sizeof(HBTInt)>=IntTypeSize);
+  }
+  
+  fclose(fp);
+  
+  Header.Hz=PhysicalConst::H0 * sqrt(Header.Omega0 / (Header.time * Header.time * Header.time) 
+  + (1 - Header.Omega0 - Header.OmegaLambda) / (Header.time * Header.time)
+  + Header.OmegaLambda);//Hubble param for the current catalogue;
+  
+  //npartTotal is not reliable
+  NumberOfParticles=0;
+  for(int iFile=0;iFile<Header.num_files;iFile++)
+  {
+	int n=ReadNumberOfDMParticles(param, iFile);
+	NumberOfDMParticleInFiles.push_back(n);
+	OffsetOfDMParticleInFiles.push_back(NumberOfParticles);
+	NumberOfParticles+=n;
+  }
+  
 }
 
-void Snapshot_t::Load(Parameter_t & param, bool load_id=true, bool load_position=true, bool load_velocity=true)
+void Snapshot_t::Load(int snapshot_index, Parameter_t & param, bool load_id=true, bool load_position=true, bool load_velocity=true)
 {
+  SetSnapshotIndex(param, snapshot_index);
   LoadHeader(param);
   if(load_id)
 	LoadId(param);
@@ -129,220 +168,157 @@ void Snapshot_t::Load(Parameter_t & param, bool load_id=true, bool load_position
 	LoadVelocity(param);
 }
 
-void Snapshot_t::LoadId(Parameter_t &param)
-{
-  CheckSnapshotIndexIsValid();
-//FIXME: finish this...........
-  int dummy,dummy2;
-  long pre_len,tail_len;
-  HBTInt i,j;
-  HBTInt Nload=0;
-// 	void *PID=malloc(sizeof(IDatInt)*NP_DM);
-	
-
-  for(int iFile=0; iFile<NFILES; iFile++)
-    {
-	  FILE *fp; 
-	  string filename;
-	  GetSnapshotFileName(param, ifile, filename);
-	  myfopen(fp, filename, "r");
+size_t Snapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before=0, const size_t n_skip_after=0)
+{//read n_read members from the current block of fp into block. skip n_skip_* before and after. 
+  //return member size in block. 
+ //has to specify the number of members in order to know the member size for byteswap
+	  int blocksize,blocksize2;
 	  
-	  SnapshotHeader_t header;
-	  bool ByteOrder=ReadFileHeader(fp, header);
+	  ReadBlockSize(blocksize);	  
+	  size_t block_member_size=blocksize/(n_read+n_skip_before+n_skip_after);
+	  assert(4==block_member_size||8==block_member_size);
+	  fseek(fp, n_skip_before*block_member_size, SEEK_CUR);
+	  myfread(block, block_member_size, n_read, fp);
+	  fseek(fp, n_skip_after*block_member_size, SEEK_CUR);
 	  
-	  pre_len=header.npart[0]*sizeof(IDatReal)*3;
-	  for(j=2,tail_len=0;j<6;j++)tail_len+=header.npart[j];
-	  tail_len*=sizeof(IDatReal)*3;
-      SKIP;
-	  fseek(fp,pre_len,SEEK_CUR);//load only DM data;
-	  if(flag_pos)
-	  myfread(IDat.Pos+Nload,sizeof(IDatReal),3L*header.npart[1],fp);
-	  else
-	  fseek(fp,sizeof(IDatReal)*3*header.npart[1],SEEK_CUR);
-	  fseek(fp,tail_len,SEEK_CUR);
-      SKIP2;
-	  CHECK(1);
-	
-      SKIP;
-      fseek(fp,pre_len,SEEK_CUR);//load only DM data;
-	  if(flag_vel)
-		myfread(IDat.Vel+Nload,sizeof(IDatReal),3L*header.npart[1],fp);
-	  else
-		fseek(fp,sizeof(IDatReal)*3*header.npart[1],SEEK_CUR);
-	  fseek(fp,tail_len,SEEK_CUR);
-      SKIP2;
-	  CHECK(2);
-      
-#ifndef NO_ID_RECORD //for Huiyuan's data.
-	  pre_len=header.npart[0]*sizeof(IDatInt);
-	  for(j=2,tail_len=0;j<6;j++)tail_len+=header.npart[j];
-	  tail_len*=sizeof(IDatInt);
-	  SKIP;
-      fseek(fp,pre_len,SEEK_CUR);//load only DM data;
-	  if(flag_id)
-	  myfread(IDat.PID+Nload,sizeof(IDatInt),header.npart[1],fp);
-	  else
-	  fseek(fp,sizeof(IDatInt)*header.npart[1],SEEK_CUR);
-	  fseek(fp,tail_len,SEEK_CUR);
-      SKIP2;
-	  CHECK(3);
-#endif	  
+	  ReadBlockSize(blocksize2);
+	  assert(blocksize==blocksize2);
 	  
-	  if(flag_scalar)
-	  {
-	  //gravity record
-		SKIP;
-		fseek(fp, sizeof(IDatReal)*3*NP_SIM, SEEK_CUR);
-		SKIP2;
-		CHECK(31);
-	  //fifth force record
-		SKIP;
-		fseek(fp, sizeof(IDatReal)*3*NP_SIM, SEEK_CUR);
-		SKIP2;
-		CHECK(32);
-	  //potential record
-		pre_len=header.npart[0]*sizeof(IDatReal)*2;
-		for(j=2,tail_len=0;j<6;j++)tail_len+=header.npart[j];
-		tail_len*=sizeof(IDatReal)*2;
-		SKIP;
-		fseek(fp,pre_len,SEEK_CUR);//load only DM data;
-		myfread(IDat.Pot+Nload,sizeof(IDatReal)*2,header.npart[1],fp);
-		fseek(fp,tail_len,SEEK_CUR);
-		SKIP2;
-		CHECK(33);
-	  }
-		
-	  if(feof(fp))
-	  {
-		fprintf(logfile,"error:End-of-File in %s\n",buf);
-		fflush(logfile);exit(1);  
-	  }
-	
-	  Nload+=header.npart[1];
-//      printf("%d,%d,%ld\n",i, header.npart[1], Nload);fflush(stdout);
-      fclose(fp);
-  }
-  if(NP_DM!=Nload)
-  {
-	  fprintf(logfile,"error: Number of loaded DM particles mismatch: %lld,%lld\n",(long long)NP_DM,(long long)Nload);
-	  fflush(logfile);
-	  exit(1);
-  }
-
-if(flag_id)
-{
-//now transfer to HBT's internal data  
-  #ifdef HBTPID_RANKSTYLE
-  struct io_ID2Ind *table;
-  table=mymalloc(sizeof(struct io_ID2Ind)*NP_DM);
-  for(i=0;i<NP_DM;i++)
-  {
-	  table[i].PID=IDat.PID[i];
-	  table[i].PInd=i;
-  }
-  qsort(table,NP_DM,sizeof(struct io_ID2Ind),comp_PIDArr);
-  Pdat.PID=mymalloc(sizeof(HBTInt)*NP_DM);
-  for(i=0;i<NP_DM;i++)
-	Pdat.PID[table[i].PInd]=i;  //now PID has been turned into particle ranks
-	
-  sprintf(buf,"%s/DM_PIDs_Sorted.dat",SUBCAT_DIR);
-  if(!try_readfile(buf))//create the file if it does not exist
-  {
-	  IDatInt np;
-	  myfopen(fp,buf,"w");
-	  np=NP_DM;
-	  fwrite(&np,sizeof(IDatInt),1,fp);
-	  for(i=0;i<NP_DM;i++)
-	  fwrite(&(table[i].PID),sizeof(IDatInt),1,fp);
-	  fwrite(&np,sizeof(IDatInt),1,fp);
-	  fclose(fp);
-  }
-	
-  myfree(table);  
-  myfree(IDat.PID);
-  #else
-#ifdef SAME_INTTYPE
-  Pdat.PID=IDat.PID;
-#else
-  Pdat.PID=mymalloc(sizeof(HBTInt)*NP_DM);
-  for(i=0;i<NP_DM;i++)
-	Pdat.PID[i]=IDat.PID[i];
-  myfree(IDat.PID);
-#endif
-  #endif
+	  return block_member_size;
 }
-else
-Pdat.PID=NULL;
-
-if(flag_pos)
+void * Snapshot_t::LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension=1)
 {
-#ifdef SAME_REALTYPE
-	  Pdat.Pos=IDat.Pos;
-#else
-	  Pdat.Pos=mymalloc(sizeof(HBTxyz)*NP_DM);
-	  for(i=0;i<NP_DM;i++)
-		for(j=0;j<3;j++)
-			Pdat.Pos[i][j]=IDat.Pos[i][j];
-	  myfree(IDat.Pos);
-#endif
-  	
-  #ifdef CONVERT_LENGTH_MPC_KPC
-  for(i=0;i<NP_DM;i++)
-  for(j=0;j<3;j++)
-  Pdat.Pos[i][j]*=1000.;
-  #endif
+  char * buf=static_cast<char *>(::operator new(element_size*NumberOfParticles*dimension));
+  //#pragma omp parallel //can do task parallelization here.
+  for(int iFile=0; iFile<Header.num_files; iFile++)
+  {
+	FILE *fp; 
+	string filename;
+	GetSnapshotFileName(param, iFile, filename);
+	myfopen(fp, filename.c_str(), "r");
+	
+	SnapshotHeader_t header;
+	ReadFileHeader(fp, header);
+	for(int iblock=0;iblock<block_id;iblock++)
+	  SkipBlock(fp);
+	size_t n_read=header.npart[1], n_skip_before=header.npart[0], n_skip_after=0;
+	for(int i=2;i<NUMBER_OF_PARTICLE_TYPES;i++) 
+	  n_skip_after+=header.npart[i];
+	size_t buf_member_size=ReadBlock(fp, buf+OffsetOfDMParticleInFiles[iFile]*dimension*element_size, n_read*dimension, n_skip_before*dimension, n_skip_after*dimension);
+	assert(buf_member_size==element_size);
+	
+	if(feof(fp))
+	{
+	  cerr<<"error:End-of-File in "<<filename<<endl;
+	  exit(1);  
+	}
+	
+	fclose(fp);
+  }
   
-  #ifdef PERIODIC_BDR
-  for(i=0;i<NP_DM;i++)
-  for(j=0;j<3;j++)
-  Pdat.Pos[i][j]=position_modulus(Pdat.Pos[i][j]);
-  #endif	
+  return static_cast<void *>(buf);
 }
-else
-Pdat.Pos=NULL;
 
-if(flag_vel)
-{  
-  #ifdef SAME_REALTYPE
-	  Pdat.Vel=IDat.Vel;
-#else
-	  Pdat.Vel=mymalloc(sizeof(HBTxyz)*NP_DM);
-	  for(i=0;i<NP_DM;i++)
-		for(j=0;j<3;j++)
-			Pdat.Vel[i][j]=IDat.Vel[i][j];
-	  myfree(IDat.Vel);
-#endif
+template <class T, class U>
+void AssignBlock(T *dest, const U *source, size_t n)
+{
+  for(size_t i=0;i<n;i++)
+  {
+	dest[i]=source[i];
+  }
 }
-else
-Pdat.Vel=NULL;
 
-if(flag_scalar)
-{  
-  Pdat.Vel=mymalloc(sizeof(HBTReal)*NP_DM);
-  for(i=0;i<NP_DM;i++)
-	Pdat.Scalar[i]=IDat.Pot[i][1];//pass scalar field to Pdat
-  myfree(IDat.Pot);
-}
-else
-  Pdat.Scalar=NULL;
+#define BLOCK_ID_POS 0
+#define BLOCK_ID_VEL 1
+#define BLOCK_ID_PID 2
 
+void Snapshot_t::LoadId(Parameter_t &param)
+{//only do this after LoadHeader().
+  
+  if(!param.SnapshotHasIdBlock) return;
+  
+  void * buf=LoadBlock(param, BLOCK_ID_PID, IntTypeSize, 1);
+  
+  if(param.ParticleIdRankStyle)
+  {
+	cerr<<"Error: ParticleIdRankStyle not implemented yet\n";
+	exit(1);
+  }
+  else
+  {
+	if(param.SnapshotIdUnsigned)//unsigned int
+	  AssignBlock(ParticleId, static_cast<unsigned *>(buf), NumberOfParticles);
+	else
+	{
+	  if(sizeof(HBTInt)==IntTypeSize)
+		ParticleId=static_cast<HBTInt *>(buf);
+	  else
+	  {
+		ParticleId=static_cast<HBTInt *>(::operator new(sizeof(HBTInt)*NumberOfParticles));
+		if(sizeof(int)==IntTypeSize)
+		  AssignBlock(ParticleId, static_cast<int *>(buf), NumberOfParticles);
+		else
+		  AssignBlock(ParticleId, static_cast<long *>(buf), NumberOfParticles);
+		::operator delete(buf);
+	  }
+	}
+  }
 }
+
 void Snapshot_t::LoadPosition(Parameter_t &param)
 {
-  CheckSnapshotIndexIsValid();
+  void * buf=LoadBlock(param, BLOCK_ID_POS, RealTypeSize, 3);
+  
+  if(sizeof(HBTReal)==RealTypeSize)
+	ComovingPosition=static_cast<HBTxyz *>(buf);
+  else
+  {
+	ComovingPosition=static_cast<HBTxyz *>(::operator new(sizeof(HBTxyz)*NumberOfParticles));
+	if(sizeof(HBTReal)==RealTypeSize)
+	  AssignBlock(reinterpret_cast<HBTReal *>(ComovingPosition), static_cast<float *>(buf), NumberOfParticles*3);
+	else
+	  AssignBlock(reinterpret_cast<HBTReal *>(ComovingPosition), static_cast<double *>(buf), NumberOfParticles*3);
+	::operator delete(buf);
+  }
+  
+  if(param.PeriodicBoundaryOn)//regularize coord
+  {
+	for(HBTInt i=0;i<NumberOfParticles;i++)
+	  for(int j=0;j<3;j++)
+		ComovingPosition[i][j]=position_modulus(ComovingPosition[i][j], param.BoxSize);
+  }
 }
+
 void Snapshot_t::LoadVelocity(Parameter_t &param)
 {
-  CheckSnapshotIndexIsValid();
+  void * buf=LoadBlock(param, BLOCK_ID_VEL, RealTypeSize, 3);
+  
+  if(sizeof(HBTReal)==RealTypeSize)
+	PhysicalVelocity=static_cast<HBTxyz *>(buf);
+  else
+  {
+	PhysicalVelocity=static_cast<HBTxyz *>(::operator new(sizeof(HBTxyz)*NumberOfParticles));
+	if(sizeof(HBTReal)==RealTypeSize)
+	  AssignBlock(reinterpret_cast<HBTReal *>(PhysicalVelocity), static_cast<float *>(buf), NumberOfParticles*3);
+	else
+	  AssignBlock(reinterpret_cast<HBTReal *>(PhysicalVelocity), static_cast<double *>(buf), NumberOfParticles*3);
+	::operator delete(buf);
+  }
+  
+  HBTReal velocity_scale=sqrt(Header.time);
+  for(HBTInt i=0;i<NumberOfParticles;i++)
+	for(int j=0;j<3;j++)
+	  PhysicalVelocity[i][j]*=velocity_scale;
 }
 
 void Snapshot_t::Clear()
 {
-  delete [] ParticleId;
-  delete [] ComovingPosition;
-  delete [] PhysicalVelocity;
+  ::operator delete(ParticleId);
+  ::operator delete(ComovingPosition);
+  ::operator delete(PhysicalVelocity);
   NumberOfParticles=0;
 }
+
 HBTInt Snapshot_t::GetNumberOfParticles()
 {
   return NumberOfParticles;
@@ -359,3 +335,18 @@ HBTxyz& Snapshot_t::GetPhysicalVelocity(HBTInt index)
 {
   return PhysicalVelocity[index];
 }
+
+#ifdef TEST_SIMU_IO
+#include "../config_parser.h"
+
+int main(int argc, char **argv)
+{
+  HBTConfig.ParseConfigFile(argv[1]);
+  Snapshot_t snapshot;
+  snapshot.Load(0, HBTConfig);
+  cout<<snapshot.GetNumberOfParticles()<<endl;
+  cout<<snapshot.GetParticleId(0)<<endl<<snapshot.GetComovingPosition(0)<<endl;
+  snapshot.Clear();
+  return 0;
+}
+#endif

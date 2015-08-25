@@ -12,11 +12,18 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(SnapshotFileBase,1)
   else TrySetPar(HaloPath,2)
   else TrySetPar(SubhaloPath,3)
-  else TrySetPar(MinNumPartOfSub,4)
-  else TrySetPar(MassInMsunh,5)
-  else TrySetPar(LengthInMpch,6)
-  else TrySetPar(VelInKmS,7)
-  else TrySetPar(BoxSize,8)
+  else TrySetPar(BoxSize,4)
+  else TrySetPar(MaxSnapshotIndex,5)
+#undef TrySetPar		
+#define TrySetPar(var) if(name==#var){ ss>>var; cout<<#var<<" = "<<var<<endl;}	
+  else TrySetPar(MinNumPartOfSub)
+  else TrySetPar(MassInMsunh)
+  else TrySetPar(LengthInMpch)
+  else TrySetPar(VelInKmS)
+  else TrySetPar(PeriodicBoundaryOn)
+  else TrySetPar(SnapshotHasIdBlock)
+  else TrySetPar(ParticleIdRankStyle)
+  else TrySetPar(SnapshotIdUnsigned)
 #undef TrySetPar  
   else
   {
@@ -46,7 +53,7 @@ void Parameter_t::ParseConfigFile(char* param_file)
 }
 void Parameter_t::CheckUnsetParameters()
 {
-  for(int i=0;i<NumberOfConfigEntries;i++)
+  for(int i=0;i<NumberOfCompulsaryConfigEntries;i++)
   {
 	if(!IsSet[i])
 	{

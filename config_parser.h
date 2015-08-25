@@ -17,7 +17,7 @@ namespace PhysicalConst
   static HBTReal H0;
 }
 
-#define NumberOfConfigEntries 9
+#define NumberOfCompulsaryConfigEntries 6
 class Parameter_t
 {
 public:
@@ -25,14 +25,31 @@ public:
   string SnapshotFileBase;
   string HaloPath;
   string SubhaloPath;
+  HBTReal BoxSize; //to check the unit of snapshot according to the BoxSize in header
+  int MaxSnapshotIndex;
+  bool IsSet[NumberOfCompulsaryConfigEntries];
+  
+  int MinSnapshotIndex;
   int MinNumPartOfSub;
   HBTReal MassInMsunh;
   HBTReal LengthInMpch;
   HBTReal VelInKmS;
-  HBTReal BoxSize; //to check the unit of snapshot according to the BoxSize in header
-  bool IsSet[NumberOfConfigEntries];
+  bool PeriodicBoundaryOn;
+  bool SnapshotHasIdBlock;
+  bool ParticleIdRankStyle;//load particleId as id ranks
+  bool SnapshotIdUnsigned;
+  
   Parameter_t(): IsSet()
   {
+	MinSnapshotIndex=0;
+	MinNumPartOfSub=20;
+	MassInMsunh=1e10;
+	LengthInMpch=1e3;
+	VelInKmS=1.;
+	PeriodicBoundaryOn=true;
+	SnapshotHasIdBlock=true;
+	ParticleIdRankStyle=false;
+	SnapshotIdUnsigned=false;
   }
   void ParseConfigFile(char * param_file);
   void SetParameterValue(const string &line);

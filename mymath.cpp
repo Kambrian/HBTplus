@@ -7,29 +7,7 @@ std::ostream& operator << (std::ostream& o, HBTxyz &a)
    o << "(" << a[0] << ", " << a[1] << ", " << a[2] << ")";
    return o;
 };
-
-HBTReal position_modulus(HBTReal x, HBTReal boxsize)
-{//shift the positions to within [0,boxsize)
-	HBTReal y;
-	if(x>=0&&x<boxsize) return x;
-	y=x/boxsize;
-	return (y-floor(y))*boxsize;
-}
 	
-HBTReal distance(HBTReal x[3],HBTReal y[3])
-{
-	HBTReal dx[3];
-	dx[0]=x[0]-y[0];
-	dx[1]=x[1]-y[1];
-	dx[2]=x[2]-y[2];
-	#ifdef PERIODIC_BDR
-	dx[0]=NEAREST(dx[0]);
-	dx[1]=NEAREST(dx[1]);
-	dx[2]=NEAREST(dx[2]);
-	#endif
-	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
-}
-
 HBTInt compile_offset(HBTInt Len[], HBTInt Offset[], HBTInt n)
 {//fill offset info, and return total length.
   HBTInt i,offset;
@@ -78,14 +56,6 @@ void swap_Nbyte(void *data2swap,size_t nel,size_t mbyte)
 			}
 			delete old_data;
 	}
-}
-size_t fread_swap(void *buf,size_t Nsize,size_t Nbuf,FILE *fp, bool FlagByteSwap)
-{
-	size_t Nread;
-	Nread=fread(buf,Nsize,Nbuf,fp);
-	if(FlagByteSwap)
-	swap_Nbyte(buf,Nbuf,Nsize);
-	return Nread;
 }
 
 void spherical_basisD(double dx[3],double er[3],double et[3],double ef[3])

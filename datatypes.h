@@ -69,7 +69,7 @@ namespace SpecialConst
   
   const HBTInt UniverseHaloId=-200; //the universe as a halo, to contain particles that does not belong to any halo
   
-  const HBTxyz NullCoordinate{0.,0.,0.};
+  const HBTxyz NullCoordinate={0.,0.,0.};
 //   const Particle_t NullParticle(NullParticleId, NullParticleId, NullCoordinate, NullCoordinate);
 };
 

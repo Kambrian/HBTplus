@@ -1,0 +1,8 @@
+CXX=icpc
+LINK.o=$(LINK.cpp)
+
+#%.o: %.cpp
+#	$(CXX) -c $< $(CXXFLAGS)
+
+clean: 
+	rm -f *.o a.out $(EXE)
