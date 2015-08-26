@@ -4,18 +4,23 @@
 #include <iostream>
 #include <new>
 
-#include "datatypes.h"
-#include "simulation_io/simulation_io.h"
+#include "../datatypes.h"
+// #include "snapshot.h"
 
 class Halo_t
 {
 public:
-  List_t <HBTInt> ParticleReferenceList;
-  Halo_t(): ParticleReferenceList()
+  HBTInt NumberOfHaloes;
+  HBTInt * ParticleList;
+  HBTInt * HaloLength;
+  HBTInt * HaloOffset;
+  Halo_t()
   {
+	ParticleList=NULL;
   }
   void Load();
   void Clear();
+  void GetFileName(Parameter_t &param, int ifile, string &filename);
 };
 class TrackParticle_t
 {
