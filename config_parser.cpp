@@ -28,7 +28,12 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(SnapshotHasIdBlock)
   else TrySetPar(ParticleIdRankStyle)
   else TrySetPar(SnapshotIdUnsigned)
-#undef TrySetPar  
+#undef TrySetPar
+  else if("SnapshotIdList"==name)
+  {
+	for(int i; ss>>i;)
+	SnapshotIdList.push_back(i);
+  }
   else
   {
 	stringstream msg;
@@ -62,6 +67,15 @@ void Parameter_t::CheckUnsetParameters()
 	if(!IsSet[i])
 	{
 	  cerr<<"Error parsing configuration file: entry "<<i<<" missing\n";
+	  exit(1);
+	}
+  }
+  if(!SnapshotIdList.empty())
+  {
+	int max_index=SnapshotIdList.size()-1;
+	if(MaxSnapshotIndex!=max_index)
+	{
+	  cerr<<"Error: MaxSnapshotIndex="<<MaxSnapshotIndex<<", inconsistent with SnapshotIdList ("<<max_index+1<<" snapshots listed)\n";
 	  exit(1);
 	}
   }

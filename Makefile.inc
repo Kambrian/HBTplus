@@ -1,9 +1,7 @@
-CXX=icpc
-CXXFLAGS+=-DHBT_REAL8 #-DHBT_INT8
+CXX=g++
+CXXFLAGS+=-std=c++0x
+CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8
 LINK.o=$(LINK.cpp)
-
-#%.o: %.cpp
-#	$(CXX) -c $< $(CXXFLAGS)
 
 SUBDIRS:=$(wildcard */.)
 SUBDIRSCLEAN=$(addsuffix clean,$(SUBDIRS))
@@ -11,7 +9,7 @@ SUBDIRSCLEAN=$(addsuffix clean,$(SUBDIRS))
 clean: clean_curdir $(SUBDIRSCLEAN)
 
 clean_curdir:
-	rm -rfv *.o *~ core a.out $(EXE)
+	rm -rf *.o *~ core a.out $(EXE)
 
 %clean: %
 	$(MAKE) -C $< clean_curdir

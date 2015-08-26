@@ -38,8 +38,9 @@ public:
   bool SnapshotHasIdBlock;
   bool ParticleIdRankStyle;//load particleId as id ranks
   bool SnapshotIdUnsigned;
+  vector <int> SnapshotIdList;
   
-  Parameter_t(): IsSet()
+  Parameter_t(): IsSet(),SnapshotIdList()
   {
 	MinSnapshotIndex=0;
 	MinNumPartOfSub=20;
