@@ -31,6 +31,7 @@ public:
   
   int MinSnapshotIndex;
   int MinNumPartOfSub;
+  int GroupFileVariant;
   HBTReal MassInMsunh;
   HBTReal LengthInMpch;
   HBTReal VelInKmS;
@@ -44,6 +45,7 @@ public:
   {
 	MinSnapshotIndex=0;
 	MinNumPartOfSub=20;
+	GroupFileVariant=GROUP_FORMAT_GADGET3_INT;
 	MassInMsunh=1e10;
 	LengthInMpch=1e3;
 	VelInKmS=1.;

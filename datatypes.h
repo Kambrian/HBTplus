@@ -33,7 +33,7 @@ typedef float HBTReal;
 // the user should ganrantee that HBTInt can at least hold NP_DM (when HBTPID_RANKSTYLE is defined)
 #ifdef HBT_INT8
 typedef long HBTInt;  
-#define HBTIFMT "%lld"
+#define HBTIFMT "%ld"
 #else 
 typedef int HBTInt;
 #define HBTIFMT "%d"
@@ -53,9 +53,9 @@ typedef int HBTInt;
 #define FRSH_SRCCAT -3
 //#define FRSH_MBDCAT -4
 
-#define FLAG_LOAD_ID  0b001
-#define FLAG_LOAD_POS 0b010
-#define FLAG_LOAD_VEL 0b100
+#define GROUP_FORMAT_GADGET4 40
+#define GROUP_FORMAT_GADGET3_INT 30
+#define GROUP_FORMAT_GADGET3_LONG 31
 
 typedef HBTReal HBTxyz[3];  //3-d pos/vel data
 
@@ -87,13 +87,14 @@ class List_t
   HBTInt N;
 public:
   T * Data;
-  List_t(HBTInt n=0, T *data=NULL)
+  List_t(): Data(nullptr)
   {
-	N=n;
-	if(data)//memory can be shared, not always allocated. ToDo: implement shared_ptr?
-	  Data=data;
-	else
-	  Data=new T[n];
+  }
+  List_t(HBTInt n, T *data): N(n), Data(data)
+  {
+  }
+  List_t(const List_t &l): N(l.N), Data(l.Data)
+  {
   }
   T & operator [](HBTInt index)
   {
@@ -109,10 +110,6 @@ public:
 	N=0;
   }
 };
-
-#ifndef IniSnap //initial snapshot to start processing
-#define IniSnap 0
-#endif
 
 #define DATATYPES_INCLUDED
 #endif

@@ -19,7 +19,7 @@
 			* so that any distance within the halo should be smaller than boxhalf */
 // #endif
 #define get_bit(x,k) (((x)&(1<<k))>>k)
-
+extern int count_pattern_files(char *filename_pattern);
 extern std::ostream& operator << (std::ostream& o, HBTxyz &a);
 extern void swap_Nbyte(void *data2swap,size_t nel,size_t mbyte);
 inline size_t fread_swap(void *buf,const size_t member_size, const size_t member_count,FILE *fp, const bool FlagByteSwap)

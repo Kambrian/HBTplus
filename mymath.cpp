@@ -1,6 +1,18 @@
 #include <iostream>
+#include <glob.h>
 
 #include "mymath.h"
+
+int count_pattern_files(char *filename_pattern)
+{
+   glob_t globbuf;
+
+   globbuf.gl_offs = 0;
+   glob(filename_pattern, GLOB_ERR, NULL, &globbuf);
+//    printf("couting %s...\n found %d files\n", filename_pattern, globbuf.gl_pathc);
+   globfree(&globbuf);
+   return globbuf.gl_pathc;  
+}
 
 std::ostream& operator << (std::ostream& o, HBTxyz &a)
 {

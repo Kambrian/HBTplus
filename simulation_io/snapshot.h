@@ -1,5 +1,5 @@
-#ifndef SIMULATION_IO_H_INCLUDED
-#define SIMULATION_IO_H_INCLUDED
+#ifndef SNAPSHOT_H_INCLUDED
+#define SNAPSHOT_H_INCLUDED
 
 #include <iostream>
 #include <sstream>
@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include "../datatypes.h"
 #include "../config_parser.h"
+#include "snapshot_number.h"
 
 #define NUMBER_OF_PARTICLE_TYPES 6
 #define SNAPSHOT_HEADER_SIZE 256
@@ -31,7 +32,7 @@ struct SnapshotHeader_t
   double Hz;//current Hubble param in internal units, BT extension
   char     fill[SNAPSHOT_HEADER_SIZE- NUMBER_OF_PARTICLE_TYPES*4- NUMBER_OF_PARTICLE_TYPES*8- 2*8- 2*4- NUMBER_OF_PARTICLE_TYPES*4- 2*4 - 4*8 -8];  /* fills to 256 Bytes */
 };
-class Snapshot_t
+class Snapshot_t: public SnapshotNumber_t
 {
   SnapshotHeader_t Header;
   
@@ -41,8 +42,6 @@ class Snapshot_t
   vector <HBTInt> NumberOfDMParticleInFiles;
   vector <HBTInt> OffsetOfDMParticleInFiles;
   
-  int SnapshotIndex;
-  int SnapshotId; //original number
   HBTInt NumberOfParticles;
   HBTInt * ParticleId; //better hide this from the user!!!!! 
   HBTxyz * ComovingPosition;
@@ -50,7 +49,6 @@ class Snapshot_t
   HBTReal * ParticleMass;
   unordered_map <HBTInt, HBTInt> ParticleHash;//TODO: optimize this
   
-  void SetSnapshotIndex(Parameter_t &param, int snapshot_index);
   void LoadId(Parameter_t & param);
   void LoadPosition(Parameter_t & param);
   void LoadVelocity(Parameter_t & param);
@@ -62,12 +60,11 @@ class Snapshot_t
   size_t ReadBlock(FILE *fp, void *buf, const size_t n_read, const size_t n_skip_before, const size_t n_skip_after);
   void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension, bool is_massblock);
 public:
-  Snapshot_t()
+  Snapshot_t(): SnapshotNumber_t()
   {
 	NeedByteSwap=false;
 	IntTypeSize=0;
 	RealTypeSize=0;
-	SnapshotIndex=SpecialConst::NullSnapshotId;
 	NumberOfParticles=0;
 	ParticleId=NULL;
 	ComovingPosition=NULL;
@@ -78,10 +75,7 @@ public:
   void ClearParticleHash();
   HBTInt GetParticleIndex(HBTInt particle_id);
   void GetFileName(Parameter_t &param, int ifile, string &filename);
-  void FormatSnapshotId(std::stringstream &ss);
   void Clear();
-  int GetSnapshotIndex();
-  int GetSnapshotId();
   HBTInt GetNumberOfParticles();
   HBTInt GetParticleId(HBTInt index);
   HBTxyz &GetComovingPosition(HBTInt index);
@@ -92,28 +86,6 @@ public:
 inline HBTInt Snapshot_t::GetParticleIndex(HBTInt particle_id)
 {
   return ParticleHash[particle_id];
-}
-inline int Snapshot_t::GetSnapshotIndex()
-{
-  return SnapshotIndex;
-}
-inline int Snapshot_t::GetSnapshotId()
-{
-  return SnapshotId;
-}
-inline void Snapshot_t::FormatSnapshotId(stringstream& ss)
-{
-  ss << std::setw(3) << std::setfill('0') << SnapshotId;
-}
-inline void Snapshot_t::SetSnapshotIndex(Parameter_t & param, int snapshot_index)
-{
-  assert(snapshot_index>=param.MinSnapshotIndex&&snapshot_index<=param.MaxSnapshotIndex);
-//   assert(SpecialConst::NullSnapshotId!=snapshot_index);
-  SnapshotIndex=snapshot_index; 
-  if(param.SnapshotIdList.empty())
-	SnapshotId=SnapshotIndex;
-  else
-	SnapshotId=param.SnapshotIdList[SnapshotIndex];
 }
 inline HBTInt Snapshot_t::GetNumberOfParticles()
 {

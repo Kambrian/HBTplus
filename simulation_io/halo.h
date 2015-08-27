@@ -5,23 +5,27 @@
 #include <new>
 
 #include "../datatypes.h"
-// #include "snapshot.h"
+#include "snapshot_number.h"
 
-class Halo_t
+class HaloSnapshot_t: public SnapshotNumber_t
 {
+  template <class PIDtype_t>
+  void LoadGroupV3(Parameter_t &param, PIDtype_t dummy);
+  void GetFileNameFormat(Parameter_t &param, string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 public:
   HBTInt NumberOfHaloes;
+  HBTInt NumberOfParticles;
   HBTInt * ParticleList;
   HBTInt * HaloLength;
   HBTInt * HaloOffset;
-  Halo_t()
+  HaloSnapshot_t()
   {
 	ParticleList=NULL;
   }
-  void Load();
+  void Load(Parameter_t &param, int snapshot_index);
   void Clear();
-  void GetFileName(Parameter_t &param, int ifile, string &filename);
 };
+
 class TrackParticle_t
 {
 public:
@@ -48,6 +52,11 @@ public:
   {
 	TrackId=track_id;
   }
+};
+class Halo_t
+{
+public:
+  List_t <HBTInt> Particles;
 };
 class SubHalo_t: public Halo_t, public TrackParticle_t
 {

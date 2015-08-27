@@ -7,6 +7,8 @@ using namespace std;
 #include <assert.h>
 #include <cstdlib>
 #include <cstdio>
+#include <glob.h>
+#include <climits>
 
 #include "../mymath.h"
 #include "halo.h"
@@ -14,284 +16,292 @@ using namespace std;
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
 
-inline size_t SkipBlock(FILE *fp, bool NeedByteSwap)
+struct GroupV4Header_t
 {
-  int blocksize,blocksize2;
+  int Ngroups;
+  int Nsubgroups;
+  int Nids;
+  int TotNgroups;
+  int TotNsubgroups;
+  int TotNids;
+  int num_files;//long? no, but padding may exist.
+  double time;
+  double redshift;
+  double HubbleParam;
+  double BoxSize;
+  double Omega0;
+  double OmegaLambda;
+  int flag_doubleprecision;//long? no, but padding may exist
+};
+static bool GetGroupFileByteOrder(const char *filename, const int FileCounts, const int GroupFileVariant)
+{
+  /* to check whether byteswap is needed, return true if yes, false if no, exit if error*/
+  int Nfiles,n,ns;
+  long offset;
+  FILE *fp;
   
-  ReadBlockSize(blocksize);	  
-  fseek(fp, blocksize, SEEK_CUR);
-  ReadBlockSize(blocksize2);
-  assert(blocksize==blocksize2);
-  return blocksize;
+  if(GROUP_FORMAT_GADGET4==GroupFileVariant)
+	n=sizeof(GroupV4Header_t);
+  else
+	n=FileCounts;
+  
+  ns=n;
+  swap_Nbyte(&ns,1,sizeof(ns));	
+  
+  myfopen(fp,filename,"r");
+  switch(GroupFileVariant)
+  {
+	case GROUP_FORMAT_GADGET4:
+	  offset=0;
+	  break;
+	case GROUP_FORMAT_GADGET3_INT:
+	case GROUP_FORMAT_GADGET3_LONG:
+	  offset=5*4;  //3*int+1*longlong
+	  break;
+	default:
+	  offset=3*4;  //3*int
+  }  
+  fseek(fp,offset,SEEK_SET);
+  fread(&Nfiles,sizeof(int),1,fp);
+  fclose(fp);
+  
+  if(Nfiles==n) return false;
+  if(Nfiles==ns) return true;
+  
+  cerr<<"endianness check failed for: "<<filename<<", file format not expected:"<<Nfiles<<';'<<n<<';'<<ns<<endl;
+  exit(1);
 }
 
-void Halo_t::GetFileName(Parameter_t &param, int ifile, string &filename)
+void HaloSnapshot_t::GetFileNameFormat(Parameter_t &param, string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap)
 {
-  FILE *fp;
-  char buf[1024];
-  
-  sprintf(buf,"%s/snapdir_%03d/%s_%03d.%d",param.SnapshotPath.c_str(),SnapshotId,param.SnapshotFileBase.c_str(),SnapshotId,ifile);
-  if(ifile==0)
-	if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d",param.SnapshotPath.c_str(),param.SnapshotFileBase.c_str(),SnapshotId); //try the other convention
-  if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d.%d",param.SnapshotPath.c_str(),param.SnapshotFileBase.c_str(),SnapshotId,ifile); //try the other convention
-  if(!file_exist(buf)) sprintf(buf,"%s/%d/%s.%d",param.SnapshotPath.c_str(),SnapshotId,param.SnapshotFileBase.c_str(),ifile);//for BJL's RAMSES output
-  if(!file_exist(buf))
+  IsSubFile=false;
+  FileCounts=1;
+  char buf[1024], pattern[1024], basefmt[1024], fmt[1024];
+  const int ifile=0;
+  sprintf(basefmt, "%s/groups_%03d/subhalo_%%s_%03d",param.HaloPath.c_str(),SnapshotId,SnapshotId);
+  sprintf(fmt, "%s.%%d", basefmt);
+  sprintf(buf, fmt, "tab", ifile);
+  if(file_exist(buf))
   {
-	cerr<<"Failed to find a snapshot file at "<<buf<<endl;
-	exit(1);
+	IsSubFile=true;
+	sprintf(pattern, "%s.*", basefmt);
+	sprintf(pattern, pattern, "tab");
+	FileCounts=count_pattern_files(pattern);
+	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	return;
   }
-  filename=buf;
+  
+  sprintf(basefmt, "%s/groups_%03d/group_%%s_%03d",param.HaloPath.c_str(),SnapshotId,SnapshotId);
+  sprintf(fmt, "%s.%%d", basefmt);
+  sprintf(buf, fmt, "tab", ifile);
+  if(file_exist(buf))
+  {
+	sprintf(pattern, "%s.*", basefmt);
+	sprintf(pattern, pattern, "tab");
+	FileCounts=count_pattern_files(pattern);
+	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	return;
+  }
+  
+  sprintf(fmt, "%s/subhalo_%%s_%03d",param.HaloPath.c_str(),SnapshotId);
+  sprintf(buf, fmt, "tab");
+  if(file_exist(buf))
+  {
+	IsSubFile=true;
+	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	return;
+  }
+  
+  sprintf(fmt, "%s/group_%%s_%03d",param.HaloPath.c_str(),SnapshotId);
+  sprintf(buf, fmt, "tab");
+  if(file_exist(buf))
+  {
+	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	return;
+  }
+  
+  // 	return 0;
+  cerr<<"Error: no group files found under "<<param.HaloPath<<" at snapshot "<<SnapshotId<<endl;
+  exit(1);
 }
-int find_group_file(HBTInt Nsnap, char *GrpPath, int *grpfile_type)
+
+void HaloSnapshot_t::Load(Parameter_t &param, int snapshot_index)
 {
-  int i=0;
-  char buf[1024],pattern[1024];
-    
-  sprintf(buf, "%s/groups_%03d/subhalo_ids_%03d.%d",GrpPath,(int)Nsnap,(int)Nsnap,(int)i);
-  if(try_readfile(buf))
+  SetSnapshotIndex(param, snapshot_index);
+  switch(param.GroupFileVariant)
   {
-	*grpfile_type=1;
-	sprintf(pattern, "%s/groups_%03d/subhalo_tab_%03d.*",GrpPath,(int)Nsnap,(int)Nsnap);
-	return count_pattern_files(pattern);
+	case GROUP_FORMAT_GADGET3_INT:
+	  int i;
+	  LoadGroupV3(param, i);
+	  break;
+	case GROUP_FORMAT_GADGET3_LONG:
+	  long j;
+	  LoadGroupV3(param, j);
+	  break;
+	default:
+	  cerr<<"GroupFileVariant="<<param.GroupFileVariant<<" not implemented yet.\n";
+	  exit(1);
   }
-  
-  sprintf(buf, "%s/groups_%03d/group_tab_%03d.%d",GrpPath,(int)Nsnap,(int)Nsnap,(int)i);
-  if(try_readfile(buf))
-  {
-	*grpfile_type=2;
-	sprintf(pattern, "%s/groups_%03d/group_tab_%03d.*",GrpPath,(int)Nsnap,(int)Nsnap);
-	return count_pattern_files(pattern);
-  }
-  
-  sprintf(buf, "%s/subhalo_tab_%03d",GrpPath,(int)Nsnap);
-  if(try_readfile(buf))
-  {
-	  *grpfile_type=3;
-	  return 1;
-  }
-  
-  sprintf(buf, "%s/group_tab_%03d",GrpPath,(int)Nsnap);
-  if(try_readfile(buf))
-  {
-	*grpfile_type=4;
-	return 1;
-  }
-  
-  return 0; //0 files matching
 }
-void load_group_catalogue_v3(HBTInt Nsnap,CATALOGUE *Cat,char *GrpPath)
-{//PGADGET-3's subfind format
+
+void HaloSnapshot_t::Clear()
+{
+  delete [] ParticleList;
+  delete [] HaloLength;
+  delete [] HaloOffset;
+  NumberOfHaloes=0;
+  NumberOfParticles=0;
+}
+
+template <class PIDtype_t>
+void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
+{
   FILE *fd;
   char buf[1024];
-  int Ngroups,TotNgroups,Nids,NFiles, FileCounts;
-  long long i,Nload,TotNids;
-  int ByteOrder,grpfile_type;
+  int *Len, *Offset;
+  int Ngroups, TotNgroups, Nids, NFiles;
+  long long TotNids;
+  bool NeedByteSwap;
   
-struct 
-{
-int *Len;
-int *Offset;
-IDatInt *PID; 
-}ICat;
+  string filename_format;
+  bool IsSubFile;
+  int FileCounts;
+  GetFileNameFormat(param, filename_format, FileCounts, IsSubFile, NeedByteSwap);
   
-  	#ifdef SNAPLIST
-	Nsnap=snaplist[Nsnap];
-	#endif
-
-  Nload=0;
-  FileCounts=find_group_file(Nsnap, GrpPath, &grpfile_type);
-  if(!FileCounts) 
+  long long Nload=0;  
+  for(int iFile=0;iFile<FileCounts;iFile++)
   {
-	fprintf(logfile, "Error: no group files found under %s at snapshot %d\n", GrpPath, Nsnap);
-	exit(1);
-  }
-  
-  for(i=0;i<FileCounts;i++)
-  {
-	switch(grpfile_type)
+	if(FileCounts>1)
+	  sprintf(buf, filename_format.c_str(), "tab", iFile);
+	else
+	  sprintf(buf, filename_format.c_str(), "tab");
+		
+	myfopen(fd,buf,"r");
+	myfread(&Ngroups, sizeof(Ngroups), 1, fd);
+	myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
+	myfread(&Nids, sizeof(Nids), 1, fd);
+	myfread(&TotNids,sizeof(TotNids),1,fd);
+	myfread(&NFiles, sizeof(NFiles), 1, fd);
+	if(IsSubFile)
 	{
-	  case 1:
-		sprintf(buf, "%s/groups_%03d/subhalo_tab_%03d.%d",GrpPath,(int)Nsnap,(int)Nsnap,(int)i);
-		break;
-	  case 2:
-		sprintf(buf, "%s/groups_%03d/group_tab_%03d.%d",GrpPath,(int)Nsnap,(int)Nsnap,(int)i);
-		break;
-	  case 3:
-		sprintf(buf, "%s/subhalo_tab_%03d",GrpPath,(int)Nsnap);
-		break;
-	  case 4:
-		sprintf(buf, "%s/group_tab_%03d",GrpPath,(int)Nsnap);
-		break;
-	  default:
-		fprintf(logfile, "Error: wrong grpfile_type=%d at snap %d\n", grpfile_type, Nsnap);
+	  int Nsub,TotNsub;
+	  myfread(&Nsub,sizeof(int),1,fd);
+	  myfread(&TotNsub,sizeof(int),1,fd);
+	}
+	if(FileCounts!=NFiles)
+	{
+	  fprintf(stderr,"error: number of grpfiles specified not the same as stored: %d,%d\n for file %s\n",
+			  FileCounts,NFiles,buf);
+	  fflush(stderr);
+	  exit(1);
+	}
+	
+	if(0==iFile)
+	{
+	  NumberOfHaloes=TotNgroups;
+	  NumberOfParticles=TotNids;
+	  if(sizeof(HBTInt)==4 && TotNids>INT_MAX)
+	  {
+		fprintf(stderr,"error: TotNids larger than HBTInt can hold! %lld\n",TotNids);
 		exit(1);
+	  }
+	  fprintf(stdout,"Snap=%d (%d)  TotNids=%ld  TotNgroups=%d  NFiles=%d\n", SnapshotIndex, SnapshotId, (long)NumberOfParticles, (int)NumberOfHaloes, NFiles);
+	  
+	  Len=new int[NumberOfHaloes];
+	  Offset=new int[NumberOfHaloes];
 	}
 	
-  ByteOrder=check_grpcat_byteorder(buf, FileCounts);
-  	
-  myfopen(fd,buf,"r");
-
-  myfread(&Ngroups, sizeof(int), 1, fd);
-  myfread(&TotNgroups, sizeof(int), 1, fd);
-  Cat->Ngroups=TotNgroups;
-  myfread(&Nids, sizeof(int), 1, fd);
-  myfread(&TotNids,sizeof(long long),1,fd);
-  #ifndef HBT_INT8
-  if(TotNids>INT_MAX)
-  {
-	  printf("error: TotNids larger than HBTInt can hold! %lld\n",TotNids);
-	  exit(1);
+	myfread(Len+Nload, sizeof(int), Ngroups, fd);
+	myfread(Offset+Nload, sizeof(int), Ngroups, fd);
+	if(feof(fd))
+	{
+	  fprintf(stderr,"error:End-of-File in %s\n",buf);
+	  fflush(stderr);exit(1);  
+	}
+	Nload+=Ngroups;
+	fclose(fd);
   }
-  #endif
-  Cat->Nids=TotNids;
-  myfread(&NFiles, sizeof(int), 1, fd);
- 
-  if(1==grpfile_type||3==grpfile_type)
+  if(Nload!=NumberOfHaloes)
   {
-  int Nsub,TotNsub;
-  myfread(&Nsub,sizeof(int),1,fd);
-  myfread(&TotNsub,sizeof(int),1,fd);
+	fprintf(stderr,"error:Num groups loaded not match: %lld,"HBTIFMT"\n",Nload,NumberOfHaloes);
+	fflush(stderr);exit(1);
   }
-  
-  if(FileCounts!=NFiles)
-	  {
-		  fprintf(logfile,"error: number of grpfiles specified not the same as stored: %d,%d\n for file %s\n",
-		  FileCounts,(int)NFiles,buf);
-		  fflush(logfile);
-		  exit(1);
-	  }
- 
-  if(0==i)
-  fprintf(logfile,"Snap="HBTIFMT"  Ngroups=%d  Nids=%d  TotNgroups=%d  NFiles=%d\n", Nsnap, Ngroups, Nids, (int)(Cat->Ngroups), NFiles);
-  
-  if(0==i)
+  if(typeid(HBTInt)==typeid(int))
   {
-  ICat.Len= mymalloc(sizeof(int)*Cat->Ngroups);
-  ICat.Offset=mymalloc(sizeof(int)*Cat->Ngroups);
+	HaloLength=(HBTInt *)Len;
+	HaloOffset=(HBTInt *)Offset;
+  }
+  else
+  {
+	HaloLength=new HBTInt[NumberOfHaloes];
+	HaloOffset=new HBTInt[NumberOfHaloes];
+	for(int i=0;i<NumberOfHaloes;i++)
+	{
+	  HaloLength[i]=Len[i];
+	  HaloOffset[i]=Offset[i];
+	}
+	delete [] Len;
+	delete [] Offset;
   }
   
-  myfread(ICat.Len+Nload, sizeof(int), Ngroups, fd);
-  myfread(ICat.Offset+Nload, sizeof(int), Ngroups, fd);
-  if(feof(fd))
+  PIDtype_t *PID=new PIDtype_t[NumberOfParticles];
+  
+  Nload=0;  
+  for(int iFile=0;iFile<FileCounts;iFile++)
   {
-	fprintf(logfile,"error:End-of-File in %s\n",buf);
-	fflush(logfile);exit(1);  
-  }
-  Nload+=Ngroups;
-  fclose(fd);
-  }
-  if(Nload!=Cat->Ngroups)
-  {
-	  fprintf(logfile,"error:Num groups loaded not match: %lld,"HBTIFMT"\n",Nload,Cat->Ngroups);
-	  fflush(logfile);exit(1);
+	if(FileCounts>1)
+	  sprintf(buf, filename_format.c_str(), "ids", iFile);
+	else
+	  sprintf(buf, filename_format.c_str(), "ids");
+	
+	myfopen(fd,buf,"r");
+	myfread(&Ngroups, sizeof(Ngroups), 1, fd);
+	myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
+	myfread(&Nids, sizeof(Nids), 1, fd);
+	myfread(&TotNids,sizeof(TotNids),1,fd);
+	myfread(&NFiles, sizeof(NFiles), 1, fd);
+	//file offset:
+	int dummy;
+	myfread(&dummy,sizeof(int),1,fd);
+	
+	myfread(PID+Nload, sizeof(PIDtype_t), Nids, fd);
+	if(feof(fd))
+	{
+	  fprintf(stderr,"error:End-of-File in %s\n",buf);
+	  fflush(stderr);exit(1);  
+	}
+	Nload+=Nids;
+	fclose(fd);
   }
   
-  ICat.PID=mymalloc(sizeof(IDatInt)*Cat->Nids);
-  Cat->ID2Halo=mymalloc(sizeof(HBTInt)*NP_DM);//consider move this out.............
-  Nload=0;
-  for(i=0;i<FileCounts;i++)
+  if(Nload!=NumberOfParticles)
   {
-  switch(grpfile_type)
-  {
-  case 1:
-	sprintf(buf, "%s/groups_%03d/subhalo_ids_%03d.%d",GrpPath,(int)Nsnap,(int)Nsnap,(int)i);
-	break;
-  case 2:
-	sprintf(buf, "%s/groups_%03d/group_ids_%03d.%d",GrpPath,(int)Nsnap,(int)Nsnap,(int)i);
-	break;
-  case 3:
-	sprintf(buf, "%s/subhalo_ids_%03d",GrpPath,(int)Nsnap);
-	break;
-  case 4:
-	sprintf(buf, "%s/group_ids_%03d",GrpPath,(int)Nsnap);
-  break;
-  default:
-	fprintf(logfile,"error: grpfile_type not assigned? %s\n",buf);
+	cerr<<"error:Number of  group particles loaded not match: "<<Nload<<','<<NumberOfParticles<<endl;
 	exit(1);
   }
-  ByteOrder=check_grpcat_byteorder(buf, FileCounts);
-  myfopen(fd,buf,"r");
-
-  myfread(&Ngroups, sizeof(int), 1, fd);
-  myfread(&TotNgroups, sizeof(int), 1, fd);
-  Cat->Ngroups=TotNgroups;
-  myfread(&Nids, sizeof(int), 1, fd);
-  myfread(&TotNids,sizeof(long long),1,fd);
-  #ifndef HBT_INT8
-  if(TotNids>INT_MAX)
+  
+  if(param.ParticleIdRankStyle)
   {
-	  printf("error: TotNids larger than HBTInt can hold! %lld\n",TotNids);
-	  exit(1);
-  }
-  #endif
-  Cat->Nids=TotNids;
-  myfread(&NFiles, sizeof(int), 1, fd);
-  //file offset:
-  int dummy;
-  myfread(&dummy,sizeof(int),1,fd);
-
-  
-  myfread(ICat.PID+Nload, sizeof(IDatInt), Nids, fd);
-  if(feof(fd))
+	cerr<<"ParticleIdRankStyle not implemented for group files\n";
+	exit(1);
+  }else
   {
-	fprintf(logfile,"error:End-of-File in %s\n",buf);
-	fflush(logfile);exit(1);  
-  }
-  Nload+=Nids;
-  fclose(fd);
-	}
-	
-  if(Nload!=Cat->Nids)
-  {
-	  fprintf(logfile,"error:Num grpparticles loaded not match: %lld,%lld\n",Nload,(long long)Cat->Nids);
-	  fflush(logfile);
-	  exit(1);
-  }
-  
-  
-#ifndef HBT_INT8
-	  Cat->Len=ICat.Len;
-	  Cat->Offset=ICat.Offset;
-#else
-	  Cat->Len=mymalloc(sizeof(HBTInt)*Cat->Ngroups);
-	  Cat->Offset=mymalloc(sizeof(HBTInt)*Cat->Ngroups);
-	  for(i=0;i<Cat->Ngroups;i++)
-	  {
-		  Cat->Len[i]=ICat.Len[i];
-		  Cat->Offset[i]=ICat.Offset[i];
-	  }
-	  myfree(ICat.Len);
-	  myfree(ICat.Offset);
-#endif
-  
-  #ifdef HBTPID_RANKSTYLE
-  IDatInt *PIDs,*p;  
-  PIDs=load_PIDs_Sorted();
-  Cat->PIDorIndex=mymalloc(sizeof(HBTInt)*Cat->Nids);
-  for(i=0;i<Cat->Nids;i++)
-  {	  
-	p=bsearch(&(ICat.PID[i]),PIDs,NP_DM,sizeof(IDatInt),comp_IDatInt);
-	Cat->PIDorIndex[i]=p-PIDs;
-  }
-  myfree(PIDs);
-  myfree(ICat.PID);
-  #else
-#ifdef SAME_INTTYPE
-	  Cat->PIDorIndex=ICat.PID;
-#else
-	  Cat->PIDorIndex=mymalloc(sizeof(HBTInt)*Cat->Nids);
-	  for(i=0;i<Cat->Nids;i++)
-	  Cat->PIDorIndex[i]=ICat.PID[i];
-	  myfree(ICat.PID);
-#endif 
-  #endif
-  
-	for(i=1;i<Cat->Ngroups;i++)
+	if(typeid(HBTInt)==typeid(PIDtype_t))
+	  ParticleList=(HBTInt *)PID;
+	else
 	{
-		if(Cat->Len[i]>Cat->Len[i-1])
-		{
-		printf("warning: groups not sorted with mass\n");
-		}
+	  ParticleList=new HBTInt[NumberOfParticles];
+	  for(HBTInt i=0;i<NumberOfParticles;i++)
+		  ParticleList[i]=PID[i];
+	  delete [] PID;
 	}
-	
+  }
+  for(int i=1;i<NumberOfHaloes;i++)
+  {
+	if(HaloLength[i]>HaloLength[i-1])
+	{
+	  fprintf(stderr, "warning: groups not sorted with mass\n");
+	  break;
+	}
+  }
 }	

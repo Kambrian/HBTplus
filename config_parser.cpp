@@ -20,7 +20,9 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(BoxSize,5)
 #undef TrySetPar		
 #define TrySetPar(var) if(name==#var){ ss>>var; cout<<#var<<" = "<<var<<endl;}	
+  else TrySetPar(MinSnapshotIndex)
   else TrySetPar(MinNumPartOfSub)
+  else TrySetPar(GroupFileVariant)
   else TrySetPar(MassInMsunh)
   else TrySetPar(LengthInMpch)
   else TrySetPar(VelInKmS)
