@@ -1,7 +1,7 @@
-EXE=snapshot
+EXE=snapshot halo
 default: $(EXE)
 include ../Makefile.inc
 
-snapshot: CXXFLAGS+=-DTEST_SIMU_IO -g -gdwarf-2
-snapshot: ../config_parser.o ../mymath.o
+$(EXE): CXXFLAGS+=-DTEST_SIMU_IO -g -gdwarf-2
+$(EXE): ../config_parser.o ../mymath.o
 

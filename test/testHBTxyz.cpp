@@ -6,7 +6,7 @@ class XYZ
 {
   std::array<T,3> data;
 public:
-  XYZ(T x, T y, T z) //:data{x,y,z}
+  XYZ(T x=0, T y=0, T z=0) //:data{x,y,z}
   {
 	data[0]=x;
 	data[1]=y;
@@ -52,5 +52,11 @@ int main()
   std::cout<<y<<std::endl;
   y[0]=0.;
   std::cout<<x<<y<<z<<b<<"\n";
+  std::cout<<"loop test:\n";
+  for(int i=0;i<5;i++)
+  {
+	XYZ <float> x;
+	std::cout<<i<<": ";
+  }
   return 0;
 }

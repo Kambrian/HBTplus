@@ -80,7 +80,7 @@ struct Particle_t
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
 };
-
+//TODO: differentiate between clean and dirty list, or initiate and follow list.
 template <class T>
 class List_t
 { 
@@ -95,6 +95,10 @@ public:
   }
   List_t(const List_t &l): N(l.N), Data(l.Data)
   {
+  }
+  List_t(HBTInt n): N(n)
+  {
+	Data=new T[n];
   }
   T & operator [](HBTInt index)
   {

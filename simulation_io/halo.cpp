@@ -56,10 +56,10 @@ static bool GetGroupFileByteOrder(const char *filename, const int FileCounts, co
 	  break;
 	case GROUP_FORMAT_GADGET3_INT:
 	case GROUP_FORMAT_GADGET3_LONG:
-	  offset=5*4;  //3*int+1*longlong
+	  offset=3*sizeof(int)+sizeof(long long);  
 	  break;
 	default:
-	  offset=3*4;  //3*int
+	  offset=3*sizeof(int); 
   }  
   fseek(fp,offset,SEEK_SET);
   fread(&Nfiles,sizeof(int),1,fp);
@@ -84,10 +84,11 @@ void HaloSnapshot_t::GetFileNameFormat(Parameter_t &param, string &format, int &
   if(file_exist(buf))
   {
 	IsSubFile=true;
-	sprintf(pattern, "%s.*", basefmt);
-	sprintf(pattern, pattern, "tab");
+	sprintf(pattern, basefmt, "tab");
+	strcat(pattern, ".*");
 	FileCounts=count_pattern_files(pattern);
 	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	format=fmt;
 	return;
   }
   
@@ -96,10 +97,11 @@ void HaloSnapshot_t::GetFileNameFormat(Parameter_t &param, string &format, int &
   sprintf(buf, fmt, "tab", ifile);
   if(file_exist(buf))
   {
-	sprintf(pattern, "%s.*", basefmt);
-	sprintf(pattern, pattern, "tab");
+	sprintf(pattern, basefmt, "tab");
+	strcat(pattern, ".*");
 	FileCounts=count_pattern_files(pattern);
 	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	format=fmt;
 	return;
   }
   
@@ -109,6 +111,7 @@ void HaloSnapshot_t::GetFileNameFormat(Parameter_t &param, string &format, int &
   {
 	IsSubFile=true;
 	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	format=fmt;
 	return;
   }
   
@@ -117,6 +120,7 @@ void HaloSnapshot_t::GetFileNameFormat(Parameter_t &param, string &format, int &
   if(file_exist(buf))
   {
 	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	format=fmt;
 	return;
   }
   
@@ -146,20 +150,19 @@ void HaloSnapshot_t::Load(Parameter_t &param, int snapshot_index)
 
 void HaloSnapshot_t::Clear()
 {
-  delete [] ParticleList;
-  delete [] HaloLength;
-  delete [] HaloOffset;
-  NumberOfHaloes=0;
-  NumberOfParticles=0;
+  AllParticles.Clear();
+  Halos.Clear();
 }
 
 template <class PIDtype_t>
 void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
+//the value of dummy is irrelevant, only its type is used.
 {
   FILE *fd;
   char buf[1024];
   int *Len, *Offset;
   int Ngroups, TotNgroups, Nids, NFiles;
+  HBTInt NumberOfParticles,NumberOfHaloes;
   long long TotNids;
   bool NeedByteSwap;
   
@@ -205,10 +208,10 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
 		fprintf(stderr,"error: TotNids larger than HBTInt can hold! %lld\n",TotNids);
 		exit(1);
 	  }
-	  fprintf(stdout,"Snap=%d (%d)  TotNids=%ld  TotNgroups=%d  NFiles=%d\n", SnapshotIndex, SnapshotId, (long)NumberOfParticles, (int)NumberOfHaloes, NFiles);
+	  fprintf(stdout,"Snap=%d (%d)  TotNids=%lld  TotNgroups=%d  NFiles=%d\n", SnapshotIndex, SnapshotId, TotNids, TotNgroups, NFiles);
 	  
-	  Len=new int[NumberOfHaloes];
-	  Offset=new int[NumberOfHaloes];
+	  Len=new int[TotNgroups];
+	  Offset=new int[TotNgroups];
 	}
 	
 	myfread(Len+Nload, sizeof(int), Ngroups, fd);
@@ -223,25 +226,8 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
   }
   if(Nload!=NumberOfHaloes)
   {
-	fprintf(stderr,"error:Num groups loaded not match: %lld,"HBTIFMT"\n",Nload,NumberOfHaloes);
-	fflush(stderr);exit(1);
-  }
-  if(typeid(HBTInt)==typeid(int))
-  {
-	HaloLength=(HBTInt *)Len;
-	HaloOffset=(HBTInt *)Offset;
-  }
-  else
-  {
-	HaloLength=new HBTInt[NumberOfHaloes];
-	HaloOffset=new HBTInt[NumberOfHaloes];
-	for(int i=0;i<NumberOfHaloes;i++)
-	{
-	  HaloLength[i]=Len[i];
-	  HaloOffset[i]=Offset[i];
-	}
-	delete [] Len;
-	delete [] Offset;
+	cerr<<"error:Num groups loaded not match: "<<Nload<<','<<NumberOfHaloes<<"\n";
+	exit(1);
   }
   
   PIDtype_t *PID=new PIDtype_t[NumberOfParticles];
@@ -284,24 +270,43 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
   {
 	cerr<<"ParticleIdRankStyle not implemented for group files\n";
 	exit(1);
-  }else
+  } else
   {
 	if(typeid(HBTInt)==typeid(PIDtype_t))
-	  ParticleList=(HBTInt *)PID;
+	  AllParticles=ParticleList_t(NumberOfParticles, (HBTInt *)PID);
 	else
 	{
-	  ParticleList=new HBTInt[NumberOfParticles];
+	  AllParticles=ParticleList_t(NumberOfParticles);
 	  for(HBTInt i=0;i<NumberOfParticles;i++)
-		  ParticleList[i]=PID[i];
+		  AllParticles[i]=PID[i];
 	  delete [] PID;
 	}
   }
+  
+  Halos=HaloList_t(NumberOfHaloes);
+  for(int i=0;i<NumberOfHaloes;i++)
+	Halos[i].Particles=ParticleList_t(Len[i], &AllParticles[Offset[i]]);
   for(int i=1;i<NumberOfHaloes;i++)
   {
-	if(HaloLength[i]>HaloLength[i-1])
+	if(Len[i]>Len[i-1])
 	{
 	  fprintf(stderr, "warning: groups not sorted with mass\n");
 	  break;
 	}
   }
 }	
+
+#ifdef TEST_SIMU_IO
+#include "../config_parser.h"
+
+int main(int argc, char **argv)
+{
+  HBTConfig.ParseConfigFile(argv[1]);
+  HaloSnapshot_t halo;
+  halo.Load(HBTConfig, HBTConfig.MaxSnapshotIndex);
+  cout<<halo.Halos.Size()<<";"<<halo.AllParticles.Size()<<endl;
+  cout<<halo.Halos[10].Particles.Size()<<endl;
+  cout<<halo.Halos[10].Particles[0]<<endl;
+  return 0;
+}
+#endif
