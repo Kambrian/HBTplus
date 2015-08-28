@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS+=-std=c++11
+CXXFLAGS+=-std=c++0x
 CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8
 LINK.o=$(LINK.cpp)
 

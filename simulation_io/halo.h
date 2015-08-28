@@ -7,32 +7,28 @@
 #include "../datatypes.h"
 #include "snapshot_number.h"
 
-typedef List_t <HBTInt> ParticleList_t;
-
 class Halo_t
-{
+{  
+  typedef ShallowList_t <HBTInt> ParticleShallowList_t;
 public:
-  ParticleList_t Particles;
+  ParticleShallowList_t Particles;
 };
-typedef List_t <Halo_t> HaloList_t;
 
 class HaloSnapshot_t: public SnapshotNumber_t
-{
+{  
+  typedef DeepList_t <HBTInt> ParticleList_t;
+  typedef DeepList_t <Halo_t> HaloList_t;
   template <class PIDtype_t>
   void LoadGroupV3(Parameter_t &param, PIDtype_t dummy);
   void GetFileNameFormat(Parameter_t &param, string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
-  void Clear();//this is called by destructor. never call this manually, otherwise double free.
 public:
   ParticleList_t AllParticles;
   HaloList_t Halos;
   HaloSnapshot_t(): SnapshotNumber_t(), Halos(), AllParticles()
   {
   }
-  ~HaloSnapshot_t()
-  {
-	Clear();
-  }
   void Load(Parameter_t &param, int snapshot_index);
+  void Clear();
 };
 
 class TrackParticle_t

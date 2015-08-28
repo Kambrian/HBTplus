@@ -8,6 +8,7 @@ class XYZ
 public:
   XYZ(T x=0, T y=0, T z=0) //:data{x,y,z}
   {
+	std::cout<<"new\n";
 	data[0]=x;
 	data[1]=y;
 	data[2]=z;

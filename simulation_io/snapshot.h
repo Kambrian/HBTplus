@@ -71,6 +71,10 @@ public:
 	PhysicalVelocity=NULL;
 	ParticleMass=NULL;
   }
+  ~Snapshot_t()
+  {
+	Clear();
+  }
   void FillParticleHash();
   void ClearParticleHash();
   HBTInt GetParticleIndex(HBTInt particle_id);

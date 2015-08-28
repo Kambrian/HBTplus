@@ -149,6 +149,8 @@ void HaloSnapshot_t::Load(Parameter_t &param, int snapshot_index)
 }
 
 void HaloSnapshot_t::Clear()
+/* call this to reset the HaloSnapshot to empty.
+ This is usually not necessary because the destructor will release the memory automatically*/
 {
   AllParticles.Clear();
   Halos.Clear();
@@ -273,19 +275,17 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
   } else
   {
 	if(typeid(HBTInt)==typeid(PIDtype_t))
-	  AllParticles=ParticleList_t(NumberOfParticles, (HBTInt *)PID);
+	  AllParticles.Bind(NumberOfParticles, (HBTInt *)PID);
 	else
 	{
-	  AllParticles=ParticleList_t(NumberOfParticles);
-	  for(HBTInt i=0;i<NumberOfParticles;i++)
-		  AllParticles[i]=PID[i];
+	  AllParticles.Fill(NumberOfParticles, PID);
 	  delete [] PID;
 	}
   }
   
-  Halos=HaloList_t(NumberOfHaloes);
+  Halos.Resize(NumberOfHaloes);
   for(int i=0;i<NumberOfHaloes;i++)
-	Halos[i].Particles=ParticleList_t(Len[i], &AllParticles[Offset[i]]);
+	Halos[i].Particles.Bind(Len[i], &AllParticles[Offset[i]]);
   for(int i=1;i<NumberOfHaloes;i++)
   {
 	if(Len[i]>Len[i-1])

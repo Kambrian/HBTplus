@@ -83,24 +83,16 @@ struct Particle_t
 //TODO: differentiate between clean and dirty list, or initiate and follow list.
 template <class T>
 class List_t
+/* a base class for list; only empty constructor*/
 { 
+protected:  
   HBTInt N;
+  T * Data; //this is only copied. never allocated by itself.
 public:
-  T * Data;
-  List_t(): Data(nullptr)
+  List_t(): N(0), Data(nullptr)
   {
   }
-  List_t(HBTInt n, T *data): N(n), Data(data)
-  {
-  }
-  List_t(const List_t &l): N(l.N), Data(l.Data)
-  {
-  }
-  List_t(HBTInt n): N(n)
-  {
-	Data=new T[n];
-  }
-  T & operator [](HBTInt index)
+  T & operator [](const HBTInt index)
   {
 	return Data[index];
   }
@@ -108,12 +100,80 @@ public:
   {
 	return N;
   }
-  void Clear()//the user is responsible for cleaning up.
+};
+template <class T>
+class ShallowList_t: public List_t <T>
+/* a list whose memory is only a link pointing to already allocated buffer.
+ * It involves no new or delete inside its constructor or destructor*/
+{
+  typedef List_t <T> BaseList_t;
+public:
+  ShallowList_t(): BaseList_t()
   {
-	delete [] Data;
-	N=0;
+  }
+  ShallowList_t(const HBTInt n, T * const data): BaseList_t::N(n), BaseList_t::Data(data)
+  {
+  }
+  ShallowList_t(const ShallowList_t &l): BaseList_t::N(l.N), BaseList_t::Data(l.Data)
+  {
+  }
+  void Bind(HBTInt n, T *data)
+  {
+	BaseList_t::N=n;
+	BaseList_t::Data=data;
   }
 };
-
+template <class T>
+class DeepList_t: public List_t <T>
+/* DeepList_t manages memory actively. automatically allocate memory upon construction;
+ automatically frees memory upon destruction;*/
+{
+typedef List_t <T> BaseList_t;  
+public:
+  DeepList_t(): BaseList_t ()
+  {
+  }
+  template <class U>
+  DeepList_t(const DeepList_t<U> & l)
+  {
+	Fill(l.n, l.Data);
+  }
+  void Resize(const HBTInt n)
+  {
+	if(n!=BaseList_t::N)
+	{
+	  delete [] BaseList_t::Data;
+	  BaseList_t::N=n;
+	  BaseList_t::Data=new T[n];
+	}
+  }
+  template <class U>
+  void Fill(const HBTInt n, U * const data)
+  {
+	Resize(n);
+	for(HBTInt i=0;i<n;i++)
+	  BaseList_t::Data[i]=data[i];
+  }
+  void Bind(const HBTInt n, T * const data)
+  /*bind data to DeepList's internal pointer, instead of copying the data.
+   *Caution: data has to be created with new T[]; otherwise may cause segfault upon destruction. use with care. */
+  {
+	delete [] BaseList_t::Data;
+	BaseList_t::Data=data;
+	BaseList_t::N=n;
+  }
+  void Clear()
+  {
+	delete [] BaseList_t::Data;
+	BaseList_t::Data=nullptr;
+	BaseList_t::N=0;
+  }
+  ~DeepList_t()
+  {
+	delete [] BaseList_t::Data;
+// 	std::cout<<"List cleaned\n";
+// 	BaseList_t::N=0; //no need to do this. the object is out of scope (destroyed) after this is called.
+  }
+};
 #define DATATYPES_INCLUDED
 #endif

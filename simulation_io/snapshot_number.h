@@ -21,8 +21,8 @@ public:
 	SnapshotIndex=SpecialConst::NullSnapshotId;
 	SnapshotId=SpecialConst::NullSnapshotId;
   }
-  ~SnapshotNumber_t()
-  {
+  void Reset()
+  {//reset is not destructon! when destructor is called, the data content no matter matters.
 	SnapshotIndex=SpecialConst::NullSnapshotId;
 	SnapshotId=SpecialConst::NullSnapshotId;
   }

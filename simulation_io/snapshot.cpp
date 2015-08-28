@@ -339,12 +339,16 @@ void Snapshot_t::LoadMass(Parameter_t &param)
 }
 
 void Snapshot_t::Clear()
+/*reset to empty*/
 {
-  ::operator delete(ParticleId);
-  ::operator delete(ComovingPosition);
-  ::operator delete(PhysicalVelocity);
-  ::operator delete(ParticleMass);
-  ParticleHash.clear();
+#define RESET(x) {::operator delete(x);x=nullptr;}
+  RESET(ParticleId);
+  RESET(ComovingPosition);
+  RESET(PhysicalVelocity);
+  RESET(ParticleMass);
+#undef RESET 
+  ParticleHash.clear();//even if you don't do this, the destructor will still clean up the memory.
+//   cout<<NumberOfParticles<<" particles cleared from snapshot "<<SnapshotIndex<<endl;
   NumberOfParticles=0;
 }
 
@@ -355,7 +359,7 @@ void Snapshot_t::FillParticleHash()
   ParticleHash.reserve(NumberOfParticles);
   for(HBTInt i=0;i<NumberOfParticles;i++)
 	ParticleHash[ParticleId[i]]=i;
-  cout<<ParticleHash.bucket_count()<<" buckets used; load factor "<<ParticleHash.load_factor()<<endl;
+//   cout<<ParticleHash.bucket_count()<<" buckets used; load factor "<<ParticleHash.load_factor()<<endl;
 }
 void Snapshot_t::ClearParticleHash()
 {
@@ -375,7 +379,6 @@ int main(int argc, char **argv)
   cout<<snapshot.GetComovingPosition(10)<<endl;
   cout<<snapshot.GetParticleMass(10)<<','<<snapshot.GetParticleMass(100)<<endl;
   cout<<snapshot.GetParticleIndex(snapshot.GetParticleId(10))<<endl;
-  snapshot.Clear();
   return 0;
 }
 #endif
