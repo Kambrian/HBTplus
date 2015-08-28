@@ -6,8 +6,8 @@
 #include <new>
 
 #include "datatypes.h"
-#include "simulation_io/simulation_io.h"
-#include "halo.h"
+#include "simulation_io/snapshot.h"
+#include "simulation_io/halo.h"
 
 class Track
 {

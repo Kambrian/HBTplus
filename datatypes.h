@@ -1,4 +1,3 @@
-/* CAUTION: if your data exceeds SIZET_MAX, there would be problem allocating memory*/
 #ifndef DATATYPES_INCLUDED
 
 #include <iostream>

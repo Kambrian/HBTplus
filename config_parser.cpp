@@ -43,7 +43,7 @@ void Parameter_t::SetParameterValue(const string &line)
 	throw runtime_error(msg.str());
   }
 }
-void Parameter_t::ParseConfigFile(char* param_file)
+void Parameter_t::ParseConfigFile(const char * param_file)
 {
   ifstream ifs;
   ifs.open(param_file);

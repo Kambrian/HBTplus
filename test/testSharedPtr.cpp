@@ -1,5 +1,5 @@
 #include <memory>
-
+#include "../datatypes.h"
 template <class T>
 class SharedList_t
 {
@@ -46,9 +46,9 @@ struct HaloCatalogue
 {  
   SharedList_t <int> * Halos;
   int Nhalos;
-}
+};
 int main()
 {
-  SharedList_t <int> H1(10),H2(5,&(H1[5]),&H1);
+//   SharedList_t <int> H1(10),H2(5,(void *)&(H1[5]),(std::shared_ptr<int>)&H1);
   return 0;
 }

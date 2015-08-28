@@ -54,7 +54,7 @@ public:
 	ParticleIdRankStyle=false;
 	SnapshotIdUnsigned=false;
   }
-  void ParseConfigFile(char * param_file);
+  void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
   void CheckUnsetParameters();
 };
