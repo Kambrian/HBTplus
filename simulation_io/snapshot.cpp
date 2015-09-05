@@ -58,8 +58,7 @@ bool Snapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
 	NeedByteSwap=true;
   else
   {
-	fprintf(stderr,"endianness check failed for header\n file format not expected:%d;%d,%d\n",dummy,headersize,headersize_byteswap);
-	fflush(stderr);
+	cerr<<"endianness check failed for header\n file format not expected:"<<dummy<<" not match headersize "<<headersize<<" or "<<headersize_byteswap<<endl<<flush;
 	exit(1);
   }
   dummy=headersize;
