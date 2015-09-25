@@ -53,12 +53,12 @@ class Snapshot_t: public SnapshotNumber_t
   void LoadPosition(Parameter_t & param);
   void LoadVelocity(Parameter_t & param);
   void LoadMass(Parameter_t & param);
-  void LoadHeader(Parameter_t & param, int ifile);
+  void LoadHeader(Parameter_t & param, int ifile=1);
   bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
   HBTInt ReadNumberOfDMParticles(Parameter_t & param, int ifile);
   size_t SkipBlock(FILE *fp);
-  size_t ReadBlock(FILE *fp, void *buf, const size_t n_read, const size_t n_skip_before, const size_t n_skip_after);
-  void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension, bool is_massblock);
+  size_t ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before=0, const size_t n_skip_after=0);
+  void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
 public:
   Snapshot_t(): SnapshotNumber_t()
   {
@@ -85,7 +85,7 @@ public:
   HBTxyz &GetComovingPosition(HBTInt index);
   HBTxyz &GetPhysicalVelocity(HBTInt index);
   HBTReal GetParticleMass(HBTInt index);
-  void Load(int snapshot_index, Parameter_t & param, bool load_id, bool load_position, bool load_velocity, bool load_mass, bool fill_particle_hash);
+  void Load(Parameter_t & param, int snapshot_index, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true, bool fill_particle_hash=true);
 };
 inline HBTInt Snapshot_t::GetParticleIndex(HBTInt particle_id)
 {
