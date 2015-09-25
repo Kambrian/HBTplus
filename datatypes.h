@@ -103,7 +103,8 @@ public:
 template <class T>
 class ShallowList_t: public List_t <T>
 /* a list whose memory is only a link pointing to already allocated buffer.
- * It involves no new or delete inside its constructor or destructor*/
+ * It involves no new or delete inside its constructor or destructor.
+ * so it is only a "virtual" list.*/
 {
   typedef List_t <T> BaseList_t;
 public:

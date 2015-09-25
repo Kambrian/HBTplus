@@ -23,36 +23,20 @@ int main(int argc, char **argv)
   
   for(int isnap=snapshot_start;isnap<=snapshot_end;isnap++)
   {
-	Snapshot_t snapshot;
+	Snapshot_t partsnap;
 	HaloSnapshot_t halosnap;
-	snapshot.Load(HBTConfig, isnap);
+	partsnap.Load(HBTConfig, isnap);
 	halosnap.Load(HBTConfig, isnap);
-	halosnap.ParticleToIndex(snapshot);
-	subsnap.ParticleToIndex(snapshot);
+	halosnap.ParticleIdToIndex(partsnap);
+	subsnap.ParticleIdToIndex(partsnap);
 	
-	subsnap.rehost(halosnap);
-	subsnap.filter();
+	subsnap.descend_into(halosnap, partsnap);
+	subsnap.refine_particles();
 	
-	subsnap.IndexToParticle();
-	subsnap.save();
+	subsnap.ParticleIndexToId(partsnap);
+	subsnap.Save(HBTConfig);
 // 	subsnap_old=subsnap;
   }
   
   return 0;
-}
-
-void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_start, int &snapshot_end)
-{
-  if(argc<2)
-  {
-	cerr<<"Usage: "<<argv[0]<<" [param_file] <snapshot_start> <snapshot_end>\n";
-	exit(1);
-  }
-  config.ParseConfigFile(argv[1]);
-  if(argc>2)
-	snapshot_start=argv[2];
-  if(argc>3)
-	snapshot_end=argv[3];
-  else
-	snapshot_end=snapshot_start;
 }

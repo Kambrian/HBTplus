@@ -12,7 +12,7 @@ class TrackParticle_t
 {
 public:
   HBTInt TrackId;
-  HBTInt TrackParticleReference;
+  HBTInt TrackParticleId;
   HBTInt SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
   HBTInt SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
@@ -23,15 +23,15 @@ public:
   TrackParticle_t()
   {
 	TrackId=-1;
-	TrackParticleReference=HBTInt();
+	TrackParticleId=HBTInt();
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
   }
-  void SetTrackParticle(const HBTInt reference)
+  void SetTrackParticle(const HBTInt particle_id)
   {
-	TrackParticleReference=reference;
+	TrackParticleId=particle_id;
   }
   void SetTrackId(const HBTInt track_id)
   {
@@ -42,12 +42,16 @@ public:
 class SubHalo_t: public Halo_t, public TrackParticle_t
 {
 public:
+  HBTInt Nbound, Nsrc;
   HBTInt HostHaloId;
   HBTReal RmaxComoving;
   HBTReal VmaxPhysical;
   HBTReal RPoissonComoving;
-  SubHalo_t(): Halo_t(),TrackParticle_t()
+  SubHalo_t(): Halo_t(),TrackParticle_t(), Nbound(0), Nsrc(0)
   {
+  }
+  void unbind()
+  {//TODO
   }
 };
 
@@ -91,6 +95,9 @@ public:
 	for(HBTInt i=0;i<AllParticles.Size();i++)
 	  AllParticles[i]=snapshot.GetParticleId(AllParticles[i]);
   }
+  void descend_into(HaloSnapshot_t &halo_snap, Snapshot_t &part_snap);
+  void refine_particles();
 };
+
 
 #endif

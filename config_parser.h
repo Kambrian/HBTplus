@@ -60,6 +60,7 @@ public:
 };
 
 extern Parameter_t HBTConfig;
+extern void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_start, int &snapshot_end);
 
 inline void trim_leading_garbage(string &s, const string &garbage_list)
 {
@@ -75,4 +76,7 @@ inline void trim_trailing_garbage(string &s, const string &garbage_list)
   if(string::npos!=pos)  
 	s.erase(pos);
 }
+
+
+
 #endif
