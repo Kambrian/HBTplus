@@ -27,10 +27,13 @@ int main(int argc, char **argv)
 	HaloSnapshot_t halosnap;
 	snapshot.Load(HBTConfig, isnap);
 	halosnap.Load(HBTConfig, isnap);
+	halosnap.ParticleToIndex(snapshot);
+	subsnap.ParticleToIndex(snapshot);
 	
 	subsnap.rehost(halosnap);
 	subsnap.filter();
 	
+	subsnap.IndexToParticle();
 	subsnap.save();
 // 	subsnap_old=subsnap;
   }

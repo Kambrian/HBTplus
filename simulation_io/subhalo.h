@@ -43,6 +43,9 @@ class SubHalo_t: public Halo_t, public TrackParticle_t
 {
 public:
   HBTInt HostHaloId;
+  HBTReal RmaxComoving;
+  HBTReal VmaxPhysical;
+  HBTReal RPoissonComoving;
   SubHalo_t(): Halo_t(),TrackParticle_t()
   {
   }
@@ -77,6 +80,16 @@ public:
   {
 	//TODO
 	cout<<"Clean() not implemented yet\n";
+  }
+  void ParticleIdToIndex(Snapshot_t & snapshot)
+  {
+	for(HBTInt i=0;i<AllParticles.Size();i++)
+	  AllParticles[i]=snapshot.GetParticleIndex(AllParticles[i]);
+  }
+  void ParticleIndexToId(Snapshot_t & snapshot)
+  {
+	for(HBTInt i=0;i<AllParticles.Size();i++)
+	  AllParticles[i]=snapshot.GetParticleId(AllParticles[i]);
   }
 };
 

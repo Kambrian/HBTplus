@@ -6,6 +6,7 @@
 
 #include "../datatypes.h"
 #include "snapshot_number.h"
+#include "snapshot.h"
 
 class Halo_t
 {  
@@ -29,6 +30,8 @@ public:
   }
   void Load(Parameter_t &param, int snapshot_index);
   void Clear();
+  void ParticleIdToIndex(Snapshot_t & snapshot);
+  void ParticleIndexToId(Snapshot_t & snapshot);
 };
 
 #endif

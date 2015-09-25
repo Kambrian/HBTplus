@@ -294,7 +294,19 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
 	  break;
 	}
   }
-}	
+}
+
+void HaloSnapshot_t::ParticleIdToIndex(Snapshot_t& snapshot)
+{
+  for(HBTInt i=0;i<AllParticles.Size();i++)
+	AllParticles[i]=snapshot.GetParticleIndex(AllParticles[i]);
+}
+
+void HaloSnapshot_t::ParticleIndexToId(Snapshot_t& snapshot)
+{
+  for(HBTInt i=0;i<AllParticles.Size();i++)
+	AllParticles[i]=snapshot.GetParticleId(AllParticles[i]);
+}
 
 #ifdef TEST_SIMU_IO
 #include "../config_parser.h"
