@@ -22,6 +22,13 @@ void SubHaloSnapshot_t::descend_into(HaloSnapshot_t &halo_snap, Snapshot_t &part
   //alternative: trim particles outside fof
 }
 
+void SubHaloSnapshot_t::decide_centrals()
+{
+  for(HBTInt subid=0;subid<SubHalos.Size();subid++)
+  {//FIXME.............
+  }
+}
+
 void SubHaloSnapshot_t::refine_particles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
   //TODO: ensure the inclusive unbinding is stable (contaminating particles from big subhaloes may hurdle the unbinding

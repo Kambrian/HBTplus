@@ -39,15 +39,17 @@ public:
   }
 };
 
-class SubHalo_t: public Halo_t, public TrackParticle_t
+class SubHalo_t: public TrackParticle_t
 {
+  typedef ShallowList_t <HBTInt> ParticleShallowList_t;
 public:
+  ParticleShallowList_t Particles;
   HBTInt Nbound, Nsrc;
   HBTInt HostHaloId;
   HBTReal RmaxComoving;
   HBTReal VmaxPhysical;
   HBTReal RPoissonComoving;
-  SubHalo_t(): Halo_t(),TrackParticle_t(), Nbound(0), Nsrc(0)
+  SubHalo_t(): TrackParticle_t(), Particles(), Nbound(0), Nsrc(0)
   {
   }
   void unbind()
@@ -96,6 +98,7 @@ public:
 	  AllParticles[i]=snapshot.GetParticleId(AllParticles[i]);
   }
   void descend_into(HaloSnapshot_t &halo_snap, Snapshot_t &part_snap);
+  void decide_centrals();
   void refine_particles();
 };
 
