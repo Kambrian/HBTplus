@@ -139,8 +139,8 @@ void HaloSnapshot_t::Load(Parameter_t &param, int snapshot_index)
 	  LoadGroupV3(param, i);
 	  break;
 	case GROUP_FORMAT_GADGET3_LONG:
-	  long j;
-	  LoadGroupV3(param, j);
+	  long l;
+	  LoadGroupV3(param, l);
 	  break;
 	default:
 	  cerr<<"GroupFileVariant="<<param.GroupFileVariant<<" not implemented yet.\n";
@@ -308,7 +308,16 @@ void HaloSnapshot_t::ParticleIndexToId(Snapshot_t& snapshot)
 	AllParticles[i]=snapshot.GetParticleId(AllParticles[i]);
 }
 
-#ifdef TEST_SIMU_IO
+void HaloSnapshot_t::AverageHaloCoordinates(Snapshot_t& snapshot)
+{
+  for(HBTInt i=0;i<Halos.Size();i++)
+  {
+	snapshot.AveragePosition(Halos[i].CenterOfMassComoving, Halos[i].Particles);
+	snapshot.AverageVelocity(Halos[i].AverageVelocityPhysical, Halos[i].Particles);
+  }
+}
+
+#ifdef TEST_SIMU_IO_halo
 #include "../config_parser.h"
 
 int main(int argc, char **argv)

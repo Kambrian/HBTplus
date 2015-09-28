@@ -13,6 +13,8 @@ class Halo_t
   typedef ShallowList_t <HBTInt> ParticleShallowList_t;
 public:
   ParticleShallowList_t Particles;
+  HBTxyz CenterOfMassComoving;
+  HBTxyz AverageVelocityPhysical;
 };
 
 class HaloSnapshot_t: public SnapshotNumber_t
@@ -32,6 +34,7 @@ public:
   void Clear();
   void ParticleIdToIndex(Snapshot_t & snapshot);
   void ParticleIndexToId(Snapshot_t & snapshot);
+  void AverageHaloCoordinates(Snapshot_t & snapshot);
 };
 
 #endif
