@@ -91,11 +91,11 @@ public:
   List_t(): N(0), Data(nullptr)
   {
   }
-  T & operator [](const HBTInt index)
+  T & operator [](const HBTInt index) const
   {
 	return Data[index];
   }
-  HBTInt Size()
+  HBTInt Size() const
   {
 	return N;
   }
