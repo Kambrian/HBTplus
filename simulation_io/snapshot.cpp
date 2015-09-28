@@ -11,6 +11,7 @@ using namespace std;
 #include "snapshot.h"
 #include "../mymath.h"
 
+
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
 #define SkipPositionBlock SkipBlock
 #define SkipVelocityBlock SkipBlock	 
@@ -152,8 +153,9 @@ void Snapshot_t::LoadHeader(Parameter_t & param, int ifile)
 }
 
 void Snapshot_t::Load(Parameter_t & param, int snapshot_index, bool load_id, bool load_position, bool load_velocity, bool load_mass, bool fill_particle_hash)
-{
+{ 
   SetSnapshotIndex(param, snapshot_index);
+  PeriodicBox=param.PeriodicBoundaryOn;
   LoadHeader(param);
   if(load_id)
   {
@@ -364,6 +366,69 @@ void Snapshot_t::ClearParticleHash()
 {
   ParticleHash.clear();
 }
+#define NEAREST(x, boxhalf, boxsize) (((x)>boxhalf)?((x)-boxsize):(((x)<-boxhalf)?((x)+boxsize):(x)))
+/*this macro can well manipulate boundary condition because 
+* usually a halo is much smaller than boxhalf
+* so that any distance within the halo should be smaller than boxhalf */
+void Snapshot_t::AveragePosition(HBTxyz& CoM, const IndexList_t & Particles)
+/*mass weighted average position*/
+{
+	ParticleIndex_t i,j,np=Particles.Size();
+	double sx[3],origin[3],msum;
+	static bool Periodic=PeriodicBox;
+	static HBTReal boxsize=Header.BoxSize, boxhalf=boxsize/2.;
+	
+	if(0==np) return;
+	
+	sx[0]=sx[1]=sx[2]=0.;
+	msum=0.;
+	if(Periodic)
+	  for(j=0;j<3;j++)
+		origin[j]=GetComovingPosition(Particles[0])[j];
+	
+	for(i=0;i<np;i++)
+	{
+	  HBTReal m=GetParticleMass(Particles[i]);
+	  msum+=m;
+	  for(j=0;j<3;j++)
+	  if(Periodic)
+		  sx[j]+=NEAREST(GetComovingPosition(Particles[i])[j]-origin[j], boxhalf, boxsize)*m;
+	  else
+		  sx[j]+=GetComovingPosition(Particles[i])[j]*m;
+	}
+	
+	for(j=0;j<3;j++)
+	{
+		sx[j]/=msum;
+		if(Periodic) sx[j]+=origin[j];
+		CoM[j]=sx[j];
+	}
+}
+
+void Snapshot_t::AverageVelocity(HBTxyz& CoV, const Snapshot_t::IndexList_t& Particles)
+/*mass weighted average velocity*/
+{
+	ParticleIndex_t i,j,np=Particles.Size();
+	double sv[3],msum;
+	
+	if(0==np) return;
+	
+	sv[0]=sv[1]=sv[2]=0.;
+	msum=0.;
+	
+	for(i=0;i<np;i++)
+	{
+	  HBTReal m=GetParticleMass(Particles[i]);
+	  msum+=m;
+	  for(j=0;j<3;j++)
+		sv[j]+=GetPhysicalVelocity(Particles[i])[j]*m;
+	}
+	
+	for(j=0;j<3;j++)
+	  CoV[j]=sv[j]/msum;
+}
+
+
 
 #ifdef TEST_SIMU_IO
 #include "../config_parser.h"

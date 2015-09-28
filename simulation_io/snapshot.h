@@ -34,20 +34,25 @@ struct SnapshotHeader_t
 };
 class Snapshot_t: public SnapshotNumber_t
 {
+  typedef HBTInt ParticleIndex_t ;
+  typedef HBTInt ParticleId_t;
+  typedef List_t <ParticleIndex_t> IndexList_t;
+  
   SnapshotHeader_t Header;
   
+  bool PeriodicBox;
   bool NeedByteSwap;
   int IntTypeSize;
   int RealTypeSize;
-  vector <HBTInt> NumberOfDMParticleInFiles;
-  vector <HBTInt> OffsetOfDMParticleInFiles;
+  vector <ParticleIndex_t> NumberOfDMParticleInFiles;
+  vector <ParticleIndex_t> OffsetOfDMParticleInFiles;
   
-  HBTInt NumberOfParticles;
-  HBTInt * ParticleId; //better hide this from the user!!!!! 
+  ParticleIndex_t NumberOfParticles;
+  ParticleId_t * ParticleId; //better hide this from the user!!!!! 
   HBTxyz * ComovingPosition;
   HBTxyz * PhysicalVelocity;
   HBTReal * ParticleMass;
-  unordered_map <HBTInt, HBTInt> ParticleHash;//TODO: optimize this
+  unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this
   
   void LoadId(Parameter_t & param);
   void LoadPosition(Parameter_t & param);
@@ -55,13 +60,14 @@ class Snapshot_t: public SnapshotNumber_t
   void LoadMass(Parameter_t & param);
   void LoadHeader(Parameter_t & param, int ifile=1);
   bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
-  HBTInt ReadNumberOfDMParticles(Parameter_t & param, int ifile);
+  ParticleIndex_t ReadNumberOfDMParticles(Parameter_t & param, int ifile);
   size_t SkipBlock(FILE *fp);
   size_t ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before=0, const size_t n_skip_after=0);
   void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
 public:
   Snapshot_t(): SnapshotNumber_t()
   {
+	PeriodicBox=true;
 	NeedByteSwap=false;
 	IntTypeSize=0;
 	RealTypeSize=0;
@@ -77,37 +83,39 @@ public:
   }
   void FillParticleHash();
   void ClearParticleHash();
-  HBTInt GetParticleIndex(HBTInt particle_id);
+  ParticleIndex_t GetParticleIndex(ParticleId_t particle_id);
   void GetFileName(Parameter_t &param, int ifile, string &filename);
   void Clear();
-  HBTInt GetNumberOfParticles();
-  HBTInt GetParticleId(HBTInt index);
-  HBTxyz &GetComovingPosition(HBTInt index);
-  HBTxyz &GetPhysicalVelocity(HBTInt index);
-  HBTReal GetParticleMass(HBTInt index);
+  ParticleIndex_t GetNumberOfParticles();
+  ParticleId_t GetParticleId(ParticleIndex_t index);
+  HBTxyz &GetComovingPosition(ParticleIndex_t index);
+  HBTxyz &GetPhysicalVelocity(ParticleIndex_t index);
+  HBTReal GetParticleMass(ParticleIndex_t index);
   void Load(Parameter_t & param, int snapshot_index, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true, bool fill_particle_hash=true);
+  void AveragePosition(HBTxyz & CoM, const IndexList_t & Particles); 
+  void AverageVelocity(HBTxyz & CoV, const IndexList_t & Particles);
 };
-inline HBTInt Snapshot_t::GetParticleIndex(HBTInt particle_id)
+inline Snapshot_t::ParticleIndex_t Snapshot_t::GetParticleIndex(ParticleId_t particle_id)
 {
   return ParticleHash[particle_id];
 }
-inline HBTInt Snapshot_t::GetNumberOfParticles()
+inline Snapshot_t::ParticleIndex_t Snapshot_t::GetNumberOfParticles()
 {
   return NumberOfParticles;
 }
-inline HBTInt Snapshot_t::GetParticleId(HBTInt index)
+inline Snapshot_t::ParticleId_t Snapshot_t::GetParticleId(ParticleIndex_t index)
 {
   return ParticleId[index];
 }
-inline HBTxyz& Snapshot_t::GetComovingPosition(HBTInt index)
+inline HBTxyz& Snapshot_t::GetComovingPosition(ParticleIndex_t index)
 {
   return ComovingPosition[index];
 }
-inline HBTxyz& Snapshot_t::GetPhysicalVelocity(HBTInt index)
+inline HBTxyz& Snapshot_t::GetPhysicalVelocity(ParticleIndex_t index)
 {
   return PhysicalVelocity[index];
 }
-inline HBTReal Snapshot_t::GetParticleMass(HBTInt index)
+inline HBTReal Snapshot_t::GetParticleMass(ParticleIndex_t index)
 {
   if(Header.mass[1])
 	return Header.mass[1];
