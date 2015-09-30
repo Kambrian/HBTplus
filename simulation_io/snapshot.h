@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <unordered_map>
 #include "../datatypes.h"
+#include "../mymath.h"
 #include "../config_parser.h"
 #include "snapshot_number.h"
 
@@ -37,9 +38,7 @@ class Snapshot_t: public SnapshotNumber_t
   typedef HBTInt ParticleIndex_t ;
   typedef HBTInt ParticleId_t;
   typedef List_t <ParticleIndex_t> IndexList_t;
-  
-  SnapshotHeader_t Header;
-  
+    
   bool PeriodicBox;
   bool NeedByteSwap;
   int IntTypeSize;
@@ -65,7 +64,8 @@ class Snapshot_t: public SnapshotNumber_t
   size_t ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before=0, const size_t n_skip_after=0);
   void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
 public:
-  Snapshot_t(): SnapshotNumber_t()
+  SnapshotHeader_t Header;
+  Snapshot_t(): SnapshotNumber_t(), Header()
   {
 	PeriodicBox=true;
 	NeedByteSwap=false;
@@ -86,40 +86,51 @@ public:
   ParticleIndex_t GetParticleIndex(ParticleId_t particle_id);
   void GetFileName(Parameter_t &param, int ifile, string &filename);
   void Clear();
-  ParticleIndex_t GetNumberOfParticles();
-  ParticleId_t GetParticleId(ParticleIndex_t index);
-  HBTxyz &GetComovingPosition(ParticleIndex_t index);
-  HBTxyz &GetPhysicalVelocity(ParticleIndex_t index);
-  HBTReal GetParticleMass(ParticleIndex_t index);
+  ParticleIndex_t GetNumberOfParticles() const;
+  ParticleId_t GetParticleId(ParticleIndex_t index) const;
+  HBTxyz &GetComovingPosition(ParticleIndex_t index) const;
+  HBTxyz &GetPhysicalVelocity(ParticleIndex_t index) const;
+  HBTReal GetParticleMass(ParticleIndex_t index) const;
   void Load(Parameter_t & param, int snapshot_index, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true, bool fill_particle_hash=true);
-  void AveragePosition(HBTxyz & CoM, const IndexList_t & Particles); 
-  void AverageVelocity(HBTxyz & CoV, const IndexList_t & Particles);
+  void AveragePosition(HBTxyz & CoM, const IndexList_t & Particles) const; 
+  void AverageVelocity(HBTxyz & CoV, const IndexList_t & Particles) const;
+  HBTReal PeriodicDistance(const HBTReal x[3], const HBTReal y[3]) const;
 };
+
+#define NEAREST(x, boxhalf, boxsize) (((x)>boxhalf)?((x)-boxsize):(((x)<-boxhalf)?((x)+boxsize):(x)))
+/*this macro can well manipulate boundary condition because 
+* usually a halo is much smaller than boxhalf
+* so that any distance within the halo should be smaller than boxhalf */
+
 inline Snapshot_t::ParticleIndex_t Snapshot_t::GetParticleIndex(ParticleId_t particle_id)
 {
   return ParticleHash[particle_id];
 }
-inline Snapshot_t::ParticleIndex_t Snapshot_t::GetNumberOfParticles()
+inline Snapshot_t::ParticleIndex_t Snapshot_t::GetNumberOfParticles() const
 {
   return NumberOfParticles;
 }
-inline Snapshot_t::ParticleId_t Snapshot_t::GetParticleId(ParticleIndex_t index)
+inline Snapshot_t::ParticleId_t Snapshot_t::GetParticleId(ParticleIndex_t index) const
 {
   return ParticleId[index];
 }
-inline HBTxyz& Snapshot_t::GetComovingPosition(ParticleIndex_t index)
+inline HBTxyz& Snapshot_t::GetComovingPosition(ParticleIndex_t index) const
 {
   return ComovingPosition[index];
 }
-inline HBTxyz& Snapshot_t::GetPhysicalVelocity(ParticleIndex_t index)
+inline HBTxyz& Snapshot_t::GetPhysicalVelocity(ParticleIndex_t index) const
 {
   return PhysicalVelocity[index];
 }
-inline HBTReal Snapshot_t::GetParticleMass(ParticleIndex_t index)
+inline HBTReal Snapshot_t::GetParticleMass(ParticleIndex_t index) const
 {
   if(Header.mass[1])
 	return Header.mass[1];
   else
 	return ParticleMass[index];
+}
+inline HBTReal Snapshot_t::PeriodicDistance(const HBTReal x[3], const HBTReal y[3]) const
+{
+	return distance(x,y, Header.BoxSize, PeriodicBox);
 }
 #endif

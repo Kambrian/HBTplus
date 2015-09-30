@@ -41,17 +41,21 @@ inline HBTReal position_modulus(HBTReal x, HBTReal boxsize)
 	y=x/boxsize;
 	return (y-floor(y))*boxsize;
 }
-inline HBTReal distance(HBTReal x[3],HBTReal y[3])
+inline HBTReal distance(const HBTReal x[3], const HBTReal y[3], const HBTReal boxsize=0., const bool Periodic=false)
 {
 	HBTReal dx[3];
 	dx[0]=x[0]-y[0];
 	dx[1]=x[1]-y[1];
 	dx[2]=x[2]-y[2];
-	#ifdef PERIODIC_BDR
-	dx[0]=NEAREST(dx[0]);
-	dx[1]=NEAREST(dx[1]);
-	dx[2]=NEAREST(dx[2]);
-	#endif
+	if(Periodic)
+	{
+	  #define NEAREST(x) (((x)>(boxhalf))?((x)-boxsize):(((x)<-(boxhalf))?((x)+boxsize):(x)))
+	  HBTReal boxhalf=boxsize/2.;
+	  dx[0]=NEAREST(dx[0]);
+	  dx[1]=NEAREST(dx[1]);
+	  dx[2]=NEAREST(dx[2]);
+	  #undef NEAREST
+	}
 	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
 }
 #endif

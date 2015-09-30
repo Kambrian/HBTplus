@@ -62,9 +62,9 @@ namespace SpecialConst
 {
   const HBTInt NullParticleId=-100;
   const HBTInt NullSnapshotId=-100;
-  const HBTInt NullHaloId=-100;
-  const HBTInt NullSubhaloId=-100;
-  const HBTInt NullTrackId=-100;
+  const HBTInt NullHaloId=-1;//do not change this.
+  const HBTInt NullSubhaloId=-1;
+  const HBTInt NullTrackId=-1;
   
   const HBTInt UniverseHaloId=-200; //the universe as a halo, to contain particles that does not belong to any halo
   
@@ -91,11 +91,15 @@ public:
   List_t(): N(0), Data(nullptr)
   {
   }
+  T * data() const
+  {
+	return Data;
+  }
   T & operator [](const HBTInt index) const
   {
 	return Data[index];
   }
-  HBTInt Size() const
+  HBTInt size() const
   {
 	return N;
   }
@@ -114,13 +118,28 @@ public:
   ShallowList_t(const HBTInt n, T * const data): BaseList_t::N(n), BaseList_t::Data(data)
   {
   }
-  ShallowList_t(const ShallowList_t &l): BaseList_t::N(l.N), BaseList_t::Data(l.Data)
+  ShallowList_t(const ShallowList_t &l) 
   {
+	BaseList_t::N=l.N;
+	BaseList_t::Data=l.Data;
   }
   void Bind(HBTInt n, T *data)
   {
 	BaseList_t::N=n;
 	BaseList_t::Data=data;
+  }
+  void Resize(const HBTInt n)
+  {
+	BaseList_t::N=n;
+  }
+  void IncrementSize()
+  {
+	BaseList_t::N++; 
+  }
+  void push_back(T x)
+  {
+	BaseList_t::Data[BaseList_t::N]=x;
+	IncrementSize();
   }
 };
 template <class T>

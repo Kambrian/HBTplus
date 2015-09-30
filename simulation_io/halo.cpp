@@ -298,19 +298,19 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
 
 void HaloSnapshot_t::ParticleIdToIndex(Snapshot_t& snapshot)
 {
-  for(HBTInt i=0;i<AllParticles.Size();i++)
+  for(HBTInt i=0;i<AllParticles.size();i++)
 	AllParticles[i]=snapshot.GetParticleIndex(AllParticles[i]);
 }
 
 void HaloSnapshot_t::ParticleIndexToId(Snapshot_t& snapshot)
 {
-  for(HBTInt i=0;i<AllParticles.Size();i++)
+  for(HBTInt i=0;i<AllParticles.size();i++)
 	AllParticles[i]=snapshot.GetParticleId(AllParticles[i]);
 }
 
-void HaloSnapshot_t::AverageHaloCoordinates(Snapshot_t& snapshot)
+void HaloSnapshot_t::AverageCoordinates(Snapshot_t& snapshot)
 {
-  for(HBTInt i=0;i<Halos.Size();i++)
+  for(HBTInt i=0;i<Halos.size();i++)
   {
 	snapshot.AveragePosition(Halos[i].CenterOfMassComoving, Halos[i].Particles);
 	snapshot.AverageVelocity(Halos[i].AverageVelocityPhysical, Halos[i].Particles);
@@ -325,8 +325,8 @@ int main(int argc, char **argv)
   HBTConfig.ParseConfigFile(argv[1]);
   HaloSnapshot_t halo;
   halo.Load(HBTConfig, HBTConfig.MaxSnapshotIndex);
-  cout<<halo.Halos.Size()<<";"<<halo.AllParticles.Size()<<endl;
-  cout<<halo.Halos[10].Particles.Size()<<endl;
+  cout<<halo.Halos.size()<<";"<<halo.AllParticles.size()<<endl;
+  cout<<halo.Halos[10].Particles.size()<<endl;
   cout<<halo.Halos[10].Particles[0]<<endl;
   return 0;
 }

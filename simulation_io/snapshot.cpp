@@ -230,7 +230,7 @@ void * Snapshot_t::LoadBlock(Parameter_t &param, int block_id, size_t element_si
 }
 
 template <class T, class U>
-static void AssignBlock(T *dest, const U *source, size_t n)
+static void AssignBlock(T *dest, const U *source, const size_t n)
 {
   for(size_t i=0;i<n;i++)
   {
@@ -366,14 +366,10 @@ void Snapshot_t::ClearParticleHash()
 {
   ParticleHash.clear();
 }
-#define NEAREST(x, boxhalf, boxsize) (((x)>boxhalf)?((x)-boxsize):(((x)<-boxhalf)?((x)+boxsize):(x)))
-/*this macro can well manipulate boundary condition because 
-* usually a halo is much smaller than boxhalf
-* so that any distance within the halo should be smaller than boxhalf */
-void Snapshot_t::AveragePosition(HBTxyz& CoM, const IndexList_t & Particles)
+void Snapshot_t::AveragePosition(HBTxyz& CoM, const IndexList_t & Particles) const
 /*mass weighted average position*/
 {
-	ParticleIndex_t i,j,np=Particles.Size();
+	ParticleIndex_t i,j,np=Particles.size();
 	double sx[3],origin[3],msum;
 	static bool Periodic=PeriodicBox;
 	static HBTReal boxsize=Header.BoxSize, boxhalf=boxsize/2.;
@@ -405,10 +401,10 @@ void Snapshot_t::AveragePosition(HBTxyz& CoM, const IndexList_t & Particles)
 	}
 }
 
-void Snapshot_t::AverageVelocity(HBTxyz& CoV, const Snapshot_t::IndexList_t& Particles)
+void Snapshot_t::AverageVelocity(HBTxyz& CoV, const Snapshot_t::IndexList_t& Particles) const
 /*mass weighted average velocity*/
 {
-	ParticleIndex_t i,j,np=Particles.Size();
+	ParticleIndex_t i,j,np=Particles.size();
 	double sv[3],msum;
 	
 	if(0==np) return;

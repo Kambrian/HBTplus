@@ -34,7 +34,7 @@ public:
   void Clear();
   void ParticleIdToIndex(Snapshot_t & snapshot);
   void ParticleIndexToId(Snapshot_t & snapshot);
-  void AverageHaloCoordinates(Snapshot_t & snapshot);
+  void AverageCoordinates(Snapshot_t & snapshot);
 };
 
 #endif

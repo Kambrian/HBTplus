@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <new>
+#include <vector>
 
 #include "../datatypes.h"
 #include "snapshot_number.h"
@@ -55,16 +56,44 @@ public:
   void unbind()
   {//TODO
   }
+  HBTReal KineticDistance(const Halo_t & halo, const Snapshot_t & partsnap);
 };
 
+typedef DeepList_t <SubHalo_t> SubHaloList_t;
+
+class MemberShipTable_t
+/* list the subhaloes inside each host, rather than ordering the subhaloes 
+ * 
+ * the principle is to not move the objects, but construct a table of them, since moving objects will change their id (or index at least), introducing the trouble to re-index them and update the indexes in any existence references.
+ */
+{
+public:
+  typedef ShallowList_t<HBTInt> MemberList_t;  //list of members in a group
+private:
+  void Init(const HBTInt nhalos, const HBTInt nsubhalos, const float alloc_factor=1.2);
+  void BindMemberLists();
+  void FillMemberLists(const SubHaloList_t & SubHalos);
+  void CountMembers(const SubHaloList_t & SubHalos);
+  void SortMemberLists(const SubHaloList_t & SubHalos);
+  vector <MemberList_t> RawLists; //list of subhaloes inside each host halo; contain one more group than halo catalogue, to hold field subhaloes.
+  vector <HBTInt> AllMembers; //the storage for all the MemberList_t
+public:
+  ShallowList_t <MemberList_t> Lists; //offset to allow hostid=-1
+  
+  MemberShipTable_t(): RawLists(), AllMembers(), Lists()
+  {
+  }
+  void Build(const HBTInt nhalos, const SubHaloList_t & SubHalos);
+};
 class SubHaloSnapshot_t: public SnapshotNumber_t
 {  
   typedef DeepList_t <HBTInt> ParticleList_t;
-  typedef DeepList_t <SubHalo_t> SubHaloList_t;
 public:
-  ParticleList_t AllParticles;
+  
+  ParticleList_t AllParticles; /*TODO: replace this with a list of vectors. each subhalo manages its memory individually! */
   SubHaloList_t SubHalos;
-  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), AllParticles()
+  MemberShipTable_t MemberTable;
+  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), AllParticles(), MemberTable()
   {
   }
   void Load(Parameter_t &param, int snapshot_index)
@@ -89,17 +118,18 @@ public:
   }
   void ParticleIdToIndex(Snapshot_t & snapshot)
   {
-	for(HBTInt i=0;i<AllParticles.Size();i++)
+	for(HBTInt i=0;i<AllParticles.size();i++)
 	  AllParticles[i]=snapshot.GetParticleIndex(AllParticles[i]);
   }
   void ParticleIndexToId(Snapshot_t & snapshot)
   {
-	for(HBTInt i=0;i<AllParticles.Size();i++)
+	for(HBTInt i=0;i<AllParticles.size();i++)
 	  AllParticles[i]=snapshot.GetParticleId(AllParticles[i]);
   }
-  void descend_into(HaloSnapshot_t &halo_snap, Snapshot_t &part_snap);
-  void decide_centrals();
-  void refine_particles();
+  void AverageCoordinates(const Snapshot_t &part_snap);
+  void AssignHost(const HaloSnapshot_t &halo_snap, const Snapshot_t &part_snap);
+  void DecideCentrals(const HaloSnapshot_t &halo_snap, const Snapshot_t &part_snap);
+  void RefineParticles();
 };
 
 
