@@ -152,8 +152,8 @@ void HaloSnapshot_t::Clear()
 /* call this to reset the HaloSnapshot to empty.
  This is usually not necessary because the destructor will release the memory automatically*/
 {
-  AllParticles.Clear();
-  Halos.Clear();
+//   Halos.clear(); //this does not actually clear
+  HaloList_t().swap(Halos);//this deeply cleans it
 }
 
 template <class PIDtype_t>
@@ -232,7 +232,7 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
 	exit(1);
   }
   
-  PIDtype_t *PID=new PIDtype_t[NumberOfParticles];
+  vector <PIDtype_t> PIDs(NumberOfParticles);
   
   Nload=0;  
   for(int iFile=0;iFile<FileCounts;iFile++)
@@ -252,7 +252,7 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
 	int dummy;
 	myfread(&dummy,sizeof(int),1,fd);
 	
-	myfread(PID+Nload, sizeof(PIDtype_t), Nids, fd);
+	myfread(&PIDs[Nload], sizeof(PIDtype_t), Nids, fd);
 	if(feof(fd))
 	{
 	  fprintf(stderr,"error:End-of-File in %s\n",buf);
@@ -268,24 +268,19 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
 	exit(1);
   }
   
+  TotNumberOfParticles=NumberOfParticles;
+  Halos.resize(NumberOfHaloes);
   if(param.ParticleIdRankStyle)
   {
 	cerr<<"ParticleIdRankStyle not implemented for group files\n";
 	exit(1);
   } else
   {
-	if(typeid(HBTInt)==typeid(PIDtype_t))
-	  AllParticles.Bind(NumberOfParticles, (HBTInt *)PID);
-	else
-	{
-	  AllParticles.Fill(NumberOfParticles, PID);
-	  delete [] PID;
-	}
+	for(int i=0;i<NumberOfHaloes;i++)
+		Halos[i].Particles.assign(PIDs.begin()+Offset[i], PIDs.begin()+Offset[i]+Len[i]);
+// 	if(typeid(HBTInt)==typeid(PIDtype_t))//consider optimizing by using memcpy
   }
   
-  Halos.Resize(NumberOfHaloes);
-  for(int i=0;i<NumberOfHaloes;i++)
-	Halos[i].Particles.Bind(Len[i], &AllParticles[Offset[i]]);
   for(int i=1;i<NumberOfHaloes;i++)
   {
 	if(Len[i]>Len[i-1])
@@ -298,14 +293,16 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
 
 void HaloSnapshot_t::ParticleIdToIndex(Snapshot_t& snapshot)
 {
-  for(HBTInt i=0;i<AllParticles.size();i++)
-	AllParticles[i]=snapshot.GetParticleIndex(AllParticles[i]);
+  for(HBTInt haloid=0;haloid<Halos.size();haloid++)
+	for(HBTInt pid=0;pid<Halos[pid].Particles.size();pid++)
+	  Halos[haloid].Particles[pid]=snapshot.GetParticleIndex(Halos[haloid].Particles[pid]);
 }
 
 void HaloSnapshot_t::ParticleIndexToId(Snapshot_t& snapshot)
 {
-  for(HBTInt i=0;i<AllParticles.size();i++)
-	AllParticles[i]=snapshot.GetParticleId(AllParticles[i]);
+  for(HBTInt haloid=0;haloid<Halos.size();haloid++)
+	for(HBTInt pid=0;pid<Halos[pid].Particles.size();pid++)
+	  Halos[haloid].Particles[pid]=snapshot.GetParticleId(Halos[haloid].Particles[pid]);
 }
 
 void HaloSnapshot_t::AverageCoordinates(Snapshot_t& snapshot)
@@ -325,7 +322,7 @@ int main(int argc, char **argv)
   HBTConfig.ParseConfigFile(argv[1]);
   HaloSnapshot_t halo;
   halo.Load(HBTConfig, HBTConfig.MaxSnapshotIndex);
-  cout<<halo.Halos.size()<<";"<<halo.AllParticles.size()<<endl;
+  cout<<halo.Halos.size()<<";"<<halo.TotNumberOfParticles<<endl;
   cout<<halo.Halos[10].Particles.size()<<endl;
   cout<<halo.Halos[10].Particles[0]<<endl;
   return 0;

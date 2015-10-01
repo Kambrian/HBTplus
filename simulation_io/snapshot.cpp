@@ -366,64 +366,6 @@ void Snapshot_t::ClearParticleHash()
 {
   ParticleHash.clear();
 }
-void Snapshot_t::AveragePosition(HBTxyz& CoM, const IndexList_t & Particles) const
-/*mass weighted average position*/
-{
-	ParticleIndex_t i,j,np=Particles.size();
-	double sx[3],origin[3],msum;
-	static bool Periodic=PeriodicBox;
-	static HBTReal boxsize=Header.BoxSize, boxhalf=boxsize/2.;
-	
-	if(0==np) return;
-	
-	sx[0]=sx[1]=sx[2]=0.;
-	msum=0.;
-	if(Periodic)
-	  for(j=0;j<3;j++)
-		origin[j]=GetComovingPosition(Particles[0])[j];
-	
-	for(i=0;i<np;i++)
-	{
-	  HBTReal m=GetParticleMass(Particles[i]);
-	  msum+=m;
-	  for(j=0;j<3;j++)
-	  if(Periodic)
-		  sx[j]+=NEAREST(GetComovingPosition(Particles[i])[j]-origin[j], boxhalf, boxsize)*m;
-	  else
-		  sx[j]+=GetComovingPosition(Particles[i])[j]*m;
-	}
-	
-	for(j=0;j<3;j++)
-	{
-		sx[j]/=msum;
-		if(Periodic) sx[j]+=origin[j];
-		CoM[j]=sx[j];
-	}
-}
-
-void Snapshot_t::AverageVelocity(HBTxyz& CoV, const Snapshot_t::IndexList_t& Particles) const
-/*mass weighted average velocity*/
-{
-	ParticleIndex_t i,j,np=Particles.size();
-	double sv[3],msum;
-	
-	if(0==np) return;
-	
-	sv[0]=sv[1]=sv[2]=0.;
-	msum=0.;
-	
-	for(i=0;i<np;i++)
-	{
-	  HBTReal m=GetParticleMass(Particles[i]);
-	  msum+=m;
-	  for(j=0;j<3;j++)
-		sv[j]+=GetPhysicalVelocity(Particles[i])[j]*m;
-	}
-	
-	for(j=0;j<3;j++)
-	  CoV[j]=sv[j]/msum;
-}
-
 
 
 #ifdef TEST_SIMU_IO

@@ -42,9 +42,9 @@ public:
 
 class SubHalo_t: public TrackParticle_t
 {
-  typedef ShallowList_t <HBTInt> ParticleShallowList_t;
+  typedef vector <HBTInt> ParticleList_t;
 public:
-  ParticleShallowList_t Particles;
+  ParticleList_t Particles;
   HBTInt Nbound, Nsrc;
   HBTInt HostHaloId;
   HBTReal RmaxComoving;
@@ -59,7 +59,7 @@ public:
   HBTReal KineticDistance(const Halo_t & halo, const Snapshot_t & partsnap);
 };
 
-typedef DeepList_t <SubHalo_t> SubHaloList_t;
+typedef vector <SubHalo_t> SubHaloList_t;
 
 class MemberShipTable_t
 /* list the subhaloes inside each host, rather than ordering the subhaloes 
@@ -87,13 +87,10 @@ public:
 };
 class SubHaloSnapshot_t: public SnapshotNumber_t
 {  
-  typedef DeepList_t <HBTInt> ParticleList_t;
 public:
-  
-  ParticleList_t AllParticles; /*TODO: replace this with a list of vectors. each subhalo manages its memory individually! */
   SubHaloList_t SubHalos;
   MemberShipTable_t MemberTable;
-  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), AllParticles(), MemberTable()
+  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable()
   {
   }
   void Load(Parameter_t &param, int snapshot_index)
@@ -118,19 +115,20 @@ public:
   }
   void ParticleIdToIndex(Snapshot_t & snapshot)
   {
-	for(HBTInt i=0;i<AllParticles.size();i++)
-	  AllParticles[i]=snapshot.GetParticleIndex(AllParticles[i]);
+	for(HBTInt subid=0;subid<SubHalos.size();subid++)
+	for(HBTInt pid=0;pid<SubHalos[pid].Particles.size();pid++)
+	  SubHalos[subid].Particles[pid]=snapshot.GetParticleIndex(SubHalos[subid].Particles[pid]);
   }
   void ParticleIndexToId(Snapshot_t & snapshot)
   {
-	for(HBTInt i=0;i<AllParticles.size();i++)
-	  AllParticles[i]=snapshot.GetParticleId(AllParticles[i]);
+	for(HBTInt subid=0;subid<SubHalos.size();subid++)
+	for(HBTInt pid=0;pid<SubHalos[pid].Particles.size();pid++)
+	  SubHalos[subid].Particles[pid]=snapshot.GetParticleId(SubHalos[subid].Particles[pid]);
   }
   void AverageCoordinates(const Snapshot_t &part_snap);
   void AssignHost(const HaloSnapshot_t &halo_snap, const Snapshot_t &part_snap);
   void DecideCentrals(const HaloSnapshot_t &halo_snap, const Snapshot_t &part_snap);
   void RefineParticles();
 };
-
 
 #endif

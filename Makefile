@@ -8,4 +8,4 @@ depend:
 	makedepend --$(CXXFLAGS)-- -Y $(SRC)
 	
 synccosma: clean
-	rsync -avzL $(shell pwd)/ jvbq85@cosma-a:data/HBT2/code# DO NOT DELETE
+	rsync -avzL $(shell pwd)/ jvbq85@cosma-a:data/HBT2/code

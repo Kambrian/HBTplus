@@ -10,24 +10,23 @@
 
 class Halo_t
 {  
-  typedef ShallowList_t <HBTInt> ParticleShallowList_t;
+  typedef vector <HBTInt> ParticleList_t;
 public:
-  ParticleShallowList_t Particles;
+  ParticleList_t Particles;
   HBTxyz CenterOfMassComoving;
   HBTxyz AverageVelocityPhysical;
 };
 
 class HaloSnapshot_t: public SnapshotNumber_t
 {  
-  typedef DeepList_t <HBTInt> ParticleList_t;
-  typedef DeepList_t <Halo_t> HaloList_t;
+  typedef vector <Halo_t> HaloList_t;
   template <class PIDtype_t>
   void LoadGroupV3(Parameter_t &param, PIDtype_t dummy);
   void GetFileNameFormat(Parameter_t &param, string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 public:
-  ParticleList_t AllParticles;
   HaloList_t Halos;
-  HaloSnapshot_t(): SnapshotNumber_t(), Halos(), AllParticles()
+  HBTInt TotNumberOfParticles;
+  HaloSnapshot_t(): SnapshotNumber_t(), Halos()
   {
   }
   void Load(Parameter_t &param, int snapshot_index);
