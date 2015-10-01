@@ -118,9 +118,11 @@ public:
   }
   void ParticleIndexToId()
   {
+	Snapshot_t &snapshot=*SnapshotPointer;
 	for(HBTInt subid=0;subid<SubHalos.size();subid++)
 	for(HBTInt pid=0;pid<SubHalos[pid].Particles.size();pid++)
-	  SubHalos[subid].Particles[pid]=SnapshotPointer->GetParticleId(SubHalos[subid].Particles[pid]);
+	  SubHalos[subid].Particles[pid]=snapshot.GetParticleId(SubHalos[subid].Particles[pid]);
+	SnapshotPointer=nullptr;
   }
   void AverageCoordinates();
   void AssignHost(const HaloSnapshot_t &halo_snap);

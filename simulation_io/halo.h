@@ -24,16 +24,17 @@ class HaloSnapshot_t: public SnapshotNumber_t
   void LoadGroupV3(Parameter_t &param, PIDtype_t dummy);
   void GetFileNameFormat(Parameter_t &param, string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 public:
+  Snapshot_t * SnapshotPointer;
   HaloList_t Halos;
   HBTInt TotNumberOfParticles;
-  HaloSnapshot_t(): SnapshotNumber_t(), Halos()
+  HaloSnapshot_t(): SnapshotNumber_t(), Halos(), SnapshotPointer(nullptr)
   {
   }
   void Load(Parameter_t &param, int snapshot_index);
   void Clear();
   void ParticleIdToIndex(Snapshot_t & snapshot);
-  void ParticleIndexToId(Snapshot_t & snapshot);
-  void AverageCoordinates(Snapshot_t & snapshot);
+  void ParticleIndexToId();
+  void AverageCoordinates();
 };
 
 #endif

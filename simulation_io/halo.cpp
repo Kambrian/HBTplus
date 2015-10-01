@@ -293,24 +293,27 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
 
 void HaloSnapshot_t::ParticleIdToIndex(Snapshot_t& snapshot)
 {
+  SnapshotPointer=&snapshot;
   for(HBTInt haloid=0;haloid<Halos.size();haloid++)
 	for(HBTInt pid=0;pid<Halos[pid].Particles.size();pid++)
 	  Halos[haloid].Particles[pid]=snapshot.GetParticleIndex(Halos[haloid].Particles[pid]);
 }
 
-void HaloSnapshot_t::ParticleIndexToId(Snapshot_t& snapshot)
+void HaloSnapshot_t::ParticleIndexToId()
 {
+  Snapshot_t& snapshot=*SnapshotPointer;
   for(HBTInt haloid=0;haloid<Halos.size();haloid++)
 	for(HBTInt pid=0;pid<Halos[pid].Particles.size();pid++)
 	  Halos[haloid].Particles[pid]=snapshot.GetParticleId(Halos[haloid].Particles[pid]);
+  SnapshotPointer=nullptr;
 }
 
-void HaloSnapshot_t::AverageCoordinates(Snapshot_t& snapshot)
+void HaloSnapshot_t::AverageCoordinates()
 {
   for(HBTInt i=0;i<Halos.size();i++)
   {
-	snapshot.AveragePosition(Halos[i].ComovingPosition, Halos[i].Particles.data(), Halos[i].Particles.size());
-	snapshot.AverageVelocity(Halos[i].PhysicalVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
+	SnapshotPointer->AveragePosition(Halos[i].ComovingPosition, Halos[i].Particles.data(), Halos[i].Particles.size());
+	SnapshotPointer->AverageVelocity(Halos[i].PhysicalVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
   }
 }
 
