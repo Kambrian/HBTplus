@@ -19,8 +19,6 @@ public:
   HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
   HBTInt SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved.
   HBTInt LastMaxMass;
-  HBTxyz ComovingPosition;
-  HBTxyz PhysicalVelocity;
   TrackParticle_t()
   {
 	TrackId=-1;
@@ -40,22 +38,18 @@ public:
   }
 };
 
-class SubHalo_t: public TrackParticle_t
+class SubHalo_t: public Halo_t, public TrackParticle_t
 {
-  typedef vector <HBTInt> ParticleList_t;
 public:
-  ParticleList_t Particles;
-  HBTInt Nbound, Nsrc;
+  HBTInt Nbound;
   HBTInt HostHaloId;
   HBTReal RmaxComoving;
   HBTReal VmaxPhysical;
   HBTReal RPoissonComoving;
-  SubHalo_t(): TrackParticle_t(), Particles(), Nbound(0), Nsrc(0)
+  SubHalo_t(): Halo_t(), TrackParticle_t(), Nbound(0)
   {
   }
-  void unbind()
-  {//TODO
-  }
+  void unbind(const Snapshot_t &part_snap);
   HBTReal KineticDistance(const Halo_t & halo, const Snapshot_t & partsnap);
 };
 
@@ -88,9 +82,10 @@ public:
 class SubHaloSnapshot_t: public SnapshotNumber_t
 {  
 public:
+  Snapshot_t * SnapshotPointer;
   SubHaloList_t SubHalos;
   MemberShipTable_t MemberTable;
-  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable()
+  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr)
   {
   }
   void Load(Parameter_t &param, int snapshot_index)
@@ -115,22 +110,23 @@ public:
 	cout<<"Clean() not implemented yet\n";
   }
   void ParticleIdToIndex(Snapshot_t & snapshot)
-  {
+  {//also bind to snapshot
+	SnapshotPointer=&snapshot;
 	for(HBTInt subid=0;subid<SubHalos.size();subid++)
 	for(HBTInt pid=0;pid<SubHalos[pid].Particles.size();pid++)
 	  SubHalos[subid].Particles[pid]=snapshot.GetParticleIndex(SubHalos[subid].Particles[pid]);
   }
-  void ParticleIndexToId(Snapshot_t & snapshot)
+  void ParticleIndexToId()
   {
 	for(HBTInt subid=0;subid<SubHalos.size();subid++)
 	for(HBTInt pid=0;pid<SubHalos[pid].Particles.size();pid++)
-	  SubHalos[subid].Particles[pid]=snapshot.GetParticleId(SubHalos[subid].Particles[pid]);
+	  SubHalos[subid].Particles[pid]=SnapshotPointer->GetParticleId(SubHalos[subid].Particles[pid]);
   }
-  void AverageCoordinates(const Snapshot_t &part_snap);
-  void AssignHost(const HaloSnapshot_t &halo_snap, const Snapshot_t &part_snap);
-  void DecideCentrals(const HaloSnapshot_t &halo_snap, const Snapshot_t &part_snap);
+  void AverageCoordinates();
+  void AssignHost(const HaloSnapshot_t &halo_snap);
+  void DecideCentrals(const HaloSnapshot_t &halo_snap);
   void FeedCentrals(HaloSnapshot_t &halo_snap);
-  void RefineParticles(const Snapshot_t &part_snap);
+  void RefineParticles();
 };
 
 #endif

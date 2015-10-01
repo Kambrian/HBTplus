@@ -309,8 +309,8 @@ void HaloSnapshot_t::AverageCoordinates(Snapshot_t& snapshot)
 {
   for(HBTInt i=0;i<Halos.size();i++)
   {
-	snapshot.AveragePosition(Halos[i].CenterOfMassComoving, Halos[i].Particles.data(), Halos[i].Particles.size());
-	snapshot.AverageVelocity(Halos[i].AverageVelocityPhysical, Halos[i].Particles.data(), Halos[i].Particles.size());
+	snapshot.AveragePosition(Halos[i].ComovingPosition, Halos[i].Particles.data(), Halos[i].Particles.size());
+	snapshot.AverageVelocity(Halos[i].PhysicalVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
   }
 }
 

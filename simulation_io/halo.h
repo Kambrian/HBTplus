@@ -13,8 +13,8 @@ class Halo_t
   typedef vector <HBTInt> ParticleList_t;
 public:
   ParticleList_t Particles;
-  HBTxyz CenterOfMassComoving;
-  HBTxyz AverageVelocityPhysical;
+  HBTxyz ComovingPosition;
+  HBTxyz PhysicalVelocity;
 };
 
 class HaloSnapshot_t: public SnapshotNumber_t
