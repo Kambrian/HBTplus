@@ -22,7 +22,15 @@ public:
 	SnapshotIndex=SpecialConst::NullSnapshotId;
 	SnapshotId=SpecialConst::NullSnapshotId;
   }
-  void Reset()
+  SnapshotNumber_t(SnapshotNumber_t & sn):SnapshotId(sn.SnapshotId), SnapshotIndex(sn.SnapshotIndex)
+  {
+  }
+  SnapshotNumber_t & operator=(SnapshotNumber_t &sn)
+  {
+	SnapshotIndex=sn.SnapshotIndex;
+	SnapshotId=sn.SnapshotId;
+  }
+  void ResetSnapshotNumber()
   {//reset is not destructon! when destructor is called, the data content no matter matters.
 	SnapshotIndex=SpecialConst::NullSnapshotId;
 	SnapshotId=SpecialConst::NullSnapshotId;

@@ -24,7 +24,7 @@ public:
   TrackParticle_t()
   {
 	TrackId=-1;
-	TrackParticleId=HBTInt();
+	TrackParticleId=SpecialConst::NullParticleId;
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
@@ -76,8 +76,8 @@ private:
   void CountMembers(const SubHaloList_t & SubHalos);
   void SortMemberLists(const SubHaloList_t & SubHalos);
   vector <MemberList_t> RawLists; //list of subhaloes inside each host halo; contain one more group than halo catalogue, to hold field subhaloes.
-  vector <HBTInt> AllMembers; //the storage for all the MemberList_t
 public:
+  vector <HBTInt> AllMembers; //the storage for all the MemberList_t
   ShallowList_t <MemberList_t> Lists; //offset to allow hostid=-1
   
   MemberShipTable_t(): RawLists(), AllMembers(), Lists()
@@ -96,6 +96,7 @@ public:
   void Load(Parameter_t &param, int snapshot_index)
   {//TODO
 	cout<<"SubHaloSnapshot_t::Load() not implemented yet\n";
+	SetSnapshotIndex(param, snapshot_index);
 	if(SnapshotIndex<HBTConfig.MinSnapshotIndex)
 	{// LoadNull();
 	}
@@ -128,7 +129,8 @@ public:
   void AverageCoordinates(const Snapshot_t &part_snap);
   void AssignHost(const HaloSnapshot_t &halo_snap, const Snapshot_t &part_snap);
   void DecideCentrals(const HaloSnapshot_t &halo_snap, const Snapshot_t &part_snap);
-  void RefineParticles();
+  void FeedCentrals(HaloSnapshot_t &halo_snap);
+  void RefineParticles(const Snapshot_t &part_snap);
 };
 
 #endif

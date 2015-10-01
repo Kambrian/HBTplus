@@ -20,7 +20,7 @@ int main(int argc, char **argv)
   SubHaloSnapshot_t subsnap;
   
   subsnap.Load(HBTConfig, snapshot_start-1);
-  
+    
   for(int isnap=snapshot_start;isnap<=snapshot_end;isnap++)
   {
 	Snapshot_t partsnap;
@@ -29,14 +29,15 @@ int main(int argc, char **argv)
 	halosnap.Load(HBTConfig, isnap);
 	halosnap.ParticleIdToIndex(partsnap);
 	subsnap.ParticleIdToIndex(partsnap);
-		
+// 	subsnap.SubHalos.reserve(partsnap.GetNumberOfParticles()*0.1);//reserve enough	branches.......
 	subsnap.AssignHost(halosnap, partsnap);
 	
 	halosnap.AverageCoordinates(partsnap);
 	subsnap.AverageCoordinates(partsnap);
 	subsnap.DecideCentrals(halosnap, partsnap);
+	subsnap.FeedCentrals(halosnap);
 	
-	subsnap.RefineParticles();
+	subsnap.RefineParticles(partsnap);
 	
 	subsnap.ParticleIndexToId(partsnap);
 	subsnap.Save(HBTConfig);

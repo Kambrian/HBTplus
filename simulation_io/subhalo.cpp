@@ -7,7 +7,7 @@
 #include "subhalo.h"
 HBTReal SubHalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t& partsnap)
 {
-  HBTReal dx=partsnap.PeriodicDistance(halo.CenterOfMassComoving, ComovingPosition);
+  HBTReal dx=PeriodicDistance(halo.CenterOfMassComoving, ComovingPosition);
   HBTReal dv=distance(halo.AverageVelocityPhysical, PhysicalVelocity);
   HBTReal d=dv+partsnap.Header.Hz*partsnap.Header.time*dx;
   return (d>0?d:-d);
@@ -103,14 +103,12 @@ void SubHaloSnapshot_t::AverageCoordinates(const Snapshot_t& part_snap)
 {
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
-	ShallowList_t <HBTInt> core;
 	int coresize=SubHalos[subid].Nbound*CORE_SIZE_FRAC;
 	if(coresize<CORE_SIZE_MIN) coresize=CORE_SIZE_MIN;
 	if(coresize>SubHalos[subid].Nbound) coresize=SubHalos[subid].Nbound;
-	core.Bind(coresize, SubHalos[subid].Particles.data());
 	
-	part_snap.AveragePosition(SubHalos[subid].ComovingPosition, core);
-	part_snap.AverageVelocity(SubHalos[subid].PhysicalVelocity, core);
+	part_snap.AveragePosition(SubHalos[subid].ComovingPosition, SubHalos[subid].Particles.data(), coresize);
+	part_snap.AverageVelocity(SubHalos[subid].PhysicalVelocity, SubHalos[subid].Particles.data(), coresize);
   }
 }
 
@@ -123,7 +121,7 @@ void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap, const Sn
 	MemberShipTable_t::MemberList_t &List=MemberTable.Lists[hostid];
 	if(List.size()>1)
 	{
-	  int n_major=0;
+	  int n_major;
 	  HBTInt MassLimit=SubHalos[List[0]].Nbound*MAJOR_PROGENITOR_MASS_RATIO;
 	  for(n_major=1;n_major<List.size();n_major++)
 		if(SubHalos[List[n_major]].Nbound<MassLimit) break;
@@ -146,7 +144,28 @@ void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap, const Sn
   }
 }
 
-void SubHaloSnapshot_t::RefineParticles()
+void SubHaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
+{
+  HBTInt Npro=SubHalos.size(),NBirth=0;
+  for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
+	if(MemberTable.Lists[hostid].size()==0)  NBirth++;
+  SubHalos.resize(Npro+NBirth);
+  for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
+  {
+	if(0==MemberTable.Lists[hostid].size()) //create a new sub
+	{//assign trackId only at save time.
+		SubHalos[Npro].HostHaloId=hostid;
+		SubHalos[Npro].SnapshotIndexOfBirth=SnapshotIndex;
+		MemberTable.AllMembers.push_back(Npro);
+		MemberTable.Lists[hostid].Bind(1, &MemberTable.AllMembers.back());
+		Npro++;
+	}
+	SubHalos[MemberTable.Lists[hostid][0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles; now halo_snap should
+  }
+}
+
+
+void SubHaloSnapshot_t::RefineParticles(const Snapshot_t &part_snap)
 {//it's more expensive to build an exclusive list. so do inclusive here. 
   //TODO: ensure the inclusive unbinding is stable (contaminating particles from big subhaloes may hurdle the unbinding
   for(HBTInt subid=0;subid<SubHalos.size();subid++)

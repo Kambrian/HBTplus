@@ -1,8 +1,12 @@
 #include <cstdlib>
 #include "config_parser.h"
 
-HBTReal PhysicalConst::G;
-HBTReal PhysicalConst::H0;
+namespace PhysicalConst
+{
+HBTReal G;
+HBTReal H0;
+}
+
 Parameter_t HBTConfig;
 
 void Parameter_t::SetParameterValue(const string &line)
@@ -18,6 +22,7 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(SnapshotFileBase,3)
   else TrySetPar(MaxSnapshotIndex,4)
   else TrySetPar(BoxSize,5)
+  else TrySetPar(SofteningHalo,6)
 #undef TrySetPar		
 #define TrySetPar(var) if(name==#var){ ss>>var; cout<<#var<<" = "<<var<<endl;}	
   else TrySetPar(MinSnapshotIndex)
@@ -30,6 +35,7 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(SnapshotHasIdBlock)
   else TrySetPar(ParticleIdRankStyle)
   else TrySetPar(SnapshotIdUnsigned)
+  else TrySetPar(TreeNodeOpenAngle)
 #undef TrySetPar
   else if("SnapshotIdList"==name)
   {
@@ -61,6 +67,11 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   CheckUnsetParameters();
   PhysicalConst::G=43.0071*(MassInMsunh/1e10)/VelInKmS/VelInKmS/LengthInMpch;
   PhysicalConst::H0=100.*(1./VelInKmS)/(1./LengthInMpch);
+  
+  BoxHalf=BoxSize/2.;
+  TreeNodeResolution=SofteningHalo*0.1;
+  TreeNodeResolutionHalf=TreeNodeResolution/2.;
+  TreeNodeOpenAngleSquare=TreeNodeOpenAngle*TreeNodeOpenAngle;
 }
 void Parameter_t::CheckUnsetParameters()
 {

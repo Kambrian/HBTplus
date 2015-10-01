@@ -92,17 +92,9 @@ public:
   HBTxyz &GetPhysicalVelocity(ParticleIndex_t index) const;
   HBTReal GetParticleMass(ParticleIndex_t index) const;
   void Load(Parameter_t & param, int snapshot_index, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true, bool fill_particle_hash=true);
-  template <class IndexList_T>
-  void AveragePosition(HBTxyz & CoM, const IndexList_T & Particles) const; 
-  template <class IndexList_T>
-  void AverageVelocity(HBTxyz & CoV, const IndexList_T & Particles) const;
-  HBTReal PeriodicDistance(const HBTReal x[3], const HBTReal y[3]) const;
+  void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
+  void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
 };
-
-#define NEAREST(x, boxhalf, boxsize) (((x)>boxhalf)?((x)-boxsize):(((x)<-boxhalf)?((x)+boxsize):(x)))
-/*this macro can well manipulate boundary condition because 
-* usually a halo is much smaller than boxhalf
-* so that any distance within the halo should be smaller than boxhalf */
 
 inline Snapshot_t::ParticleIndex_t Snapshot_t::GetParticleIndex(ParticleId_t particle_id)
 {
@@ -131,67 +123,4 @@ inline HBTReal Snapshot_t::GetParticleMass(ParticleIndex_t index) const
   else
 	return ParticleMass[index];
 }
-inline HBTReal Snapshot_t::PeriodicDistance(const HBTReal x[3], const HBTReal y[3]) const
-{
-	return distance(x,y, Header.BoxSize, PeriodicBox);
-}
-template <class IndexList_T>
-void Snapshot_t::AveragePosition(HBTxyz& CoM, const IndexList_T & Particles) const
-/*mass weighted average position*/
-{
-	ParticleIndex_t i,j,np=Particles.size();
-	double sx[3],origin[3],msum;
-	static bool Periodic=PeriodicBox;
-	static HBTReal boxsize=Header.BoxSize, boxhalf=boxsize/2.;
-	
-	if(0==np) return;
-	
-	sx[0]=sx[1]=sx[2]=0.;
-	msum=0.;
-	if(Periodic)
-	  for(j=0;j<3;j++)
-		origin[j]=GetComovingPosition(Particles[0])[j];
-	
-	for(i=0;i<np;i++)
-	{
-	  HBTReal m=GetParticleMass(Particles[i]);
-	  msum+=m;
-	  for(j=0;j<3;j++)
-	  if(Periodic)
-		  sx[j]+=NEAREST(GetComovingPosition(Particles[i])[j]-origin[j], boxhalf, boxsize)*m;
-	  else
-		  sx[j]+=GetComovingPosition(Particles[i])[j]*m;
-	}
-	
-	for(j=0;j<3;j++)
-	{
-		sx[j]/=msum;
-		if(Periodic) sx[j]+=origin[j];
-		CoM[j]=sx[j];
-	}
-}
-template <class IndexList_T>
-void Snapshot_t::AverageVelocity(HBTxyz& CoV, const IndexList_T& Particles) const
-/*mass weighted average velocity*/
-{
-	ParticleIndex_t i,j,np=Particles.size();
-	double sv[3],msum;
-	
-	if(0==np) return;
-	
-	sv[0]=sv[1]=sv[2]=0.;
-	msum=0.;
-	
-	for(i=0;i<np;i++)
-	{
-	  HBTReal m=GetParticleMass(Particles[i]);
-	  msum+=m;
-	  for(j=0;j<3;j++)
-		sv[j]+=GetPhysicalVelocity(Particles[i])[j]*m;
-	}
-	
-	for(j=0;j<3;j++)
-	  CoV[j]=sv[j]/msum;
-}
-
 #endif

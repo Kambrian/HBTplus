@@ -17,7 +17,7 @@ namespace PhysicalConst
   extern HBTReal H0;
 }
 
-#define NumberOfCompulsaryConfigEntries 6
+#define NumberOfCompulsaryConfigEntries 7
 class Parameter_t
 {
 public:
@@ -27,6 +27,7 @@ public:
   string SnapshotFileBase;
   int MaxSnapshotIndex;
   HBTReal BoxSize; //to check the unit of snapshot according to the BoxSize in header
+  HBTReal SofteningHalo;
   bool IsSet[NumberOfCompulsaryConfigEntries];
   
   int MinSnapshotIndex;
@@ -41,6 +42,13 @@ public:
   bool SnapshotIdUnsigned;
   vector <int> SnapshotIdList;
   
+  HBTReal TreeNodeOpenAngle;
+  
+  HBTReal TreeNodeOpenAngleSquare;
+  HBTReal TreeNodeResolution;
+  HBTReal TreeNodeResolutionHalf;
+  HBTReal BoxHalf; 
+  
   Parameter_t(): IsSet(),SnapshotIdList()
   {
 	MinSnapshotIndex=0;
@@ -53,6 +61,7 @@ public:
 	SnapshotHasIdBlock=true;
 	ParticleIdRankStyle=false;
 	SnapshotIdUnsigned=false;
+	TreeNodeOpenAngle=0.45;
   }
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);

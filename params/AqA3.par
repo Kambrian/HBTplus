@@ -7,6 +7,7 @@ SubhaloPath /gpfs/data/jvbq85/HBT/data/AqA3/subcat
 SnapshotFileBase snap_C02_800
 MaxSnapshotIndex 64
 BoxSize 100.
+SofteningHalo 8.8e-5
 
 #[Optional]
 MassInMsunh 1e10
