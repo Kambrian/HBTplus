@@ -35,6 +35,10 @@ inline bool file_exist(char * filename)
 { struct stat buffer;   
   return (stat(filename, &buffer) == 0); 
 }
+inline void copyHBTxyz(HBTxyz & dest, HBTxyz & src)
+{
+  memcpy(dest, src, sizeof(HBTxyz));
+}
 inline HBTReal position_modulus(HBTReal x, HBTReal boxsize)
 {//shift the positions to within [0,boxsize)
 	HBTReal y;

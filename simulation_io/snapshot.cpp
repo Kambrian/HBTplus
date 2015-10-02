@@ -66,7 +66,7 @@ bool Snapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
   
   myfread(header.npart,sizeof(int),NUMBER_OF_PARTICLE_TYPES,fp);
   myfread(header.mass,sizeof(double),NUMBER_OF_PARTICLE_TYPES,fp);
-  myfread(&header.time,sizeof(double),1,fp);
+  myfread(&header.ScaleFactor,sizeof(double),1,fp);
   myfread(&header.redshift,sizeof(double),1,fp);
   myfread(&header.flag_sfr,sizeof(int),1,fp);
   myfread(&header.flag_feedback,sizeof(int),1,fp);
@@ -136,8 +136,8 @@ void Snapshot_t::LoadHeader(Parameter_t & param, int ifile)
   
   fclose(fp);
   
-  Header.Hz=PhysicalConst::H0 * sqrt(Header.Omega0 / (Header.time * Header.time * Header.time) 
-  + (1 - Header.Omega0 - Header.OmegaLambda) / (Header.time * Header.time)
+  Header.Hz=PhysicalConst::H0 * sqrt(Header.Omega0 / (Header.ScaleFactor * Header.ScaleFactor * Header.ScaleFactor) 
+  + (1 - Header.Omega0 - Header.OmegaLambda) / (Header.ScaleFactor * Header.ScaleFactor)
   + Header.OmegaLambda);//Hubble param for the current catalogue;
   
   //npartTotal is not reliable
@@ -316,7 +316,7 @@ void Snapshot_t::LoadVelocity(Parameter_t &param)
 	::operator delete(buf);
   }
   
-  HBTReal velocity_scale=sqrt(Header.time);
+  HBTReal velocity_scale=sqrt(Header.ScaleFactor);
   for(HBTInt i=0;i<NumberOfParticles;i++)
 	for(int j=0;j<3;j++)
 	  PhysicalVelocity[i][j]*=velocity_scale;

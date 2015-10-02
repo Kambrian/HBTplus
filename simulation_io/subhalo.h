@@ -129,6 +129,7 @@ public:
   void DecideCentrals(const HaloSnapshot_t &halo_snap);
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
+  void RemoveFakeHalos();
 };
 
 #endif

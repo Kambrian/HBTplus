@@ -19,7 +19,7 @@ struct SnapshotHeader_t
 {
   int      npart[NUMBER_OF_PARTICLE_TYPES];
   double   mass[NUMBER_OF_PARTICLE_TYPES];
-  double   time;
+  double   ScaleFactor;
   double   redshift;
   int      flag_sfr;
   int      flag_feedback;

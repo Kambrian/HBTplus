@@ -30,16 +30,18 @@ int main(int argc, char **argv)
 	halosnap.ParticleIdToIndex(partsnap);
 	subsnap.ParticleIdToIndex(partsnap);
 // 	subsnap.SubHalos.reserve(partsnap.GetNumberOfParticles()*0.1);//reserve enough	branches.......
-	subsnap.AssignHost(halosnap, partsnap);
+	subsnap.AssignHost(halosnap);
 	
-	halosnap.AverageCoordinates(partsnap);
-	subsnap.AverageCoordinates(partsnap);
-	subsnap.DecideCentrals(halosnap, partsnap);
+	halosnap.AverageCoordinates();
+	subsnap.AverageCoordinates();
+	subsnap.DecideCentrals(halosnap);
 	subsnap.FeedCentrals(halosnap);
 	
-	subsnap.RefineParticles(partsnap);
+	subsnap.RefineParticles();
 	
-	subsnap.ParticleIndexToId(partsnap);
+	subsnap.RemoveFakeHalos();
+	
+	subsnap.ParticleIndexToId();
 	subsnap.Save(HBTConfig);
 // 	subsnap_old=subsnap;
   }

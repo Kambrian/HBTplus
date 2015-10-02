@@ -35,7 +35,7 @@ public:
   {
   }
   void Reserve(const size_t max_num_part);
-  HBTInt Build(const HBTInt num_part, const HBTInt * particles, const Snapshot_t * snapshot);
+  HBTInt Build(const HBTInt num_part, const HBTInt * particles, const Snapshot_t &snapshot);
   void Clear();
   double EvaluatePotential(const HBTReal targetPos[3], const HBTReal targetMass=0.);
   double BindingEnergy(const HBTxyz &targetPos, const HBTxyz &targetVel, const HBTxyz &refPos, const HBTxyz &refVel, const HBTReal targetMass=0.);

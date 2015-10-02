@@ -35,7 +35,11 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(SnapshotHasIdBlock)
   else TrySetPar(ParticleIdRankStyle)
   else TrySetPar(SnapshotIdUnsigned)
+  else TrySetPar(BoundMassPrecision)
+  else TrySetPar(SourceSubRelaxFactor)
+  else TrySetPar(TreeAllocFactor)
   else TrySetPar(TreeNodeOpenAngle)
+  else TrySetPar(TreeMinNumOfCells)
 #undef TrySetPar
   else if("SnapshotIdList"==name)
   {

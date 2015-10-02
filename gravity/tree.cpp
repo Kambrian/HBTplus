@@ -79,7 +79,7 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 		Nodes[no].way.s[2]=s[2]/mass;
 }
 
-HBTInt OctTree_t::Build(const HBTInt num_part, const HBTInt* particles, const Snapshot_t *snapshot)
+HBTInt OctTree_t::Build(const HBTInt num_part, const HBTInt* particles, const Snapshot_t &snapshot)
 {/* build tree for a list of particles; automatically resize memory if necessary.
   * particles[] contain the list of particle indices in snapshot*/
 	HBTInt NumNids,numnodes;
@@ -94,7 +94,7 @@ HBTInt OctTree_t::Build(const HBTInt num_part, const HBTInt* particles, const Sn
 	}
 	
 	NumberOfParticles=num_part;
-	Snapshot=snapshot;
+	Snapshot=&snapshot;
 	ParticleList=particles;
 	
 	/* find enclosing rectangle */

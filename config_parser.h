@@ -42,7 +42,12 @@ public:
   bool SnapshotIdUnsigned;
   vector <int> SnapshotIdList;
   
+  HBTReal BoundMassPrecision;
+  HBTReal SourceSubRelaxFactor;
+  
+  HBTReal TreeAllocFactor;
   HBTReal TreeNodeOpenAngle;
+  HBTInt TreeMinNumOfCells;
   
   HBTReal TreeNodeOpenAngleSquare;
   HBTReal TreeNodeResolution;
@@ -61,7 +66,11 @@ public:
 	SnapshotHasIdBlock=true;
 	ParticleIdRankStyle=false;
 	SnapshotIdUnsigned=false;
+	BoundMassPrecision=0.9;
+	SourceSubRelaxFactor=3.;
+	TreeAllocFactor=1.; /* a value of 2 should be more than sufficient*/
 	TreeNodeOpenAngle=0.45;
+	TreeMinNumOfCells=500;
   }
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
