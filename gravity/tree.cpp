@@ -10,7 +10,8 @@
 
 void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 {
-	HBTInt j,jj,p,pp,mass,sons[8];
+	HBTInt j,jj,p,pp,sons[8];
+	double mass;
 	double s[3];
 	
 		mass=0;
@@ -32,10 +33,10 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 				pp=sons[jj];
 				if(p<NumberOfParticles)
 				{
-					mass++;
-					s[0]+=ParticlePosition[ParticleList[p]][0];
-					s[1]+=ParticlePosition[ParticleList[p]][1];
-					s[2]+=ParticlePosition[ParticleList[p]][2];
+					mass+=Snapshot->GetParticleMass(ParticleList[p]);
+					s[0]+=Snapshot->GetComovingPosition(ParticleList[p])[0];
+					s[1]+=Snapshot->GetComovingPosition(ParticleList[p])[1];
+					s[2]+=Snapshot->GetComovingPosition(ParticleList[p])[2];
 					NextnodeFromParticle[p]=pp;
 				}
 				else
@@ -54,10 +55,10 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 		}
 		if(pp<NumberOfParticles)//the last son
 		{			
-			mass++;
-			s[0]+=ParticlePosition[ParticleList[pp]][0];
-			s[1]+=ParticlePosition[ParticleList[pp]][1];
-			s[2]+=ParticlePosition[ParticleList[pp]][2];
+			mass+=Snapshot->GetParticleMass(ParticleList[p]);
+			s[0]+=Snapshot->GetComovingPosition(ParticleList[pp])[0];
+			s[1]+=Snapshot->GetComovingPosition(ParticleList[pp])[1];
+			s[2]+=Snapshot->GetComovingPosition(ParticleList[pp])[2];
 			NextnodeFromParticle[pp]=sib;
 		}
 		else
@@ -78,33 +79,35 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 		Nodes[no].way.s[2]=s[2]/mass;
 }
 
-HBTInt OctTree_t::Build(HBTInt num_part, HBTInt* particles, HBTReal part_pos[][3])
-{/* build tree for a list of particles
-  * particles[] contain the list of particle indices, 
-  * part_pos[][3] is the position for all the particles
-  * so that the position of particles[i] can be obtained as part_pos[particles[i]][]*/
+HBTInt OctTree_t::Build(const HBTInt num_part, const HBTInt* particles, const Snapshot_t *snapshot)
+{/* build tree for a list of particles; automatically resize memory if necessary.
+  * particles[] contain the list of particle indices in snapshot*/
 	HBTInt NumNids,numnodes;
 	HBTInt sub,subid,i,j,nodeid;
 	double center[3], lenhalf;
 	double xmin[3], xmax[3],Center[3], Len,Lenhalf;
 
+	if(num_part>=MaxNumberOfParticles)
+	{
+	  Clear();
+	  Reserve(MaxNumberOfParticles);
+	}
+	
 	NumberOfParticles=num_part;
-	ParticlePosition=part_pos;
+	Snapshot=snapshot;
 	ParticleList=particles;
-
-	Allocate(num_part);
 	
 	/* find enclosing rectangle */
   for(j = 0; j < 3; j++)
-    xmin[j] = xmax[j] = ParticlePosition[ParticleList[0]][j];
+    xmin[j] = xmax[j] = Snapshot->GetComovingPosition(ParticleList[0])[j];
 
   for(i = 1; i < NumberOfParticles; i++)
     for(j = 0; j < 3; j++)
       {
-	if(ParticlePosition[ParticleList[i]][j] > xmax[j])
-	  xmax[j] = ParticlePosition[ParticleList[i]][j];
-	else if(ParticlePosition[ParticleList[i]][j] < xmin[j])
-	  xmin[j] = ParticlePosition[ParticleList[i]][j];
+	if(Snapshot->GetComovingPosition(ParticleList[i])[j] > xmax[j])
+	  xmax[j] = Snapshot->GetComovingPosition(ParticleList[i])[j];
+	else if(Snapshot->GetComovingPosition(ParticleList[i])[j] < xmin[j])
+	  xmin[j] = Snapshot->GetComovingPosition(ParticleList[i])[j];
       }
 
   /* determine maxmimum extension */
@@ -116,7 +119,7 @@ HBTInt OctTree_t::Build(HBTInt num_part, HBTInt* particles, HBTReal part_pos[][3
     Center[j] = 0.5 * (xmax[j] + xmin[j]);
   
   Lenhalf=0.5*Len;
-MaxNumberOfNodes=MaxNumberOfCells+NumberOfParticles;
+MaxNodeId=MaxNumberOfCells+NumberOfParticles;
 
 Nodes= Cells-NumberOfParticles;	/* select first node */
 
@@ -140,7 +143,7 @@ Cells->sons[i] = -1;
 			//fprintf(logfile,"%f\n",len);
 			  lenhalf *= 0.5;//halflen for the to-be-found subnode
 			  sub = 0;
-	      if(ParticlePosition[ParticleList[i]][0] > center[0])
+	      if(Snapshot->GetComovingPosition(ParticleList[i])[0] > center[0])
 		{
 		  center[0] += lenhalf;//subcenter
 		  sub += 1;//sub index
@@ -149,7 +152,7 @@ Cells->sons[i] = -1;
 		{
 		  center[0] -= lenhalf;
 		}
-	      if(ParticlePosition[ParticleList[i]][1] > center[1])
+	      if(Snapshot->GetComovingPosition(ParticleList[i])[1] > center[1])
 		{
 		  center[1] += lenhalf;
 		  sub += 2;
@@ -158,7 +161,7 @@ Cells->sons[i] = -1;
 		{
 		  center[1] -= lenhalf;
 		}
-	      if(ParticlePosition[ParticleList[i]][2] > center[2])
+	      if(Snapshot->GetComovingPosition(ParticleList[i])[2] > center[2])
 		{
 		  center[2] += lenhalf;
 		  sub += 4;
@@ -179,7 +182,7 @@ Cells->sons[i] = -1;
 			Nodes[nodeid].sons[sub]=NumNids;//create a new node;
 			nodeid=NumNids;//take over the new nodeid
 			NumNids++;
-			if(NumNids >= MaxNumberOfNodes)
+			if(NumNids >= MaxNodeId)
 			{
 			  
 			  fprintf(stderr,"maximum number %zd of tree-nodes reached.\n", MaxNumberOfCells);
@@ -201,16 +204,16 @@ Cells->sons[i] = -1;
 				if(sub >= 8)
 				sub = 7;
 				//~ fprintf(logfile,"len=%g Len=%g sub=%d  i=%d (%g|%g|%g)\n",
-					//~ lenhalf*2, Len, sub, i, ParticlePosition[ParticleList[i]][0], ParticlePosition[ParticleList[i]][1], ParticlePosition[ParticleList[i]][2]);
+					//~ lenhalf*2, Len, sub, i, Snapshot->GetComovingPosition(ParticleList[i]][0], Snapshot->GetComovingPosition(ParticleList[i]][1], Snapshot->GetComovingPosition(ParticleList[i]][2]);
 				}
 			 else
 				{
 				sub=0;
-				if(ParticlePosition[ParticleList[subid]][0] > center[0])
+				if(Snapshot->GetComovingPosition(ParticleList[subid])[0] > center[0])
 					sub += 1;
-				if(ParticlePosition[ParticleList[subid]][1] > center[1])
+				if(Snapshot->GetComovingPosition(ParticleList[subid])[1] > center[1])
 					sub += 2;
-				if(ParticlePosition[ParticleList[subid]][2] > center[2])
+				if(Snapshot->GetComovingPosition(ParticleList[subid])[2] > center[2])
 					sub += 4;
 				}	
 			Nodes[nodeid].sons[sub]=subid;//the disturbing particle inserted
@@ -231,7 +234,11 @@ Cells->sons[i] = -1;
 	return numnodes; 
 }
 
-double OctTree_t::EvaluatePotential(HBTReal targetPos[3])
+double OctTree_t::EvaluatePotential(const HBTReal targetPos[3], const HBTReal targetMass)
+/*return specific physical potential, GM/Rphysical. 
+ * targetPos[] is comoving.
+ * if targetMass!=0, then the self-potential from targetMass is excluded. 
+ * do not set targetMass (i.e., keep to 0.) if target is outside the particlelist of tree*/
 {
   OctTreeCell_t *nop = 0;
   HBTInt no;
@@ -245,7 +252,7 @@ double OctTree_t::EvaluatePotential(HBTReal targetPos[3])
   h = 2.8 * HBTConfig.SofteningHalo;
   h_inv = 1.0 / h;
 
-  pot = 0;
+  pot=targetMass/HBTConfig.SofteningHalo; //to cancle out the self-potential added during tree walk.
 
   no = NumberOfParticles;//start from root node
 
@@ -253,16 +260,16 @@ double OctTree_t::EvaluatePotential(HBTReal targetPos[3])
     {
       if(no < NumberOfParticles)		/* single particle */
 	{
-	  dx = ParticlePosition[ParticleList[no]][0] - pos_x;
-	  dy = ParticlePosition[ParticleList[no]][1] - pos_y;
-	  dz = ParticlePosition[ParticleList[no]][2] - pos_z;
+	  dx = Snapshot->GetComovingPosition(ParticleList[no])[0] - pos_x;
+	  dy = Snapshot->GetComovingPosition(ParticleList[no])[1] - pos_y;
+	  dz = Snapshot->GetComovingPosition(ParticleList[no])[2] - pos_z;
 	  if(HBTConfig.PeriodicBoundaryOn)
 	  {
 	  dx=NEAREST(dx);
 	  dy=NEAREST(dy);
 	  dz=NEAREST(dz);
 	  }
-	  mass = 1;
+	  mass = Snapshot->GetParticleMass(ParticleList[no]);
 	  no = NextnodeFromParticle[no];
 	      r2 = dx * dx + dy * dy + dz * dz;	
 	}
@@ -308,33 +315,53 @@ double OctTree_t::EvaluatePotential(HBTReal targetPos[3])
 	  pot += mass * h_inv * wp;
 	}
     }
-
-  return pot;
+    
+  return pot*PhysicalConst::G/Snapshot->Header.ScaleFactor;
 }
 
-#define MIN_NUM_CELLS_OF_TREE 500
-#define TreeAllocFactor 1. /* a value of 2 should be more than sufficient*/
-void OctTree_t::Allocate(size_t num_part)
+double OctTree_t::BindingEnergy(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, const HBTReal targetMass)
+/* return specific binding energy 
+ * input Pos comoving, Vel physical
+ * targetMass optional, can be set to exclude self-potential if target is contained in the tree*/
 {
-  MaxNumberOfCells =TreeAllocFactor*num_part;
-  if(MaxNumberOfCells<MIN_NUM_CELLS_OF_TREE) MaxNumberOfCells=MIN_NUM_CELLS_OF_TREE;
+	  double pot=EvaluatePotential(targetPos, targetMass);
+	  double dv[3],dx[3], E=0.;
+	  for(int j=0;j<3;j++)
+	  {
+		dx[j]=targetPos[j]-refPos[j];
+		if(HBTConfig.PeriodicBoundaryOn)  dx[j]=NEAREST(dx[j]);
+		dv[j]=targetVel[j]-refVel[j];
+		dv[j]+=Snapshot->Header.Hz*Snapshot->Header.ScaleFactor*dx[j];
+		E+=dv[j]*dv[j];
+	  }
+	  E=E*0.5+pot;
+	  return E;
+}
+
+void OctTree_t::Reserve(const size_t max_num_part)
+/* allocate tree memory to hold a maximum of max_num_part particles */
+{
+  MaxNumberOfParticles=max_num_part;
+  MaxNumberOfCells =HBTConfig.TreeAllocFactor*MaxNumberOfParticles;
+  if(MaxNumberOfCells<HBTConfig.TreeMinNumOfCells) MaxNumberOfCells=HBTConfig.TreeMinNumOfCells;
   Cells=new OctTreeCell_t[MaxNumberOfCells+1];
 
-  NextnodeFromParticle=new HBTInt[num_part];
+  NextnodeFromParticle=new HBTInt[MaxNumberOfParticles];
 }
 void OctTree_t::Clear()
 {
-  if(NumberOfParticles)
+  if(MaxNumberOfParticles)
   {
 	delete [] NextnodeFromParticle;
+	MaxNumberOfParticles=0;
 	NumberOfParticles=0;
   }
   if(MaxNumberOfCells)
   {
 	delete [] Cells;
 	MaxNumberOfCells=0;
+	MaxNodeId=0;
   }
-  MaxNumberOfNodes=0;
 }
 
 
