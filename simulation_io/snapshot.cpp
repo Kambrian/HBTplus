@@ -374,6 +374,11 @@ void Snapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Particles[],
 	double sx[3],origin[3],msum;
 	
 	if(0==NumPart) return;
+	if(1==NumPart) 
+	{
+	  copyHBTxyz(CoM, GetComovingPosition(Particles[0]));
+	  return;
+	}
 	
 	sx[0]=sx[1]=sx[2]=0.;
 	msum=0.;
@@ -406,6 +411,11 @@ void Snapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Particles[],
 	double sv[3],msum;
 	
 	if(0==NumPart) return;
+	if(1==NumPart) 
+	{
+	  copyHBTxyz(CoV, GetPhysicalVelocity(Particles[0]));
+	  return;
+	}
 	
 	sv[0]=sv[1]=sv[2]=0.;
 	msum=0.;

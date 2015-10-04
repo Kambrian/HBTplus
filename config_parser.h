@@ -42,8 +42,12 @@ public:
   bool SnapshotIdUnsigned;
   vector <int> SnapshotIdList;
   
+  bool TrimNonHostParticles; //whether to trim particles outside the host halo when finding hosts
+  HBTReal MajorProgenitorMassRatio; 
   HBTReal BoundMassPrecision;
   HBTReal SourceSubRelaxFactor;
+  HBTReal SubCoreSizeFactor; //coresize=Nbound*CoreSizeFactor, to get center coordinates for the KineticDistance test.
+  HBTInt SubCoreSizeMin; //Minimum coresize
   
   HBTReal TreeAllocFactor;
   HBTReal TreeNodeOpenAngle;
@@ -66,8 +70,12 @@ public:
 	SnapshotHasIdBlock=true;
 	ParticleIdRankStyle=false;
 	SnapshotIdUnsigned=false;
+	TrimNonHostParticles=false;
+	MajorProgenitorMassRatio=0.67;
 	BoundMassPrecision=0.9;
 	SourceSubRelaxFactor=3.;
+	SubCoreSizeFactor=0.25;
+	SubCoreSizeMin=20;
 	TreeAllocFactor=1.; /* a value of 2 should be more than sufficient*/
 	TreeNodeOpenAngle=0.45;
 	TreeMinNumOfCells=500;

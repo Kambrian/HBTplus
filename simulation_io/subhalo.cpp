@@ -14,30 +14,73 @@ HBTReal SubHalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &snapsho
   HBTReal d=dv+snapshot.Header.Hz*snapshot.Header.ScaleFactor*dx;
   return (d>0?d:-d);
 }
-struct Energy_t
+struct ParticleEnergy_t
 {
   HBTInt pid;
   float E;
 };
-inline bool CompEnergy(const Energy_t & a, const Energy_t & b)
+inline bool CompEnergy(const ParticleEnergy_t & a, const ParticleEnergy_t & b)
 {
   return (a.E<b.E);
 };
-void SubHalo_t::unbind(const Snapshot_t &snapshot)
-{
-  if(1==Particles.size())
-  {
-	memcpy(ComovingPosition, snapshot.GetComovingPosition(Particles[0]), sizeof(HBTxyz));
-	memcpy(PhysicalVelocity, snapshot.GetPhysicalVelocity(Particles[0]), sizeof(HBTxyz));
-	return;
-  }
+static HBTInt PartitionBindingEnergy(vector <ParticleEnergy_t> &Elist)
+/*sort Elist to move unbound particles to the end*/
+{//similar to the C++ partition() func
+  if(Elist.size()==0) return 0;
+  if(Elist.size()==1) return Elist[0].E<0;
   
+  ParticleEnergy_t Etmp=Elist[0]; 
+  auto iterforward=Elist.begin(), iterbackward=Elist.end();
+  while(true)
+  {
+	//iterforward is a void now, can be filled
+	while(true)
+	{
+	  iterbackward--;
+	  if(iterbackward==iterforward)
+	  {
+		*iterforward=Etmp;
+		if(Etmp.E<0) iterbackward++;
+		return iterbackward-Elist.begin();
+	  }
+	  if(iterbackward->E<0) break;
+	}
+	*iterforward=*iterbackward;
+	//iterbackward is a void now, can be filled
+	while(true)
+	{
+	  iterforward++;
+	  if(iterforward==iterbackward)
+	  {
+		*iterbackward=Etmp;
+		if(Etmp.E<0) iterbackward++;
+		return iterbackward-Elist.begin();
+	  }
+	  if(iterforward->E>0) break;
+	}
+	*iterbackward=*iterforward;
+  }
+}
+static void PopMostBoundParticle(ParticleEnergy_t * Edata, const HBTInt Nbound)
+{
+  HBTInt imin=0;
+  for(HBTInt i=1;i<Nbound;i++)
+  {
+	if(Edata[i].E<Edata[imin].E) imin=i;
+  }
+  if(imin!=0) swap(Edata[imin], Edata[0]);
+}
+void SubHalo_t::unbind(const Snapshot_t &snapshot)
+{//the reference frame should already be initialized before unbinding.
+  if(1==Particles.size()) return;
+ 
+  HBTInt OldMostBoundParticle=Particles[0];
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
   HBTInt Nlast=Nbound*100; 
   
-  vector <Energy_t> Elist(Nbound);
+  vector <ParticleEnergy_t> Elist(Nbound);
   for(HBTInt i=0;i<Nbound;i++)
 	Elist[i].pid=Particles[i];
   assert(Nbound<Nlast*HBTConfig.BoundMassPrecision);
@@ -50,19 +93,24 @@ void SubHalo_t::unbind(const Snapshot_t &snapshot)
 	  HBTInt pid=Elist[i].pid;
 	  Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingPosition, PhysicalVelocity, snapshot.GetParticleMass(pid));
 	}
-	sort(Elist.begin(), Elist.begin()+Nlast, CompEnergy);
-	memcpy(ComovingPosition, snapshot.GetComovingPosition(Elist[0].pid), sizeof(HBTxyz));
-	memcpy(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid), sizeof(HBTxyz));
-	for(Nbound=0;Nbound<Nlast;Nbound++)
-	  if(Elist[Nbound].E>0) break;
+	Nbound=PartitionBindingEnergy(Elist);
 	if(Nbound<HBTConfig.MinNumPartOfSub)
 	{
 	  Nbound=0;
-	  break;
+	  Elist[0].pid=OldMostBoundParticle;
 	}
+	else
+	{
+	  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
+	  PopMostBoundParticle(Elist.data(), Nbound);
+	}
+	copyHBTxyz(ComovingPosition, snapshot.GetComovingPosition(Elist[0].pid));
+	copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
+	if(0==Nbound) break;
   }
   if(Nbound)
   {
+	sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
 	Nlast=Particles.size();
 	if(Nlast>Nbound*HBTConfig.SourceSubRelaxFactor) Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
   }
@@ -155,18 +203,20 @@ void SubHaloSnapshot_t::AssignHost(const HaloSnapshot_t &halo_snap)
 	SubHalos[subid].HostHaloId=ParticleToHost[SubHalos[subid].TrackParticleId];
 	//alternatives: CoreTrack; Split;
   }
-  //alternative: trim particles outside fof
-    
+  if(HBTConfig.TrimNonHostParticles)
+  {
+	cout<<"Error: TrimNonHostParticles not implemented yet...\n";
+	exit(1);
+  }
   MemberTable.Build(halo_snap.Halos.size(), SubHalos);
 }
-#define CORE_SIZE_MIN 20
-#define CORE_SIZE_FRAC 0.25
+
 void SubHaloSnapshot_t::AverageCoordinates()
 {
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
-	int coresize=SubHalos[subid].Nbound*CORE_SIZE_FRAC;
-	if(coresize<CORE_SIZE_MIN) coresize=CORE_SIZE_MIN;
+	int coresize=SubHalos[subid].Nbound*HBTConfig.SubCoreSizeFactor;
+	if(coresize<HBTConfig.SubCoreSizeMin) coresize=HBTConfig.SubCoreSizeMin;
 	if(coresize>SubHalos[subid].Nbound) coresize=SubHalos[subid].Nbound;
 	
 	SnapshotPointer->AveragePosition(SubHalos[subid].ComovingPosition, SubHalos[subid].Particles.data(), coresize);
@@ -174,7 +224,6 @@ void SubHaloSnapshot_t::AverageCoordinates()
   }
 }
 
-#define MAJOR_PROGENITOR_MASS_RATIO 0.67
 void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 /* to select central subhalo according to KineticDistance, and move each central to the beginning of each list in MemberTable*/
 {
@@ -184,7 +233,7 @@ void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 	if(List.size()>1)
 	{
 	  int n_major;
-	  HBTInt MassLimit=SubHalos[List[0]].Nbound*MAJOR_PROGENITOR_MASS_RATIO;
+	  HBTInt MassLimit=SubHalos[List[0]].Nbound*HBTConfig.MajorProgenitorMassRatio;
 	  for(n_major=1;n_major<List.size();n_major++)
 		if(SubHalos[List[n_major]].Nbound<MassLimit) break;
 		if(n_major>1)
