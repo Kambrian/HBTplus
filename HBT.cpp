@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 	subsnap.FeedCentrals(halosnap);
 	subsnap.RefineParticles();
 	
-	subsnap.ExtendTrackIds();
+	subsnap.RegisterNewTracks();
 	
 	subsnap.ParticleIndexToId();
 	subsnap.Save();

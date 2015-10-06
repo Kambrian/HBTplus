@@ -316,7 +316,7 @@ void SubHaloSnapshot_t::RefineParticles()
   }
 }
 
-void SubHaloSnapshot_t::ExtendTrackIds()
+void SubHaloSnapshot_t::RegisterNewTracks()
 /*assign trackId to new bound ones*/
 {
   HBTInt NTracks=SubHalos.size()-MemberTable.NBirth;
