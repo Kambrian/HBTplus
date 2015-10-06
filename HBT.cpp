@@ -36,10 +36,8 @@ int main(int argc, char **argv)
 	subsnap.AverageCoordinates();
 	subsnap.DecideCentrals(halosnap);
 	subsnap.FeedCentrals(halosnap);
-	
 	subsnap.RefineParticles();
-	
-	subsnap.RemoveFakeHalos();
+	subsnap.ExtendTrackIds();
 	
 	subsnap.ParticleIndexToId();
 	subsnap.Save(HBTConfig);

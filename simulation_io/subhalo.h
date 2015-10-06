@@ -13,7 +13,6 @@ class TrackParticle_t
 {
 public:
   HBTInt TrackId;
-  HBTInt TrackParticleId;
   HBTInt SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
   HBTInt SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
@@ -21,20 +20,11 @@ public:
   HBTInt LastMaxMass;
   TrackParticle_t()
   {
-	TrackId=-1;
-	TrackParticleId=SpecialConst::NullParticleId;
+	TrackId=SpecialConst::NullTrackId;
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
-  }
-  void SetTrackParticle(const HBTInt particle_id)
-  {
-	TrackParticleId=particle_id;
-  }
-  void SetTrackId(const HBTInt track_id)
-  {
-	TrackId=track_id;
   }
 };
 
@@ -69,12 +59,15 @@ private:
   void FillMemberLists(const SubHaloList_t & SubHalos);
   void CountMembers(const SubHaloList_t & SubHalos);
   void SortMemberLists(const SubHaloList_t & SubHalos);
+  void CountBirth();
   vector <MemberList_t> RawLists; //list of subhaloes inside each host halo; contain one more group than halo catalogue, to hold field subhaloes.
 public:
   vector <HBTInt> AllMembers; //the storage for all the MemberList_t
   ShallowList_t <MemberList_t> Lists; //offset to allow hostid=-1
+  HBTInt NBirth; //newly born halos.
+  HBTInt NBirthFake; //Fake (unbound) halos out of NBirth
   
-  MemberShipTable_t(): RawLists(), AllMembers(), Lists()
+  MemberShipTable_t(): RawLists(), AllMembers(), Lists(), NBirth(0), NBirthFake(0)
   {
   }
   void Build(const HBTInt nhalos, const SubHaloList_t & SubHalos);
@@ -129,7 +122,7 @@ public:
   void DecideCentrals(const HaloSnapshot_t &halo_snap);
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
-  void RemoveFakeHalos();
+  void ExtendTrackIds();
 };
 
 #endif

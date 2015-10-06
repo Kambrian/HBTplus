@@ -10,8 +10,8 @@
 
 class Halo_t
 {  
-  typedef vector <HBTInt> ParticleList_t;
 public:
+  typedef vector <HBTInt> ParticleList_t;
   ParticleList_t Particles;
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;

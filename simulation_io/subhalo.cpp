@@ -121,6 +121,7 @@ void SubHalo_t::unbind(const Snapshot_t &snapshot)
   }
   for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
   Particles.resize(Nlast);
+  //todo: output angular momentum and total energy as well, for calculation of spin.
 }
 
 void MemberShipTable_t::Init(const HBTInt nhalos, const HBTInt nsubhalos, const float alloc_factor)
@@ -171,6 +172,12 @@ void MemberShipTable_t::SortMemberLists(const SubHaloList_t & SubHalos)
   for(HBTInt i=0;i<RawLists.size();i++)
 	std::sort(RawLists[i].data(), RawLists[i].data()+RawLists[i].size(), compare_mass);
 }
+void MemberShipTable_t::CountBirth()
+{
+  NBirth=0;
+  for(HBTInt hostid=0;hostid<Lists.size();hostid++)
+	if(Lists[hostid].size()==0)  NBirth++;
+}
 void MemberShipTable_t::Build(const HBTInt nhalos, const SubHaloList_t & SubHalos)
 {
   Init(nhalos, SubHalos.size());
@@ -178,6 +185,7 @@ void MemberShipTable_t::Build(const HBTInt nhalos, const SubHaloList_t & SubHalo
   BindMemberLists();
   FillMemberLists(SubHalos);
   SortMemberLists(SubHalos);
+  CountBirth();
 //   std::sort(AllMembers.begin(), AllMembers.end(), CompareHostAndMass);
 }
 /*
@@ -194,13 +202,14 @@ void SubHaloSnapshot_t::AssignHost(const HaloSnapshot_t &halo_snap)
   vector<HBTInt> ParticleToHost(SnapshotPointer->GetNumberOfParticles(), SpecialConst::NullHaloId);
   for(int haloid=0;haloid<halo_snap.Halos.size();haloid++)
   {
-	for(int i=0;i<halo_snap.Halos[haloid].Particles.size();i++)
-	  ParticleToHost[i]=haloid;
+	const Halo_t::ParticleList_t & Particles=halo_snap.Halos[haloid].Particles;
+	for(int i=0;i<Particles.size();i++)
+	  ParticleToHost[Particles[i]]=haloid;
   }
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
-	//rely on track_particle
-	SubHalos[subid].HostHaloId=ParticleToHost[SubHalos[subid].TrackParticleId];
+	//rely on most-bound particle
+	SubHalos[subid].HostHaloId=ParticleToHost[SubHalos[subid].Particles[0]];
 	//alternatives: CoreTrack; Split;
   }
   if(HBTConfig.TrimNonHostParticles)
@@ -236,21 +245,21 @@ void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 	  HBTInt MassLimit=SubHalos[List[0]].Nbound*HBTConfig.MajorProgenitorMassRatio;
 	  for(n_major=1;n_major<List.size();n_major++)
 		if(SubHalos[List[n_major]].Nbound<MassLimit) break;
-		if(n_major>1)
+	  if(n_major>1)
+	  {
+		HBTReal dmin=SubHalos[List[0]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
+		int icenter=0;
+		for(int i=1;i<n_major;i++)
 		{
-		  HBTReal dmin=SubHalos[List[0]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
-		  int icenter=0;
-		  for(int i=1;i<n_major;i++)
+		  HBTReal d=SubHalos[List[i]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
+		  if(dmin>d)
 		  {
-			HBTReal d=SubHalos[List[i]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
-			if(dmin>d)
-			{
-			  dmin=d;
-			  icenter=i;
-			}
+			dmin=d;
+			icenter=i;
 		  }
-		  if(icenter)  swap(List[0], List[icenter]);
 		}
+		if(icenter)  swap(List[0], List[icenter]);
+	  }
 	}
   }
 }
@@ -261,10 +270,8 @@ void SubHaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
  * initialize new central with host halo center coordinates
  */
 {
-  HBTInt Npro=SubHalos.size(),NBirth=0;
-  for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
-	if(MemberTable.Lists[hostid].size()==0)  NBirth++;
-	SubHalos.resize(Npro+NBirth);
+  HBTInt Npro=SubHalos.size();
+  SubHalos.resize(Npro+MemberTable.NBirth);
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   {
 	if(0==MemberTable.Lists[hostid].size()) //create a new sub
@@ -292,9 +299,23 @@ void SubHaloSnapshot_t::RefineParticles()
   }
 }
 
-void SubHaloSnapshot_t::RemoveFakeHalos()
-/*remove fake ones and assign trackId to new bound ones*/
+void SubHaloSnapshot_t::ExtendTrackIds()
+/*assign trackId to new bound ones*/
 {
-//TODO
+  HBTInt NTracks=SubHalos.size()-MemberTable.NBirth;
+  MemberTable.NBirthFake=0;
+  for(HBTInt i=MemberTable.AllMembers.size()-MemberTable.NBirth;i<MemberTable.AllMembers.size();i++)
+  {
+	HBTInt & subid=MemberTable.AllMembers[i];
+	if(SubHalos[subid].Nbound>1)
+	{
+	  SubHalos[subid].TrackId=NTracks;
+	  NTracks++;
+	}
+	else
+	{
+	  subid=SpecialConst::NullSubhaloId;
+	  MemberTable.NBirthFake++;
+	}
+  }
 }
-
