@@ -152,23 +152,23 @@ void Snapshot_t::LoadHeader(Parameter_t & param, int ifile)
   
 }
 
-void Snapshot_t::Load(Parameter_t & param, int snapshot_index, bool load_id, bool load_position, bool load_velocity, bool load_mass, bool fill_particle_hash)
+void Snapshot_t::Load(int snapshot_index, bool load_id, bool load_position, bool load_velocity, bool load_mass, bool fill_particle_hash)
 { 
-  SetSnapshotIndex(param, snapshot_index);
-  PeriodicBox=param.PeriodicBoundaryOn;
-  LoadHeader(param);
+  SetSnapshotIndex(HBTConfig, snapshot_index);
+  PeriodicBox=HBTConfig.PeriodicBoundaryOn;
+  LoadHeader(HBTConfig);
   if(load_id)
   {
-	LoadId(param);
+	LoadId(HBTConfig);
 	if(fill_particle_hash)
 	  FillParticleHash();
   }
   if(load_position)
-	LoadPosition(param);
+	LoadPosition(HBTConfig);
   if(load_velocity)
-	LoadVelocity(param);
+	LoadVelocity(HBTConfig);
   if(load_mass)
-	if(0.==Header.mass[1]) LoadMass(param);
+	if(0.==Header.mass[1]) LoadMass(HBTConfig);
 }
 
 size_t Snapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before, const size_t n_skip_after)
@@ -439,7 +439,7 @@ int main(int argc, char **argv)
 {
   HBTConfig.ParseConfigFile(argv[1]);
   Snapshot_t snapshot;
-  snapshot.Load(HBTConfig, 0, true, true, false, true);
+  snapshot.Load(0, true, true, false, true);
   cout<<snapshot.GetNumberOfParticles()<<endl;
   cout<<snapshot.GetParticleId(10)<<endl;
   cout<<snapshot.GetComovingPosition(10)<<endl;

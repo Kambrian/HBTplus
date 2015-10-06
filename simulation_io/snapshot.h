@@ -91,7 +91,7 @@ public:
   HBTxyz &GetComovingPosition(ParticleIndex_t index) const;
   HBTxyz &GetPhysicalVelocity(ParticleIndex_t index) const;
   HBTReal GetParticleMass(ParticleIndex_t index) const;
-  void Load(Parameter_t & param, int snapshot_index, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true, bool fill_particle_hash=true);
+  void Load(int snapshot_index, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true, bool fill_particle_hash=true);
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
 };

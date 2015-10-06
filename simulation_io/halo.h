@@ -21,8 +21,8 @@ class HaloSnapshot_t: public SnapshotNumber_t
 {  
   typedef vector <Halo_t> HaloList_t;
   template <class PIDtype_t>
-  void LoadGroupV3(Parameter_t &param, PIDtype_t dummy);
-  void GetFileNameFormat(Parameter_t &param, string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
+  void LoadGroupV3(PIDtype_t dummy);
+  void GetFileNameFormat(string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 public:
   Snapshot_t * SnapshotPointer;
   HaloList_t Halos;
@@ -30,7 +30,7 @@ public:
   HaloSnapshot_t(): SnapshotNumber_t(), Halos(), SnapshotPointer(nullptr)
   {
   }
-  void Load(Parameter_t &param, int snapshot_index);
+  void Load(int snapshot_index);
   void Clear();
   void ParticleIdToIndex(Snapshot_t & snapshot);
   void ParticleIndexToId();

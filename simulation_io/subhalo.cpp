@@ -178,6 +178,15 @@ void MemberShipTable_t::CountBirth()
   for(HBTInt hostid=0;hostid<Lists.size();hostid++)
 	if(Lists[hostid].size()==0)  NBirth++;
 }
+/*
+inline bool SubHaloSnapshot_t::CompareHostAndMass(const HBTInt& subid_a, const HBTInt& subid_b)
+{//ascending in host id, descending in mass inside each host, and put NullHaloId to the beginning.
+  SubHalo_t a=SubHalos[subid_a], b=SubHalos[subid_b];
+  
+  if(a.HostHaloId==b.HostHaloId) return (a.Nbound>b.Nbound);
+  
+  return (a.HostHaloId<b.HostHaloId); //(a.HostHaloId!=SpecialConst::NullHaloId)&&
+}*/
 void MemberShipTable_t::Build(const HBTInt nhalos, const SubHaloList_t & SubHalos)
 {
   Init(nhalos, SubHalos.size());
@@ -188,15 +197,22 @@ void MemberShipTable_t::Build(const HBTInt nhalos, const SubHaloList_t & SubHalo
   CountBirth();
 //   std::sort(AllMembers.begin(), AllMembers.end(), CompareHostAndMass);
 }
-/*
-inline bool SubHaloSnapshot_t::CompareHostAndMass(const HBTInt& subid_a, const HBTInt& subid_b)
-{//ascending in host id, descending in mass inside each host, and put NullHaloId to the beginning.
-  SubHalo_t a=SubHalos[subid_a], b=SubHalos[subid_b];
-  
-  if(a.HostHaloId==b.HostHaloId) return (a.Nbound>b.Nbound);
-  
-  return (a.HostHaloId<b.HostHaloId); //(a.HostHaloId!=SpecialConst::NullHaloId)&&
-}*/
+void SubHaloSnapshot_t::Load(int snapshot_index)
+{//TODO
+  cout<<"SubHaloSnapshot_t::Load() not implemented yet\n";
+  SetSnapshotIndex(HBTConfig, snapshot_index);
+  if(SnapshotIndex<HBTConfig.MinSnapshotIndex)
+  {// LoadNull();
+  }
+  else
+  {
+  }
+}
+void SubHaloSnapshot_t::Save()
+{
+	//TODO
+	cout<<"Save() not implemted yet\n";
+}
 void SubHaloSnapshot_t::AssignHost(const HaloSnapshot_t &halo_snap)
 {
   vector<HBTInt> ParticleToHost(SnapshotPointer->GetNumberOfParticles(), SpecialConst::NullHaloId);
@@ -271,6 +287,7 @@ void SubHaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
  */
 {
   HBTInt Npro=SubHalos.size();
+  //SubHalos.reserve(Snapshot->GetNumberOfParticles()*0.1);//reserve enough	branches.......
   SubHalos.resize(Npro+MemberTable.NBirth);
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   {

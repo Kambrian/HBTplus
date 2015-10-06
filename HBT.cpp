@@ -19,17 +19,17 @@ int main(int argc, char **argv)
   ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
   SubHaloSnapshot_t subsnap;
   
-  subsnap.Load(HBTConfig, snapshot_start-1);
+  subsnap.Load(snapshot_start-1);
     
   for(int isnap=snapshot_start;isnap<=snapshot_end;isnap++)
   {
 	Snapshot_t partsnap;
 	HaloSnapshot_t halosnap;
-	partsnap.Load(HBTConfig, isnap);
-	halosnap.Load(HBTConfig, isnap);
+	partsnap.Load(isnap);
+	halosnap.Load(isnap);
 	halosnap.ParticleIdToIndex(partsnap);
 	subsnap.ParticleIdToIndex(partsnap);
-// 	subsnap.SubHalos.reserve(partsnap.GetNumberOfParticles()*0.1);//reserve enough	branches.......
+	
 	subsnap.AssignHost(halosnap);
 	
 	halosnap.AverageCoordinates();
@@ -37,11 +37,11 @@ int main(int argc, char **argv)
 	subsnap.DecideCentrals(halosnap);
 	subsnap.FeedCentrals(halosnap);
 	subsnap.RefineParticles();
+	
 	subsnap.ExtendTrackIds();
 	
 	subsnap.ParticleIndexToId();
-	subsnap.Save(HBTConfig);
-// 	subsnap_old=subsnap;
+	subsnap.Save();
   }
   
   return 0;

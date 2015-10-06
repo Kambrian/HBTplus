@@ -72,13 +72,13 @@ static bool GetGroupFileByteOrder(const char *filename, const int FileCounts, co
   exit(1);
 }
 
-void HaloSnapshot_t::GetFileNameFormat(Parameter_t &param, string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap)
+void HaloSnapshot_t::GetFileNameFormat(string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap)
 {
   IsSubFile=false;
   FileCounts=1;
   char buf[1024], pattern[1024], basefmt[1024], fmt[1024];
   const int ifile=0;
-  sprintf(basefmt, "%s/groups_%03d/subhalo_%%s_%03d",param.HaloPath.c_str(),SnapshotId,SnapshotId);
+  sprintf(basefmt, "%s/groups_%03d/subhalo_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId,SnapshotId);
   sprintf(fmt, "%s.%%d", basefmt);
   sprintf(buf, fmt, "tab", ifile);
   if(file_exist(buf))
@@ -87,12 +87,12 @@ void HaloSnapshot_t::GetFileNameFormat(Parameter_t &param, string &format, int &
 	sprintf(pattern, basefmt, "tab");
 	strcat(pattern, ".*");
 	FileCounts=count_pattern_files(pattern);
-	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, HBTConfig.GroupFileVariant);
 	format=fmt;
 	return;
   }
   
-  sprintf(basefmt, "%s/groups_%03d/group_%%s_%03d",param.HaloPath.c_str(),SnapshotId,SnapshotId);
+  sprintf(basefmt, "%s/groups_%03d/group_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId,SnapshotId);
   sprintf(fmt, "%s.%%d", basefmt);
   sprintf(buf, fmt, "tab", ifile);
   if(file_exist(buf))
@@ -100,50 +100,50 @@ void HaloSnapshot_t::GetFileNameFormat(Parameter_t &param, string &format, int &
 	sprintf(pattern, basefmt, "tab");
 	strcat(pattern, ".*");
 	FileCounts=count_pattern_files(pattern);
-	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, HBTConfig.GroupFileVariant);
 	format=fmt;
 	return;
   }
   
-  sprintf(fmt, "%s/subhalo_%%s_%03d",param.HaloPath.c_str(),SnapshotId);
+  sprintf(fmt, "%s/subhalo_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId);
   sprintf(buf, fmt, "tab");
   if(file_exist(buf))
   {
 	IsSubFile=true;
-	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, HBTConfig.GroupFileVariant);
 	format=fmt;
 	return;
   }
   
-  sprintf(fmt, "%s/group_%%s_%03d",param.HaloPath.c_str(),SnapshotId);
+  sprintf(fmt, "%s/group_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId);
   sprintf(buf, fmt, "tab");
   if(file_exist(buf))
   {
-	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, param.GroupFileVariant);
+	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, HBTConfig.GroupFileVariant);
 	format=fmt;
 	return;
   }
   
   // 	return 0;
-  cerr<<"Error: no group files found under "<<param.HaloPath<<" at snapshot "<<SnapshotId<<endl;
+  cerr<<"Error: no group files found under "<<HBTConfig.HaloPath<<" at snapshot "<<SnapshotId<<endl;
   exit(1);
 }
 
-void HaloSnapshot_t::Load(Parameter_t &param, int snapshot_index)
+void HaloSnapshot_t::Load(int snapshot_index)
 {
-  SetSnapshotIndex(param, snapshot_index);
-  switch(param.GroupFileVariant)
+  SetSnapshotIndex(HBTConfig, snapshot_index);
+  switch(HBTConfig.GroupFileVariant)
   {
 	case GROUP_FORMAT_GADGET3_INT:
 	  int i;
-	  LoadGroupV3(param, i);
+	  LoadGroupV3(i);
 	  break;
 	case GROUP_FORMAT_GADGET3_LONG:
 	  long l;
-	  LoadGroupV3(param, l);
+	  LoadGroupV3(l);
 	  break;
 	default:
-	  cerr<<"GroupFileVariant="<<param.GroupFileVariant<<" not implemented yet.\n";
+	  cerr<<"GroupFileVariant="<<HBTConfig.GroupFileVariant<<" not implemented yet.\n";
 	  exit(1);
   }
 }
@@ -157,7 +157,7 @@ void HaloSnapshot_t::Clear()
 }
 
 template <class PIDtype_t>
-void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
+void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 //the value of dummy is irrelevant, only its type is used.
 {
   FILE *fd;
@@ -171,7 +171,7 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
   string filename_format;
   bool IsSubFile;
   int FileCounts;
-  GetFileNameFormat(param, filename_format, FileCounts, IsSubFile, NeedByteSwap);
+  GetFileNameFormat(filename_format, FileCounts, IsSubFile, NeedByteSwap);
   
   long long Nload=0;  
   for(int iFile=0;iFile<FileCounts;iFile++)
@@ -270,7 +270,7 @@ void HaloSnapshot_t::LoadGroupV3(Parameter_t &param, PIDtype_t dummy)
   
   TotNumberOfParticles=NumberOfParticles;
   Halos.resize(NumberOfHaloes);
-  if(param.ParticleIdRankStyle)
+  if(HBTConfig.ParticleIdRankStyle)
   {
 	cerr<<"ParticleIdRankStyle not implemented for group files\n";
 	exit(1);
@@ -324,7 +324,7 @@ int main(int argc, char **argv)
 {
   HBTConfig.ParseConfigFile(argv[1]);
   HaloSnapshot_t halo;
-  halo.Load(HBTConfig, HBTConfig.MaxSnapshotIndex);
+  halo.Load(HBTConfig.MaxSnapshotIndex);
   cout<<halo.Halos.size()<<";"<<halo.TotNumberOfParticles<<endl;
   cout<<halo.Halos[10].Particles.size()<<endl;
   cout<<halo.Halos[10].Particles[0]<<endl;

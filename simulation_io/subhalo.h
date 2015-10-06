@@ -81,22 +81,8 @@ public:
   SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr)
   {
   }
-  void Load(Parameter_t &param, int snapshot_index)
-  {//TODO
-	cout<<"SubHaloSnapshot_t::Load() not implemented yet\n";
-	SetSnapshotIndex(param, snapshot_index);
-	if(SnapshotIndex<HBTConfig.MinSnapshotIndex)
-	{// LoadNull();
-	}
-	else
-	{
-	}
-  }
-  void Save(Parameter_t &param)
-  {
-	//TODO
-	cout<<"Save() not implemted yet\n";
-  }
+  void Load(int snapshot_index);
+  void Save();
   void Clear()
   {
 	//TODO
