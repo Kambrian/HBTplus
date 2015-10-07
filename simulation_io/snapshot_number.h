@@ -37,14 +37,14 @@ public:
   }
   void FormatSnapshotId(std::stringstream &ss);
   void SetSnapshotIndex(Parameter_t &param, int snapshot_index);
-  int GetSnapshotIndex();
-  int GetSnapshotId();
+  int GetSnapshotIndex() const;
+  int GetSnapshotId() const;
 };
-inline int SnapshotNumber_t::GetSnapshotIndex()
+inline int SnapshotNumber_t::GetSnapshotIndex() const
 {
   return SnapshotIndex;
 }
-inline int SnapshotNumber_t::GetSnapshotId()
+inline int SnapshotNumber_t::GetSnapshotId() const
 {
   return SnapshotId;
 }

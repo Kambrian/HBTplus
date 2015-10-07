@@ -7,6 +7,18 @@
 #include "subhalo.h"
 #include "../gravity/tree.h"
 
+void SubHalo_t::UpdateTrack(HBTInt snapshot_index)
+{
+  if(TrackId==SpecialConst::NullTrackId) return;
+  
+  if(0==Rank) SnapshotIndexOfLastIsolation=snapshot_index;
+  if(Nbound>LastMaxMass) 
+  {
+	SnapshotIndexOfLastMaxMass=snapshot_index;
+	LastMaxMass=Nbound;
+  }
+}
+
 HBTReal SubHalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &snapshot)
 {
   HBTReal dx=PeriodicDistance(halo.ComovingPosition, ComovingPosition);
@@ -70,7 +82,7 @@ static void PopMostBoundParticle(ParticleEnergy_t * Edata, const HBTInt Nbound)
   }
   if(imin!=0) swap(Edata[imin], Edata[0]);
 }
-void SubHalo_t::unbind(const Snapshot_t &snapshot)
+void SubHalo_t::Unbind(const Snapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
   if(1==Particles.size()) return;
  
@@ -117,7 +129,8 @@ void SubHalo_t::unbind(const Snapshot_t &snapshot)
   else
   {
 	Nbound=1;
-	Nlast=1;
+	Nlast=1;//what if this is a central?? any fixes?
+	SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
   }
   for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
   Particles.resize(Nlast);
@@ -126,9 +139,9 @@ void SubHalo_t::unbind(const Snapshot_t &snapshot)
 
 void MemberShipTable_t::Init(const HBTInt nhalos, const HBTInt nsubhalos, const float alloc_factor)
 {
-  RawLists.clear();
-  RawLists.resize(nhalos+1);
-  Lists.Bind(nhalos, RawLists.data()+1);
+  RawSubGroups.clear();
+  RawSubGroups.resize(nhalos+1);
+  SubGroups.Bind(nhalos, RawSubGroups.data()+1);
 
   AllMembers.clear();
   AllMembers.reserve(nsubhalos*alloc_factor); //allocate more for seed haloes.
@@ -137,22 +150,22 @@ void MemberShipTable_t::Init(const HBTInt nhalos, const HBTInt nsubhalos, const 
 void MemberShipTable_t::BindMemberLists()
 {
   HBTInt offset=0;
-  for(HBTInt i=0;i<RawLists.size();i++)
+  for(HBTInt i=0;i<RawSubGroups.size();i++)
   {
-	RawLists[i].Bind(RawLists[i].size(), &(AllMembers[offset]));
-	offset+=RawLists[i].size();
-	RawLists[i].Resize(0);
+	RawSubGroups[i].Bind(RawSubGroups[i].size(), &(AllMembers[offset]));
+	offset+=RawSubGroups[i].size();
+	RawSubGroups[i].Resize(0);
   }
 }
 void MemberShipTable_t::CountMembers(const SubHaloList_t& SubHalos)
 {
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
-	Lists[SubHalos[subid].HostHaloId].IncrementSize();
+	SubGroups[SubHalos[subid].HostHaloId].IncrementSize();
 }
 void MemberShipTable_t::FillMemberLists(const SubHaloList_t& SubHalos)
 {
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
-	Lists[SubHalos[subid].HostHaloId].push_back(subid);
+	SubGroups[SubHalos[subid].HostHaloId].push_back(subid);
 }
 struct CompareMass_t
 {
@@ -169,14 +182,30 @@ struct CompareMass_t
 void MemberShipTable_t::SortMemberLists(const SubHaloList_t & SubHalos)
 {
   CompareMass_t compare_mass(SubHalos);
-  for(HBTInt i=0;i<RawLists.size();i++)
-	std::sort(RawLists[i].data(), RawLists[i].data()+RawLists[i].size(), compare_mass);
+  for(HBTInt i=0;i<RawSubGroups.size();i++)
+	std::sort(RawSubGroups[i].data(), RawSubGroups[i].data()+RawSubGroups[i].size(), compare_mass);
+}
+void MemberShipTable_t::SortSatellites(const SubHaloList_t & SubHalos)
+/*central subhalo not changed*/
+{
+  CompareMass_t compare_mass(SubHalos);
+  for(HBTInt i=0;i<SubGroups.size();i++)
+	std::sort(SubGroups[i].data()+1, SubGroups[i].data()+SubGroups[i].size(), compare_mass);
+}
+void MemberShipTable_t::AssignRanks(SubHaloList_t& SubHalos)
+{
+  for(HBTInt haloid=0;haloid<SubGroups.size();haloid++)
+  {
+	MemberList_t & SubGroup=SubGroups[haloid];
+	for(HBTInt i=0;i<SubGroup.size();i++)
+	  SubHalos[SubGroup[i]].Rank=i;
+  }
 }
 void MemberShipTable_t::CountBirth()
 {
   NBirth=0;
-  for(HBTInt hostid=0;hostid<Lists.size();hostid++)
-	if(Lists[hostid].size()==0)  NBirth++;
+  for(HBTInt hostid=0;hostid<SubGroups.size();hostid++)
+	if(SubGroups[hostid].size()==0)  NBirth++;
 }
 /*
 inline bool SubHaloSnapshot_t::CompareHostAndMass(const HBTInt& subid_a, const HBTInt& subid_b)
@@ -213,7 +242,7 @@ void SubHaloSnapshot_t::Save()
 	//TODO
 	cout<<"Save() not implemted yet\n";
 }
-void SubHaloSnapshot_t::AssignHost(const HaloSnapshot_t &halo_snap)
+void SubHaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 {
   vector<HBTInt> ParticleToHost(SnapshotPointer->GetNumberOfParticles(), SpecialConst::NullHaloId);
   for(int haloid=0;haloid<halo_snap.Halos.size();haloid++)
@@ -234,6 +263,7 @@ void SubHaloSnapshot_t::AssignHost(const HaloSnapshot_t &halo_snap)
 	exit(1);
   }
   MemberTable.Build(halo_snap.Halos.size(), SubHalos);
+//   MemberTable.AssignRanks(SubHalos); //not needed here
 }
 
 void SubHaloSnapshot_t::AverageCoordinates()
@@ -254,7 +284,7 @@ void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 {
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   {
-	MemberShipTable_t::MemberList_t &List=MemberTable.Lists[hostid];
+	MemberShipTable_t::MemberList_t &List=MemberTable.SubGroups[hostid];
 	if(List.size()>1)
 	{
 	  int n_major;
@@ -291,20 +321,27 @@ void SubHaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
   SubHalos.resize(Npro+MemberTable.NBirth);
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   {
-	if(0==MemberTable.Lists[hostid].size()) //create a new sub
+	if(0==MemberTable.SubGroups[hostid].size()) //create a new sub
 	{
-	  SubHalos[Npro].TrackId=SpecialConst::NullTrackId; //means to be assigned
+// 	  SubHalos[Npro].TrackId=SpecialConst::NullTrackId; //means to be assigned
 	  SubHalos[Npro].HostHaloId=hostid;
 	  SubHalos[Npro].SnapshotIndexOfBirth=SnapshotIndex;
 	  MemberTable.AllMembers.push_back(Npro);
-	  MemberTable.Lists[hostid].Bind(1, &MemberTable.AllMembers.back());
+	  MemberTable.SubGroups[hostid].Bind(1, &MemberTable.AllMembers.back());
 	  //assign host center to new central
 	  copyHBTxyz(SubHalos[Npro].ComovingPosition, halo_snap.Halos[hostid].ComovingPosition); 
 	  copyHBTxyz(SubHalos[Npro].PhysicalVelocity, halo_snap.Halos[hostid].PhysicalVelocity);
 	  Npro++;
 	}
-	SubHalos[MemberTable.Lists[hostid][0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles; now halo_snap should
+	SubHalos[MemberTable.SubGroups[hostid][0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles; now halo_snap should
   }
+}
+void SubHaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
+{
+  halo_snap.AverageCoordinates();
+  AverageCoordinates();
+  DecideCentrals(halo_snap);
+  FeedCentrals(halo_snap);
 }
 
 void SubHaloSnapshot_t::RefineParticles()
@@ -312,7 +349,7 @@ void SubHaloSnapshot_t::RefineParticles()
   //TODO: ensure the inclusive unbinding is stable (contaminating particles from big subhaloes may hurdle the unbinding
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
-	SubHalos[subid].unbind(*SnapshotPointer);
+	SubHalos[subid].Unbind(*SnapshotPointer);
   }
 }
 
@@ -334,5 +371,19 @@ void SubHaloSnapshot_t::RegisterNewTracks()
 	  subid=SpecialConst::NullSubhaloId;
 	  MemberTable.NBirthFake++;
 	}
+  }
+}
+void SubHaloSnapshot_t::UpdateRanks()
+{
+/*renew ranks after unbinding*/
+  MemberTable.SortMemberLists(SubHalos);//or just sort the satellites?
+  MemberTable.AssignRanks(SubHalos);
+}
+void SubHaloSnapshot_t::UpdateTracks()
+{
+  RegisterNewTracks();
+  for(HBTInt i=0;i<SubHalos.size();i++)
+  {
+	SubHalos[i].UpdateTrack(SnapshotIndex);
   }
 }

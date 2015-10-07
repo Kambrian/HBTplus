@@ -30,15 +30,14 @@ int main(int argc, char **argv)
 	halosnap.ParticleIdToIndex(partsnap);
 	subsnap.ParticleIdToIndex(partsnap);
 	
-	subsnap.AssignHost(halosnap);
+	subsnap.AssignHosts(halosnap);
 	
-	halosnap.AverageCoordinates();
-	subsnap.AverageCoordinates();
-	subsnap.DecideCentrals(halosnap);
-	subsnap.FeedCentrals(halosnap);
+	subsnap.PrepareCentrals(halosnap);
+	
 	subsnap.RefineParticles();
 	
-	subsnap.RegisterNewTracks();
+	subsnap.UpdateRanks();
+	subsnap.UpdateTracks();
 	
 	subsnap.ParticleIndexToId();
 	subsnap.Save();
