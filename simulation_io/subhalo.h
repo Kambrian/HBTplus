@@ -15,16 +15,16 @@ public:
   HBTInt TrackId;
   HBTInt SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
   HBTInt SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
-  HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
-  HBTInt SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved.
+//   HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
+//   HBTInt SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved.
   HBTInt LastMaxMass;
   TrackParticle_t()
   {
 	TrackId=SpecialConst::NullTrackId;
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
-	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
-	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
+// 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
+// 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
 	LastMaxMass=0;
   }
 };

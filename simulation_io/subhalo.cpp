@@ -130,7 +130,7 @@ void SubHalo_t::Unbind(const Snapshot_t &snapshot)
   {
 	Nbound=1;
 	Nlast=1;//what if this is a central?? any fixes?
-	SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
+// 	SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
   }
   for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
   Particles.resize(Nlast);
@@ -325,7 +325,7 @@ void SubHaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	{
 // 	  SubHalos[Npro].TrackId=SpecialConst::NullTrackId; //means to be assigned
 	  SubHalos[Npro].HostHaloId=hostid;
-	  SubHalos[Npro].SnapshotIndexOfBirth=SnapshotIndex;
+// 	  SubHalos[Npro].SnapshotIndexOfBirth=SnapshotIndex;
 	  MemberTable.AllMembers.push_back(Npro);
 	  MemberTable.SubGroups[hostid].Bind(1, &MemberTable.AllMembers.back());
 	  //assign host center to new central
