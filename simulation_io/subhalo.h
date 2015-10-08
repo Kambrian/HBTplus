@@ -4,6 +4,20 @@
 #include <iostream>
 #include <new>
 #include <vector>
+#include "H5Cpp.h"
+#ifndef H5_NO_NAMESPACE
+    using namespace H5;
+#endif
+#ifdef HBT_REAL8
+#define H5T_HBTReal PredType::NATIVE_DOUBLE
+#else
+#define H5T_HBTReal PredType::NATIVE_FLOAT
+#endif
+#ifdef HBT_INT8
+#define H5T_HBTInt PredType::NATIVE_LONG
+#else 
+#define H5T_HBTInt PredType::NATIVE_INT
+#endif
 
 #include "../datatypes.h"
 #include "snapshot_number.h"
@@ -87,12 +101,15 @@ private:
   void RegisterNewTracks();
   void DecideCentrals(const HaloSnapshot_t &halo_snap);
   void FeedCentrals(HaloSnapshot_t &halo_snap);
+  void BuildHDFDataType();
+  CompType H5T_SubHalo;
 public:
   Snapshot_t * SnapshotPointer;
   SubHaloList_t SubHalos;
   MemberShipTable_t MemberTable;
-  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr)
+  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubHalo(sizeof(SubHalo_t))
   {
+	BuildHDFDataType();
   }
   void Load(int snapshot_index);
   void Save();

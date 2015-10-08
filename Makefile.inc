@@ -1,7 +1,11 @@
+HDFINC=
+HDFLIB=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5
+
 CXX=g++
 CXXFLAGS+=-std=c++0x
-CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8
-LINK.o=$(LINK.cpp)
+CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 $(HDFINC)
+LDLIBS+=$(HDFLIB)
+<!-- LINK.o=$(LINK.cpp) -->
 
 SUBDIRS:=$(wildcard */.)
 SUBDIRSCLEAN=$(addsuffix clean,$(SUBDIRS))

@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cstring>
+using namespace std;
 // #include <memory>
 
 /*datatype for input particle data*/

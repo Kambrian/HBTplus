@@ -7,8 +7,6 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
-using namespace std;
-
 #include "datatypes.h"
 
 namespace PhysicalConst

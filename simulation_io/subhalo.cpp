@@ -6,7 +6,8 @@
 #include "snapshot_number.h"
 #include "subhalo.h"
 #include "../gravity/tree.h"
-
+#include "../tracks.h"
+	
 void SubHalo_t::UpdateTrack(HBTInt snapshot_index)
 {
   if(TrackId==SpecialConst::NullTrackId) return;
@@ -226,6 +227,25 @@ void MemberShipTable_t::Build(const HBTInt nhalos, const SubHaloList_t & SubHalo
   CountBirth();
 //   std::sort(AllMembers.begin(), AllMembers.end(), CompareHostAndMass);
 }
+void SubHaloSnapshot_t::BuildHDFDataType()
+{
+  HOFFSET(Halo_t, ComovingPosition);
+  HOFFSET(TrackParticle_t, TrackId);
+  cout<<"------FixMe: Derived Class is non-POD and cannot do offsetof()!---------\n";
+  hsize_t dims=3;
+  ArrayType H5T_HBTxyz(H5T_HBTReal, 1, &dims);
+  #define InsertMember(x,t) H5T_SubHalo.insertMember(#x, HOFFSET(SubHalo_t, x), t)
+  InsertMember(TrackId, H5T_HBTInt);
+  InsertMember(Nbound, H5T_HBTInt);
+  InsertMember(HostHaloId, H5T_HBTInt);
+  InsertMember(Rank, H5T_HBTInt);
+  InsertMember(ComovingPosition, H5T_HBTxyz);
+  InsertMember(PhysicalVelocity, H5T_HBTxyz);
+  InsertMember(LastMaxMass, H5T_HBTInt);
+  InsertMember(SnapshotIndexOfLastMaxMass, H5T_HBTInt);
+  InsertMember(SnapshotIndexOfLastIsolation, H5T_HBTInt);
+  #undef InsertMember	
+}
 void SubHaloSnapshot_t::Load(int snapshot_index)
 {//TODO
   cout<<"SubHaloSnapshot_t::Load() not implemented yet\n";
@@ -239,8 +259,25 @@ void SubHaloSnapshot_t::Load(int snapshot_index)
 }
 void SubHaloSnapshot_t::Save()
 {
-	//TODO
-	cout<<"Save() not implemted yet\n";
+  stringstream formater;
+  formater<<HBTConfig.SubhaloPath<<"SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex; //or use snapshotid
+  string filename=formater.str();
+  H5File file(filename.c_str(), H5F_ACC_TRUNC);
+
+  hsize_t dim=1;
+  DataSpace dataspace(1, &dim);
+  DataSet dataset(file.createDataSet( "SnapshotId", H5T_HBTInt, dataspace));
+  dataset.write(&SnapshotId, H5T_HBTInt);
+  dataset.close();
+  dataspace.close();
+  
+  /*TODO: clear up memory before saving! remove fake haloes and clean up MemberTable!*/
+  dim=SubHalos.size();
+  dataspace=DataSpace(1, &dim); //dataspace.setExtentSimple(1, &dim);
+  dataset=file.createDataSet( "SubHalos", H5T_SubHalo, dataspace);
+  dataset.write(SubHalos.data(), H5T_SubHalo);
+  dataset.close();
+  dataspace.close();
 }
 void SubHaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 {
