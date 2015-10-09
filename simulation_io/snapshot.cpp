@@ -154,7 +154,7 @@ void Snapshot_t::LoadHeader(Parameter_t & param, int ifile)
 
 void Snapshot_t::Load(int snapshot_index, bool load_id, bool load_position, bool load_velocity, bool load_mass, bool fill_particle_hash)
 { 
-  SetSnapshotIndex(HBTConfig, snapshot_index);
+  SetSnapshotIndex(snapshot_index);
   PeriodicBox=HBTConfig.PeriodicBoundaryOn;
   LoadHeader(HBTConfig);
   if(load_id)

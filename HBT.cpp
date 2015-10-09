@@ -17,9 +17,11 @@ int main(int argc, char **argv)
 {
   int snapshot_start, snapshot_end;
   ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
+  mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
+  
   SubHaloSnapshot_t subsnap;
   
-  subsnap.Load(snapshot_start-1);
+  subsnap.Load(snapshot_start-1, true);
     
   for(int isnap=snapshot_start;isnap<=snapshot_end;isnap++)
   {
@@ -27,6 +29,8 @@ int main(int argc, char **argv)
 	HaloSnapshot_t halosnap;
 	partsnap.Load(isnap);
 	halosnap.Load(isnap);
+	subsnap.SetSnapshotIndex(isnap);
+	
 	halosnap.ParticleIdToIndex(partsnap);
 	subsnap.ParticleIdToIndex(partsnap);
 	
@@ -36,7 +40,6 @@ int main(int argc, char **argv)
 	
 	subsnap.RefineParticles();
 	
-	subsnap.UpdateRanks();
 	subsnap.UpdateTracks();
 	
 	subsnap.ParticleIndexToId();

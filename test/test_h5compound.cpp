@@ -34,7 +34,8 @@
 	using std::vector;
 #endif  // H5_NO_STD
 #endif
-
+#include "hdf5.h"
+#include "hdf5_hl.h"	
 #include "H5Cpp.h"
 // #include "H5VarLenType.h"	
 
@@ -255,15 +256,30 @@ int main(void)
 		vl[i].p=s3[i].i.data();
 		vl[i].len=s3[i].i.size();
 	  }
-	  DataSet dset2(file3.createDataSet("S3Data", vlt_i, space));
+	  file3.createGroup("/data");
+	  DataSet dset2(file3.createDataSet("/data/S3Data", vlt_i, space));
 	  dset2.write( vl, vlt_i);
+// 	  dset2.setComment("comment","variable length");
+	  H5LTset_attribute_string(file3.getId(),"/data/S3Data","Unit","(km/s)^2, -GM/R_physical");
 	  }
 	  {
 		H5File file3("VL.hdf5", H5F_ACC_RDONLY);
 		DataSet dset(file3.openDataSet("S3"));
 		dset.read(s3.data(), mtype3);
 		// now how to read S3Data back??...
-		
+		DataSet dset2(file3.openDataSet("/data/S3Data"));
+		DataSpace dspace=dset2.getSpace();
+		dspace.getSimpleExtentDims(dim);
+		cout<<dim[0]<<endl;
+		hvl_t vl[dim[0]];
+		dset2.read(vl, vlt_i);
+		for(i=0;i<LENGTH;i++)
+		{
+		  cout<<"data "<<i<<":";
+		  for(int j=0;j<vl[i].len;j++)
+			cout<<((int *)vl[i].p)[j]<<" ";
+		  cout<<endl;
+		}
 	  }
    }  // end of try block
 

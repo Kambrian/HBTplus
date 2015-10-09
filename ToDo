@@ -1,10 +1,13 @@
-implement tree code
 -------------------
-split class declaration and definition
 implement special ids with classes
 snapshot contain multiple arrays for separate/efficient load; maybe not a problem/even a benefit to use particle cell with MPI.
 
 custom allocator for vectors 
+
+use shallow_list for subhalo particles as well
+
+unify snapshot template/base class (include a common header containing snapnum, Hz, scalefactor)
+make tree accept snapshot class
 
 Future: 
 shared_ptr
