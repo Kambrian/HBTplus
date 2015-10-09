@@ -131,7 +131,7 @@ void HaloSnapshot_t::GetFileNameFormat(string &format, int &FileCounts, bool &Is
 
 void HaloSnapshot_t::Load(int snapshot_index)
 {
-  SetSnapshotIndex(HBTConfig, snapshot_index);
+  SetSnapshotIndex(snapshot_index);
   switch(HBTConfig.GroupFileVariant)
   {
 	case GROUP_FORMAT_GADGET3_INT:
@@ -295,16 +295,22 @@ void HaloSnapshot_t::ParticleIdToIndex(Snapshot_t& snapshot)
 {
   SnapshotPointer=&snapshot;
   for(HBTInt haloid=0;haloid<Halos.size();haloid++)
-	for(HBTInt pid=0;pid<Halos[pid].Particles.size();pid++)
-	  Halos[haloid].Particles[pid]=snapshot.GetParticleIndex(Halos[haloid].Particles[pid]);
+  {
+	Halo_t::ParticleList_t &Particles=Halos[haloid].Particles;
+	for(HBTInt pid=0;pid<Particles.size();pid++)
+	  Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);
+  }
 }
 
 void HaloSnapshot_t::ParticleIndexToId()
 {
   Snapshot_t& snapshot=*SnapshotPointer;
   for(HBTInt haloid=0;haloid<Halos.size();haloid++)
-	for(HBTInt pid=0;pid<Halos[pid].Particles.size();pid++)
-	  Halos[haloid].Particles[pid]=snapshot.GetParticleId(Halos[haloid].Particles[pid]);
+  {
+	Halo_t::ParticleList_t &Particles=Halos[haloid].Particles;
+	for(HBTInt pid=0;pid<Particles.size();pid++)
+	  Particles[pid]=snapshot.GetParticleId(Particles[pid]);
+  }
   SnapshotPointer=nullptr;
 }
 

@@ -11,7 +11,7 @@
 void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 {
 	HBTInt j,jj,p,pp,sons[8];
-	double mass;
+	double mass, thismass;
 	double s[3];
 	
 		mass=0;
@@ -33,10 +33,11 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 				pp=sons[jj];
 				if(p<NumberOfParticles)
 				{
-					mass+=Snapshot->GetParticleMass(ParticleList[p]);
-					s[0]+=Snapshot->GetComovingPosition(ParticleList[p])[0];
-					s[1]+=Snapshot->GetComovingPosition(ParticleList[p])[1];
-					s[2]+=Snapshot->GetComovingPosition(ParticleList[p])[2];
+					thismass=Snapshot->GetParticleMass(ParticleList[p]);
+					mass+=thismass;
+					s[0]+=Snapshot->GetComovingPosition(ParticleList[p])[0]*thismass;
+					s[1]+=Snapshot->GetComovingPosition(ParticleList[p])[1]*thismass;
+					s[2]+=Snapshot->GetComovingPosition(ParticleList[p])[2]*thismass;
 					NextnodeFromParticle[p]=pp;
 				}
 				else
@@ -46,19 +47,21 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 				//we didn't divide the node seriouly so we don't have finer node length
 				else
 					UpdateInternalNodes(p,pp,len);//get internal node info
-				mass+=Nodes[p].way.mass;
-				s[0]+=Nodes[p].way.s[0]*Nodes[p].way.mass;
-				s[1]+=Nodes[p].way.s[1]*Nodes[p].way.mass;
-				s[2]+=Nodes[p].way.s[2]*Nodes[p].way.mass;
+				thismass=Nodes[p].way.mass;
+				mass+=thismass;
+				s[0]+=Nodes[p].way.s[0]*thismass;
+				s[1]+=Nodes[p].way.s[1]*thismass;
+				s[2]+=Nodes[p].way.s[2]*thismass;
 				}
 			}
 		}
 		if(pp<NumberOfParticles)//the last son
 		{			
-			mass+=Snapshot->GetParticleMass(ParticleList[p]);
-			s[0]+=Snapshot->GetComovingPosition(ParticleList[pp])[0];
-			s[1]+=Snapshot->GetComovingPosition(ParticleList[pp])[1];
-			s[2]+=Snapshot->GetComovingPosition(ParticleList[pp])[2];
+			thismass=Snapshot->GetParticleMass(ParticleList[pp]);
+			mass+=thismass;
+			s[0]+=Snapshot->GetComovingPosition(ParticleList[pp])[0]*thismass;
+			s[1]+=Snapshot->GetComovingPosition(ParticleList[pp])[1]*thismass;
+			s[2]+=Snapshot->GetComovingPosition(ParticleList[pp])[2]*thismass;
 			NextnodeFromParticle[pp]=sib;
 		}
 		else
@@ -68,10 +71,11 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 			//we didn't divide the node seriouly so we don't have finer node length
 			else
 				UpdateInternalNodes(pp,sib,len);
-			mass+=Nodes[pp].way.mass;
-			s[0]+=Nodes[pp].way.s[0]*Nodes[pp].way.mass;
-			s[1]+=Nodes[pp].way.s[1]*Nodes[pp].way.mass;
-			s[2]+=Nodes[pp].way.s[2]*Nodes[pp].way.mass;
+			thismass=Nodes[pp].way.mass;
+			mass+=thismass;
+			s[0]+=Nodes[pp].way.s[0]*thismass;
+			s[1]+=Nodes[pp].way.s[1]*thismass;
+			s[2]+=Nodes[pp].way.s[2]*thismass;
 		}
 		Nodes[no].way.mass=mass;
 		Nodes[no].way.s[0]=s[0]/mass;
@@ -87,10 +91,10 @@ HBTInt OctTree_t::Build(const HBTInt num_part, const HBTInt* particles, const Sn
 	double center[3], lenhalf;
 	double xmin[3], xmax[3],Center[3], Len,Lenhalf;
 
-	if(num_part>=MaxNumberOfParticles)
+	if(num_part>MaxNumberOfParticles)
 	{
 	  Clear();
-	  Reserve(MaxNumberOfParticles);
+	  Reserve(num_part);
 	}
 	
 	NumberOfParticles=num_part;
@@ -185,8 +189,7 @@ Cells->sons[i] = -1;
 			if(NumNids >= MaxNodeId)
 			{
 			  
-			  fprintf(stderr,"maximum number %zd of tree-nodes reached.\n", MaxNumberOfCells);
-			  fprintf(stderr,"for particle "HBTIFMT"\n", i);
+			  std::cerr<<"maximum number "<<MaxNumberOfCells<<" of tree-nodes reached.\nfor particle "<<i<<std::endl;
 			  exit(1);
 			}
 			for(sub=0;sub<8;sub++)//initialize new node
@@ -364,8 +367,39 @@ void OctTree_t::Clear()
   }
 }
 
+#ifdef TEST_TREE
+#include "../config_parser.h"
+#include "../simulation_io/snapshot.h"
+#include "../simulation_io/halo.h"
 
+int main(int argc, char **argv)
+{
+  HBTConfig.ParseConfigFile("../configs/AqA5.conf");
+  HBTInt isnap=HBTConfig.MinSnapshotIndex;
+  Snapshot_t snapshot;
+  snapshot.Load(isnap);
+  
+  HaloSnapshot_t halo;
+  halo.Load(isnap);
+  halo.ParticleIdToIndex(snapshot);
 
+  halo.AverageCoordinates();
+  Halo_t::ParticleList_t &P=halo.Halos[0].Particles;
+  
+  OctTree_t tree;
+  tree.Reserve(2);
+  tree.Build(P.size(), P.data(), snapshot);
+  
+  for(HBTInt i=0;i<P.size();i++)
+  {
+	double E=tree.BindingEnergy(snapshot.GetComovingPosition(P[i]), snapshot.GetPhysicalVelocity(P[i]),
+								halo.Halos[0].ComovingPosition, halo.Halos[0].PhysicalVelocity, snapshot.GetParticleMass(P[i]));
+	cout<<i<<" : "<<E<<endl;
+  }
+  
+  return 0;
+}
+#endif
 
 
 

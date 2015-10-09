@@ -13,7 +13,7 @@ class Track
 {
 public:
   HBTInt TrackId;
-  List_t <SubHalo_t> SubHaloList;
+  vector <SubHalo_t> SubHaloList;
 };
 
 #endif

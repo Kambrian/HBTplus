@@ -19,6 +19,7 @@ namespace PhysicalConst
 class Parameter_t
 {
 public:
+  /*compulsory parameters*/
   string SnapshotPath;
   string HaloPath;
   string SubhaloPath;
@@ -28,6 +29,7 @@ public:
   HBTReal SofteningHalo;
   bool IsSet[NumberOfCompulsaryConfigEntries];
   
+  /*optional*/
   int MinSnapshotIndex;
   int MinNumPartOfSub;
   int GroupFileVariant;
@@ -51,6 +53,7 @@ public:
   HBTReal TreeNodeOpenAngle;
   HBTInt TreeMinNumOfCells;
   
+  /*derived parameters; do not require user input*/
   HBTReal TreeNodeOpenAngleSquare;
   HBTReal TreeNodeResolution;
   HBTReal TreeNodeResolutionHalf;

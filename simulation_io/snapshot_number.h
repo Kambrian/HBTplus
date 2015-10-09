@@ -36,7 +36,7 @@ public:
 	SnapshotId=SpecialConst::NullSnapshotId;
   }
   void FormatSnapshotId(std::stringstream &ss);
-  void SetSnapshotIndex(Parameter_t &param, int snapshot_index);
+  void SetSnapshotIndex(int snapshot_index);
   int GetSnapshotIndex() const;
   int GetSnapshotId() const;
 };
@@ -52,15 +52,15 @@ inline void SnapshotNumber_t::FormatSnapshotId(stringstream& ss)
 {
   ss << std::setw(3) << std::setfill('0') << SnapshotId;
 }
-inline void SnapshotNumber_t::SetSnapshotIndex(Parameter_t & param, int snapshot_index)
+inline void SnapshotNumber_t::SetSnapshotIndex(int snapshot_index)
 {
-  assert(snapshot_index>=param.MinSnapshotIndex&&snapshot_index<=param.MaxSnapshotIndex);
+  assert(snapshot_index>=HBTConfig.MinSnapshotIndex&&snapshot_index<=HBTConfig.MaxSnapshotIndex);
 //   assert(SpecialConst::NullSnapshotId!=snapshot_index);
   SnapshotIndex=snapshot_index; 
-  if(param.SnapshotIdList.empty())
+  if(HBTConfig.SnapshotIdList.empty())
 	SnapshotId=SnapshotIndex;
   else
-	SnapshotId=param.SnapshotIdList[SnapshotIndex];
+	SnapshotId=HBTConfig.SnapshotIdList[SnapshotIndex];
 }
 
 #endif

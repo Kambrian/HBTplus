@@ -109,11 +109,12 @@ void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_st
 	cerr<<"Usage: "<<argv[0]<<" [param_file] <snapshot_start> <snapshot_end>\n";
 	exit(1);
   }
-  config.ParseConfigFile(argv[1]);
   if(argc>2)
 	snapshot_start=atoi(argv[2]);
   if(argc>3)
 	snapshot_end=atoi(argv[3]);
   else
 	snapshot_end=snapshot_start;
+  cout<<"Running "<<argv[0]<<" from snapshot "<<snapshot_start<<" to "<<snapshot_end<<" using configuration file "<<argv[1]<<endl;
+  config.ParseConfigFile(argv[1]);
 }

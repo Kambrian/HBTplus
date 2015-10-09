@@ -61,14 +61,12 @@ typedef HBTReal HBTxyz[3];  //3-d pos/vel data
 
 namespace SpecialConst
 {
-  const HBTInt NullParticleId=-100;
-  const HBTInt NullSnapshotId=-100;
+  const HBTInt NullParticleId=-1;
+  const HBTInt NullSnapshotId=-1;
   const HBTInt NullHaloId=-1;//do not change this.
   const HBTInt NullSubhaloId=-1;
   const HBTInt NullTrackId=-1;
-  
-  const HBTInt UniverseHaloId=-200; //the universe as a halo, to contain particles that does not belong to any halo
-  
+    
   const HBTxyz NullCoordinate={0.,0.,0.};
 //   const Particle_t NullParticle(NullParticleId, NullParticleId, NullCoordinate, NullCoordinate);
 };
@@ -80,17 +78,35 @@ struct Particle_t
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
 };
-//TODO: differentiate between clean and dirty list, or initiate and follow list.
 template <class T>
-class List_t
-/* a base class for list; only empty constructor*/
-{ 
-protected:  
+class VectorView_t
+/* similar to vector, but never actively manage memory; only bind to existing memory*/
+{
+public:
   HBTInt N;
   T * Data; //this is only copied. never allocated by itself.
-public:
-  List_t(): N(0), Data(nullptr)
+  VectorView_t(): N(0), Data(nullptr)
   {
+  }
+  VectorView_t(const HBTInt n, T * const data): N(n), Data(data)
+  {
+  }
+  void Bind(const HBTInt n, T * const data)
+  {
+	N=n;
+	Data=data;
+  }
+  void Bind(T * const data)
+  {
+	Data=data;
+  }
+  void ReBind(const HBTInt n)
+  {
+	N=n;
+  }
+  void IncrementBind()
+  {
+	N++; 
   }
   T * data() const
   {
@@ -104,95 +120,23 @@ public:
   {
 	return N;
   }
-};
-template <class T>
-class ShallowList_t: public List_t <T>
-/* a list whose memory is only a link pointing to already allocated buffer.
- * It involves no new or delete inside its constructor or destructor.
- * so it is only a "virtual" list.*/
-{
-  typedef List_t <T> BaseList_t;
-public:
-  ShallowList_t(): BaseList_t()
+  void PushBack(T x)
+  /*memory is never reallocated*/
   {
+	Data[N]=x;
+	N++;
   }
-  ShallowList_t(const HBTInt n, T * const data): BaseList_t::N(n), BaseList_t::Data(data)
+  T * begin()
   {
+	return Data;
   }
-  ShallowList_t(const ShallowList_t &l) 
+  T* end()
   {
-	BaseList_t::N=l.N;
-	BaseList_t::Data=l.Data;
+	return Data+N;
   }
-  void Bind(HBTInt n, T *data)
+  T & back()
   {
-	BaseList_t::N=n;
-	BaseList_t::Data=data;
-  }
-  void Resize(const HBTInt n)
-  {
-	BaseList_t::N=n;
-  }
-  void IncrementSize()
-  {
-	BaseList_t::N++; 
-  }
-  void push_back(T x)
-  {
-	BaseList_t::Data[BaseList_t::N]=x;
-	IncrementSize();
-  }
-};
-template <class T>
-class DeepList_t: public List_t <T>
-/* DeepList_t manages memory actively. automatically allocate memory upon construction;
- automatically frees memory upon destruction;*/
-{
-typedef List_t <T> BaseList_t;  
-public:
-  DeepList_t(): BaseList_t ()
-  {
-  }
-  template <class U>
-  DeepList_t(const DeepList_t<U> & l)
-  {
-	Fill(l.n, l.Data);
-  }
-  void Resize(const HBTInt n)
-  {
-	if(n!=BaseList_t::N)
-	{
-	  delete [] BaseList_t::Data;
-	  BaseList_t::N=n;
-	  BaseList_t::Data=new T[n];
-	}
-  }
-  template <class U>
-  void Fill(const HBTInt n, U * const data)
-  {
-	Resize(n);
-	for(HBTInt i=0;i<n;i++)
-	  BaseList_t::Data[i]=data[i];
-  }
-  void Bind(const HBTInt n, T * const data)
-  /*bind data to DeepList's internal pointer, instead of copying the data.
-   *Caution: data has to be created with new T[]; otherwise may cause segfault upon destruction. use with care. */
-  {
-	delete [] BaseList_t::Data;
-	BaseList_t::Data=data;
-	BaseList_t::N=n;
-  }
-  void Clear()
-  {
-	delete [] BaseList_t::Data;
-	BaseList_t::Data=nullptr;
-	BaseList_t::N=0;
-  }
-  ~DeepList_t()
-  {
-	delete [] BaseList_t::Data;
-// 	std::cout<<"List cleaned\n";
-// 	BaseList_t::N=0; //no need to do this. the object is out of scope (destroyed) after this is called.
+	return Data[N-1];
   }
 };
 #define DATATYPES_INCLUDED
