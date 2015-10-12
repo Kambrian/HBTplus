@@ -13,7 +13,7 @@ void SubHalo_t::UpdateTrack(HBTInt snapshot_index)
   if(TrackId==SpecialConst::NullTrackId) return;
   
   if(0==Rank) SnapshotIndexOfLastIsolation=snapshot_index;
-  if(Nbound>LastMaxMass) 
+  if(Nbound>=LastMaxMass) 
   {
 	SnapshotIndexOfLastMaxMass=snapshot_index;
 	LastMaxMass=Nbound;
@@ -278,7 +278,7 @@ void SubHaloSnapshot_t::BuildHDFDataType()
 {
   hsize_t dims=3;
   H5::ArrayType H5T_HBTxyz(H5T_HBTReal, 1, &dims);
-  #define InsertMember(x,t) H5T_SubHalo.insertMember(#x, HOFFSET(SubHalo_t, x), t)
+  #define InsertMember(x,t) H5T_SubHaloInMem.insertMember(#x, HOFFSET(SubHalo_t, x), t)//;cout<<#x<<": "<<HOFFSET(SubHalo_t, x)<<endl
   InsertMember(TrackId, H5T_HBTInt);
   InsertMember(Nbound, H5T_HBTInt);
   InsertMember(HostHaloId, H5T_HBTInt);
@@ -289,24 +289,120 @@ void SubHaloSnapshot_t::BuildHDFDataType()
   InsertMember(SnapshotIndexOfLastMaxMass, H5T_HBTInt);
   InsertMember(SnapshotIndexOfLastIsolation, H5T_HBTInt);
   #undef InsertMember	
+  H5T_SubHaloInDisk.copy(H5T_SubHaloInMem);
+  H5T_SubHaloInDisk.pack(); //clear fields not added.
+//   SubHalo_t s;
+//   cout<<(char *)&s.TrackId-(char *)&s<<","<<(char *)&s.Nbound-(char *)&s<<","<<(char *)&s.ComovingPosition-(char *)&s<<","<<(char *)&s.Particles-(char *)&s<<endl;
+}
+void SubHaloSnapshot_t::GetSubFileName(string &filename)
+{
+  stringstream formater;
+  formater<<HBTConfig.SubhaloPath<<"/SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
+  filename=formater.str();
+}
+void SubHaloSnapshot_t::GetSrcFileName(string &filename)
+{
+  stringstream formater;
+  formater<<HBTConfig.SubhaloPath<<"/SrcSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
+  filename=formater.str();
 }
 void SubHaloSnapshot_t::Load(int snapshot_index, bool load_src)
 {
-  if(SnapshotIndex<HBTConfig.MinSnapshotIndex)
-  {}
+  if(snapshot_index<HBTConfig.MinSnapshotIndex)
+  {
+	cout<<"Warning: snapshot index "<<snapshot_index<<" is below MinSnapshotIndex of "<<HBTConfig.MinSnapshotIndex;
+	cout<<", I wil not load anything.\n";
+	return;
+  }
+  
+  SetSnapshotIndex(snapshot_index);
+  string filename;
+  GetSubFileName(filename);
+  H5::H5File file(filename.c_str(), H5F_ACC_RDONLY);
+  
+  H5::DataSet dset(file.openDataSet("SnapshotId"));
+  HBTInt snapshot_id;
+  dset.read(&snapshot_id, H5T_HBTInt);//HBTInt does not have to be the same as the datatype in the file.
+  dset.close();
+  assert(snapshot_id==SnapshotId);
+  
+  hsize_t dims[1];
+  dset=file.openDataSet("SubHalos");
+  dset.getSpace().getSimpleExtentDims(dims);
+  HBTInt nsubhalos=dims[0];
+  SubHalos.resize(nsubhalos);
+  if(nsubhalos)	dset.read(SubHalos.data(), H5T_SubHaloInMem);
+  dset.close();
+  
+  file.openDataSet("/Membership/NumberOfNewSubHalos").read(&MemberTable.NBirth, H5T_HBTInt);
+  file.openDataSet("/Membership/NumberOfNewSubHalos").read(&MemberTable.NFake, H5T_HBTInt);
+  dset=file.openDataSet("/Membership/GroupedTrackIds");
+  dset.getSpace().getSimpleExtentDims(dims);
+  HBTInt nhalos=dims[0]-1;
+  vector <hvl_t> vl(dims[0]);
+  H5::VarLenType H5T_HBTIntArr(&H5T_HBTInt);
+  if(nsubhalos)
+  {
+	dset.read(vl.data(), H5T_HBTIntArr);
+	MemberTable.Init(nhalos, nsubhalos);
+	#define FILL_SUBGROUP(vl_id, halo_id, offset) {\
+	MemberTable.SubGroups[halo_id].Bind(vl[vl_id].len, &(MemberTable.AllMembers[offset])); \
+	memcpy(MemberTable.SubGroups[halo_id].data(), vl[vl_id].p, sizeof(HBTInt)*vl[vl_id].len);\
+	offset+=vl[vl_id].len;}
+	HBTInt offset=0;
+	FILL_SUBGROUP(nhalos, -1, offset);
+	for(HBTInt i=0;i<nhalos;i++)
+	  FILL_SUBGROUP(i, i, offset);
+	#undef FILL_SUBGROUP	
+	dset.vlenReclaim(vl.data(), H5T_HBTIntArr, dset.getSpace());
+	assert(offset==nsubhalos);
+  }
+  dset.close();
+  
+  if(0==nsubhalos) return;
+  
+  vl.resize(nsubhalos);
+  if(load_src)
+  {
+	dset=file.openDataSet("SubHaloParticles");
+	dset.getSpace().getSimpleExtentDims(dims);
+	assert(dims[0]==nsubhalos);
+	dset.read(vl.data(), H5T_HBTIntArr);
+	for(HBTInt i=0;i<nsubhalos;i++)
+	{
+	  SubHalos[i].Particles.resize(vl[i].len);
+	  memcpy(SubHalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+	}
+	dset.vlenReclaim(vl.data(), H5T_HBTIntArr,dset.getSpace());
+	dset.close();
+  }
   else
-  {//todo
-	SetSnapshotIndex(snapshot_index);
-	assert(false);
-	/*test whether file is empty*/
+  {
+	GetSrcFileName(filename);
+	H5::H5File file2(filename.c_str(), H5F_ACC_RDONLY);
+	dset=file2.openDataSet("SrcHaloParticles");
+	dset.getSpace().getSimpleExtentDims(dims);
+	assert(dims[0]==nsubhalos);
+	dset.read(vl.data(), H5T_HBTIntArr);
+	for(HBTInt i=0;i<nsubhalos;i++)
+	{
+	  SubHalos[i].Particles.resize(vl[i].len);
+	  memcpy(SubHalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+	}
+	dset.vlenReclaim(vl.data(), H5T_HBTIntArr,dset.getSpace());
+	dset.close();
   }
 }
-void writeHDFmatrix(H5::CommonFG &file, const void * buf, const char * name, const hsize_t ndim, const hsize_t *dims, const H5::DataType &dtype)
+void writeHDFmatrix(H5::CommonFG &file, const void * buf, const char * name, const hsize_t ndim, const hsize_t *dims, const H5::DataType &dtype, const H5::DataType &dtype_file)
 {
   H5::DataSpace dataspace(ndim, dims);
-  H5::DataSet dataset(file.createDataSet( name, dtype, dataspace));
+  H5::DataSet dataset(file.createDataSet( name, dtype_file, dataspace));
   if(NULL==buf||0==dims[0]) return;
   dataset.write(buf, dtype);
+}
+inline void writeHDFmatrix(H5::CommonFG &file, const void * buf, const char * name, const hsize_t ndim, const hsize_t *dims, const H5::DataType &dtype)
+{
+  writeHDFmatrix(file, buf, name, ndim, dims, dtype, dtype);
 }
 void SubHaloSnapshot_t::Save()
 {
@@ -317,33 +413,33 @@ void SubHaloSnapshot_t::Save()
   H5::H5File file(filename.c_str(), H5F_ACC_TRUNC);
 
   hsize_t ndim=1, dim_atom[]={1};
-  writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5T_HBTInt);
+  writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5::PredType::NATIVE_INT);
   
   hsize_t dim_sub[]={SubHalos.size()};
-  writeHDFmatrix(file, SubHalos.data(), "SubHalos", ndim, dim_sub, H5T_SubHalo); 
+  writeHDFmatrix(file, SubHalos.data(), "SubHalos", ndim, dim_sub, H5T_SubHaloInMem, H5T_SubHaloInDisk); 
   
   H5::Group datagrp(file.createGroup("/Membership"));
-  H5LTset_attribute_string(file.getId(),"/Membership","Comment","List of subhaloes in each group, starting from grpid=-1 (the id for the background universe hosting unbonded subhaloes) to grpid=Nhalos-1.");
+  H5LTset_attribute_string(file.getId(),"/Membership","Comment","List of subhaloes in each group.");
   writeHDFmatrix(datagrp, &MemberTable.NBirth, "NumberOfNewSubHalos", ndim, dim_atom, H5T_HBTInt);
   writeHDFmatrix(datagrp, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
  
-  HBTInt Ngroups=MemberTable.SubGroups.size();
-  vector <HBTInt> Offset(Ngroups+1), Len(Ngroups+1);
-  HBTInt *start=MemberTable.AllMembers.data();
-  for(HBTInt hostid=-1;hostid<Ngroups;hostid++)
-  {
-	Offset[hostid+1]=MemberTable.SubGroups[hostid].data()-start;
-	Len[hostid+1]=MemberTable.SubGroups[hostid].size();
-  }
-  hsize_t dim_grp[]={(hsize_t)Ngroups+1};
-  writeHDFmatrix(datagrp, Offset.data(), "GroupOffset", ndim, dim_grp, H5T_HBTInt);
-  writeHDFmatrix(datagrp, Len.data(), "GroupSize", ndim, dim_grp, H5T_HBTInt);
   MemberTable.SubIdToTrackId(SubHalos);
-  writeHDFmatrix(datagrp, MemberTable.AllMembers.data(), "GroupOrderedTrackIds", ndim, dim_sub, H5T_HBTInt);
+  HBTInt Ngroups=MemberTable.SubGroups.size();
+  hsize_t dim_grp[]={(hsize_t)Ngroups+1};
+  H5::VarLenType H5T_HBTIntArr(&H5T_HBTInt);
+  vector <hvl_t> vl(Ngroups+1);
+  for(HBTInt i=0;i<Ngroups;i++)
+  {
+	vl[i].len=MemberTable.SubGroups[i].size();
+	vl[i].p=MemberTable.SubGroups[i].data();
+  }
+  vl[Ngroups].len=MemberTable.SubGroups[-1].size();
+  vl[Ngroups].p=MemberTable.SubGroups[-1].data();
+  writeHDFmatrix(datagrp, vl.data(), "GroupedTrackIds", ndim, dim_grp, H5T_HBTIntArr);
+  H5LTset_attribute_string(datagrp.getId(),"GroupedTrackIds","Comment","Nhalo+1 groups. The last group contain tracks outside any host halo (i.e., field subhaloes).");
   
   //now write the particle list for each subhalo
-  H5::VarLenType H5T_HBTIntArr(&H5T_HBTInt);
-  vector <hvl_t> vl(SubHalos.size());
+  vl.resize(SubHalos.size());
   for(HBTInt i=0;i<vl.size();i++)
   {
 	vl[i].len=SubHalos[i].Nbound;
@@ -359,6 +455,7 @@ void SubHaloSnapshot_t::Save()
   filename=formater.str();
   cout<<"Saving to "<<filename<<"..."<<endl;
   file=H5::H5File(filename.c_str(), H5F_ACC_TRUNC);
+  writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5::PredType::NATIVE_INT);
   for(HBTInt i=0;i<vl.size();i++)
 	vl[i].len=SubHalos[i].Particles.size();
   writeHDFmatrix(file, vl.data(), "SrcHaloParticles", ndim, dim_sub, H5T_HBTIntArr);

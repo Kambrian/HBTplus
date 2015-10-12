@@ -13,7 +13,7 @@ SUBDIRSCLEAN=$(addsuffix clean,$(SUBDIRS))
 clean: clean_curdir $(SUBDIRSCLEAN)
 
 clean_curdir:
-	rm -rf *.o *~ core a.out $(EXE)
+	rm -rf *.o *~ core a.out $(EXE) $(OUTPUTS)
 
 %clean: %
 	$(MAKE) -C $< clean_curdir

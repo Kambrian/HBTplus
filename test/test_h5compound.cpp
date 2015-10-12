@@ -43,7 +43,7 @@
     using namespace H5;
 #endif
 
-const H5std_string FILE_NAME( "SDScompound.h5" );
+const H5std_string FILE_NAME( "SDScompound.hdf5" );
 const H5std_string DATASET_NAME( "ArrayOfStructures" );
 const H5std_string MEMBER1( "a" );
 const H5std_string MEMBER2( "b" );
@@ -146,15 +146,14 @@ int main(void)
       /*
        * Display the fields
        */
-      cout << endl << "Field c : " << endl;
-      for( i = 0; i < LENGTH; i++)
-	 cout << s2[i].c << " ";
-      cout << endl;
-
-      cout << endl << "Field a : " << endl;
-      for( i = 0; i < LENGTH; i++)
-	 cout << s2[i].a << " ";
-      cout << endl;
+#define ShowField(s,x){\
+      cout << endl << "Field "<<#x<<" : " << endl;\
+      for( i = 0; i < LENGTH; i++)\
+	 cout << s[i].x << " ";\
+      cout << endl;\
+   }
+   ShowField(s2, a);
+   ShowField(s2, c);
 
       /*
        * Create a datatype for s3.
@@ -207,7 +206,7 @@ int main(void)
 	  cout<<"vector ii size="<<sizeof(ii)<<endl;
       CompType mtype3(sizeof(s3_t));
       mtype3.insertMember("a", HOFFSET(s3_t, a), PredType::NATIVE_INT);
-      mtype3.insertMember(MEMBER2, HOFFSET(s3_t, b), PredType::NATIVE_FLOAT);
+//       mtype3.insertMember(MEMBER2, HOFFSET(s3_t, b), PredType::NATIVE_FLOAT);
       mtype3.insertMember(MEMBER3, HOFFSET(s3_t, c), PredType::NATIVE_DOUBLE);
       mtype3.insertMember("d", HOFFSET(s3_t, d), PredType::NATIVE_INT);
 	  hsize_t dims=3;
@@ -230,6 +229,20 @@ int main(void)
 	 cout << s3[i].a << " ";
       cout << endl;
 	  
+	  cout << endl << "Field b : " << endl;
+      for( i = 0; i < LENGTH; i++)
+	 cout << s3[i].b << " ";
+      cout << endl;
+	  
+	  cout << endl << "Field x : " << endl;
+      for( i = 0; i < LENGTH; i++)
+		{
+		  cout <<i<<":";
+		  for(auto x: s3[i].x)
+			cout << x << " ";
+		  cout << endl;
+		}
+		
 	  cout << endl << "Field i : " << endl;
       for( i = 0; i < LENGTH; i++)
 		if(s3[i].i.size())
@@ -272,12 +285,12 @@ int main(void)
 		dspace.getSimpleExtentDims(dim);
 		cout<<dim[0]<<endl;
 		hvl_t vl[dim[0]];
-		dset2.read(vl, vlt_i);
+		dset2.read(vl, VarLenType(&PredType::NATIVE_FLOAT)); //this does not have to be the same as the storage type!
 		for(i=0;i<LENGTH;i++)
 		{
 		  cout<<"data "<<i<<":";
 		  for(int j=0;j<vl[i].len;j++)
-			cout<<((int *)vl[i].p)[j]<<" ";
+			cout<<((float *)vl[i].p)[j]<<" ";
 		  cout<<endl;
 		}
 	  }

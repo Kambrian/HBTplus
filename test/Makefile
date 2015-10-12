@@ -3,5 +3,7 @@ EXE=$(basename $(SRC))
 default: $(EXE)
 test_parse:  ../config_parser.o
 
+OUTPUTS=$(wildcard *.hdf5)
+
 include ../Makefile.inc
 

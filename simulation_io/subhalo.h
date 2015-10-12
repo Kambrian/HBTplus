@@ -82,7 +82,6 @@ class MemberShipTable_t
 public:
   typedef VectorView_t <HBTInt> MemberList_t;  //list of members in a group
 private:
-  void Init(const HBTInt nhalos, const HBTInt nsubhalos, const float alloc_factor=1.2);
   void BindMemberLists();
   void FillMemberLists(const SubHaloList_t & SubHalos);
   void CountMembers(const SubHaloList_t & SubHalos);
@@ -104,6 +103,7 @@ public:
   {
 	return SubGroups[-1].size();
   }
+  void Init(const HBTInt nhalos, const HBTInt nsubhalos, const float alloc_factor=1.2);
   void ResizeAllMembers(size_t n);
   void Build(const HBTInt nhalos, const SubHaloList_t & SubHalos);
   void SortMemberLists(const SubHaloList_t & SubHalos);
@@ -118,15 +118,17 @@ private:
   void DecideCentrals(const HaloSnapshot_t &halo_snap);
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void BuildHDFDataType();
-  H5::CompType H5T_SubHalo;
+  H5::CompType H5T_SubHaloInMem, H5T_SubHaloInDisk;
 public:
   Snapshot_t * SnapshotPointer;
   SubHaloList_t SubHalos;
   MemberShipTable_t MemberTable;
-  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubHalo(sizeof(SubHalo_t))
+  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubHaloInMem(sizeof(SubHalo_t))
   {
 	BuildHDFDataType();
   }
+  void GetSubFileName(string &filename);
+  void GetSrcFileName(string &filename);
   void Load(int snapshot_index, bool load_src=false);
   void Save();
   void Clear()
