@@ -283,6 +283,15 @@ int main(void)
 		DataSet dset2(file3.openDataSet("/data/S3Data"));
 		DataSpace dspace=dset2.getSpace();
 		dspace.getSimpleExtentDims(dim);
+		hsize_t count[]={1}, offset[]={0}, stride[]={1}, block[]={1};
+		for(offset[0]=0;offset[0]<dim[0];offset[0]++)
+		{
+		  dspace.selectHyperslab(H5S_SELECT_SET, count, offset, stride, block);
+		  cout<<dset2.getVlenBufSize(vlt_i, dspace)/vlt_i.getSuper().getSize()<<" ";
+		}
+		cout<<endl;
+		cout<<dset2.getStorageSize()<<','<<dset2.getInMemDataSize()<<endl;
+		cout<<vlt_i.getSize()<<endl;
 		cout<<dim[0]<<endl;
 		hvl_t vl[dim[0]];
 		dset2.read(vl, VarLenType(&PredType::NATIVE_FLOAT)); //this does not have to be the same as the storage type!
