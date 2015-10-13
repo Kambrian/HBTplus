@@ -171,7 +171,7 @@ void MemberShipTable_t::BindMemberLists()
   }
 }
 void MemberShipTable_t::CountMembers(const SubHaloList_t& SubHalos)
-{
+{//todo: parallelize this..
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
 	SubGroups[SubHalos[subid].HostHaloId].IncrementBind();
 }
@@ -197,6 +197,7 @@ struct CompareMass_t
 void MemberShipTable_t::SortMemberLists(const SubHaloList_t & SubHalos)
 {
   CompareMass_t compare_mass(SubHalos);
+#pragma omp for
   for(HBTInt i=-1;i<SubGroups.size();i++)
 	std::sort(SubGroups[i].begin(), SubGroups[i].end(), compare_mass);
 }
@@ -218,9 +219,14 @@ void MemberShipTable_t::AssignRanks(SubHaloList_t& SubHalos)
 }
 void MemberShipTable_t::CountBirth()
 {
-  NBirth=0;
+static HBTInt nbirth;
+#pragma omp single
+nbirth=0;
+#pragma omp for reduction(+:nbirth)
   for(HBTInt hostid=0;hostid<SubGroups.size();hostid++)
-	if(SubGroups[hostid].size()==0)  NBirth++;
+	if(SubGroups[hostid].size()==0)  nbirth++;
+#pragma omp single
+NBirth=nbirth;	
 }
 /*
 inline bool SubHaloSnapshot_t::CompareHostAndMass(const HBTInt& subid_a, const HBTInt& subid_b)
@@ -233,10 +239,13 @@ inline bool SubHaloSnapshot_t::CompareHostAndMass(const HBTInt& subid_a, const H
 }*/
 void MemberShipTable_t::Build(const HBTInt nhalos, const SubHaloList_t & SubHalos)
 {
+  #pragma omp single
+  {
   Init(nhalos, SubHalos.size());
   CountMembers(SubHalos);
   BindMemberLists();
   FillMemberLists(SubHalos);
+  }
   SortMemberLists(SubHalos);
   CountBirth();
 //   std::sort(AllMembers.begin(), AllMembers.end(), CompareHostAndMass);
@@ -255,24 +264,29 @@ exit(1);
 
 void SubHaloSnapshot_t::ParticleIdToIndex(const Snapshot_t& snapshot)
 {//also bind to snapshot
+#pragma omp single
   SnapshotPointer=&snapshot;
-  for(HBTInt subid=0;subid<SubHalos.size();subid++)
-  {
-	SubHalo_t::ParticleList_t & Particles=SubHalos[subid].Particles;
-	for(HBTInt pid=0;pid<Particles.size();pid++)
-	  Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);
-  }
+#pragma omp for
+	for(HBTInt subid=0;subid<SubHalos.size();subid++)
+	{
+	  SubHalo_t::ParticleList_t & Particles=SubHalos[subid].Particles;
+	  HBTInt nP=Particles.size();
+	  for(HBTInt pid=0;pid<nP;pid++)
+		Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);
+	}
 }
 void SubHaloSnapshot_t::ParticleIndexToId()
 {
-  const Snapshot_t &snapshot=*SnapshotPointer;
+#pragma omp for
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
 	SubHalo_t::ParticleList_t & Particles=SubHalos[subid].Particles;
-	for(HBTInt pid=0;pid<Particles.size();pid++)
-	  Particles[pid]=snapshot.GetParticleId(Particles[pid]);
+	HBTInt nP=Particles.size();
+	for(HBTInt pid=0;pid<nP;pid++)
+	  Particles[pid]=SnapshotPointer->GetParticleId(Particles[pid]);
   }
-	SnapshotPointer=nullptr;
+#pragma omp single
+  SnapshotPointer=nullptr;
 }
 void SubHaloSnapshot_t::BuildHDFDataType()
 {
@@ -463,19 +477,26 @@ void SubHaloSnapshot_t::Save()
 }
 void SubHaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 {
-  vector<HBTInt> ParticleToHost(SnapshotPointer->GetNumberOfParticles(), SpecialConst::NullHaloId);
+  static vector<HBTInt> ParticleToHost;//to make it shared
+#pragma omp single
+   ParticleToHost.assign(SnapshotPointer->GetNumberOfParticles(), SpecialConst::NullHaloId);
+#pragma omp for
   for(HBTInt haloid=0;haloid<halo_snap.Halos.size();haloid++)
   {
 	const Halo_t::ParticleList_t & Particles=halo_snap.Halos[haloid].Particles;
 	for(HBTInt i=0;i<Particles.size();i++)
 	  ParticleToHost[Particles[i]]=haloid;
   }
+#pragma omp for 
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
 	//rely on most-bound particle
 	SubHalos[subid].HostHaloId=ParticleToHost[SubHalos[subid].Particles[0]];
 	//alternatives: CoreTrack; Split;
   }
+#pragma omp single
+  vector <HBTInt>().swap(ParticleToHost);//free the memory.
+#pragma omp single nowait
   if(HBTConfig.TrimNonHostParticles)
   {
 	cout<<"Error: TrimNonHostParticles not implemented yet...\n";

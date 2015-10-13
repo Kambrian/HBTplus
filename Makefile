@@ -1,6 +1,7 @@
-include Makefile.inc
 SRC=$(wildcard *.cpp)
 EXE=HBT
+default: $(EXE)
+include Makefile.inc
 
 HBT: mymath.o config_parser.o simulation_io/snapshot.o simulation_io/halo.o simulation_io/subhalo.o gravity/tree.o
 

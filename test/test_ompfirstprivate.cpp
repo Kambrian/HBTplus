@@ -18,19 +18,17 @@ public:
 };
 int main()
 {
-#pragma omp parallel num_threads(2)
+  #pragma omp parallel num_threads(3)
   {
-  myclass c=myclass(),d;
-  myclass a(0,1,2);//every thread executes the initializer
-#pragma omp single
-  {
-//   cout<<c.x<<','<<c.y<<','<<c.z<<endl;
-//   cout<<d.x<<','<<d.y<<','<<d.z<<endl;
+	int x=omp_get_thread_num();
+#pragma omp for
+	for(int i=0;i<3;i++)
+	{
+	  static myclass a(1,2,3);//static var is initialized only once!
+	  printf("%d, %d: %d, %d\n", omp_get_thread_num(), i, x, a.x);
+	  a.x=i;
+	  printf("%d, %d: %d\n", omp_get_thread_num(), i, a.x);
+	}
   }
-  }
-  /*output:
-    0,1,4196688
-	0,1,4196128
-	*/
   return 0;
 }

@@ -295,27 +295,27 @@ void HaloSnapshot_t::ParticleIdToIndex(const Snapshot_t& snapshot)
 {
 #pragma omp single
   SnapshotPointer=&snapshot;
-#pragma omp single nowait //TODO: use intel thread-safe container! 
+#pragma omp for
   for(HBTInt haloid=0;haloid<Halos.size();haloid++)
   {
-	HBTInt *Particles=Halos[haloid].Particles.data();
-	HBTInt np=Halos[haloid].Particles.size();
+	Halo_t::ParticleList_t & Particles=Halos[haloid].Particles;
+	HBTInt np=Particles.size();
 	for(HBTInt pid=0;pid<np;pid++)
-	  #pragma omp task firstprivate(pid, Particles) shared(snapshot)
 	  Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);//this should be safe since its a const func
   }
-#pragma omp taskwait
 }
 
 void HaloSnapshot_t::ParticleIndexToId()
 {
-  const Snapshot_t & snapshot=*SnapshotPointer;
+#pragma omp for
   for(HBTInt haloid=0;haloid<Halos.size();haloid++)
   {
 	Halo_t::ParticleList_t &Particles=Halos[haloid].Particles;
-	for(HBTInt pid=0;pid<Particles.size();pid++)
-	  Particles[pid]=snapshot.GetParticleId(Particles[pid]);
+	HBTInt nP=Halos[haloid].Particles.size();
+	for(HBTInt pid=0;pid<nP;pid++)
+	  Particles[pid]=SnapshotPointer->GetParticleId(Particles[pid]);
   }
+#pragma omp single
   SnapshotPointer=nullptr;
 }
 

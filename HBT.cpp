@@ -33,11 +33,11 @@ int main(int argc, char **argv)
 	
 	#pragma omp parallel
 	{
-	halosnap.ParticleIdToIndex(partsnap);}
+	halosnap.ParticleIdToIndex(partsnap);
 	subsnap.ParticleIdToIndex(partsnap);
 	
 	subsnap.AssignHosts(halosnap);
-	
+	}
 	subsnap.PrepareCentrals(halosnap);
 	
 	subsnap.RefineParticles();

@@ -2,8 +2,8 @@ HDFINC=
 HDFLIB=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5
 
 CXX=g++
-CXXFLAGS+=-std=c++0x -g -fopenmp
-CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 $(HDFINC)
+CXXFLAGS+=-std=c++0x $(HDFINC) -g -fopenmp
+CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
 LDLIBS+=$(HDFLIB) -fopenmp
 <!-- LINK.o=$(LINK.cpp) -->
 
