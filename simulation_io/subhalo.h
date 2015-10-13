@@ -120,7 +120,7 @@ private:
   void BuildHDFDataType();
   H5::CompType H5T_SubHaloInMem, H5T_SubHaloInDisk;
 public:
-  Snapshot_t * SnapshotPointer;
+  const Snapshot_t * SnapshotPointer;
   SubHaloList_t SubHalos;
   MemberShipTable_t MemberTable;
   SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubHaloInMem(sizeof(SubHalo_t))
@@ -136,7 +136,7 @@ public:
 	//TODO
 	cout<<"Clean() not implemented yet\n";
   }
-  void ParticleIdToIndex(Snapshot_t & snapshot);
+  void ParticleIdToIndex(const Snapshot_t & snapshot);
   void ParticleIndexToId();
   void AverageCoordinates();
   void AssignHosts(const HaloSnapshot_t &halo_snap);

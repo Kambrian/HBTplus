@@ -31,7 +31,9 @@ int main(int argc, char **argv)
 	halosnap.Load(isnap);
 	subsnap.SetSnapshotIndex(isnap);
 	
-	halosnap.ParticleIdToIndex(partsnap);
+	#pragma omp parallel
+	{
+	halosnap.ParticleIdToIndex(partsnap);}
 	subsnap.ParticleIdToIndex(partsnap);
 	
 	subsnap.AssignHosts(halosnap);
@@ -43,6 +45,8 @@ int main(int argc, char **argv)
 	subsnap.UpdateTracks();
 	
 	subsnap.ParticleIndexToId();
+	//}
+	
 	subsnap.Save();
   }
   

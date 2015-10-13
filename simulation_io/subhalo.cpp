@@ -253,7 +253,7 @@ cout<<"ToBeImplemented!\n";
 exit(1);
 }
 
-void SubHaloSnapshot_t::ParticleIdToIndex(Snapshot_t& snapshot)
+void SubHaloSnapshot_t::ParticleIdToIndex(const Snapshot_t& snapshot)
 {//also bind to snapshot
   SnapshotPointer=&snapshot;
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
@@ -265,7 +265,7 @@ void SubHaloSnapshot_t::ParticleIdToIndex(Snapshot_t& snapshot)
 }
 void SubHaloSnapshot_t::ParticleIndexToId()
 {
-  Snapshot_t &snapshot=*SnapshotPointer;
+  const Snapshot_t &snapshot=*SnapshotPointer;
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
 	SubHalo_t::ParticleList_t & Particles=SubHalos[subid].Particles;
