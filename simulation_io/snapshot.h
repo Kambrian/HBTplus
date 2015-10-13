@@ -51,7 +51,7 @@ class Snapshot_t: public SnapshotNumber_t
   HBTxyz * ComovingPosition;
   HBTxyz * PhysicalVelocity;
   HBTReal * ParticleMass;
-  unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this
+  unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
   
   void LoadId(Parameter_t & param);
   void LoadPosition(Parameter_t & param);
@@ -83,7 +83,7 @@ public:
   }
   void FillParticleHash();
   void ClearParticleHash();
-  ParticleIndex_t GetParticleIndex(ParticleId_t particle_id);
+  ParticleIndex_t GetParticleIndex(ParticleId_t particle_id) const;
   void GetFileName(Parameter_t &param, int ifile, string &filename);
   void Clear();
   ParticleIndex_t GetNumberOfParticles() const;
@@ -96,9 +96,9 @@ public:
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
 };
 
-inline Snapshot_t::ParticleIndex_t Snapshot_t::GetParticleIndex(ParticleId_t particle_id)
+inline Snapshot_t::ParticleIndex_t Snapshot_t::GetParticleIndex(ParticleId_t particle_id) const
 {
-  return ParticleHash[particle_id];
+  return ParticleHash.at(particle_id);//this is safe
 }
 inline Snapshot_t::ParticleIndex_t Snapshot_t::GetNumberOfParticles() const
 {
