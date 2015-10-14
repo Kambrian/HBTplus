@@ -1,10 +1,11 @@
 HDFINC=
 HDFLIB=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5
+OMPFLAG=-fopenmp
 
 CXX=g++
-CXXFLAGS+=-std=c++0x $(HDFINC) -g -fopenmp
+CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -g 
 CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
-LDLIBS+=$(HDFLIB) -fopenmp
+LDLIBS+=$(HDFLIB) $(OMPFLAG)
 <!-- LINK.o=$(LINK.cpp) -->
 
 SUBDIRS:=$(wildcard */.)

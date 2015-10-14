@@ -27,7 +27,8 @@ public:
   const Snapshot_t * SnapshotPointer;
   HaloList_t Halos;
   HBTInt TotNumberOfParticles;
-  HaloSnapshot_t(): SnapshotNumber_t(), Halos(), SnapshotPointer(nullptr)
+  HBTInt NumPartOfLargestHalo;
+  HaloSnapshot_t(): SnapshotNumber_t(), Halos(), SnapshotPointer(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
   }
   void Load(int snapshot_index);

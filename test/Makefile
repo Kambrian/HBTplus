@@ -6,5 +6,5 @@ test_parse:  ../config_parser.o
 OUTPUTS=$(wildcard *.hdf5)
 
 include ../Makefile.inc
-CXXFLAGS+=-o0
+test_omptask:CXXFLAGS+=-o0
 

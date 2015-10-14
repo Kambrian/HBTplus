@@ -123,7 +123,8 @@ public:
   const Snapshot_t * SnapshotPointer;
   SubHaloList_t SubHalos;
   MemberShipTable_t MemberTable;
-  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubHaloInMem(sizeof(SubHalo_t))
+  bool ParallelizeHaloes;
+  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubHaloInMem(sizeof(SubHalo_t)), ParallelizeHaloes(true)
   {
 	BuildHDFDataType();
   }

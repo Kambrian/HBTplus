@@ -1,6 +1,7 @@
 #include <iostream>
 #include <new>
 #include <algorithm>
+#include <omp.h>
 
 #include "../datatypes.h"
 #include "snapshot_number.h"
@@ -86,55 +87,59 @@ static void PopMostBoundParticle(ParticleEnergy_t * Edata, const HBTInt Nbound)
 void SubHalo_t::Unbind(const Snapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
   if(1==Particles.size()) return;
- 
+  
   HBTInt OldMostBoundParticle=Particles[0];
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
-  HBTInt Nlast=Nbound*100; 
+  HBTInt Nlast; 
   
   vector <ParticleEnergy_t> Elist(Nbound);
-  for(HBTInt i=0;i<Nbound;i++)
-	Elist[i].pid=Particles[i];
-  assert(Nbound<Nlast*HBTConfig.BoundMassPrecision);
-  while(Nbound<Nlast*HBTConfig.BoundMassPrecision)
-  {
-	Nlast=Nbound;
-	tree.Build(Nlast, Particles.data(), snapshot);
-	for(HBTInt i=0;i<Nlast;i++)
+	for(HBTInt i=0;i<Nbound;i++)
+	  Elist[i].pid=Particles[i];
+	while(true)
 	{
-	  HBTInt pid=Elist[i].pid;
-	  Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingPosition, PhysicalVelocity, snapshot.GetParticleMass(pid));
+		Nlast=Nbound;
+		tree.Build(Nlast, Particles.data(), snapshot);
+	  #pragma omp parallel for if(Nlast>100)
+	  for(HBTInt i=0;i<Nlast;i++)
+	  {
+		HBTInt pid=Elist[i].pid;
+		Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingPosition, PhysicalVelocity, snapshot.GetParticleMass(pid));
+	  }
+		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
+		if(Nbound<HBTConfig.MinNumPartOfSub)
+		{
+		  Nbound=0;
+		  Elist[0].pid=OldMostBoundParticle;
+		}
+		else
+		{
+		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
+		  PopMostBoundParticle(Elist.data(), Nbound);
+		}
+	  if(Nbound<HBTConfig.MinNumPartOfSub)
+	  {
+		for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;//copy the sorted particles this round. ToDo: optimize this away (passing Elist to tree? maybe pass functions to tree, or a ParticleList/minisnapshot base class with GetPos,GetMass etc.)
+	  }
+	  {
+		copyHBTxyz(ComovingPosition, snapshot.GetComovingPosition(Elist[0].pid));
+		copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
+	  }
+		if(0==Nbound||Nbound>Nlast*HBTConfig.BoundMassPrecision)  break;
 	}
-	Nbound=PartitionBindingEnergy(Elist, Nlast);
-	if(Nbound<HBTConfig.MinNumPartOfSub)
+	if(Nbound)
 	{
-	  Nbound=0;
-	  Elist[0].pid=OldMostBoundParticle;
+	  sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
+	  for(HBTInt i=0;i<Nbound;i++) Particles[i]=Elist[i].pid;//unbound part already copied inside the loop.
+		Nlast=Particles.size();
+		if(Nlast>Nbound*HBTConfig.SourceSubRelaxFactor) Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
 	}
 	else
 	{
-	  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
-	  PopMostBoundParticle(Elist.data(), Nbound);
-	  for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;//copy the sorted particles this round. ToDo: optimize this away (passing Elist to tree? maybe pass functions to tree, or a ParticleList/minisnapshot base class with GetPos,GetMass etc.)
+	  Nbound=1;
+	  Nlast=1;//what if this is a central?? any fixes?
 	}
-	copyHBTxyz(ComovingPosition, snapshot.GetComovingPosition(Elist[0].pid));
-	copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
-	if(0==Nbound) break;
-  }
-  
-  if(Nbound)
-  {
-	sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
-	for(HBTInt i=0;i<Nbound;i++) Particles[i]=Elist[i].pid;//unbound part already copied inside the loop.
-	Nlast=Particles.size();
-	if(Nlast>Nbound*HBTConfig.SourceSubRelaxFactor) Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
-  }
-  else
-  {
-	Nbound=1;
-	Nlast=1;//what if this is a central?? any fixes?
-  }
   Particles.resize(Nlast);
   //todo: output angular momentum and total energy as well, for calculation of spin.
 }
@@ -258,8 +263,8 @@ void MemberShipTable_t::SubIdToTrackId(const SubHaloList_t& SubHalos)
 }
 void MemberShipTable_t::TrackIdToSubId(SubHaloList_t& SubHalos)
 {
-cout<<"ToBeImplemented!\n";
-exit(1);
+cout<<"Warning: TrackIdToSubId ToBe fully Implemented!\n";
+// exit(1);
 }
 
 void SubHaloSnapshot_t::ParticleIdToIndex(const Snapshot_t& snapshot)
@@ -376,7 +381,7 @@ void SubHaloSnapshot_t::Load(int snapshot_index, bool load_src)
   if(0==nsubhalos) return;
   
   vl.resize(nsubhalos);
-  if(load_src)
+  if(!load_src)
   {
 	dset=file.openDataSet("SubHaloParticles");
 	dset.getSpace().getSimpleExtentDims(dims);
@@ -479,7 +484,10 @@ void SubHaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 {
   static vector<HBTInt> ParticleToHost;//to make it shared
 #pragma omp single
+{
    ParticleToHost.assign(SnapshotPointer->GetNumberOfParticles(), SpecialConst::NullHaloId);
+   ParallelizeHaloes=halo_snap.NumPartOfLargestHalo<0.1*halo_snap.TotNumberOfParticles;//no dominating objects
+}
 #pragma omp for
   for(HBTInt haloid=0;haloid<halo_snap.Halos.size();haloid++)
   {
@@ -586,6 +594,11 @@ void SubHaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
 void SubHaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
   //TODO: ensure the inclusive unbinding is stable (contaminating particles from big subhaloes may hurdle the unbinding
+#ifdef _OPEN_MP
+ omp_set_nested(0);
+ if(ParallelizeHaloes) cout<<"HaloPara\n";
+#endif  
+#pragma omp parallel for if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
 	SubHalos[subid].Unbind(*SnapshotPointer);

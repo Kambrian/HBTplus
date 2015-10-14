@@ -1,4 +1,3 @@
-using namespace std;
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -9,6 +8,7 @@ using namespace std;
 #include <cstdio>
 #include <glob.h>
 #include <climits>
+#include <algorithm>
 
 #include "../mymath.h"
 #include "halo.h"
@@ -281,6 +281,8 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 // 	if(typeid(HBTInt)==typeid(PIDtype_t))//consider optimizing by using memcpy
   }
   
+  NumPartOfLargestHalo=*max_element(Len, Len+NumberOfHaloes);
+  
   for(int i=1;i<NumberOfHaloes;i++)
   {
 	if(Len[i]>Len[i-1])
@@ -295,7 +297,7 @@ void HaloSnapshot_t::ParticleIdToIndex(const Snapshot_t& snapshot)
 {
 #pragma omp single
   SnapshotPointer=&snapshot;
-#pragma omp for
+#pragma omp for //maybe try collapse(2)? need to remove intermediate variables to enable this.
   for(HBTInt haloid=0;haloid<Halos.size();haloid++)
   {
 	Halo_t::ParticleList_t & Particles=Halos[haloid].Particles;

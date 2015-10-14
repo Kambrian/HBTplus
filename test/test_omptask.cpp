@@ -18,7 +18,7 @@ int main(int argc, char **argv)
       t0=time(NULL);
 #pragma omp parallel num_threads(4)
   {
-#pragma omp for
+#pragma omp for //collapse(2) //the use of collapse is unspecified here?
 	for(int i=0;i<N;i++)
 	  for(int j=0;j<i;j++)
 		int x=work(i,j);
