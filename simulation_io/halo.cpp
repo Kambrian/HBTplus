@@ -282,7 +282,7 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 // 	if(typeid(HBTInt)==typeid(PIDtype_t))//consider optimizing by using memcpy
   }
   
-  NumPartOfLargestHalo=*max_element(Len, Len+NumberOfHaloes);
+  NumPartOfLargestHalo=*max_element(Len.begin(), Len.end());
   
   for(int i=1;i<NumberOfHaloes;i++)
   {
