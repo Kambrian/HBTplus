@@ -35,6 +35,19 @@ inline bool file_exist(char * filename)
 { struct stat buffer;   
   return (stat(filename, &buffer) == 0); 
 }
+inline long int BytesToEOF(FILE *fp)
+{
+  fpos_t fpos;
+  fgetpos (fp,&fpos);
+  
+  long int offset=ftell(fp);
+  fseek(fp, 0L, SEEK_END);
+  long int offset_end=ftell (fp);
+  
+  fsetpos(fp, &fpos);
+  
+  return (offset_end-offset);
+}
 inline void copyHBTxyz(HBTxyz & dest, HBTxyz & src)
 {
   memcpy(dest, src, sizeof(HBTxyz));

@@ -53,7 +53,7 @@ bool Snapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
 
   bool NeedByteSwap;
   int dummy,dummy2;
-  fread(&dummy,sizeof(dummy),1,fp);
+  size_t tmp_size=fread(&dummy,sizeof(dummy),1,fp);
   if(dummy==headersize)
 	NeedByteSwap=false;
   else if(dummy==headersize_byteswap)
@@ -370,7 +370,8 @@ void Snapshot_t::FillParticleHash()
 void Snapshot_t::ClearParticleHash()
 {
   ParticleHash.clear();
-}*/
+}
+*/
 
 void Snapshot_t::FillParticleHash()
 {

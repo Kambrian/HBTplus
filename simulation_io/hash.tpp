@@ -21,7 +21,7 @@ void MappedIndexTable_t<Key_t, Index_t>::Fill(const Key_t* keys, const Index_t n
 {
 	Map.resize(n);
 	#pragma omp parallel for
-	for(size_t i=0;i<n;i++)
+	for(Index_t i=0;i<n;i++)
 	{
 		#ifdef PID_ORDERED
 		Map[i].Key=i+1;

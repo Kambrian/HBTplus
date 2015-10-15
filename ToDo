@@ -1,5 +1,10 @@
-complete SubHaloSnapshot_t::Load(); improve save() to also output variable-length arrays
+test PeriodicBoundaryOff; single-precision, to figure out why the tree alloc factor is so large?
+add exceptions to treebuild
 
+segregate the effect of MassPrecision
+
+remove id=-1 from pidhash: do not allow this. just exit.
+--------
 openMP version
 analysis routines/check compare
 
@@ -14,6 +19,8 @@ use shallow_list for subhalo particles as well? or use vector for MemberTable as
 
 unify snapshot template/base class (include a common header containing snapnum, Hz, scalefactor)
 make tree accept snapshot class
+
+fix non-POD issue with HDF save.
 -------------------
 Future: 
 shared_ptr

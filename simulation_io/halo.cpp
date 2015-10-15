@@ -63,7 +63,7 @@ static bool GetGroupFileByteOrder(const char *filename, const int FileCounts, co
 	  offset=3*sizeof(int); 
   }  
   fseek(fp,offset,SEEK_SET);
-  fread(&Nfiles,sizeof(int),1,fp);
+  size_t tmp_size=fread(&Nfiles,sizeof(int),1,fp);
   fclose(fp);
   
   if(Nfiles==n) return false;
@@ -77,50 +77,50 @@ void HaloSnapshot_t::GetFileNameFormat(string &format, int &FileCounts, bool &Is
 {
   IsSubFile=false;
   FileCounts=1;
-  char buf[1024], pattern[1024], basefmt[1024], fmt[1024];
+  char filename[1024], pattern[1024], basefmt[1024], fmt[1024];
   const int ifile=0;
   sprintf(basefmt, "%s/groups_%03d/subhalo_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId,SnapshotId);
   sprintf(fmt, "%s.%%d", basefmt);
-  sprintf(buf, fmt, "tab", ifile);
-  if(file_exist(buf))
+  sprintf(filename, fmt, "tab", ifile);
+  if(file_exist(filename))
   {
 	IsSubFile=true;
 	sprintf(pattern, basefmt, "tab");
 	strcat(pattern, ".*");
 	FileCounts=count_pattern_files(pattern);
-	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, HBTConfig.GroupFileVariant);
+	NeedByteSwap=GetGroupFileByteOrder(filename, FileCounts, HBTConfig.GroupFileVariant);
 	format=fmt;
 	return;
   }
   
   sprintf(basefmt, "%s/groups_%03d/group_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId,SnapshotId);
   sprintf(fmt, "%s.%%d", basefmt);
-  sprintf(buf, fmt, "tab", ifile);
-  if(file_exist(buf))
+  sprintf(filename, fmt, "tab", ifile);
+  if(file_exist(filename))
   {
 	sprintf(pattern, basefmt, "tab");
 	strcat(pattern, ".*");
 	FileCounts=count_pattern_files(pattern);
-	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, HBTConfig.GroupFileVariant);
+	NeedByteSwap=GetGroupFileByteOrder(filename, FileCounts, HBTConfig.GroupFileVariant);
 	format=fmt;
 	return;
   }
   
   sprintf(fmt, "%s/subhalo_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId);
-  sprintf(buf, fmt, "tab");
-  if(file_exist(buf))
+  sprintf(filename, fmt, "tab");
+  if(file_exist(filename))
   {
 	IsSubFile=true;
-	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, HBTConfig.GroupFileVariant);
+	NeedByteSwap=GetGroupFileByteOrder(filename, FileCounts, HBTConfig.GroupFileVariant);
 	format=fmt;
 	return;
   }
   
   sprintf(fmt, "%s/group_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId);
-  sprintf(buf, fmt, "tab");
-  if(file_exist(buf))
+  sprintf(filename, fmt, "tab");
+  if(file_exist(filename))
   {
-	NeedByteSwap=GetGroupFileByteOrder(buf, FileCounts, HBTConfig.GroupFileVariant);
+	NeedByteSwap=GetGroupFileByteOrder(filename, FileCounts, HBTConfig.GroupFileVariant);
 	format=fmt;
 	return;
   }
@@ -162,7 +162,7 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 //the value of dummy is irrelevant, only its type is used.
 {
   FILE *fd;
-  char buf[1024];
+  char filename[1024];
   vector <int> Len, Offset;
   int Ngroups, TotNgroups, Nids, NFiles;
   HBTInt NumberOfParticles,NumberOfHaloes;
@@ -178,11 +178,11 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
   for(int iFile=0;iFile<FileCounts;iFile++)
   {
 	if(FileCounts>1)
-	  sprintf(buf, filename_format.c_str(), "tab", iFile);
+	  sprintf(filename, filename_format.c_str(), "tab", iFile);
 	else
-	  sprintf(buf, filename_format.c_str(), "tab");
+	  sprintf(filename, filename_format.c_str(), "tab");
 		
-	myfopen(fd,buf,"r");
+	myfopen(fd,filename,"r");
 	myfread(&Ngroups, sizeof(Ngroups), 1, fd);
 	myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
 	myfread(&Nids, sizeof(Nids), 1, fd);
@@ -197,7 +197,7 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 	if(FileCounts!=NFiles)
 	{
 	  fprintf(stderr,"error: number of grpfiles specified not the same as stored: %d,%d\n for file %s\n",
-			  FileCounts,NFiles,buf);
+			  FileCounts,NFiles,filename);
 	  fflush(stderr);
 	  exit(1);
 	}
@@ -221,7 +221,7 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 	myfread(Offset.data()+Nload, sizeof(int), Ngroups, fd);
 	if(feof(fd))
 	{
-	  fprintf(stderr,"error:End-of-File in %s\n",buf);
+	  fprintf(stderr,"error:End-of-File in %s\n",filename);
 	  fflush(stderr);exit(1);  
 	}
 	Nload+=Ngroups;
@@ -239,11 +239,11 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
   for(int iFile=0;iFile<FileCounts;iFile++)
   {
 	if(FileCounts>1)
-	  sprintf(buf, filename_format.c_str(), "ids", iFile);
+	  sprintf(filename, filename_format.c_str(), "ids", iFile);
 	else
-	  sprintf(buf, filename_format.c_str(), "ids");
+	  sprintf(filename, filename_format.c_str(), "ids");
 	
-	myfopen(fd,buf,"r");
+	myfopen(fd,filename,"r");
 	myfread(&Ngroups, sizeof(Ngroups), 1, fd);
 	myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
 	myfread(&Nids, sizeof(Nids), 1, fd);
@@ -254,9 +254,16 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 	myfread(&dummy,sizeof(int),1,fd);
 	
 	myfread(&PIDs[Nload], sizeof(PIDtype_t), Nids, fd);
+	if(long int extra_bytes=BytesToEOF(fd))
+	{
+	  cerr<<"Error: unexpected format of "<<filename<<endl;
+	  cerr<<extra_bytes<<" extra bytes beyond particleId block! Check if particleId has a different type?\n";
+	  exit(1);
+	}
+	
 	if(feof(fd))
 	{
-	  fprintf(stderr,"error:End-of-File in %s\n",buf);
+	  fprintf(stderr,"error:End-of-File in %s\n",filename);
 	  fflush(stderr);exit(1);  
 	}
 	Nload+=Nids;
@@ -277,6 +284,7 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 	exit(1);
   } else
   {
+#pragma omp parallel for
 	for(int i=0;i<NumberOfHaloes;i++)
 		Halos[i].Particles.assign(PIDs.begin()+Offset[i], PIDs.begin()+Offset[i]+Len[i]);
 // 	if(typeid(HBTInt)==typeid(PIDtype_t))//consider optimizing by using memcpy
