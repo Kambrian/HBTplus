@@ -411,6 +411,7 @@ void SubHaloSnapshot_t::Load(int snapshot_index, bool load_src)
 	dset.vlenReclaim(vl.data(), H5T_HBTIntArr,dset.getSpace());
 	dset.close();
   }
+  cout<<SubHalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
 }
 void writeHDFmatrix(H5::CommonFG &file, const void * buf, const char * name, const hsize_t ndim, const hsize_t *dims, const H5::DataType &dtype, const H5::DataType &dtype_file)
 {
@@ -479,6 +480,7 @@ void SubHaloSnapshot_t::Save()
 	vl[i].len=SubHalos[i].Particles.size();
   writeHDFmatrix(file, vl.data(), "SrcHaloParticles", ndim, dim_sub, H5T_HBTIntArr);
   file.close();
+  cout<<SubHalos.size()<<" subhaloes saved: "<<MemberTable.NBirth<<" birth, "<< MemberTable.NFake<<" fake.\n";
 }
 void SubHaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 {

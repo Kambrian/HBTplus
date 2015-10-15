@@ -9,6 +9,7 @@
 #include <glob.h>
 #include <climits>
 #include <algorithm>
+#include <chrono>
 
 #include "../mymath.h"
 #include "halo.h"
@@ -132,15 +133,15 @@ void HaloSnapshot_t::GetFileNameFormat(string &format, int &FileCounts, bool &Is
 void HaloSnapshot_t::Load(int snapshot_index)
 {
   SetSnapshotIndex(snapshot_index);
+  int dummy_integer=0;
+  long dummy_long=0;
   switch(HBTConfig.GroupFileVariant)
   {
 	case GROUP_FORMAT_GADGET3_INT:
-	  int i;
-	  LoadGroupV3(i);
+	  LoadGroupV3(dummy_integer);
 	  break;
 	case GROUP_FORMAT_GADGET3_LONG:
-	  long l;
-	  LoadGroupV3(l);
+	  LoadGroupV3(dummy_long);
 	  break;
 	default:
 	  cerr<<"GroupFileVariant="<<HBTConfig.GroupFileVariant<<" not implemented yet.\n";
@@ -295,8 +296,12 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 
 void HaloSnapshot_t::ParticleIdToIndex(const Snapshot_t& snapshot)
 {
-#pragma omp single
+  chrono::high_resolution_clock::time_point time_begin, time_end;
+#pragma omp master
+  {
   SnapshotPointer=&snapshot;
+  time_begin = chrono::high_resolution_clock::now();
+  }
 #pragma omp for //maybe try collapse(2)? need to remove intermediate variables to enable this.
   for(HBTInt haloid=0;haloid<Halos.size();haloid++)
   {
@@ -304,6 +309,12 @@ void HaloSnapshot_t::ParticleIdToIndex(const Snapshot_t& snapshot)
 	HBTInt np=Particles.size();
 	for(HBTInt pid=0;pid<np;pid++)
 	  Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);//this should be safe since its a const func
+  }
+  #pragma omp master
+  {
+	time_end = chrono::high_resolution_clock::now();
+	auto elapsed = chrono::duration_cast<chrono::duration<double>>(time_end - time_begin);
+	cout << "Halo ParticleId lookup took " << elapsed.count() <<"seconds"<< endl;
   }
 }
 

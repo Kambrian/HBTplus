@@ -182,7 +182,7 @@ int main(void)
 		int a;
 		int d;
 		float x[3];
-		vector <int> i;
+		vector <int> i; //this invalidates POD requirement of s3_t
 // 		float *f;
 // 		s2_t *s2;
 //  		CompType mtype2;

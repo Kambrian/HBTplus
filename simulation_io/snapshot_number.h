@@ -29,6 +29,7 @@ public:
   {
 	SnapshotIndex=sn.SnapshotIndex;
 	SnapshotId=sn.SnapshotId;
+	return *this;
   }
   void ResetSnapshotNumber()
   {//reset is not destructon! when destructor is called, the data content no matter matters.

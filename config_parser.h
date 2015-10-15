@@ -39,6 +39,7 @@ public:
   bool PeriodicBoundaryOn;
   bool SnapshotHasIdBlock;
   bool ParticleIdRankStyle;//load particleId as id ranks
+  bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
   vector <int> SnapshotIdList;
   
@@ -70,6 +71,7 @@ public:
 	PeriodicBoundaryOn=true;
 	SnapshotHasIdBlock=true;
 	ParticleIdRankStyle=false;
+	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
 	TrimNonHostParticles=false;
 	MajorProgenitorMassRatio=0.67;

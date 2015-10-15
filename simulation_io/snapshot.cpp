@@ -7,6 +7,7 @@ using namespace std;
 #include <assert.h>
 #include <cstdlib>
 #include <cstdio>
+#include <chrono>
 
 #include "snapshot.h"
 #include "../mymath.h"
@@ -348,23 +349,45 @@ void Snapshot_t::Clear()
   RESET(PhysicalVelocity);
   RESET(ParticleMass);
 #undef RESET 
-  ParticleHash.clear();//even if you don't do this, the destructor will still clean up the memory.
+  ClearParticleHash();//even if you don't do this, the destructor will still clean up the memory.
 //   cout<<NumberOfParticles<<" particles cleared from snapshot "<<SnapshotIndex<<endl;
   NumberOfParticles=0;
 }
-
+/*
 void Snapshot_t::FillParticleHash()
 {
   cout<<"Filling Hash Table...\n";
+  auto begin = chrono::high_resolution_clock::now();
   ParticleHash.rehash(NumberOfParticles);
   ParticleHash.reserve(NumberOfParticles);
   for(HBTInt i=0;i<NumberOfParticles;i++)
 	ParticleHash[ParticleId[i]]=i;
+  auto end = chrono::high_resolution_clock::now();
+  auto elapsed = chrono::duration_cast<std::chrono::milliseconds>(end - begin);
+  cout << "inserts: " << elapsed.count() << endl;
 //   cout<<ParticleHash.bucket_count()<<" buckets used; load factor "<<ParticleHash.load_factor()<<endl;
 }
 void Snapshot_t::ClearParticleHash()
 {
   ParticleHash.clear();
+}*/
+
+void Snapshot_t::FillParticleHash()
+{
+  if(HBTConfig.ParticleIdNeedHash)
+	ParticleHash=&MappedHash;
+  else
+	ParticleHash=&FlatHash;
+  cout<<"Filling Hash Table...\n";
+  auto begin = chrono::high_resolution_clock::now();
+  ParticleHash->Fill(ParticleId, NumberOfParticles);
+  auto end = chrono::high_resolution_clock::now();
+  auto elapsed = chrono::duration_cast<chrono::duration<double>>(end - begin);
+  cout << "HashTableFilled in: " << elapsed.count() <<"seconds"<< endl;
+}
+void Snapshot_t::ClearParticleHash()
+{
+  ParticleHash->Clear();
 }
 
 void Snapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const
@@ -439,7 +462,7 @@ int main(int argc, char **argv)
 {
   HBTConfig.ParseConfigFile(argv[1]);
   Snapshot_t snapshot;
-  snapshot.Load(0, true, true, false, true);
+  snapshot.Load(HBTConfig.MaxSnapshotIndex, true, true, false, true, true);
   cout<<snapshot.GetNumberOfParticles()<<endl;
   cout<<snapshot.GetParticleId(10)<<endl;
   cout<<snapshot.GetComovingPosition(10)<<endl;

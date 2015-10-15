@@ -11,6 +11,7 @@
 #include "../mymath.h"
 #include "../config_parser.h"
 #include "snapshot_number.h"
+#include "hash.h"
 
 #define NUMBER_OF_PARTICLE_TYPES 6
 #define SNAPSHOT_HEADER_SIZE 256
@@ -51,7 +52,10 @@ class Snapshot_t: public SnapshotNumber_t
   HBTxyz * ComovingPosition;
   HBTxyz * PhysicalVelocity;
   HBTReal * ParticleMass;
-  unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
+  FlatIndexTable_t<ParticleId_t, ParticleIndex_t> FlatHash;
+  MappedIndexTable_t<ParticleId_t, ParticleIndex_t> MappedHash;
+  IndexTable_t<ParticleId_t, ParticleIndex_t> *ParticleHash;
+//   unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
   
   void LoadId(Parameter_t & param);
   void LoadPosition(Parameter_t & param);
@@ -98,7 +102,8 @@ public:
 
 inline Snapshot_t::ParticleIndex_t Snapshot_t::GetParticleIndex(ParticleId_t particle_id) const
 {
-  return ParticleHash.at(particle_id);//this is safe
+//   return ParticleHash.at(particle_id);//this is safe
+  return ParticleHash->GetIndex(particle_id);
 }
 inline Snapshot_t::ParticleIndex_t Snapshot_t::GetNumberOfParticles() const
 {
