@@ -163,7 +163,7 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 {
   FILE *fd;
   char buf[1024];
-  int *Len, *Offset;
+  vector <int> Len, Offset;
   int Ngroups, TotNgroups, Nids, NFiles;
   HBTInt NumberOfParticles,NumberOfHaloes;
   long long TotNids;
@@ -213,12 +213,12 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 	  }
 	  fprintf(stdout,"Snap=%d (%d)  TotNids=%lld  TotNgroups=%d  NFiles=%d\n", SnapshotIndex, SnapshotId, TotNids, TotNgroups, NFiles);
 	  
-	  Len=new int[TotNgroups];
-	  Offset=new int[TotNgroups];
+	  Len.resize(TotNgroups);
+	  Offset.resize(TotNgroups);
 	}
 	
-	myfread(Len+Nload, sizeof(int), Ngroups, fd);
-	myfread(Offset+Nload, sizeof(int), Ngroups, fd);
+	myfread(Len.data()+Nload, sizeof(int), Ngroups, fd);
+	myfread(Offset.data()+Nload, sizeof(int), Ngroups, fd);
 	if(feof(fd))
 	{
 	  fprintf(stderr,"error:End-of-File in %s\n",buf);
