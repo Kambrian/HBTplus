@@ -15,6 +15,9 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
+#ifdef _OPENMP
+ omp_set_nested(0);
+#endif
   int snapshot_start, snapshot_end;
   ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
   mkdir(HBTConfig.SubhaloPath.c_str(), 0755);

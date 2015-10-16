@@ -614,7 +614,6 @@ void SubHaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
   //TODO: ensure the inclusive unbinding is stable (contaminating particles from big subhaloes may hurdle the unbinding
 #ifdef _OPENMP
- omp_set_nested(0);
  if(ParallelizeHaloes) cout<<"Unbinding with HaloPara...\n";
  else cout<<"Unbinding with ParticlePara...\n";
 #else
