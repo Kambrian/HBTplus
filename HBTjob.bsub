@@ -30,7 +30,7 @@ export HBT_VERSION=1.0
 # so better not allow it to adjust. shit.
 # export KMP_BLOCKTIME=0  # this seems to help a lot, to reuse thread immediately after its job is finished
 export OMP_NUM_THREADS=32
-export OMP_NESTED=0
+export OMP_NESTED=false
 
 snapstart=179
 snapend=1024

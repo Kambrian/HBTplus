@@ -1,9 +1,12 @@
 SRC=$(wildcard *.cpp)
-EXE=HBT
-default: $(EXE)
+EXE=HBT HBTdouble
+default: HBT
 include Makefile.inc
 
-HBT: mymath.o config_parser.o simulation_io/snapshot.o simulation_io/halo.o simulation_io/subhalo.o gravity/tree.o
+HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
+
+HBT HBTdouble: HBT.o mymath.o config_parser.o simulation_io/snapshot.o simulation_io/halo.o simulation_io/subhalo.o gravity/tree.o
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 depend:
 	makedepend --$(CXXFLAGS)-- -Y $(SRC)

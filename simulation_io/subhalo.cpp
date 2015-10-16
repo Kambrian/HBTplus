@@ -215,6 +215,7 @@ void MemberShipTable_t::SortSatellites(const SubHaloList_t & SubHalos)
 }
 void MemberShipTable_t::AssignRanks(SubHaloList_t& SubHalos)
 {
+#pragma omp for
   for(HBTInt haloid=-1;haloid<SubGroups.size();haloid++)
   {
 	MemberList_t & SubGroup=SubGroups[haloid];
@@ -515,15 +516,19 @@ void SubHaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
   MemberTable.Build(halo_snap.Halos.size(), SubHalos);
 //   MemberTable.AssignRanks(SubHalos); //not needed here
 }
-
+inline HBTInt GetCoreSize(HBTInt nbound)
+{
+  int coresize=nbound*HBTConfig.SubCoreSizeFactor;
+  if(coresize<HBTConfig.SubCoreSizeMin) coresize=HBTConfig.SubCoreSizeMin;
+  if(coresize>nbound) coresize=nbound;
+  return coresize;
+}
 void SubHaloSnapshot_t::AverageCoordinates()
 {
+#pragma omp for
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
-	int coresize=SubHalos[subid].Nbound*HBTConfig.SubCoreSizeFactor;
-	if(coresize<HBTConfig.SubCoreSizeMin) coresize=HBTConfig.SubCoreSizeMin;
-	if(coresize>SubHalos[subid].Nbound) coresize=SubHalos[subid].Nbound;
-	
+	int coresize=GetCoreSize(SubHalos[subid].Nbound);
 	SnapshotPointer->AveragePosition(SubHalos[subid].ComovingPosition, SubHalos[subid].Particles.data(), coresize);
 	SnapshotPointer->AverageVelocity(SubHalos[subid].PhysicalVelocity, SubHalos[subid].Particles.data(), coresize);
   }
@@ -532,6 +537,7 @@ void SubHaloSnapshot_t::AverageCoordinates()
 void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 /* to select central subhalo according to KineticDistance, and move each central to the beginning of each list in MemberTable*/
 {
+#pragma omp for
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   {
 	MemberShipTable_t::MemberList_t &List=MemberTable.SubGroups[hostid];
@@ -567,23 +573,34 @@ void SubHaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
  * halo_snap is rendered unspecified upon return (its particles have been swapped to subhaloes).
  */
 {
-  HBTInt Npro=SubHalos.size();
+  static HBTInt Npro;
+  #pragma omp single
+  {
+  Npro=SubHalos.size();
   //SubHalos.reserve(Snapshot->GetNumberOfParticles()*0.1);//reserve enough	branches.......
   SubHalos.resize(Npro+MemberTable.NBirth);
+  }
+  #pragma omp for
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   { 
 	MemberShipTable_t::MemberList_t & Members=MemberTable.SubGroups[hostid];
 	if(0==Members.size()) //create a new sub
 	{
-	  SubHalos[Npro].HostHaloId=hostid;
-	  copyHBTxyz(SubHalos[Npro].ComovingPosition, halo_snap.Halos[hostid].ComovingPosition); 
-	  copyHBTxyz(SubHalos[Npro].PhysicalVelocity, halo_snap.Halos[hostid].PhysicalVelocity);
-	  SubHalos[Npro].Particles.swap(halo_snap.Halos[hostid].Particles);
-	  Npro++;
+	  HBTInt subid;
+	  #pragma omp critical(AddNewSub)
+	  {
+		subid=Npro++;
+	  }
+	  SubHalos[subid].HostHaloId=hostid;
+	  copyHBTxyz(SubHalos[subid].ComovingPosition, halo_snap.Halos[hostid].ComovingPosition); 
+	  copyHBTxyz(SubHalos[subid].PhysicalVelocity, halo_snap.Halos[hostid].PhysicalVelocity);
+	  SubHalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
 	}
 	else
 	  SubHalos[Members[0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles
   }
+  #pragma omp single
+  halo_snap.Clear();//to avoid misuse
 }
 void SubHaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
 {
@@ -596,9 +613,12 @@ void SubHaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
 void SubHaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
   //TODO: ensure the inclusive unbinding is stable (contaminating particles from big subhaloes may hurdle the unbinding
-#ifdef _OPEN_MP
+#ifdef _OPENMP
  omp_set_nested(0);
- if(ParallelizeHaloes) cout<<"HaloPara\n";
+ if(ParallelizeHaloes) cout<<"Unbinding with HaloPara...\n";
+ else cout<<"Unbinding with ParticlePara...\n";
+#else
+ cout<<"Unbinding..."<<endl;
 #endif  
 #pragma omp parallel for if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
@@ -633,11 +653,11 @@ void SubHaloSnapshot_t::RegisterNewTracks()
 void SubHaloSnapshot_t::UpdateTracks()
 {
   /*renew ranks after unbinding*/
+#pragma omp single
   RegisterNewTracks();
   MemberTable.SortMemberLists(SubHalos);//reorder
   MemberTable.AssignRanks(SubHalos);
+#pragma omp for
   for(HBTInt i=0;i<SubHalos.size();i++)
-  {
 	SubHalos[i].UpdateTrack(SnapshotIndex);
-  }
 }

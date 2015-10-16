@@ -26,26 +26,26 @@ int main(int argc, char **argv)
   for(int isnap=snapshot_start;isnap<=snapshot_end;isnap++)
   {
 	Snapshot_t partsnap;
-	HaloSnapshot_t halosnap;
 	partsnap.Load(isnap);
-	halosnap.Load(isnap);
 	subsnap.SetSnapshotIndex(isnap);
 	
+	HaloSnapshot_t halosnap;
+	halosnap.Load(isnap);
 	#pragma omp parallel
 	{
 	halosnap.ParticleIdToIndex(partsnap);
 	subsnap.ParticleIdToIndex(partsnap);
-	
 	subsnap.AssignHosts(halosnap);
-	}
 	subsnap.PrepareCentrals(halosnap);
+	}
 	
 	subsnap.RefineParticles();
 	
+	#pragma omp parallel
+	{
 	subsnap.UpdateTracks();
-	
 	subsnap.ParticleIndexToId();
-	//}
+	}
 	
 	subsnap.Save();
   }

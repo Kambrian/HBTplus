@@ -342,6 +342,7 @@ void HaloSnapshot_t::ParticleIndexToId()
 
 void HaloSnapshot_t::AverageCoordinates()
 {
+#pragma omp for
   for(HBTInt i=0;i<Halos.size();i++)
   {
 	SnapshotPointer->AveragePosition(Halos[i].ComovingPosition, Halos[i].Particles.data(), Halos[i].Particles.size());

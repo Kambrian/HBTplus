@@ -3,7 +3,6 @@ HDFLIB=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5
 
 CXX=g++
 CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3
-CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
 LDLIBS+=$(HDFLIB) $(OMPFLAG)
 <!-- LINK.o=$(LINK.cpp) -->
 
