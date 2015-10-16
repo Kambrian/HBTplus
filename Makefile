@@ -1,11 +1,13 @@
 SRC=$(wildcard *.cpp)
 EXE=HBT HBTdouble
+OBJS_COMM=mymath.o config_parser.o simulation_io/snapshot.o simulation_io/halo.o simulation_io/subhalo.o gravity/tree.o
+
 default: HBT
 include Makefile.inc
 
 HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
 
-HBT HBTdouble: HBT.o mymath.o config_parser.o simulation_io/snapshot.o simulation_io/halo.o simulation_io/subhalo.o gravity/tree.o
+HBT HBTdouble: HBT.o $(OBJS_COMM)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 depend:
