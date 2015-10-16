@@ -1,10 +1,27 @@
 /* this oct-tree code is adopted from SUBFIND with minor modifications for HBT */
 #ifndef TREE_H_INCLUDED
 #define TREE_H_INCLUDED
+#include <exception>
 
 #include "../datatypes.h"
 #include "../simulation_io/snapshot.h"
 
+class OctTreeExceeded_t : public exception
+{
+private:
+  string msg;
+public:
+  OctTreeExceeded_t(const string & message)
+  {
+	msg=message;
+  }
+  const char * what () const throw ()
+  {
+	return msg.c_str();
+  }
+  ~OctTreeExceeded_t() throw()
+  {}
+};
 class OctTree_t
 {
 private:  
@@ -44,6 +61,8 @@ public:
 	Clear();
   }
 };
+
+
 #endif	
 
 

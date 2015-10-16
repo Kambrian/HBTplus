@@ -188,9 +188,9 @@ Cells->sons[i] = -1;
 			NumNids++;
 			if(NumNids >= MaxNodeId)
 			{
-			  
-			  std::cerr<<"maximum number "<<MaxNumberOfCells<<" of tree-nodes reached.\nfor particle "<<i<<std::endl;
-			  exit(1);
+			  stringstream msg;
+			  msg<<"maximum number "<<MaxNumberOfCells<<" of tree-nodes reached for particle "<<i;
+			  throw OctTreeExceeded_t(msg.str());
 			}
 			for(sub=0;sub<8;sub++)//initialize new node
 				Nodes[nodeid].sons[sub]=-1;

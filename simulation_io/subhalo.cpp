@@ -622,7 +622,15 @@ void SubHaloSnapshot_t::RefineParticles()
 #pragma omp parallel for if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<SubHalos.size();subid++)
   {
-	SubHalos[subid].Unbind(*SnapshotPointer);
+	try
+	{
+	  SubHalos[subid].Unbind(*SnapshotPointer);
+	}
+	catch(OctTreeExceeded_t &tree_exception)
+	{
+	  cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<subid<<endl;
+	  exit(1);
+	}
   }
 }
 
