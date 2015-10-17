@@ -1,7 +1,7 @@
 #!/bin/bash
 # this file is intended to be used with bsub, for job submition
 ##BSUB -L /bin/bash       # script shell language (/bin/tcsh, /bin/ksh etc.) NOTE: this cause problem on SHAO cluster of missing libimf.so
-#BSUB -n 32               # number of cores required
+#BSUB -n 12               # number of cores required
 #BSUB -M 100000        #max (MB)
 ##BSUB -m "cosma-f"
 ##BSUB -R "rusage[mem=3000]"  #reserve 3gb
@@ -15,7 +15,7 @@
 ##BSUB -N
 ##BSUB -a intelmpi
 #BSUB -x                     # give node exclusive access to job
-#BSUB -R "span[ptile=32]"     # number of processors to use per node
+#BSUB -R "span[ptile=12]"     # number of processors to use per node
 ##BSUB -R "model=SandyBridge"
 
 
@@ -23,14 +23,12 @@ ulimit -s unlimited
 
 #~ source /etc/profile.d/modules.csh
 
-export HBT_VERSION=1.0
+export HBT_VERSION=1.0.1
 # export OMP_SCHEDULE=dynamic
 # export OMP_DYNAMIC=FALSE # this works for icc v11.1.072, 
 # but seems not always use the maximum available number of cpus allowed by NUM_THREADS
 # so better not allow it to adjust. shit.
 # export KMP_BLOCKTIME=0  # this seems to help a lot, to reuse thread immediately after its job is finished
-export OMP_NUM_THREADS=32
+export OMP_NUM_THREADS=12
 
-snapstart=179
-snapend=1024
-./HBT configs/AqA4.conf $snapstart $snapend
+./HBT configs/AqA5.conf $snapstart $snapend

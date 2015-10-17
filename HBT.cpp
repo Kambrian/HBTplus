@@ -1,12 +1,7 @@
 using namespace std;
 #include <iostream>
-// #include <iomanip>
-#include <sstream>
 #include <string>
-#include <typeinfo>
-#include <assert.h>
 #include <cstdlib>
-#include <cstdio>
 
 #include "simulation_io/snapshot.h"
 #include "simulation_io/halo.h"
@@ -21,7 +16,8 @@ int main(int argc, char **argv)
   int snapshot_start, snapshot_end;
   ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
   mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
-  
+  MarkHBTVersion();
+	
   SubHaloSnapshot_t subsnap;
   
   subsnap.Load(snapshot_start-1, true);

@@ -128,3 +128,12 @@ void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_st
   }
   cout<<"Running "<<argv[0]<<" from snapshot "<<snapshot_start<<" to "<<snapshot_end<<" using configuration file "<<argv[1]<<endl;
 }
+
+void MarkHBTVersion()
+{
+  char * versionstr=getenv("HBT_VERSION");
+  if(versionstr) 
+	ofstream version_file(HBTConfig.SubhaloPath+"/VER"+versionstr, fstream::trunc);
+  else
+	cout<<"Warning: HBT_VERSION not set. Better write down which version you are using.\n";
+}

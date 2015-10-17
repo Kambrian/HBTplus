@@ -90,7 +90,7 @@ public:
 
 extern Parameter_t HBTConfig;
 extern void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_start, int &snapshot_end);
-
+extern void MarkHBTVersion();
 inline void trim_leading_garbage(string &s, const string &garbage_list)
 {
   int pos= s.find_first_not_of(garbage_list);//look for any good staff
