@@ -1,6 +1,3 @@
-test PeriodicBoundaryOff; single-precision, to figure out why the tree alloc factor is so large?
-add exceptions to treebuild
-
 segregate the effect of MassPrecision
 
 remove id=-1 from pidhash: do not allow this. just exit.

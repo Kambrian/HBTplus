@@ -118,22 +118,17 @@ void SubHalo_t::Unbind(const Snapshot_t &snapshot)
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
 		  PopMostBoundParticle(Elist.data(), Nbound);
 		}
-	  if(Nbound<HBTConfig.MinNumPartOfSub)
-	  {
-		for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;//copy the sorted particles this round. ToDo: optimize this away (passing Elist to tree? maybe pass functions to tree, or a ParticleList/minisnapshot base class with GetPos,GetMass etc.)
-	  }
-	  {
 		copyHBTxyz(ComovingPosition, snapshot.GetComovingPosition(Elist[0].pid));
 		copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
-	  }
 		if(0==Nbound||Nbound>Nlast*HBTConfig.BoundMassPrecision)  break;
+		for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;//copy the sorted particles. ToDo: optimize this away (passing Elist to tree? maybe pass functions to tree, or a ParticleList/minisnapshot base class with GetPos,GetMass etc.)
 	}
 	if(Nbound)
 	{
 	  sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
-	  for(HBTInt i=0;i<Nbound;i++) Particles[i]=Elist[i].pid;//unbound part already copied inside the loop.
-		Nlast=Particles.size();
-		if(Nlast>Nbound*HBTConfig.SourceSubRelaxFactor) Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
+	  for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;//>Nlast part already copied inside the loop.
+	  Nlast=Particles.size();
+	  if(Nlast>Nbound*HBTConfig.SourceSubRelaxFactor) Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
 	}
 	else
 	{
