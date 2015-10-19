@@ -1,14 +1,14 @@
-segregate the effect of MassPrecision (run one HBT1 with 0.9 mass prec)
-
-remove id=-1 from pidhash: do not allow this. just exit, or throw exception
-
 Better parallelization/Minisnapshot
 
 Add Virial/Vmax: test bound vs all: how much does the virial mass/radius differ? is the density profile still NFW? is it correct with the mass/concentration parameters?
 
 Run on major merger and satellite infall
 --------
+remove id=-1 from pidhash: do not allow this. just exit, or throw exception
+
 analysis routines/check compare
+
+segregate the effect of MassPrecision (run one HBT1 with 0.9 mass prec)
 
 MPI version
 

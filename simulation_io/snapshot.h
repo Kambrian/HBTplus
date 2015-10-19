@@ -60,6 +60,7 @@ public:
   }
   virtual const HBTxyz & GetComovingPosition(const HBTInt index) const=0;
   virtual const HBTxyz & GetPhysicalVelocity(const HBTInt index) const=0;
+  virtual HBTReal GetMass(const HBTInt index) const=0;
 };
 class ParticleSnapshot_t: public Snapshot_t
 {
@@ -124,6 +125,7 @@ public:
   const HBTxyz &GetComovingPosition(const ParticleIndex_t index) const;
   const HBTxyz &GetPhysicalVelocity(const ParticleIndex_t index) const;
   HBTReal GetParticleMass(const ParticleIndex_t index) const;
+  HBTReal GetMass(const ParticleIndex_t index) const;
   void Load(int snapshot_index, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true, bool fill_particle_hash=true);
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
@@ -163,5 +165,9 @@ inline HBTReal ParticleSnapshot_t::GetParticleMass(const ParticleIndex_t index) 
 	return Header.mass[1];
   else
 	return ParticleMass[index];
+}
+inline HBTReal ParticleSnapshot_t::GetMass(const HBTInt index) const
+{
+  return GetParticleMass(index);
 }
 #endif

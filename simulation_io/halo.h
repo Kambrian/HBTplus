@@ -48,6 +48,10 @@ public:
   {
 	return Halos[index].PhysicalVelocity;
   }
+  HBTReal GetMass(const HBTInt index) const
+  {
+	return Halos[index].Particles.size();
+  }
 };
 
 #endif

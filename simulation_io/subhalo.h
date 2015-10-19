@@ -160,6 +160,10 @@ public:
   {
 	return Subhalos[index].PhysicalVelocity;
   }
+  HBTReal GetMass(const HBTInt index) const
+  {
+	return Subhalos[index].Particles.size();
+  }
 };
 
 #endif

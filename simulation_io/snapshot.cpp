@@ -335,7 +335,14 @@ void ParticleSnapshot_t::LoadMass(Parameter_t &param)
 	else
 	  AssignBlock(ParticleMass, static_cast<double *>(buf), NumberOfParticles);
 	::operator delete(buf);
-  }  
+  }/*
+  if((NumberOfParticles>1)&&(ParticleMass[0]!=ParticleMass[1]))
+  {
+	cout<<"Error: DM particles have different mass? not supported!\n";
+	exit(1);
+  }
+  else
+	Header.mass[1]=ParticleMass[0];*/
 }
 
 void ParticleSnapshot_t::Clear()
