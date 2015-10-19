@@ -15,15 +15,15 @@ int main(int argc, char **argv)
 {
   int isnap=32, subid=22;
   HBTConfig.ParseConfigFile(argv[1]);
-  SubHaloSnapshot_t subsnap;
+  SubhaloSnapshot_t subsnap;
   subsnap.Load(isnap, true);
 
   FILE *fp;
   stringstream filename;
   filename<<HBTConfig.SubhaloPath<<"/postproc/Subhalo_"<<isnap<<"."<<subid;
   myfopen(fp, filename.str().c_str(), "w");
-  cout<<subsnap.SubHalos[subid].Particles.size()<<endl;
-  fwrite(subsnap.SubHalos[subid].Particles.data(), sizeof(HBTInt), subsnap.SubHalos[subid].Particles.size(), fp);
+  cout<<subsnap.Subhalos[subid].Particles.size()<<endl;
+  fwrite(subsnap.Subhalos[subid].Particles.data(), sizeof(HBTInt), subsnap.Subhalos[subid].Particles.size(), fp);
   fclose(fp);
   
   return 0;

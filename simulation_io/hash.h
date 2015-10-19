@@ -3,6 +3,27 @@
 #define HASH_HEADER_INCLUDED
 
 #include "../datatypes.h"
+#include <exception>
+#include <string>
+
+class InvalidPIdException_t : public exception
+{
+private:
+  HBTInt PId;
+public:
+  InvalidPIdException_t(HBTInt pid)
+  {
+	PId=pid;
+  };
+  const char * what () const throw ()
+  {
+	stringstream msg;
+	msg<<"Invalid Particle Id "<<PId<<" for index lookup\n";
+	return msg.str().c_str();
+  };
+    virtual ~InvalidPIdException_t()throw()
+  {};
+};
 
 template <class Key_t, class Index_t>
 struct IndexedKey_t

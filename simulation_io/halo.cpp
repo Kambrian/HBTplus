@@ -302,7 +302,7 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
   }
 }
 
-void HaloSnapshot_t::ParticleIdToIndex(const Snapshot_t& snapshot)
+void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 {
   chrono::high_resolution_clock::time_point time_begin, time_end;
 #pragma omp master

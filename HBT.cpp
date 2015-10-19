@@ -18,13 +18,13 @@ int main(int argc, char **argv)
   mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
   MarkHBTVersion();
 	
-  SubHaloSnapshot_t subsnap;
+  SubhaloSnapshot_t subsnap;
   
   subsnap.Load(snapshot_start-1, true);
     
   for(int isnap=snapshot_start;isnap<=snapshot_end;isnap++)
   {
-	Snapshot_t partsnap;
+	ParticleSnapshot_t partsnap;
 	partsnap.Load(isnap);
 	subsnap.SetSnapshotIndex(isnap);
 	

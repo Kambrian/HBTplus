@@ -45,14 +45,14 @@ private:
   size_t MaxNumberOfCells, MaxNumberOfParticles;
   HBTInt NumberOfParticles, MaxNodeId;
   const HBTInt *ParticleList;
-  const Snapshot_t * Snapshot;
+  const ParticleSnapshot_t * Snapshot;
   void UpdateInternalNodes(HBTInt no,HBTInt sib,double len);
 public:
   OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0)
   {
   }
   void Reserve(const size_t max_num_part);
-  HBTInt Build(const HBTInt num_part, const HBTInt * particles, const Snapshot_t &snapshot);
+  HBTInt Build(const HBTInt num_part, const HBTInt * particles, const ParticleSnapshot_t &snapshot);
   void Clear();
   double EvaluatePotential(const HBTReal targetPos[3], const HBTReal targetMass=0.);
   double BindingEnergy(const HBTxyz &targetPos, const HBTxyz &targetVel, const HBTxyz &refPos, const HBTxyz &refVel, const HBTReal targetMass=0.);

@@ -22,7 +22,7 @@
 #include "snapshot_number.h"
 #include "halo.h"
 
-class SubHalo_t
+class Subhalo_t
 {
 public:
   typedef vector <HBTInt> ParticleList_t;
@@ -42,14 +42,14 @@ public:
   HBTxyz PhysicalVelocity;
   ParticleList_t Particles;
   
-  SubHalo_t(): Nbound(0), Rank(0)
+  Subhalo_t(): Nbound(0), Rank(0)
   {
 	TrackId=SpecialConst::NullTrackId;
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
 	LastMaxMass=0;
   }
-  void MoveTo(SubHalo_t & dest)
+  void MoveTo(Subhalo_t & dest)
   {//override dest with this, leaving this unspecified.
 	dest.TrackId=TrackId;
 	dest.Nbound=Nbound;
@@ -62,8 +62,8 @@ public:
 	copyHBTxyz(dest.PhysicalVelocity, PhysicalVelocity);
 	dest.Particles.swap(Particles);
   }
-  void Unbind(const Snapshot_t &part_snap);
-  HBTReal KineticDistance(const Halo_t & halo, const Snapshot_t & partsnap);
+  void Unbind(const ParticleSnapshot_t &part_snap);
+  HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
   void UpdateTrack(HBTInt snapshot_index);
   bool IsCentral()
   {
@@ -71,7 +71,7 @@ public:
   }
 };
 
-typedef vector <SubHalo_t> SubHaloList_t;
+typedef vector <Subhalo_t> SubhaloList_t;
 
 class MemberShipTable_t
 /* list the subhaloes inside each host, rather than ordering the subhaloes 
@@ -83,9 +83,9 @@ public:
   typedef VectorView_t <HBTInt> MemberList_t;  //list of members in a group
 private:
   void BindMemberLists();
-  void FillMemberLists(const SubHaloList_t & SubHalos);
-  void CountMembers(const SubHaloList_t & SubHalos);
-  void SortSatellites(const SubHaloList_t & SubHalos);
+  void FillMemberLists(const SubhaloList_t & Subhalos);
+  void CountMembers(const SubhaloList_t & Subhalos);
+  void SortSatellites(const SubhaloList_t & Subhalos);
   void CountBirth();
   /*avoid operating on the Mem_* below; use the public VectorViews whenever possible; only operate the Mem_* variables when adjusting memory*/
   vector <MemberList_t> Mem_SubGroups; //list of subhaloes inside each host halo, with the storage of each subgroup mapped to a location in Mem_AllMembers 
@@ -105,26 +105,26 @@ public:
   }
   void Init(const HBTInt nhalos, const HBTInt nsubhalos, const float alloc_factor=1.2);
   void ResizeAllMembers(size_t n);
-  void Build(const HBTInt nhalos, const SubHaloList_t & SubHalos);
-  void SortMemberLists(const SubHaloList_t & SubHalos);
-  void AssignRanks(SubHaloList_t &SubHalos);
-  void SubIdToTrackId(const SubHaloList_t &SubHalos);
-  void TrackIdToSubId(SubHaloList_t &SubHalos);
+  void Build(const HBTInt nhalos, const SubhaloList_t & Subhalos);
+  void SortMemberLists(const SubhaloList_t & Subhalos);
+  void AssignRanks(SubhaloList_t &Subhalos);
+  void SubIdToTrackId(const SubhaloList_t &Subhalos);
+  void TrackIdToSubId(SubhaloList_t &Subhalos);
 };
-class SubHaloSnapshot_t: public SnapshotNumber_t
+class SubhaloSnapshot_t: public SnapshotNumber_t
 { 
 private:
   void RegisterNewTracks();
   void DecideCentrals(const HaloSnapshot_t &halo_snap);
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void BuildHDFDataType();
-  H5::CompType H5T_SubHaloInMem, H5T_SubHaloInDisk;
+  H5::CompType H5T_SubhaloInMem, H5T_SubhaloInDisk;
 public:
-  const Snapshot_t * SnapshotPointer;
-  SubHaloList_t SubHalos;
+  const ParticleSnapshot_t * SnapshotPointer;
+  SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;
   bool ParallelizeHaloes;
-  SubHaloSnapshot_t(): SnapshotNumber_t(), SubHalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubHaloInMem(sizeof(SubHalo_t)), ParallelizeHaloes(true)
+  SubhaloSnapshot_t(): SnapshotNumber_t(), Subhalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubhaloInMem(sizeof(Subhalo_t)), ParallelizeHaloes(true)
   {
 	BuildHDFDataType();
   }
@@ -137,7 +137,7 @@ public:
 	//TODO
 	cout<<"Clean() not implemented yet\n";
   }
-  void ParticleIdToIndex(const Snapshot_t & snapshot);
+  void ParticleIdToIndex(const ParticleSnapshot_t & snapshot);
   void ParticleIndexToId();
   void AverageCoordinates();
   void AssignHosts(const HaloSnapshot_t &halo_snap);

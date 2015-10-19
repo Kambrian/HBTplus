@@ -18,7 +18,7 @@ using namespace std;
 #define SkipVelocityBlock SkipBlock	 
 #define SkipIdBlock SkipBlock
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
-inline size_t Snapshot_t::SkipBlock(FILE *fp)
+inline size_t ParticleSnapshot_t::SkipBlock(FILE *fp)
 {
   int blocksize,blocksize2;
   
@@ -28,7 +28,7 @@ inline size_t Snapshot_t::SkipBlock(FILE *fp)
   assert(blocksize==blocksize2);
   return blocksize;
 }
-void Snapshot_t::GetFileName(Parameter_t &param, int ifile, string &filename)
+void ParticleSnapshot_t::GetFileName(Parameter_t &param, int ifile, string &filename)
 {
   FILE *fp;
   char buf[1024];
@@ -45,7 +45,7 @@ void Snapshot_t::GetFileName(Parameter_t &param, int ifile, string &filename)
   }
   filename=buf;
 }
-bool Snapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
+bool ParticleSnapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
 {
   //read the header part, assign header extensions, and check byteorder
   int headersize(SNAPSHOT_HEADER_SIZE),headersize_byteswap(SNAPSHOT_HEADER_SIZE);
@@ -88,7 +88,7 @@ bool Snapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
   
   return NeedByteSwap;
 }
-HBTInt Snapshot_t::ReadNumberOfDMParticles(Parameter_t & param, int ifile)
+HBTInt ParticleSnapshot_t::ReadNumberOfDMParticles(Parameter_t & param, int ifile)
 {
   FILE * fp;
   string filename;
@@ -99,7 +99,7 @@ HBTInt Snapshot_t::ReadNumberOfDMParticles(Parameter_t & param, int ifile)
   fclose(fp);
   return header.npart[1];
 }
-void Snapshot_t::LoadHeader(Parameter_t & param, int ifile)
+void ParticleSnapshot_t::LoadHeader(Parameter_t & param, int ifile)
 {
   //read the header part, assign header extensions, and check byteorder
 
@@ -153,7 +153,7 @@ void Snapshot_t::LoadHeader(Parameter_t & param, int ifile)
   
 }
 
-void Snapshot_t::Load(int snapshot_index, bool load_id, bool load_position, bool load_velocity, bool load_mass, bool fill_particle_hash)
+void ParticleSnapshot_t::Load(int snapshot_index, bool load_id, bool load_position, bool load_velocity, bool load_mass, bool fill_particle_hash)
 { 
   SetSnapshotIndex(snapshot_index);
   PeriodicBox=HBTConfig.PeriodicBoundaryOn;
@@ -172,7 +172,7 @@ void Snapshot_t::Load(int snapshot_index, bool load_id, bool load_position, bool
 	if(0.==Header.mass[1]) LoadMass(HBTConfig);
 }
 
-size_t Snapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before, const size_t n_skip_after)
+size_t ParticleSnapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before, const size_t n_skip_after)
 {//read n_read members from the current block of fp into block. skip n_skip_* before and after. 
   //return member size in block. 
  //has to specify the number of members in order to know the member size for byteswap
@@ -190,7 +190,7 @@ size_t Snapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const s
 	  
 	  return block_member_size;
 }
-void * Snapshot_t::LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension, bool is_massblock)
+void * ParticleSnapshot_t::LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension, bool is_massblock)
 {
   char * buf=static_cast<char *>(::operator new(element_size*NumberOfParticles*dimension));
   //#pragma omp parallel //can do task parallelization here.
@@ -244,7 +244,7 @@ static void AssignBlock(T *dest, const U *source, const size_t n)
 #define BLOCK_ID_PID 2
 #define BLOCK_ID_MASS 3
 
-void Snapshot_t::LoadId(Parameter_t &param)
+void ParticleSnapshot_t::LoadId(Parameter_t &param)
 {//only do this after LoadHeader().
   
   if(!param.SnapshotHasIdBlock) return;
@@ -277,7 +277,7 @@ void Snapshot_t::LoadId(Parameter_t &param)
   }
 }
 
-void Snapshot_t::LoadPosition(Parameter_t &param)
+void ParticleSnapshot_t::LoadPosition(Parameter_t &param)
 {
   void * buf=LoadBlock(param, BLOCK_ID_POS, RealTypeSize, 3);
   
@@ -301,7 +301,7 @@ void Snapshot_t::LoadPosition(Parameter_t &param)
   }
 }
 
-void Snapshot_t::LoadVelocity(Parameter_t &param)
+void ParticleSnapshot_t::LoadVelocity(Parameter_t &param)
 {
   void * buf=LoadBlock(param, BLOCK_ID_VEL, RealTypeSize, 3);
   
@@ -323,7 +323,7 @@ void Snapshot_t::LoadVelocity(Parameter_t &param)
 	  PhysicalVelocity[i][j]*=velocity_scale;
 }
 
-void Snapshot_t::LoadMass(Parameter_t &param)
+void ParticleSnapshot_t::LoadMass(Parameter_t &param)
 {
   void * buf=LoadBlock(param, BLOCK_ID_MASS, RealTypeSize, 1, true);
   
@@ -340,7 +340,7 @@ void Snapshot_t::LoadMass(Parameter_t &param)
   }  
 }
 
-void Snapshot_t::Clear()
+void ParticleSnapshot_t::Clear()
 /*reset to empty*/
 {
 #define RESET(x) {::operator delete(x);x=nullptr;}
@@ -354,7 +354,7 @@ void Snapshot_t::Clear()
   NumberOfParticles=0;
 }
 /*
-void Snapshot_t::FillParticleHash()
+void ParticleSnapshot_t::FillParticleHash()
 {
   cout<<"Filling Hash Table...\n";
   auto begin = chrono::high_resolution_clock::now();
@@ -367,13 +367,13 @@ void Snapshot_t::FillParticleHash()
   cout << "inserts: " << elapsed.count() << endl;
 //   cout<<ParticleHash.bucket_count()<<" buckets used; load factor "<<ParticleHash.load_factor()<<endl;
 }
-void Snapshot_t::ClearParticleHash()
+void ParticleSnapshot_t::ClearParticleHash()
 {
   ParticleHash.clear();
 }
 */
 
-void Snapshot_t::FillParticleHash()
+void ParticleSnapshot_t::FillParticleHash()
 {
   if(HBTConfig.ParticleIdNeedHash)
 	ParticleHash=&MappedHash;
@@ -386,12 +386,12 @@ void Snapshot_t::FillParticleHash()
   auto elapsed = chrono::duration_cast<chrono::duration<double>>(end - begin);
   cout << "HashTableFilled in: " << elapsed.count() <<"seconds"<< endl;
 }
-void Snapshot_t::ClearParticleHash()
+void ParticleSnapshot_t::ClearParticleHash()
 {
   ParticleHash->Clear();
 }
 
-void Snapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const
+void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const
 /*mass weighted average position*/
 {
 	ParticleIndex_t i,j;
@@ -428,7 +428,7 @@ void Snapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Particles[],
 		CoM[j]=sx[j];
 	}
 }
-void Snapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const
+void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const
 /*mass weighted average velocity*/
 {
 	ParticleIndex_t i,j;
@@ -462,7 +462,7 @@ void Snapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Particles[],
 int main(int argc, char **argv)
 {
   HBTConfig.ParseConfigFile(argv[1]);
-  Snapshot_t snapshot;
+  ParticleSnapshot_t snapshot;
   snapshot.Load(HBTConfig.MaxSnapshotIndex, true, true, false, true, true);
   cout<<snapshot.GetNumberOfParticles()<<endl;
   cout<<snapshot.GetParticleId(10)<<endl;

@@ -9,7 +9,7 @@
 #include "../gravity/tree.h"
 #include "../tracks.h"
 	
-void SubHalo_t::UpdateTrack(HBTInt snapshot_index)
+void Subhalo_t::UpdateTrack(HBTInt snapshot_index)
 {
   if(TrackId==SpecialConst::NullTrackId) return;
   
@@ -21,7 +21,7 @@ void SubHalo_t::UpdateTrack(HBTInt snapshot_index)
   }
 }
 
-HBTReal SubHalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &snapshot)
+HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const ParticleSnapshot_t &snapshot)
 {
   HBTReal dx=PeriodicDistance(halo.ComovingPosition, ComovingPosition);
   HBTReal dv=distance(halo.PhysicalVelocity, PhysicalVelocity);
@@ -84,7 +84,7 @@ static void PopMostBoundParticle(ParticleEnergy_t * Edata, const HBTInt Nbound)
   }
   if(imin!=0) swap(Edata[imin], Edata[0]);
 }
-void SubHalo_t::Unbind(const Snapshot_t &snapshot)
+void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
   if(1==Particles.size()) return;
   
@@ -170,52 +170,52 @@ void MemberShipTable_t::BindMemberLists()
 	Mem_SubGroups[i].ReBind(0);
   }
 }
-void MemberShipTable_t::CountMembers(const SubHaloList_t& SubHalos)
+void MemberShipTable_t::CountMembers(const SubhaloList_t& Subhalos)
 {//todo: parallelize this..
-  for(HBTInt subid=0;subid<SubHalos.size();subid++)
-	SubGroups[SubHalos[subid].HostHaloId].IncrementBind();
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	SubGroups[Subhalos[subid].HostHaloId].IncrementBind();
 }
-void MemberShipTable_t::FillMemberLists(const SubHaloList_t& SubHalos)
+void MemberShipTable_t::FillMemberLists(const SubhaloList_t& Subhalos)
 {
-  for(HBTInt subid=0;subid<SubHalos.size();subid++)
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
-	SubGroups[SubHalos[subid].HostHaloId].PushBack(subid);
+	SubGroups[Subhalos[subid].HostHaloId].PushBack(subid);
   }
 }
 struct CompareMass_t
 {
-  const SubHaloList_t * SubHalos;
-  CompareMass_t(const SubHaloList_t & subhalos)
+  const SubhaloList_t * Subhalos;
+  CompareMass_t(const SubhaloList_t & subhalos)
   {
-	SubHalos=&subhalos;
+	Subhalos=&subhalos;
   }
   bool operator () (const HBTInt & i, const HBTInt & j)
   {
-	return (*SubHalos)[i].Nbound>(*SubHalos)[j].Nbound;
+	return (*Subhalos)[i].Nbound>(*Subhalos)[j].Nbound;
   }
 };
-void MemberShipTable_t::SortMemberLists(const SubHaloList_t & SubHalos)
+void MemberShipTable_t::SortMemberLists(const SubhaloList_t & Subhalos)
 {
-  CompareMass_t compare_mass(SubHalos);
+  CompareMass_t compare_mass(Subhalos);
 #pragma omp for
   for(HBTInt i=-1;i<SubGroups.size();i++)
 	std::sort(SubGroups[i].begin(), SubGroups[i].end(), compare_mass);
 }
-void MemberShipTable_t::SortSatellites(const SubHaloList_t & SubHalos)
+void MemberShipTable_t::SortSatellites(const SubhaloList_t & Subhalos)
 /*central subhalo not changed*/
 {
-  CompareMass_t compare_mass(SubHalos);
+  CompareMass_t compare_mass(Subhalos);
   for(HBTInt i=0;i<SubGroups.size();i++)
 	std::sort(SubGroups[i].begin()+1, SubGroups[i].end(), compare_mass);
 }
-void MemberShipTable_t::AssignRanks(SubHaloList_t& SubHalos)
+void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
 {
 #pragma omp for
   for(HBTInt haloid=-1;haloid<SubGroups.size();haloid++)
   {
 	MemberList_t & SubGroup=SubGroups[haloid];
 	for(HBTInt i=0;i<SubGroup.size();i++)
-	  SubHalos[SubGroup[i]].Rank=i;
+	  Subhalos[SubGroup[i]].Rank=i;
   }
 }
 void MemberShipTable_t::CountBirth()
@@ -230,58 +230,58 @@ nbirth=0;
 NBirth=nbirth;	
 }
 /*
-inline bool SubHaloSnapshot_t::CompareHostAndMass(const HBTInt& subid_a, const HBTInt& subid_b)
+inline bool SubhaloSnapshot_t::CompareHostAndMass(const HBTInt& subid_a, const HBTInt& subid_b)
 {//ascending in host id, descending in mass inside each host, and put NullHaloId to the beginning.
-  SubHalo_t a=SubHalos[subid_a], b=SubHalos[subid_b];
+  Subhalo_t a=Subhalos[subid_a], b=Subhalos[subid_b];
   
   if(a.HostHaloId==b.HostHaloId) return (a.Nbound>b.Nbound);
   
   return (a.HostHaloId<b.HostHaloId); //(a.HostHaloId!=SpecialConst::NullHaloId)&&
 }*/
-void MemberShipTable_t::Build(const HBTInt nhalos, const SubHaloList_t & SubHalos)
+void MemberShipTable_t::Build(const HBTInt nhalos, const SubhaloList_t & Subhalos)
 {
   #pragma omp single
   {
-  Init(nhalos, SubHalos.size());
-  CountMembers(SubHalos);
+  Init(nhalos, Subhalos.size());
+  CountMembers(Subhalos);
   BindMemberLists();
-  FillMemberLists(SubHalos);
+  FillMemberLists(Subhalos);
   }
-  SortMemberLists(SubHalos);
+  SortMemberLists(Subhalos);
   CountBirth();
 //   std::sort(AllMembers.begin(), AllMembers.end(), CompareHostAndMass);
 }
-void MemberShipTable_t::SubIdToTrackId(const SubHaloList_t& SubHalos)
+void MemberShipTable_t::SubIdToTrackId(const SubhaloList_t& Subhalos)
 {
   /*not necessary currently*/
    for(HBTInt i=0;i<AllMembers.size();i++)
-	AllMembers[i]=SubHalos[AllMembers[i]].TrackId;
+	AllMembers[i]=Subhalos[AllMembers[i]].TrackId;
 }
-void MemberShipTable_t::TrackIdToSubId(SubHaloList_t& SubHalos)
+void MemberShipTable_t::TrackIdToSubId(SubhaloList_t& Subhalos)
 {
 cout<<"Warning: TrackIdToSubId ToBe fully Implemented!\n";
 // exit(1);
 }
 
-void SubHaloSnapshot_t::ParticleIdToIndex(const Snapshot_t& snapshot)
+void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 {//also bind to snapshot
 #pragma omp single
   SnapshotPointer=&snapshot;
 #pragma omp for
-	for(HBTInt subid=0;subid<SubHalos.size();subid++)
+	for(HBTInt subid=0;subid<Subhalos.size();subid++)
 	{
-	  SubHalo_t::ParticleList_t & Particles=SubHalos[subid].Particles;
+	  Subhalo_t::ParticleList_t & Particles=Subhalos[subid].Particles;
 	  HBTInt nP=Particles.size();
 	  for(HBTInt pid=0;pid<nP;pid++)
 		Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);
 	}
 }
-void SubHaloSnapshot_t::ParticleIndexToId()
+void SubhaloSnapshot_t::ParticleIndexToId()
 {
 #pragma omp for
-  for(HBTInt subid=0;subid<SubHalos.size();subid++)
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
-	SubHalo_t::ParticleList_t & Particles=SubHalos[subid].Particles;
+	Subhalo_t::ParticleList_t & Particles=Subhalos[subid].Particles;
 	HBTInt nP=Particles.size();
 	for(HBTInt pid=0;pid<nP;pid++)
 	  Particles[pid]=SnapshotPointer->GetParticleId(Particles[pid]);
@@ -289,11 +289,11 @@ void SubHaloSnapshot_t::ParticleIndexToId()
 #pragma omp single
   SnapshotPointer=nullptr;
 }
-void SubHaloSnapshot_t::BuildHDFDataType()
+void SubhaloSnapshot_t::BuildHDFDataType()
 {
   hsize_t dims=3;
   H5::ArrayType H5T_HBTxyz(H5T_HBTReal, 1, &dims);
-  #define InsertMember(x,t) H5T_SubHaloInMem.insertMember(#x, HOFFSET(SubHalo_t, x), t)//;cout<<#x<<": "<<HOFFSET(SubHalo_t, x)<<endl
+  #define InsertMember(x,t) H5T_SubhaloInMem.insertMember(#x, HOFFSET(Subhalo_t, x), t)//;cout<<#x<<": "<<HOFFSET(Subhalo_t, x)<<endl
   InsertMember(TrackId, H5T_HBTInt);
   InsertMember(Nbound, H5T_HBTInt);
   InsertMember(HostHaloId, H5T_HBTInt);
@@ -304,24 +304,24 @@ void SubHaloSnapshot_t::BuildHDFDataType()
   InsertMember(SnapshotIndexOfLastMaxMass, H5T_HBTInt);
   InsertMember(SnapshotIndexOfLastIsolation, H5T_HBTInt);
   #undef InsertMember	
-  H5T_SubHaloInDisk.copy(H5T_SubHaloInMem);
-  H5T_SubHaloInDisk.pack(); //clear fields not added.
-//   SubHalo_t s;
+  H5T_SubhaloInDisk.copy(H5T_SubhaloInMem);
+  H5T_SubhaloInDisk.pack(); //clear fields not added.
+//   Subhalo_t s;
 //   cout<<(char *)&s.TrackId-(char *)&s<<","<<(char *)&s.Nbound-(char *)&s<<","<<(char *)&s.ComovingPosition-(char *)&s<<","<<(char *)&s.Particles-(char *)&s<<endl;
 }
-void SubHaloSnapshot_t::GetSubFileName(string &filename)
+void SubhaloSnapshot_t::GetSubFileName(string &filename)
 {
   stringstream formater;
   formater<<HBTConfig.SubhaloPath<<"/SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
   filename=formater.str();
 }
-void SubHaloSnapshot_t::GetSrcFileName(string &filename)
+void SubhaloSnapshot_t::GetSrcFileName(string &filename)
 {
   stringstream formater;
   formater<<HBTConfig.SubhaloPath<<"/SrcSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
   filename=formater.str();
 }
-void SubHaloSnapshot_t::Load(int snapshot_index, bool load_src)
+void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
 {
   if(snapshot_index<HBTConfig.MinSnapshotIndex)
   {
@@ -342,15 +342,15 @@ void SubHaloSnapshot_t::Load(int snapshot_index, bool load_src)
   assert(snapshot_id==SnapshotId);
   
   hsize_t dims[1];
-  dset=file.openDataSet("SubHalos");
+  dset=file.openDataSet("Subhalos");
   dset.getSpace().getSimpleExtentDims(dims);
   HBTInt nsubhalos=dims[0];
-  SubHalos.resize(nsubhalos);
-  if(nsubhalos)	dset.read(SubHalos.data(), H5T_SubHaloInMem);
+  Subhalos.resize(nsubhalos);
+  if(nsubhalos)	dset.read(Subhalos.data(), H5T_SubhaloInMem);
   dset.close();
   
-  file.openDataSet("/Membership/NumberOfNewSubHalos").read(&MemberTable.NBirth, H5T_HBTInt);
-  file.openDataSet("/Membership/NumberOfNewSubHalos").read(&MemberTable.NFake, H5T_HBTInt);
+  file.openDataSet("/Membership/NumberOfNewSubhalos").read(&MemberTable.NBirth, H5T_HBTInt);
+  file.openDataSet("/Membership/NumberOfNewSubhalos").read(&MemberTable.NFake, H5T_HBTInt);
   dset=file.openDataSet("/Membership/GroupedTrackIds");
   dset.getSpace().getSimpleExtentDims(dims);
   HBTInt nhalos=dims[0]-1;
@@ -379,14 +379,14 @@ void SubHaloSnapshot_t::Load(int snapshot_index, bool load_src)
   vl.resize(nsubhalos);
   if(!load_src)
   {
-	dset=file.openDataSet("SubHaloParticles");
+	dset=file.openDataSet("SubhaloParticles");
 	dset.getSpace().getSimpleExtentDims(dims);
 	assert(dims[0]==nsubhalos);
 	dset.read(vl.data(), H5T_HBTIntArr);
 	for(HBTInt i=0;i<nsubhalos;i++)
 	{
-	  SubHalos[i].Particles.resize(vl[i].len);
-	  memcpy(SubHalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+	  Subhalos[i].Particles.resize(vl[i].len);
+	  memcpy(Subhalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
 	}
 	dset.vlenReclaim(vl.data(), H5T_HBTIntArr,dset.getSpace());
 	dset.close();
@@ -395,19 +395,19 @@ void SubHaloSnapshot_t::Load(int snapshot_index, bool load_src)
   {
 	GetSrcFileName(filename);
 	H5::H5File file2(filename.c_str(), H5F_ACC_RDONLY);
-	dset=file2.openDataSet("SrcHaloParticles");
+	dset=file2.openDataSet("SrchaloParticles");
 	dset.getSpace().getSimpleExtentDims(dims);
 	assert(dims[0]==nsubhalos);
 	dset.read(vl.data(), H5T_HBTIntArr);
 	for(HBTInt i=0;i<nsubhalos;i++)
 	{
-	  SubHalos[i].Particles.resize(vl[i].len);
-	  memcpy(SubHalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+	  Subhalos[i].Particles.resize(vl[i].len);
+	  memcpy(Subhalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
 	}
 	dset.vlenReclaim(vl.data(), H5T_HBTIntArr,dset.getSpace());
 	dset.close();
   }
-  cout<<SubHalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
+  cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
 }
 void writeHDFmatrix(H5::CommonFG &file, const void * buf, const char * name, const hsize_t ndim, const hsize_t *dims, const H5::DataType &dtype, const H5::DataType &dtype_file)
 {
@@ -420,7 +420,7 @@ inline void writeHDFmatrix(H5::CommonFG &file, const void * buf, const char * na
 {
   writeHDFmatrix(file, buf, name, ndim, dims, dtype, dtype);
 }
-void SubHaloSnapshot_t::Save()
+void SubhaloSnapshot_t::Save()
 {
   stringstream formater;
   formater<<HBTConfig.SubhaloPath<<"/SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
@@ -431,15 +431,15 @@ void SubHaloSnapshot_t::Save()
   hsize_t ndim=1, dim_atom[]={1};
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5::PredType::NATIVE_INT);
   
-  hsize_t dim_sub[]={SubHalos.size()};
-  writeHDFmatrix(file, SubHalos.data(), "SubHalos", ndim, dim_sub, H5T_SubHaloInMem, H5T_SubHaloInDisk); 
+  hsize_t dim_sub[]={Subhalos.size()};
+  writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); 
   
   H5::Group datagrp(file.createGroup("/Membership"));
   H5LTset_attribute_string(file.getId(),"/Membership","Comment","List of subhaloes in each group.");
-  writeHDFmatrix(datagrp, &MemberTable.NBirth, "NumberOfNewSubHalos", ndim, dim_atom, H5T_HBTInt);
+  writeHDFmatrix(datagrp, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);
   writeHDFmatrix(datagrp, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
  
-  MemberTable.SubIdToTrackId(SubHalos);
+  MemberTable.SubIdToTrackId(Subhalos);
   HBTInt Ngroups=MemberTable.SubGroups.size();
   hsize_t dim_grp[]={(hsize_t)Ngroups+1};
   H5::VarLenType H5T_HBTIntArr(&H5T_HBTInt);
@@ -455,13 +455,13 @@ void SubHaloSnapshot_t::Save()
   H5LTset_attribute_string(datagrp.getId(),"GroupedTrackIds","Comment","Nhalo+1 groups. The last group contain tracks outside any host halo (i.e., field subhaloes).");
   
   //now write the particle list for each subhalo
-  vl.resize(SubHalos.size());
+  vl.resize(Subhalos.size());
   for(HBTInt i=0;i<vl.size();i++)
   {
-	vl[i].len=SubHalos[i].Nbound;
-	vl[i].p=SubHalos[i].Particles.data();
+	vl[i].len=Subhalos[i].Nbound;
+	vl[i].p=Subhalos[i].Particles.data();
   }
-  writeHDFmatrix(file, vl.data(), "SubHaloParticles", ndim, dim_sub, H5T_HBTIntArr);
+  writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);
   
   file.close();
   
@@ -473,12 +473,12 @@ void SubHaloSnapshot_t::Save()
   file=H5::H5File(filename.c_str(), H5F_ACC_TRUNC);
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5::PredType::NATIVE_INT);
   for(HBTInt i=0;i<vl.size();i++)
-	vl[i].len=SubHalos[i].Particles.size();
-  writeHDFmatrix(file, vl.data(), "SrcHaloParticles", ndim, dim_sub, H5T_HBTIntArr);
+	vl[i].len=Subhalos[i].Particles.size();
+  writeHDFmatrix(file, vl.data(), "SrchaloParticles", ndim, dim_sub, H5T_HBTIntArr);
   file.close();
-  cout<<SubHalos.size()<<" subhaloes saved: "<<MemberTable.NBirth<<" birth, "<< MemberTable.NFake<<" fake.\n";
+  cout<<Subhalos.size()<<" subhaloes saved: "<<MemberTable.NBirth<<" birth, "<< MemberTable.NFake<<" fake.\n";
 }
-void SubHaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
+void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 {
   static vector<HBTInt> ParticleToHost;//to make it shared
 #pragma omp single
@@ -494,10 +494,10 @@ void SubHaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 	  ParticleToHost[Particles[i]]=haloid;
   }
 #pragma omp for 
-  for(HBTInt subid=0;subid<SubHalos.size();subid++)
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 	//rely on most-bound particle
-	SubHalos[subid].HostHaloId=ParticleToHost[SubHalos[subid].Particles[0]];
+	Subhalos[subid].HostHaloId=ParticleToHost[Subhalos[subid].Particles[0]];
 	//alternatives: CoreTrack; Split;
   }
 #pragma omp single
@@ -508,8 +508,8 @@ void SubHaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 	cout<<"Error: TrimNonHostParticles not implemented yet...\n";
 	exit(1);
   }
-  MemberTable.Build(halo_snap.Halos.size(), SubHalos);
-//   MemberTable.AssignRanks(SubHalos); //not needed here
+  MemberTable.Build(halo_snap.Halos.size(), Subhalos);
+//   MemberTable.AssignRanks(Subhalos); //not needed here
 }
 inline HBTInt GetCoreSize(HBTInt nbound)
 {
@@ -518,18 +518,18 @@ inline HBTInt GetCoreSize(HBTInt nbound)
   if(coresize>nbound) coresize=nbound;
   return coresize;
 }
-void SubHaloSnapshot_t::AverageCoordinates()
+void SubhaloSnapshot_t::AverageCoordinates()
 {
 #pragma omp for
-  for(HBTInt subid=0;subid<SubHalos.size();subid++)
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
-	int coresize=GetCoreSize(SubHalos[subid].Nbound);
-	SnapshotPointer->AveragePosition(SubHalos[subid].ComovingPosition, SubHalos[subid].Particles.data(), coresize);
-	SnapshotPointer->AverageVelocity(SubHalos[subid].PhysicalVelocity, SubHalos[subid].Particles.data(), coresize);
+	int coresize=GetCoreSize(Subhalos[subid].Nbound);
+	SnapshotPointer->AveragePosition(Subhalos[subid].ComovingPosition, Subhalos[subid].Particles.data(), coresize);
+	SnapshotPointer->AverageVelocity(Subhalos[subid].PhysicalVelocity, Subhalos[subid].Particles.data(), coresize);
   }
 }
 
-void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
+void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 /* to select central subhalo according to KineticDistance, and move each central to the beginning of each list in MemberTable*/
 {
 #pragma omp for
@@ -539,16 +539,16 @@ void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 	if(List.size()>1)
 	{
 	  int n_major;
-	  HBTInt MassLimit=SubHalos[List[0]].Nbound*HBTConfig.MajorProgenitorMassRatio;
+	  HBTInt MassLimit=Subhalos[List[0]].Nbound*HBTConfig.MajorProgenitorMassRatio;
 	  for(n_major=1;n_major<List.size();n_major++)
-		if(SubHalos[List[n_major]].Nbound<MassLimit) break;
+		if(Subhalos[List[n_major]].Nbound<MassLimit) break;
 	  if(n_major>1)
 	  {
-		HBTReal dmin=SubHalos[List[0]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
+		HBTReal dmin=Subhalos[List[0]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
 		int icenter=0;
 		for(int i=1;i<n_major;i++)
 		{
-		  HBTReal d=SubHalos[List[i]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
+		  HBTReal d=Subhalos[List[i]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
 		  if(dmin>d)
 		  {
 			dmin=d;
@@ -561,7 +561,7 @@ void SubHaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
   }
 }
 
-void SubHaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
+void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 /* replace centrals with host particles;
  * create a new central if there is none
  * initialize new central with host halo center coordinates
@@ -571,9 +571,9 @@ void SubHaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
   static HBTInt Npro;
   #pragma omp single
   {
-  Npro=SubHalos.size();
-  //SubHalos.reserve(Snapshot->GetNumberOfParticles()*0.1);//reserve enough	branches.......
-  SubHalos.resize(Npro+MemberTable.NBirth);
+  Npro=Subhalos.size();
+  //Subhalos.reserve(Snapshot->GetNumberOfParticles()*0.1);//reserve enough	branches.......
+  Subhalos.resize(Npro+MemberTable.NBirth);
   }
   #pragma omp for
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
@@ -586,18 +586,18 @@ void SubHaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	  {
 		subid=Npro++;
 	  }
-	  SubHalos[subid].HostHaloId=hostid;
-	  copyHBTxyz(SubHalos[subid].ComovingPosition, halo_snap.Halos[hostid].ComovingPosition); 
-	  copyHBTxyz(SubHalos[subid].PhysicalVelocity, halo_snap.Halos[hostid].PhysicalVelocity);
-	  SubHalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
+	  Subhalos[subid].HostHaloId=hostid;
+	  copyHBTxyz(Subhalos[subid].ComovingPosition, halo_snap.Halos[hostid].ComovingPosition); 
+	  copyHBTxyz(Subhalos[subid].PhysicalVelocity, halo_snap.Halos[hostid].PhysicalVelocity);
+	  Subhalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
 	}
 	else
-	  SubHalos[Members[0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles
+	  Subhalos[Members[0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles
   }
   #pragma omp single
   halo_snap.Clear();//to avoid misuse
 }
-void SubHaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
+void SubhaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
 {
   halo_snap.AverageCoordinates();
   AverageCoordinates();
@@ -605,7 +605,7 @@ void SubHaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
   FeedCentrals(halo_snap);
 }
 
-void SubHaloSnapshot_t::RefineParticles()
+void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
   //TODO: ensure the inclusive unbinding is stable (contaminating particles from big subhaloes may hurdle the unbinding
 #ifdef _OPENMP
@@ -615,11 +615,11 @@ void SubHaloSnapshot_t::RefineParticles()
  cout<<"Unbinding..."<<endl;
 #endif  
 #pragma omp parallel for if(ParallelizeHaloes)
-  for(HBTInt subid=0;subid<SubHalos.size();subid++)
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 	try
 	{
-	  SubHalos[subid].Unbind(*SnapshotPointer);
+	  Subhalos[subid].Unbind(*SnapshotPointer);
 	}
 	catch(OctTreeExceeded_t &tree_exception)
 	{
@@ -629,37 +629,37 @@ void SubHaloSnapshot_t::RefineParticles()
   }
 }
 
-void SubHaloSnapshot_t::RegisterNewTracks()
+void SubhaloSnapshot_t::RegisterNewTracks()
 /*assign trackId to new bound ones, remove unbound ones, and record membership*/
 {
-  HBTInt NTot=SubHalos.size();
+  HBTInt NTot=Subhalos.size();
   HBTInt TrackId=NTot-MemberTable.NBirth, NFake=0;
   MemberTable.ResizeAllMembers(NTot);
   for(HBTInt i=TrackId;i<NTot;i++)
   {
-	if(SubHalos[i].Nbound>1)
+	if(Subhalos[i].Nbound>1)
 	{
 	  if(i!=TrackId)
-		SubHalos[i].MoveTo(SubHalos[TrackId]);
-	  SubHalos[TrackId].TrackId=TrackId;
+		Subhalos[i].MoveTo(Subhalos[TrackId]);
+	  Subhalos[TrackId].TrackId=TrackId;
 	  MemberTable.AllMembers[TrackId]=TrackId; //this trackId is also the subhalo index
-// 	  assert(MemberTable.SubGroups[SubHalos[TrackId].HostHaloId].size()==0);
-	  MemberTable.SubGroups[SubHalos[TrackId].HostHaloId].Bind(1, &MemberTable.AllMembers[TrackId]);
+// 	  assert(MemberTable.SubGroups[Subhalos[TrackId].HostHaloId].size()==0);
+	  MemberTable.SubGroups[Subhalos[TrackId].HostHaloId].Bind(1, &MemberTable.AllMembers[TrackId]);
 	  TrackId++;
 	}
   }
   MemberTable.NFake=NTot-TrackId;
   MemberTable.NBirth-=MemberTable.NFake;
-  SubHalos.resize(TrackId);
+  Subhalos.resize(TrackId);
 }
-void SubHaloSnapshot_t::UpdateTracks()
+void SubhaloSnapshot_t::UpdateTracks()
 {
   /*renew ranks after unbinding*/
 #pragma omp single
   RegisterNewTracks();
-  MemberTable.SortMemberLists(SubHalos);//reorder
-  MemberTable.AssignRanks(SubHalos);
+  MemberTable.SortMemberLists(Subhalos);//reorder
+  MemberTable.AssignRanks(Subhalos);
 #pragma omp for
-  for(HBTInt i=0;i<SubHalos.size();i++)
-	SubHalos[i].UpdateTrack(SnapshotIndex);
+  for(HBTInt i=0;i<Subhalos.size();i++)
+	Subhalos[i].UpdateTrack(SnapshotIndex);
 }

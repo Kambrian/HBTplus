@@ -83,7 +83,7 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 		Nodes[no].way.s[2]=s[2]/mass;
 }
 
-HBTInt OctTree_t::Build(const HBTInt num_part, const HBTInt* particles, const Snapshot_t &snapshot)
+HBTInt OctTree_t::Build(const HBTInt num_part, const HBTInt* particles, const ParticleSnapshot_t &snapshot)
 {/* build tree for a list of particles; automatically resize memory if necessary.
   * particles[] contain the list of particle indices in snapshot*/
 	HBTInt NumNids,numnodes;
@@ -376,7 +376,7 @@ int main(int argc, char **argv)
 {
   HBTConfig.ParseConfigFile("../configs/AqA5.conf");
   HBTInt isnap=HBTConfig.MinSnapshotIndex;
-  Snapshot_t snapshot;
+  ParticleSnapshot_t snapshot;
   snapshot.Load(isnap);
   
   HaloSnapshot_t halo;

@@ -34,7 +34,7 @@ struct SnapshotHeader_t
   double Hz;//current Hubble param in internal units, BT extension
   char     fill[SNAPSHOT_HEADER_SIZE- NUMBER_OF_PARTICLE_TYPES*4- NUMBER_OF_PARTICLE_TYPES*8- 2*8- 2*4- NUMBER_OF_PARTICLE_TYPES*4- 2*4 - 4*8 -8];  /* fills to 256 Bytes */
 };
-class Snapshot_t: public SnapshotNumber_t
+class ParticleSnapshot_t: public SnapshotNumber_t
 {
   typedef HBTInt ParticleIndex_t ;
   typedef HBTInt ParticleId_t;
@@ -69,7 +69,7 @@ class Snapshot_t: public SnapshotNumber_t
   void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
 public:
   SnapshotHeader_t Header;
-  Snapshot_t(): SnapshotNumber_t(), Header()
+  ParticleSnapshot_t(): SnapshotNumber_t(), Header()
   {
 	PeriodicBox=true;
 	NeedByteSwap=false;
@@ -81,7 +81,7 @@ public:
 	PhysicalVelocity=NULL;
 	ParticleMass=NULL;
   }
-  ~Snapshot_t()
+  ~ParticleSnapshot_t()
   {
 	Clear();
   }
@@ -100,28 +100,28 @@ public:
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
 };
 
-inline Snapshot_t::ParticleIndex_t Snapshot_t::GetParticleIndex(ParticleId_t particle_id) const
+inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetParticleIndex(ParticleId_t particle_id) const
 {
 //   return ParticleHash.at(particle_id);//this is safe
   return ParticleHash->GetIndex(particle_id);
 }
-inline Snapshot_t::ParticleIndex_t Snapshot_t::GetNumberOfParticles() const
+inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetNumberOfParticles() const
 {
   return NumberOfParticles;
 }
-inline Snapshot_t::ParticleId_t Snapshot_t::GetParticleId(ParticleIndex_t index) const
+inline ParticleSnapshot_t::ParticleId_t ParticleSnapshot_t::GetParticleId(ParticleIndex_t index) const
 {
   return ParticleId[index];
 }
-inline HBTxyz& Snapshot_t::GetComovingPosition(ParticleIndex_t index) const
+inline HBTxyz& ParticleSnapshot_t::GetComovingPosition(ParticleIndex_t index) const
 {
   return ComovingPosition[index];
 }
-inline HBTxyz& Snapshot_t::GetPhysicalVelocity(ParticleIndex_t index) const
+inline HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(ParticleIndex_t index) const
 {
   return PhysicalVelocity[index];
 }
-inline HBTReal Snapshot_t::GetParticleMass(ParticleIndex_t index) const
+inline HBTReal ParticleSnapshot_t::GetParticleMass(ParticleIndex_t index) const
 {
   if(Header.mass[1])
 	return Header.mass[1];
