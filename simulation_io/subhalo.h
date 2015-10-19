@@ -111,7 +111,7 @@ public:
   void SubIdToTrackId(const SubhaloList_t &Subhalos);
   void TrackIdToSubId(SubhaloList_t &Subhalos);
 };
-class SubhaloSnapshot_t: public SnapshotNumber_t
+class SubhaloSnapshot_t: public Snapshot_t
 { 
 private:
   void RegisterNewTracks();
@@ -124,7 +124,7 @@ public:
   SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;
   bool ParallelizeHaloes;
-  SubhaloSnapshot_t(): SnapshotNumber_t(), Subhalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubhaloInMem(sizeof(Subhalo_t)), ParallelizeHaloes(true)
+  SubhaloSnapshot_t(): Snapshot_t(), Subhalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubhaloInMem(sizeof(Subhalo_t)), ParallelizeHaloes(true)
   {
 	BuildHDFDataType();
   }
@@ -144,6 +144,22 @@ public:
   void PrepareCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
   void UpdateTracks();
+  HBTInt GetSize() const
+  {
+	return Subhalos.size();
+  }
+  HBTInt GetMemberId(const HBTInt index)
+  {
+	return Subhalos[index].TrackId;
+  }
+  const HBTxyz & GetComovingPosition(const HBTInt index) const
+  {
+	return Subhalos[index].ComovingPosition;
+  }
+  const HBTxyz & GetPhysicalVelocity(const HBTInt index) const
+  {
+	return Subhalos[index].PhysicalVelocity;
+  }
 };
 
 #endif

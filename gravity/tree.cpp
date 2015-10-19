@@ -334,7 +334,7 @@ double OctTree_t::BindingEnergy(const HBTxyz& targetPos, const HBTxyz& targetVel
 		dx[j]=targetPos[j]-refPos[j];
 		if(HBTConfig.PeriodicBoundaryOn)  dx[j]=NEAREST(dx[j]);
 		dv[j]=targetVel[j]-refVel[j];
-		dv[j]+=Snapshot->Header.Hz*Snapshot->Header.ScaleFactor*dx[j];
+		dv[j]+=Snapshot->Hz*Snapshot->ScaleFactor*dx[j];
 		E+=dv[j]*dv[j];
 	  }
 	  E=E*0.5+pot;

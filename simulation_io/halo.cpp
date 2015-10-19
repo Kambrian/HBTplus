@@ -307,7 +307,7 @@ void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
   chrono::high_resolution_clock::time_point time_begin, time_end;
 #pragma omp master
   {
-  SnapshotPointer=&snapshot;
+  ParticleSnapshot=&snapshot;
   time_begin = chrono::high_resolution_clock::now();
   }
 #pragma omp for //maybe try collapse(2)? need to remove intermediate variables to enable this.
@@ -334,10 +334,10 @@ void HaloSnapshot_t::ParticleIndexToId()
 	Halo_t::ParticleList_t &Particles=Halos[haloid].Particles;
 	HBTInt nP=Halos[haloid].Particles.size();
 	for(HBTInt pid=0;pid<nP;pid++)
-	  Particles[pid]=SnapshotPointer->GetParticleId(Particles[pid]);
+	  Particles[pid]=ParticleSnapshot->GetParticleId(Particles[pid]);
   }
 #pragma omp single
-  SnapshotPointer=nullptr;
+  ParticleSnapshot=nullptr;
 }
 
 void HaloSnapshot_t::AverageCoordinates()
@@ -345,8 +345,8 @@ void HaloSnapshot_t::AverageCoordinates()
 #pragma omp for
   for(HBTInt i=0;i<Halos.size();i++)
   {
-	SnapshotPointer->AveragePosition(Halos[i].ComovingPosition, Halos[i].Particles.data(), Halos[i].Particles.size());
-	SnapshotPointer->AverageVelocity(Halos[i].PhysicalVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
+	ParticleSnapshot->AveragePosition(Halos[i].ComovingPosition, Halos[i].Particles.data(), Halos[i].Particles.size());
+	ParticleSnapshot->AverageVelocity(Halos[i].PhysicalVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
   }
 }
 

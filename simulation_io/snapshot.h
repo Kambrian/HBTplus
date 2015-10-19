@@ -31,10 +31,37 @@ struct SnapshotHeader_t
   double   Omega0;
   double   OmegaLambda;
   double   HubbleParam; 
-  double Hz;//current Hubble param in internal units, BT extension
-  char     fill[SNAPSHOT_HEADER_SIZE- NUMBER_OF_PARTICLE_TYPES*4- NUMBER_OF_PARTICLE_TYPES*8- 2*8- 2*4- NUMBER_OF_PARTICLE_TYPES*4- 2*4 - 4*8 -8];  /* fills to 256 Bytes */
+  char     fill[SNAPSHOT_HEADER_SIZE- NUMBER_OF_PARTICLE_TYPES*4- NUMBER_OF_PARTICLE_TYPES*8- 2*8- 2*4- NUMBER_OF_PARTICLE_TYPES*4- 2*4 - 4*8];  /* fills to 256 Bytes */
 };
-class ParticleSnapshot_t: public SnapshotNumber_t
+class Snapshot_t: public SnapshotNumber_t
+{
+public:
+  double Hz; //current Hubble param in internal units
+  double ScaleFactor;
+  Snapshot_t(): Hz(0.), ScaleFactor(0.), SnapshotNumber_t()
+  {
+  }
+  void SetEpoch(double scalefactor, double Omega0, double OmegaLambda)
+  {
+	ScaleFactor=scalefactor;
+	Hz=PhysicalConst::H0 * sqrt(Omega0 / (ScaleFactor * ScaleFactor * ScaleFactor) 
+  + (1 - Omega0 - OmegaLambda) / (ScaleFactor * ScaleFactor)
+  + OmegaLambda);//Hubble param for the current catalogue;
+  }
+  void SetEpoch(const Snapshot_t & snap)
+  {
+	ScaleFactor=snap.ScaleFactor;
+	Hz=snap.Hz;
+  }
+  virtual HBTInt GetSize() const=0;
+  virtual HBTInt GetMemberId(const HBTInt index) const
+  {
+	return index;
+  }
+  virtual const HBTxyz & GetComovingPosition(const HBTInt index) const=0;
+  virtual const HBTxyz & GetPhysicalVelocity(const HBTInt index) const=0;
+};
+class ParticleSnapshot_t: public Snapshot_t
 {
   typedef HBTInt ParticleIndex_t ;
   typedef HBTInt ParticleId_t;
@@ -69,7 +96,7 @@ class ParticleSnapshot_t: public SnapshotNumber_t
   void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
 public:
   SnapshotHeader_t Header;
-  ParticleSnapshot_t(): SnapshotNumber_t(), Header()
+  ParticleSnapshot_t(): Snapshot_t(), Header()
   {
 	PeriodicBox=true;
 	NeedByteSwap=false;
@@ -85,22 +112,31 @@ public:
   {
 	Clear();
   }
+  HBTInt GetSize() const;
+  HBTInt GetMemberId(const HBTInt index) const;
   void FillParticleHash();
   void ClearParticleHash();
-  ParticleIndex_t GetParticleIndex(ParticleId_t particle_id) const;
+  ParticleIndex_t GetParticleIndex(const ParticleId_t particle_id) const;
   void GetFileName(Parameter_t &param, int ifile, string &filename);
   void Clear();
   ParticleIndex_t GetNumberOfParticles() const;
-  ParticleId_t GetParticleId(ParticleIndex_t index) const;
-  HBTxyz &GetComovingPosition(ParticleIndex_t index) const;
-  HBTxyz &GetPhysicalVelocity(ParticleIndex_t index) const;
-  HBTReal GetParticleMass(ParticleIndex_t index) const;
+  ParticleId_t GetParticleId(const ParticleIndex_t index) const;
+  const HBTxyz &GetComovingPosition(const ParticleIndex_t index) const;
+  const HBTxyz &GetPhysicalVelocity(const ParticleIndex_t index) const;
+  HBTReal GetParticleMass(const ParticleIndex_t index) const;
   void Load(int snapshot_index, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true, bool fill_particle_hash=true);
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
 };
-
-inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetParticleIndex(ParticleId_t particle_id) const
+inline HBTInt ParticleSnapshot_t::GetSize() const
+{
+  return NumberOfParticles;
+}
+inline HBTInt ParticleSnapshot_t::GetMemberId(const HBTInt index) const
+{
+  return ParticleId[index];
+}
+inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetParticleIndex(const ParticleId_t particle_id) const
 {
 //   return ParticleHash.at(particle_id);//this is safe
   return ParticleHash->GetIndex(particle_id);
@@ -109,19 +145,19 @@ inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetNumberOfPartic
 {
   return NumberOfParticles;
 }
-inline ParticleSnapshot_t::ParticleId_t ParticleSnapshot_t::GetParticleId(ParticleIndex_t index) const
+inline ParticleSnapshot_t::ParticleId_t ParticleSnapshot_t::GetParticleId(const ParticleIndex_t index) const
 {
   return ParticleId[index];
 }
-inline HBTxyz& ParticleSnapshot_t::GetComovingPosition(ParticleIndex_t index) const
+inline const HBTxyz& ParticleSnapshot_t::GetComovingPosition(const ParticleIndex_t index) const
 {
   return ComovingPosition[index];
 }
-inline HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(ParticleIndex_t index) const
+inline const HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(const ParticleIndex_t index) const
 {
   return PhysicalVelocity[index];
 }
-inline HBTReal ParticleSnapshot_t::GetParticleMass(ParticleIndex_t index) const
+inline HBTReal ParticleSnapshot_t::GetParticleMass(const ParticleIndex_t index) const
 {
   if(Header.mass[1])
 	return Header.mass[1];

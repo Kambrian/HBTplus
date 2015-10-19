@@ -17,18 +17,18 @@ public:
   HBTxyz PhysicalVelocity;
 };
 
-class HaloSnapshot_t: public SnapshotNumber_t
+class HaloSnapshot_t: public Snapshot_t
 {  
   typedef vector <Halo_t> HaloList_t;
   template <class PIDtype_t>
   void LoadGroupV3(PIDtype_t dummy);
   void GetFileNameFormat(string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 public:
-  const ParticleSnapshot_t * SnapshotPointer;
+  const ParticleSnapshot_t * ParticleSnapshot;
   HaloList_t Halos;
   HBTInt TotNumberOfParticles;
   HBTInt NumPartOfLargestHalo;
-  HaloSnapshot_t(): SnapshotNumber_t(), Halos(), SnapshotPointer(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
+  HaloSnapshot_t(): Snapshot_t(), Halos(), ParticleSnapshot(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
   }
   void Load(int snapshot_index);
@@ -36,6 +36,18 @@ public:
   void ParticleIdToIndex(const ParticleSnapshot_t & snapshot);
   void ParticleIndexToId();
   void AverageCoordinates();
+  HBTInt GetSize() const
+  { 
+	return Halos.size();
+  }
+  const HBTxyz & GetComovingPosition(const HBTInt index) const
+  {
+	return Halos[index].ComovingPosition;
+  }
+  const HBTxyz & GetPhysicalVelocity(const HBTInt index) const
+  {
+	return Halos[index].PhysicalVelocity;
+  }
 };
 
 #endif

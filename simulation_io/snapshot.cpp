@@ -137,9 +137,7 @@ void ParticleSnapshot_t::LoadHeader(Parameter_t & param, int ifile)
   
   fclose(fp);
   
-  Header.Hz=PhysicalConst::H0 * sqrt(Header.Omega0 / (Header.ScaleFactor * Header.ScaleFactor * Header.ScaleFactor) 
-  + (1 - Header.Omega0 - Header.OmegaLambda) / (Header.ScaleFactor * Header.ScaleFactor)
-  + Header.OmegaLambda);//Hubble param for the current catalogue;
+  SetEpoch(Header.ScaleFactor, Header.Omega0, Header.OmegaLambda);
   
   //npartTotal is not reliable
   NumberOfParticles=0;

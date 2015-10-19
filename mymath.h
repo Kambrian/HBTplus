@@ -48,7 +48,7 @@ inline long int BytesToEOF(FILE *fp)
   
   return (offset_end-offset);
 }
-inline void copyHBTxyz(HBTxyz & dest, HBTxyz & src)
+inline void copyHBTxyz(HBTxyz & dest, const HBTxyz & src)
 {
   memcpy(dest, src, sizeof(HBTxyz));
 }

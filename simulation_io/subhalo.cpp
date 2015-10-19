@@ -25,7 +25,7 @@ HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const ParticleSnapshot_t 
 {
   HBTReal dx=PeriodicDistance(halo.ComovingPosition, ComovingPosition);
   HBTReal dv=distance(halo.PhysicalVelocity, PhysicalVelocity);
-  HBTReal d=dv+snapshot.Header.Hz*snapshot.Header.ScaleFactor*dx;
+  HBTReal d=dv+snapshot.Hz*snapshot.ScaleFactor*dx;
   return (d>0?d:-d);
 }
 struct ParticleEnergy_t
