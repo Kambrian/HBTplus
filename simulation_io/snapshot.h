@@ -41,6 +41,10 @@ public:
   Snapshot_t(): Hz(0.), ScaleFactor(0.), SnapshotNumber_t()
   {
   }
+  Snapshot_t(const Snapshot_t & sn)
+  {
+	SetEpoch(sn);
+  }
   void SetEpoch(double scalefactor, double Omega0, double OmegaLambda)
   {
 	ScaleFactor=scalefactor;

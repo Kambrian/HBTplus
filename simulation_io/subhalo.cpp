@@ -90,9 +90,9 @@ public:
   ParticleEnergy_t * Elist;
   HBTInt N;
   const Snapshot_t & Snapshot;
-  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const Snapshot_t & fullsnapshot): Snapshot_t(fullsnapshot), Elist(e), N(n), Snapshot(fullsnapshot)
+  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const Snapshot_t & fullsnapshot): Elist(e), N(n), Snapshot(fullsnapshot)
   {
-// 	SetEpoch(fullsnapshot);
+	SetEpoch(fullsnapshot);
   };
   HBTInt size() const
   {
