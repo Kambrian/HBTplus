@@ -43,16 +43,16 @@ private:
   /*auxilliary pointer*/
   OctTreeCell_t *Nodes;   /* =Cells-NumberOfParticles. the nodes are labelled from 0 to NumPart+NumNodes-1, so that nodeid=0~NumPart-1 are particles, and nodeid>=NumPart are cells */
   size_t MaxNumberOfCells, MaxNumberOfParticles;
-  HBTInt NumberOfParticles, MaxNodeId;
-  const HBTInt *ParticleList;
-  const ParticleSnapshot_t * Snapshot;
+  HBTInt MaxNodeId;
+  const Snapshot_t * Snapshot;
+  HBTInt NumberOfParticles; //alias to Snapshot->GetSize().
   void UpdateInternalNodes(HBTInt no,HBTInt sib,double len);
 public:
   OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0)
   {
   }
   void Reserve(const size_t max_num_part);
-  HBTInt Build(const HBTInt num_part, const HBTInt * particles, const ParticleSnapshot_t &snapshot);
+  HBTInt Build(const Snapshot_t &snapshot, HBTInt num_part=0);
   void Clear();
   double EvaluatePotential(const HBTReal targetPos[3], const HBTReal targetMass=0.);
   double BindingEnergy(const HBTxyz &targetPos, const HBTxyz &targetVel, const HBTxyz &refPos, const HBTxyz &refVel, const HBTReal targetMass=0.);

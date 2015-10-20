@@ -144,7 +144,7 @@ public:
   void PrepareCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
   void UpdateTracks();
-  HBTInt GetSize() const
+  HBTInt size() const
   {
 	return Subhalos.size();
   }

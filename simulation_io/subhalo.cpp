@@ -84,6 +84,37 @@ static void PopMostBoundParticle(ParticleEnergy_t * Edata, const HBTInt Nbound)
   }
   if(imin!=0) swap(Edata[imin], Edata[0]);
 }
+class EnergySnapshot_t: public Snapshot_t
+{
+public:
+  ParticleEnergy_t * Elist;
+  HBTInt N;
+  const Snapshot_t & Snapshot;
+  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const Snapshot_t & fullsnapshot): Snapshot_t(fullsnapshot), Elist(e), N(n), Snapshot(fullsnapshot)
+  {
+// 	SetEpoch(fullsnapshot);
+  };
+  HBTInt size() const
+  {
+	return N;
+  }
+  HBTInt GetMemberId(const HBTInt i) const
+  {
+	return Elist[i].pid;
+  }
+  HBTReal GetMass(const HBTInt i) const
+  {
+	return Snapshot.GetMass(GetMemberId(i));
+  }
+  const HBTxyz & GetPhysicalVelocity(const HBTInt i) const
+  {
+	return Snapshot.GetPhysicalVelocity(GetMemberId(i));
+  }
+  const HBTxyz & GetComovingPosition(const HBTInt i) const
+  {
+	return Snapshot.GetComovingPosition(GetMemberId(i));
+  }
+};
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
   if(1==Particles.size()) return;
@@ -97,10 +128,11 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   vector <ParticleEnergy_t> Elist(Nbound);
 	for(HBTInt i=0;i<Nbound;i++)
 	  Elist[i].pid=Particles[i];
+  EnergySnapshot_t ESnap(Elist.data(), Elist.size(), snapshot);
 	while(true)
 	{
 		Nlast=Nbound;
-		tree.Build(Nlast, Particles.data(), snapshot);
+		tree.Build(ESnap, Nlast);
 	  #pragma omp parallel for if(Nlast>100)
 	  for(HBTInt i=0;i<Nlast;i++)
 	  {
@@ -121,14 +153,13 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		copyHBTxyz(ComovingPosition, snapshot.GetComovingPosition(Elist[0].pid));
 		copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
 		if(0==Nbound||Nbound>Nlast*HBTConfig.BoundMassPrecision)  break;
-		for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;//copy the sorted particles. ToDo: optimize this away (passing Elist to tree? maybe pass functions to tree, or a ParticleList/minisnapshot base class with GetPos,GetMass etc.)
 	}
 	if(Nbound)
 	{
 	  sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
-	  for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;//>Nlast part already copied inside the loop.
-	  Nlast=Particles.size();
-	  if(Nlast>Nbound*HBTConfig.SourceSubRelaxFactor) Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
+	  Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
+	  if(Nlast>Particles.size()) Nlast=Particles.size();
+	  for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
 	}
 	else
 	{
@@ -326,7 +357,7 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
   if(snapshot_index<HBTConfig.MinSnapshotIndex)
   {
 	cout<<"Warning: snapshot index "<<snapshot_index<<" is below MinSnapshotIndex of "<<HBTConfig.MinSnapshotIndex;
-	cout<<", I wil not load anything.\n";
+	cout<<", I wil not load anything. (Ignore this message if you are starting HBT from MinSnapshotIndex.)\n";
 	return;
   }
   

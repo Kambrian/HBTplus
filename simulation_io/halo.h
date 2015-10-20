@@ -36,7 +36,7 @@ public:
   void ParticleIdToIndex(const ParticleSnapshot_t & snapshot);
   void ParticleIndexToId();
   void AverageCoordinates();
-  HBTInt GetSize() const
+  HBTInt size() const
   { 
 	return Halos.size();
   }

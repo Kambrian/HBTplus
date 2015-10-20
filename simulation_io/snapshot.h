@@ -53,7 +53,7 @@ public:
 	ScaleFactor=snap.ScaleFactor;
 	Hz=snap.Hz;
   }
-  virtual HBTInt GetSize() const=0;
+  virtual HBTInt size() const=0;
   virtual HBTInt GetMemberId(const HBTInt index) const
   {
 	return index;
@@ -62,6 +62,50 @@ public:
   virtual const HBTxyz & GetPhysicalVelocity(const HBTInt index) const=0;
   virtual HBTReal GetMass(const HBTInt index) const=0;
 };
+class SnapshotView_t: public Snapshot_t
+{
+public:
+  HBTInt * Ids;
+  HBTInt N;
+  Snapshot_t & Snapshot;
+  SnapshotView_t(vector <HBTInt> & ids, Snapshot_t & fullsnapshot): Ids(ids.data()), N(ids.size()), Snapshot(fullsnapshot)
+  {
+	SetEpoch(fullsnapshot);
+  };
+  SnapshotView_t(VectorView_t <HBTInt> &ids, Snapshot_t & fullsnapshot): Ids(ids.data()), N(ids.size()), Snapshot(fullsnapshot)
+  {
+	SetEpoch(fullsnapshot);
+  };
+  SnapshotView_t(HBTInt *ids, HBTInt n, Snapshot_t & fullsnapshot): Ids(ids), N(n), Snapshot(fullsnapshot)
+  {
+	SetEpoch(fullsnapshot);
+  };
+  HBTInt ReSize(HBTInt n)
+  {
+	N=n;
+  }
+  HBTInt size() const
+  {
+	return N;
+  }
+  HBTInt GetMemberId(const HBTInt i) const
+  {
+	return Ids[i];
+  }
+  HBTReal GetMass(const HBTInt i) const
+  {
+	return Snapshot.GetMass(Ids[i]);
+  }
+  const HBTxyz & GetPhysicalVelocity(const HBTInt i) const
+  {
+	return Snapshot.GetPhysicalVelocity(Ids[i]);
+  }
+  const HBTxyz & GetComovingPosition(const HBTInt i) const
+  {
+	return Snapshot.GetComovingPosition(Ids[i]);
+  }
+};
+
 class ParticleSnapshot_t: public Snapshot_t
 {
   typedef HBTInt ParticleIndex_t ;
@@ -113,7 +157,7 @@ public:
   {
 	Clear();
   }
-  HBTInt GetSize() const;
+  HBTInt size() const;
   HBTInt GetMemberId(const HBTInt index) const;
   void FillParticleHash();
   void ClearParticleHash();
@@ -130,7 +174,7 @@ public:
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
 };
-inline HBTInt ParticleSnapshot_t::GetSize() const
+inline HBTInt ParticleSnapshot_t::size() const
 {
   return NumberOfParticles;
 }
