@@ -56,6 +56,8 @@ typedef int HBTInt;
 #define GROUP_FORMAT_GADGET4 40
 #define GROUP_FORMAT_GADGET3_INT 30
 #define GROUP_FORMAT_GADGET3_LONG 31
+#define GROUP_FORMAT_GADGET2_INT 20
+#define GROUP_FORMAT_GADGET2_LONG 21
 
 typedef HBTReal HBTxyz[3];  //3-d pos/vel data
 

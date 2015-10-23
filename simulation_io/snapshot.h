@@ -137,7 +137,7 @@ class ParticleSnapshot_t: public Snapshot_t
   void LoadPosition(Parameter_t & param);
   void LoadVelocity(Parameter_t & param);
   void LoadMass(Parameter_t & param);
-  void LoadHeader(Parameter_t & param, int ifile=1);
+  void LoadHeader(Parameter_t & param, int ifile=0);
   bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
   ParticleIndex_t ReadNumberOfDMParticles(Parameter_t & param, int ifile);
   size_t SkipBlock(FILE *fp);

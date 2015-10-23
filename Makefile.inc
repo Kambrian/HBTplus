@@ -2,7 +2,8 @@ HDFINC=
 HDFLIB=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5
 
 CXX=g++
-CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3
+CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 
+<!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
 LDLIBS+=$(HDFLIB) $(OMPFLAG)
 <!-- LINK.o=$(LINK.cpp) -->
 

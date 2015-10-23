@@ -21,7 +21,7 @@ class HaloSnapshot_t: public Snapshot_t
 {  
   typedef vector <Halo_t> HaloList_t;
   template <class PIDtype_t>
-  void LoadGroupV3(PIDtype_t dummy);
+  void LoadGroupV2V3(PIDtype_t dummy);
   void GetFileNameFormat(string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 public:
   const ParticleSnapshot_t * ParticleSnapshot;

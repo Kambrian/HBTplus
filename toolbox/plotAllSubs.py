@@ -4,10 +4,11 @@ import h5py
 
 rootdir='/gpfs/data/jvbq85/HBT/data/AqA5/'
 f=h5py.File(rootdir+'subcat2/SubSnap_127.hdf5','r')
-s2=f['SubHalos'][...]
+s2=f['Subhalos'][...]
 f.close()
 
-s=np.loadtxt(rootdir+'subcat/anal/halo_127',skiprows=1)
+s=np.loadtxt(rootdir+'subcatMassPrec/anal/halo_127',skiprows=1)#mass prec=0.9
+s0=np.loadtxt(rootdir+'subcat/anal/halo_127',skiprows=1)
 
 t=np.linspace(0,np.pi*2.+0.1, 20);
 def plot_circle(x,y,r,**kwargs):
@@ -35,12 +36,14 @@ plt.axis([56.8,57.3,52.4,52.8])
 plt.savefig(rootdir+'subcat2/image3.pdf')
 
 plt.figure()
+flt=s0[:,3]>0
+plt.hist(np.log10(s0[flt,3]),50, histtype='step', color='k', alpha=0.8)
 flt=s[:,3]>0
 plt.hist(np.log10(s[flt,3]),50, histtype='step', color='g', alpha=0.8)
 flt=s2['Nbound']>0
 plt.hist(np.log10(s2['Nbound'][flt]),50, histtype='step', color='r', alpha=0.5)
 plt.yscale('log')
-plt.legend(('HBT','HBT2'))
+plt.legend(('HBT-PreciseMass','HBT','HBT2'))
 plt.xlabel(r'$\log10($Mass/Particles$)$')
 plt.ylabel('Count')
 plt.savefig(rootdir+'subcat2/hist.pdf')

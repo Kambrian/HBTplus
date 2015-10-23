@@ -59,6 +59,8 @@ static bool GetGroupFileByteOrder(const char *filename, const int FileCounts, co
 	case GROUP_FORMAT_GADGET3_LONG:
 	  offset=3*sizeof(int)+sizeof(long long);  
 	  break;
+	case GROUP_FORMAT_GADGET2_INT:
+	case GROUP_FORMAT_GADGET2_LONG:
 	default:
 	  offset=3*sizeof(int); 
   }  
@@ -137,11 +139,13 @@ void HaloSnapshot_t::Load(int snapshot_index)
   long dummy_long=0;
   switch(HBTConfig.GroupFileVariant)
   {
+	case GROUP_FORMAT_GADGET2_INT:
 	case GROUP_FORMAT_GADGET3_INT:
-	  LoadGroupV3(dummy_integer);
+	  LoadGroupV2V3(dummy_integer);
 	  break;
+	case GROUP_FORMAT_GADGET2_LONG:
 	case GROUP_FORMAT_GADGET3_LONG:
-	  LoadGroupV3(dummy_long);
+	  LoadGroupV2V3(dummy_long);
 	  break;
 	default:
 	  cerr<<"GroupFileVariant="<<HBTConfig.GroupFileVariant<<" not implemented yet.\n";
@@ -157,8 +161,10 @@ void HaloSnapshot_t::Clear()
   HaloList_t().swap(Halos);//this deeply cleans it
 }
 
+#define IS_GROUP_V3 (GROUP_FORMAT_GADGET3_INT==HBTConfig.GroupFileVariant||GROUP_FORMAT_GADGET3_LONG==HBTConfig.GroupFileVariant)
+
 template <class PIDtype_t>
-void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
+void HaloSnapshot_t::LoadGroupV2V3(PIDtype_t dummy)
 //the value of dummy is irrelevant, only its type is used.
 {
   FILE *fd;
@@ -168,13 +174,15 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
   HBTInt NumberOfParticles,NumberOfHaloes;
   long long TotNids;
   bool NeedByteSwap;
+  bool IsGroupV3=IS_GROUP_V3;
   
   string filename_format;
   bool IsSubFile;
   int FileCounts;
   GetFileNameFormat(filename_format, FileCounts, IsSubFile, NeedByteSwap);
   
-  long long Nload=0;  
+  long long Nload=0;
+NumberOfParticles=0;  
   for(int iFile=0;iFile<FileCounts;iFile++)
   {
 	if(FileCounts>1)
@@ -184,10 +192,19 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 		
 	myfopen(fd,filename,"r");
 	myfread(&Ngroups, sizeof(Ngroups), 1, fd);
-	myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
-	myfread(&Nids, sizeof(Nids), 1, fd);
-	myfread(&TotNids,sizeof(TotNids),1,fd);
+	if(IsGroupV3)
+	{
+	  myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
+	  myfread(&Nids, sizeof(Nids), 1, fd);
+	  myfread(&TotNids,sizeof(TotNids),1,fd);
+	}
+	else
+	{
+	  myfread(&Nids, sizeof(Nids), 1, fd);
+	  myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
+	}
 	myfread(&NFiles, sizeof(NFiles), 1, fd);
+	NumberOfParticles+=Nids;
 	if(IsSubFile)
 	{
 	  int Nsub,TotNsub;
@@ -196,23 +213,13 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 	}
 	if(FileCounts!=NFiles)
 	{
-	  fprintf(stderr,"error: number of grpfiles specified not the same as stored: %d,%d\n for file %s\n",
-			  FileCounts,NFiles,filename);
-	  fflush(stderr);
+	  cout<<"File count mismatch for file "<<filename<<": expect "<<FileCounts<<", got "<<NFiles<<endl;
 	  exit(1);
 	}
 	
 	if(0==iFile)
 	{
-	  NumberOfHaloes=TotNgroups;
-	  NumberOfParticles=TotNids;
-	  if(sizeof(HBTInt)==4 && TotNids>INT_MAX)
-	  {
-		fprintf(stderr,"error: TotNids larger than HBTInt can hold! %lld\n",TotNids);
-		exit(1);
-	  }
-	  fprintf(stdout,"Snap=%d (%d)  TotNids=%lld  TotNgroups=%d  NFiles=%d\n", SnapshotIndex, SnapshotId, TotNids, TotNgroups, NFiles);
-	  
+	  NumberOfHaloes=TotNgroups; 	  
 	  Len.resize(TotNgroups);
 	  Offset.resize(TotNgroups);
 	}
@@ -232,6 +239,7 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 	cerr<<"error:Num groups loaded not match: "<<Nload<<','<<NumberOfHaloes<<"\n";
 	exit(1);
   }
+  cout<<"GroupSnap="<<SnapshotIndex<<" ("<<SnapshotId<<") TotNids="<<NumberOfParticles<<" TotNgroups="<<TotNgroups<<" NFiles="<<NFiles<<endl;
   
   vector <PIDtype_t> PIDs(NumberOfParticles);
   
@@ -245,13 +253,24 @@ void HaloSnapshot_t::LoadGroupV3(PIDtype_t dummy)
 	
 	myfopen(fd,filename,"r");
 	myfread(&Ngroups, sizeof(Ngroups), 1, fd);
-	myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
-	myfread(&Nids, sizeof(Nids), 1, fd);
-	myfread(&TotNids,sizeof(TotNids),1,fd);
+	if(IsGroupV3)
+	{
+	  myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
+	  myfread(&Nids, sizeof(Nids), 1, fd);
+	  myfread(&TotNids,sizeof(TotNids),1,fd);
+	}
+	else
+	{
+	  myfread(&Nids, sizeof(Nids), 1, fd);
+	  myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
+	}
 	myfread(&NFiles, sizeof(NFiles), 1, fd);
 	//file offset:
-	int dummy;
-	myfread(&dummy,sizeof(int),1,fd);
+	if(IsGroupV3)
+	{
+	  int file_offset;
+	  myfread(&file_offset,sizeof(int),1,fd);
+	}
 	
 	myfread(&PIDs[Nload], sizeof(PIDtype_t), Nids, fd);
 	if(long int extra_bytes=BytesToEOF(fd))
