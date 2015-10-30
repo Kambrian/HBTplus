@@ -8,9 +8,43 @@
 #include <cmath>
 #include <cstring>
 #include <sys/stat.h>
+#include <chrono>
 
 #include "datatypes.h"
 #include "config_parser.h"
+
+class Timer_t
+{
+public:
+  vector <chrono::high_resolution_clock::time_point> tickers;
+  Timer_t()
+  {
+	tickers.reserve(20);
+  }
+  void Tick()
+  {
+	tickers.push_back(chrono::high_resolution_clock::now());
+  }
+  void Reset()
+  {
+	tickers.clear();
+  }
+  size_t Size()
+  {
+	return tickers.size();
+  }
+  double GetSeconds(int i_start)
+  {
+	if(i_start+1<Size())
+	  return chrono::duration_cast<chrono::duration<double> >(tickers[i_start+1]-tickers[i_start]).count();
+	else
+	  return 0;
+  }
+  double GetSeconds(int i_start, int i_end)
+  {
+	return chrono::duration_cast<chrono::duration<double> >(tickers[i_end]-tickers[i_start]).count();
+  }
+};
 
 #define myfopen(filepointer,filename,filemode) if(!((filepointer)=fopen(filename,filemode))){fprintf(stderr,"Error opening file %s\n",filename);	fflush(stderr); exit(1);}
 // #ifdef PERIODIC_BDR

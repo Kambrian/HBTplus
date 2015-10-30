@@ -613,7 +613,7 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	if(0==Members.size()) //create a new sub
 	{
 	  HBTInt subid;
-	  #pragma omp critical(AddNewSub)
+	  #pragma omp critical(AddNewSub) //maybe consider ordered for here..
 	  {
 		subid=Npro++;
 	  }

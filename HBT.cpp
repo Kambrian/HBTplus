@@ -23,50 +23,48 @@ int main(int argc, char **argv)
   
   subsnap.Load(snapshot_start-1, true);
   
-  vector <chrono::high_resolution_clock::time_point> tickers(20);
-  int ticker_count=0;
-  #define TICK_TIME() tickers[ticker_count++]=chrono::high_resolution_clock::now()
+  Timer_t timer;
   ofstream time_log(HBTConfig.SubhaloPath+"/timing.log", fstream::out|fstream::app);
-  
+  time_log<<fixed<<setprecision(1);//<<setw(8);
   for(int isnap=snapshot_start;isnap<=snapshot_end;isnap++)
   {
-	TICK_TIME();
+	timer.Tick();
 	ParticleSnapshot_t partsnap;
 	partsnap.Load(isnap);
 	subsnap.SetSnapshotIndex(isnap);
 	
 	HaloSnapshot_t halosnap;
 	halosnap.Load(isnap);
-	TICK_TIME();
+	timer.Tick();
 	#pragma omp parallel
 	{
 	halosnap.ParticleIdToIndex(partsnap);
 	subsnap.ParticleIdToIndex(partsnap);
 	#pragma omp master
-	TICK_TIME();
+	timer.Tick();
 	subsnap.AssignHosts(halosnap);
 	subsnap.PrepareCentrals(halosnap);
 	}
 
-	TICK_TIME();
+	timer.Tick();
 	subsnap.RefineParticles();
-	TICK_TIME();
+	timer.Tick();
 	
 	#pragma omp parallel
 	{
 	subsnap.UpdateTracks();
 	subsnap.ParticleIndexToId();
 	}
-	TICK_TIME();
+	timer.Tick();
 	
 	subsnap.Save();
 	
-	TICK_TIME();
+	timer.Tick();
 	time_log<<isnap;
-	for(int i=1;i<ticker_count;i++)
-	  time_log<<"\t"<<chrono::duration_cast<chrono::duration<double> >(tickers[i]-tickers[i-1]).count();
+	for(int i=0;i<timer.Size()-1;i++)
+	  time_log<<"\t"<<timer.GetSeconds(i);
 	time_log<<endl;
-	ticker_count=0;
+	timer.Reset();
   }
   
   return 0;
