@@ -4,10 +4,10 @@ using namespace std;
 #include <cstdlib>
 #include <chrono>
 
-#include "simulation_io/snapshot.h"
-#include "simulation_io/halo.h"
-#include "simulation_io/subhalo.h"
-#include "mymath.h"
+#include "src/snapshot.h"
+#include "src/halo.h"
+#include "src/subhalo.h"
+#include "src/mymath.h"
 
 int main(int argc, char **argv)
 {

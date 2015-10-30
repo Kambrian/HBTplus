@@ -12,7 +12,7 @@
 #include <chrono>
 
 #include "../mymath.h"
-#include "halo.h"
+#include "../halo.h"
 
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
@@ -321,55 +321,8 @@ NumberOfParticles=0;
   }
 }
 
-void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
-{
-  chrono::high_resolution_clock::time_point time_begin, time_end;
-#pragma omp master
-  {
-  ParticleSnapshot=&snapshot;
-  time_begin = chrono::high_resolution_clock::now();
-  }
-#pragma omp for //maybe try collapse(2)? need to remove intermediate variables to enable this.
-  for(HBTInt haloid=0;haloid<Halos.size();haloid++)
-  {
-	Halo_t::ParticleList_t & Particles=Halos[haloid].Particles;
-	HBTInt np=Particles.size();
-	for(HBTInt pid=0;pid<np;pid++)
-	  Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);//this should be safe since its a const func
-  }
-  #pragma omp master
-  {
-	time_end = chrono::high_resolution_clock::now();
-	auto elapsed = chrono::duration_cast<chrono::duration<double>>(time_end - time_begin);
-	cout << "Halo ParticleId lookup took " << elapsed.count() <<"seconds"<< endl;
-  }
-}
 
-void HaloSnapshot_t::ParticleIndexToId()
-{
-#pragma omp for
-  for(HBTInt haloid=0;haloid<Halos.size();haloid++)
-  {
-	Halo_t::ParticleList_t &Particles=Halos[haloid].Particles;
-	HBTInt nP=Halos[haloid].Particles.size();
-	for(HBTInt pid=0;pid<nP;pid++)
-	  Particles[pid]=ParticleSnapshot->GetParticleId(Particles[pid]);
-  }
-#pragma omp single
-  ParticleSnapshot=nullptr;
-}
-
-void HaloSnapshot_t::AverageCoordinates()
-{
-#pragma omp for
-  for(HBTInt i=0;i<Halos.size();i++)
-  {
-	ParticleSnapshot->AveragePosition(Halos[i].ComovingPosition, Halos[i].Particles.data(), Halos[i].Particles.size());
-	ParticleSnapshot->AverageVelocity(Halos[i].PhysicalVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
-  }
-}
-
-#ifdef TEST_SIMU_IO_halo
+#ifdef TEST_halo_io
 #include "../config_parser.h"
 
 int main(int argc, char **argv)

@@ -13,13 +13,19 @@ else
 OMPFLAG=-openmp
 endif
 
+%.test.o: %.cpp
+	$(CXX) $^ -DTEST_$(basename $<) $(CXXFLAGS) -c -o $@
+%.test: %.test.o
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
+$(TEST): CXXFLAGS+=-g -gdwarf-2 -O0
+
 SUBDIRS:=$(wildcard */.)
 SUBDIRSCLEAN=$(addsuffix clean,$(SUBDIRS))
 
 clean: clean_curdir $(SUBDIRSCLEAN)
 
 clean_curdir:
-	rm -rf *.o *~ core a.out $(EXE) $(OUTPUTS)
+	rm -rf *.o *~ core a.out $(EXE) $(OUTPUTS) *.test
 
 %clean: %
-	$(MAKE) -C $< clean_curdir
+	$(MAKE) -C $< clean

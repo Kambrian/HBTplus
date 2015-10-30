@@ -2,7 +2,7 @@
 #ifndef HASH_HEADER_INCLUDED
 #define HASH_HEADER_INCLUDED
 
-#include "../datatypes.h"
+#include "datatypes.h"
 #include <exception>
 #include <string>
 

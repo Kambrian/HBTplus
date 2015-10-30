@@ -4,9 +4,9 @@
 #include <cmath>
 #include <cstring>
 
-#include "../mymath.h"
-#include "tree.h"
-#include "../config_parser.h"
+#include "mymath.h"
+#include "gravity_tree.h"
+#include "config_parser.h"
 
 void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 {
@@ -367,11 +367,10 @@ void OctTree_t::Clear()
 	MaxNodeId=0;
   }
 }
-// #define TEST_TREE
-#ifdef TEST_TREE
-#include "../config_parser.h"
-#include "../simulation_io/snapshot.h"
-#include "../simulation_io/halo.h"
+
+#ifdef TEST_gravity_tree
+#include "snapshot.h"
+#include "halo.h"
 
 int main(int argc, char **argv)
 {

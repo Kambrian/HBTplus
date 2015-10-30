@@ -18,7 +18,7 @@
 #define H5T_HBTInt H5::PredType::NATIVE_INT
 #endif
 
-#include "../datatypes.h"
+#include "datatypes.h"
 #include "snapshot_number.h"
 #include "halo.h"
 

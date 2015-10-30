@@ -7,9 +7,9 @@ using namespace std;
 #include <cstdlib>
 #include <cstdio>
 
-#include "../simulation_io/snapshot.h"
-#include "../simulation_io/subhalo.h"
-#include "../mymath.h"
+#include "../src/snapshot.h"
+#include "../src/subhalo.h"
+#include "../src/mymath.h"
 
 int main(int argc, char **argv)
 {

@@ -3,8 +3,8 @@
 #define TREE_H_INCLUDED
 #include <exception>
 
-#include "../datatypes.h"
-#include "../simulation_io/snapshot.h"
+#include "datatypes.h"
+#include "snapshot.h"
 
 class OctTreeExceeded_t : public exception
 {

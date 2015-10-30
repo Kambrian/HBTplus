@@ -4,7 +4,7 @@
 #include <iostream>
 #include <new>
 
-#include "../datatypes.h"
+#include "datatypes.h"
 #include "snapshot_number.h"
 #include "snapshot.h"
 
