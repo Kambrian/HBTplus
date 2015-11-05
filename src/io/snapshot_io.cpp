@@ -126,6 +126,8 @@ void ParticleSnapshot_t::LoadHeader(Parameter_t & param, int ifile)
   assert(sizeof(float)==RealTypeSize||sizeof(double)==RealTypeSize);
   blocksize=SkipVelocityBlock(fp);
   assert(blocksize==RealTypeSize*NumPartInFile*3);
+  if(sizeof(HBTReal)<RealTypeSize)
+	cerr<<"WARNING: loading size "<<RealTypeSize<<" float in snapshot with size "<<sizeof(HBTReal)<<" float in HBT. possible loss of accuracy.\n Please use ./HBTdouble unless you know what you are doing.";
   
   if(param.SnapshotHasIdBlock)
   {
@@ -133,6 +135,8 @@ void ParticleSnapshot_t::LoadHeader(Parameter_t & param, int ifile)
 	IntTypeSize=blocksize/NumPartInFile;
 	assert(sizeof(int)==IntTypeSize||sizeof(long)==IntTypeSize);
 	assert(sizeof(HBTInt)>=IntTypeSize);
+	if(sizeof(HBTReal)<RealTypeSize)
+	  cerr<<"WARNING: loading size "<<IntTypeSize<<" integer in snapshot with size "<<sizeof(HBTInt)<<" int in HBT. possible data overflow.\n Please use ./HBTdouble unless you know what you are doing.";
   }
   
   fclose(fp);
