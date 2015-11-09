@@ -9,6 +9,10 @@
 #include <vector>
 #include "datatypes.h"
 
+#include <boost/mpi.hpp>
+#include <boost/serialization/string.hpp>
+namespace mpi = boost::mpi;
+
 namespace PhysicalConst
 {//initialized after reading parameter file.
   extern HBTReal G;
@@ -18,6 +22,10 @@ namespace PhysicalConst
 #define NumberOfCompulsaryConfigEntries 7
 class Parameter_t
 {
+private:
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version);
 public:
   /*compulsory parameters*/
   string SnapshotPath;
@@ -106,6 +114,46 @@ inline void trim_trailing_garbage(string &s, const string &garbage_list)
 	s.erase(pos);
 }
 
-
-
+template<class Archive>
+void Parameter_t::serialize(Archive& ar, const unsigned int version)
+{
+  ar & SnapshotPath;
+  ar & HaloPath;
+  ar & SubhaloPath;
+  ar & SnapshotFileBase;
+  ar & MaxSnapshotIndex;
+  ar & BoxSize; //to check the unit of snapshot according to the BoxSize in header
+  ar & SofteningHalo;
+  ar & IsSet;
+  
+  ar & MinSnapshotIndex;
+  ar & MinNumPartOfSub;
+  ar & GroupFileVariant;
+  ar & MassInMsunh;
+  ar & LengthInMpch;
+  ar & VelInKmS;
+  ar & PeriodicBoundaryOn;
+  ar & SnapshotHasIdBlock;
+  ar & ParticleIdRankStyle;//load particleId as id ranks
+  ar & ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
+  ar & SnapshotIdUnsigned;
+  ar & SnapshotIdList;
+  
+  ar & TrimNonHostParticles; //whether to trim particles outside the host halo when finding hosts
+  ar & MajorProgenitorMassRatio; 
+  ar & BoundMassPrecision;
+  ar & SourceSubRelaxFactor;
+  ar & SubCoreSizeFactor; //coresize=Nbound*CoreSizeFactor, to get center coordinates for the KineticDistance test.
+  ar & SubCoreSizeMin; //Minimum coresize
+  
+  ar & TreeAllocFactor;
+  ar & TreeNodeOpenAngle;
+  ar & TreeMinNumOfCells;
+  
+  /*derived parameters; do not require user input*/
+  ar & TreeNodeOpenAngleSquare;
+  ar & TreeNodeResolution;
+  ar & TreeNodeResolutionHalf;
+  ar & BoxHalf; 
+}
 #endif

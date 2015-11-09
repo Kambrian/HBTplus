@@ -2,14 +2,18 @@ SRC_COMM=$(wildcard src/*.cpp) $(wildcard src/io/*.cpp)
 OBJS_COMM=$(SRC_COMM:%.cpp=%.o)
 
 SRC=$(wildcard *.cpp)
-EXE=HBT HBTdouble
+EXE=HBT HBTdouble HBTboost
 
-default: HBT
+default: HBTboost
 include Makefile.inc
-	
-HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
 
-HBT HBTdouble: HBT.o $(OBJS_COMM)
+# $(EXE): $(OBJS_COMM)
+
+HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
+HBTboost:CXX=mpic++
+HBTboost:src/config_parser.o
+HBTboost: LDLIBS+=-lboost_serialization -lboost_mpi
+HBTdouble: HBT.o
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 depend:
