@@ -6,10 +6,11 @@ EXE=HBT HBTdouble
 
 default: HBT
 include Makefile.inc
-	
-HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
 
-HBT HBTdouble: HBT.o $(OBJS_COMM)
+$(EXE): $(OBJS_COMM)
+
+HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
+HBTdouble: HBT.o
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 depend:
