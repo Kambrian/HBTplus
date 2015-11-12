@@ -155,23 +155,33 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
   
 }
 
-void ParticleSnapshot_t::Load(int snapshot_index, bool load_id, bool load_position, bool load_velocity, bool load_mass, bool fill_particle_hash)
+void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
 { 
   SetSnapshotIndex(snapshot_index);
   PeriodicBox=HBTConfig.PeriodicBoundaryOn;
+  
   LoadHeader();
-  if(load_id)
+  if(LoadFlag.Id)
   {
 	LoadId();
 	if(fill_particle_hash)
 	  FillParticleHash();
   }
-  if(load_position)
+  if(LoadFlag.Pos)
 	LoadPosition();
-  if(load_velocity)
+  if(LoadFlag.Vel)
 	LoadVelocity();
-  if(load_mass)
+  if(LoadFlag.Mass)
 	if(0.==Header.mass[1]) LoadMass();
+}
+
+void ParticleSnapshot_t::SetLoadFlags(bool load_id, bool load_pos, bool load_vel, bool load_mass)
+/* set the flags to only load some blocks; only the blocks with a true flag will be loaded. */
+{
+  LoadFlag.Id=load_id;
+  LoadFlag.Pos=load_pos;
+  LoadFlag.Vel=load_vel;
+  LoadFlag.Mass=load_mass;
 }
 
 size_t ParticleSnapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before, const size_t n_skip_after)

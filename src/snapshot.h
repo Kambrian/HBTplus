@@ -122,6 +122,16 @@ class ParticleSnapshot_t: public Snapshot_t
   int RealTypeSize;
   vector <ParticleIndex_t> NumberOfDMParticleInFiles;
   vector <ParticleIndex_t> OffsetOfDMParticleInFiles;
+  struct LoadFlag_t
+  {
+	bool Id;
+	bool Pos;
+	bool Vel;
+	bool Mass;
+	LoadFlag_t(): Id(true), Pos(true), Vel(true), Mass(true)
+	{
+	}
+  } LoadFlag;
   
   ParticleIndex_t NumberOfParticles;
   ParticleId_t * ParticleId; //better hide this from the user!!!!! 
@@ -133,6 +143,7 @@ class ParticleSnapshot_t: public Snapshot_t
   IndexTable_t<ParticleId_t, ParticleIndex_t> *ParticleHash;
 //   unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
   
+  void LoadFile(int ifile);
   void LoadId();
   void LoadPosition();
   void LoadVelocity();
@@ -145,7 +156,7 @@ class ParticleSnapshot_t: public Snapshot_t
   void * LoadBlock(int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
 public:
   SnapshotHeader_t Header;
-  ParticleSnapshot_t(): Snapshot_t(), Header()
+  ParticleSnapshot_t(): Snapshot_t(), Header(), LoadFlag()
   {
 	PeriodicBox=true;
 	NeedByteSwap=false;
@@ -174,7 +185,8 @@ public:
   const HBTxyz &GetPhysicalVelocity(const ParticleIndex_t index) const;
   HBTReal GetParticleMass(const ParticleIndex_t index) const;
   HBTReal GetMass(const ParticleIndex_t index) const;
-  void Load(int snapshot_index, bool load_id=true, bool load_position=true, bool load_velocity=true, bool load_mass=true, bool fill_particle_hash=true);
+  void Load(int snapshot_index, bool fill_particle_hash=true);
+  void SetLoadFlags(bool load_id, bool load_pos, bool load_vel, bool load_mass);
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
 };
