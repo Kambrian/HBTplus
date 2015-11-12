@@ -2,8 +2,10 @@ using namespace std;
 #include <iostream>
 #include <string>
 #include <cstdlib>
-#include <chrono>
+#include <omp.h>
 
+#include "src/datatypes.h"
+#include "src/config_parser.h"
 #include "src/snapshot.h"
 #include "src/halo.h"
 #include "src/subhalo.h"

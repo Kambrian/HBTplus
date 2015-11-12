@@ -86,7 +86,7 @@ void Parameter_t::ParseConfigFile(const char * param_file)
 }
 void Parameter_t::CheckUnsetParameters()
 {
-  for(int i=0;i<NumberOfCompulsaryConfigEntries;i++)
+  for(int i=0;i<IsSet.size();i++)
   {
 	if(!IsSet[i])
 	{
