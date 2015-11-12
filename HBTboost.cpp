@@ -2,7 +2,7 @@ using namespace std;
 #include <iostream>
 #include <string>
 #include <cstdlib>
-#include <chrono>
+#include <omp.h>
 #include <boost/mpi.hpp>
 #include <boost/serialization/string.hpp>
 namespace mpi = boost::mpi;
@@ -19,13 +19,7 @@ int main(int argc, char **argv)
   mpi::communicator world;
 #ifdef _OPENMP
  omp_set_nested(0);
-#endif/*
-  int  numtasks, rank, len, rc; 
-  char hostname[MPI_MAX_PROCESSOR_NAME];
-  rc = MPI_Init(&argc,&argv);
-  MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
-  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  MPI_Get_processor_name(hostname, &len);*/
+#endif
    
   int snapshot_start, snapshot_end;
   if(0==world.rank())

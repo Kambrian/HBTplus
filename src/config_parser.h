@@ -35,7 +35,7 @@ public:
   int MaxSnapshotIndex;
   HBTReal BoxSize; //to check the unit of snapshot according to the BoxSize in header
   HBTReal SofteningHalo;
-  bool IsSet[NumberOfCompulsaryConfigEntries];
+  vector <bool> IsSet;
   
   /*optional*/
   int MinSnapshotIndex;
@@ -68,7 +68,7 @@ public:
   HBTReal TreeNodeResolutionHalf;
   HBTReal BoxHalf; 
   
-  Parameter_t(): IsSet(),SnapshotIdList()
+  Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries, false),SnapshotIdList()
   {
 	MinSnapshotIndex=0;
 	MinNumPartOfSub=20;
