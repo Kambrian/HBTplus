@@ -133,16 +133,16 @@ class ParticleSnapshot_t: public Snapshot_t
   IndexTable_t<ParticleId_t, ParticleIndex_t> *ParticleHash;
 //   unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
   
-  void LoadId(Parameter_t & param);
-  void LoadPosition(Parameter_t & param);
-  void LoadVelocity(Parameter_t & param);
-  void LoadMass(Parameter_t & param);
-  void LoadHeader(Parameter_t & param, int ifile=0);
+  void LoadId();
+  void LoadPosition();
+  void LoadVelocity();
+  void LoadMass();
+  void LoadHeader(int ifile=0);
   bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
-  ParticleIndex_t ReadNumberOfDMParticles(Parameter_t & param, int ifile);
+  ParticleIndex_t ReadNumberOfDMParticles(int ifile);
   size_t SkipBlock(FILE *fp);
   size_t ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before=0, const size_t n_skip_after=0);
-  void * LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
+  void * LoadBlock(int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
 public:
   SnapshotHeader_t Header;
   ParticleSnapshot_t(): Snapshot_t(), Header()
@@ -166,7 +166,7 @@ public:
   void FillParticleHash();
   void ClearParticleHash();
   ParticleIndex_t GetParticleIndex(const ParticleId_t particle_id) const;
-  void GetFileName(Parameter_t &param, int ifile, string &filename);
+  void GetFileName(int ifile, string &filename);
   void Clear();
   ParticleIndex_t GetNumberOfParticles() const;
   ParticleId_t GetParticleId(const ParticleIndex_t index) const;

@@ -28,16 +28,16 @@ inline size_t ParticleSnapshot_t::SkipBlock(FILE *fp)
   assert(blocksize==blocksize2);
   return blocksize;
 }
-void ParticleSnapshot_t::GetFileName(Parameter_t &param, int ifile, string &filename)
+void ParticleSnapshot_t::GetFileName(int ifile, string &filename)
 {
   FILE *fp;
   char buf[1024];
   
-  sprintf(buf,"%s/snapdir_%03d/%s_%03d.%d",param.SnapshotPath.c_str(),SnapshotId,param.SnapshotFileBase.c_str(),SnapshotId,ifile);
+  sprintf(buf,"%s/snapdir_%03d/%s_%03d.%d",HBTConfig.SnapshotPath.c_str(),SnapshotId,HBTConfig.SnapshotFileBase.c_str(),SnapshotId,ifile);
   if(ifile==0)
-	if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d",param.SnapshotPath.c_str(),param.SnapshotFileBase.c_str(),SnapshotId); //try the other convention
-  if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d.%d",param.SnapshotPath.c_str(),param.SnapshotFileBase.c_str(),SnapshotId,ifile); //try the other convention
-  if(!file_exist(buf)) sprintf(buf,"%s/%d/%s.%d",param.SnapshotPath.c_str(),SnapshotId,param.SnapshotFileBase.c_str(),ifile);//for BJL's RAMSES output
+	if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d",HBTConfig.SnapshotPath.c_str(),HBTConfig.SnapshotFileBase.c_str(),SnapshotId); //try the other convention
+  if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d.%d",HBTConfig.SnapshotPath.c_str(),HBTConfig.SnapshotFileBase.c_str(),SnapshotId,ifile); //try the other convention
+  if(!file_exist(buf)) sprintf(buf,"%s/%d/%s.%d",HBTConfig.SnapshotPath.c_str(),SnapshotId,HBTConfig.SnapshotFileBase.c_str(),ifile);//for BJL's RAMSES output
   if(!file_exist(buf))
   {
 	cerr<<"Failed to find a snapshot file at "<<buf<<endl;
@@ -88,32 +88,32 @@ bool ParticleSnapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
   
   return NeedByteSwap;
 }
-HBTInt ParticleSnapshot_t::ReadNumberOfDMParticles(Parameter_t & param, int ifile)
+HBTInt ParticleSnapshot_t::ReadNumberOfDMParticles(int ifile)
 {
   FILE * fp;
   string filename;
-  GetFileName(param, ifile, filename);
+  GetFileName( ifile, filename);
   myfopen(fp, filename.c_str(), "r");
   SnapshotHeader_t header;
   ReadFileHeader(fp, header);
   fclose(fp);
   return header.npart[1];
 }
-void ParticleSnapshot_t::LoadHeader(Parameter_t & param, int ifile)
+void ParticleSnapshot_t::LoadHeader(int ifile)
 {
   //read the header part, assign header extensions, and check byteorder
 
   FILE *fp; 
   string filename;
-  GetFileName(param, ifile, filename);
+  GetFileName( ifile, filename);
   
   myfopen(fp, filename.c_str(), "r");
   NeedByteSwap=ReadFileHeader(fp, Header);
   
-  if(Header.BoxSize!=param.BoxSize)
+  if(Header.BoxSize!=HBTConfig.BoxSize)
   {
-	cerr<<"BoxSize not match input: read "<<Header.BoxSize<<"; expect "<<param.BoxSize<<endl;
-	cerr<<"Maybe the length unit differ? Excpected unit: "<<param.LengthInMpch<<" Msol/h\n";
+	cerr<<"BoxSize not match input: read "<<Header.BoxSize<<"; expect "<<HBTConfig.BoxSize<<endl;
+	cerr<<"Maybe the length unit differ? Excpected unit: "<<HBTConfig.LengthInMpch<<" Msol/h\n";
 	exit(1);
   }
   
@@ -129,7 +129,7 @@ void ParticleSnapshot_t::LoadHeader(Parameter_t & param, int ifile)
   if(sizeof(HBTReal)<RealTypeSize)
 	cerr<<"WARNING: loading size "<<RealTypeSize<<" float in snapshot with size "<<sizeof(HBTReal)<<" float in HBT. possible loss of accuracy.\n Please use ./HBTdouble unless you know what you are doing.";
   
-  if(param.SnapshotHasIdBlock)
+  if(HBTConfig.SnapshotHasIdBlock)
   {
 	blocksize=SkipIdBlock(fp);
 	IntTypeSize=blocksize/NumPartInFile;
@@ -147,7 +147,7 @@ void ParticleSnapshot_t::LoadHeader(Parameter_t & param, int ifile)
   NumberOfParticles=0;
   for(int iFile=0;iFile<Header.num_files;iFile++)
   {
-	int n=ReadNumberOfDMParticles(param, iFile);
+	int n=ReadNumberOfDMParticles( iFile);
 	NumberOfDMParticleInFiles.push_back(n);
 	OffsetOfDMParticleInFiles.push_back(NumberOfParticles);
 	NumberOfParticles+=n;
@@ -159,19 +159,19 @@ void ParticleSnapshot_t::Load(int snapshot_index, bool load_id, bool load_positi
 { 
   SetSnapshotIndex(snapshot_index);
   PeriodicBox=HBTConfig.PeriodicBoundaryOn;
-  LoadHeader(HBTConfig);
+  LoadHeader();
   if(load_id)
   {
-	LoadId(HBTConfig);
+	LoadId();
 	if(fill_particle_hash)
 	  FillParticleHash();
   }
   if(load_position)
-	LoadPosition(HBTConfig);
+	LoadPosition();
   if(load_velocity)
-	LoadVelocity(HBTConfig);
+	LoadVelocity();
   if(load_mass)
-	if(0.==Header.mass[1]) LoadMass(HBTConfig);
+	if(0.==Header.mass[1]) LoadMass();
 }
 
 size_t ParticleSnapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before, const size_t n_skip_after)
@@ -192,7 +192,7 @@ size_t ParticleSnapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read,
 	  
 	  return block_member_size;
 }
-void * ParticleSnapshot_t::LoadBlock(Parameter_t &param, int block_id, size_t element_size, int dimension, bool is_massblock)
+void * ParticleSnapshot_t::LoadBlock( int block_id, size_t element_size, int dimension, bool is_massblock)
 {
   char * buf=static_cast<char *>(::operator new(element_size*NumberOfParticles*dimension));
   //#pragma omp parallel //can do task parallelization here.
@@ -200,7 +200,7 @@ void * ParticleSnapshot_t::LoadBlock(Parameter_t &param, int block_id, size_t el
   {
 	FILE *fp; 
 	string filename;
-	GetFileName(param, iFile, filename);
+	GetFileName( iFile, filename);
 	myfopen(fp, filename.c_str(), "r");
 	
 	SnapshotHeader_t header;
@@ -246,21 +246,21 @@ static void AssignBlock(T *dest, const U *source, const size_t n)
 #define BLOCK_ID_PID 2
 #define BLOCK_ID_MASS 3
 
-void ParticleSnapshot_t::LoadId(Parameter_t &param)
+void ParticleSnapshot_t::LoadId()
 {//only do this after LoadHeader().
   
-  if(!param.SnapshotHasIdBlock) return;
+  if(!HBTConfig.SnapshotHasIdBlock) return;
   
-  void * buf=LoadBlock(param, BLOCK_ID_PID, IntTypeSize, 1);
+  void * buf=LoadBlock( BLOCK_ID_PID, IntTypeSize, 1);
   
-  if(param.ParticleIdRankStyle)
+  if(HBTConfig.ParticleIdRankStyle)
   {
 	cerr<<"Error: ParticleIdRankStyle not implemented yet\n";
 	exit(1);
   }
   else
   {
-	if(param.SnapshotIdUnsigned)//unsigned int
+	if(HBTConfig.SnapshotIdUnsigned)//unsigned int
 	  AssignBlock(ParticleId, static_cast<unsigned *>(buf), NumberOfParticles);
 	else
 	{
@@ -279,9 +279,9 @@ void ParticleSnapshot_t::LoadId(Parameter_t &param)
   }
 }
 
-void ParticleSnapshot_t::LoadPosition(Parameter_t &param)
+void ParticleSnapshot_t::LoadPosition()
 {
-  void * buf=LoadBlock(param, BLOCK_ID_POS, RealTypeSize, 3);
+  void * buf=LoadBlock( BLOCK_ID_POS, RealTypeSize, 3);
   
   if(sizeof(HBTReal)==RealTypeSize)
 	ComovingPosition=static_cast<HBTxyz *>(buf);
@@ -295,17 +295,17 @@ void ParticleSnapshot_t::LoadPosition(Parameter_t &param)
 	::operator delete(buf);
   }
   
-  if(param.PeriodicBoundaryOn)//regularize coord
+  if(HBTConfig.PeriodicBoundaryOn)//regularize coord
   {
 	for(HBTInt i=0;i<NumberOfParticles;i++)
 	  for(int j=0;j<3;j++)
-		ComovingPosition[i][j]=position_modulus(ComovingPosition[i][j], param.BoxSize);
+		ComovingPosition[i][j]=position_modulus(ComovingPosition[i][j], HBTConfig.BoxSize);
   }
 }
 
-void ParticleSnapshot_t::LoadVelocity(Parameter_t &param)
+void ParticleSnapshot_t::LoadVelocity()
 {
-  void * buf=LoadBlock(param, BLOCK_ID_VEL, RealTypeSize, 3);
+  void * buf=LoadBlock( BLOCK_ID_VEL, RealTypeSize, 3);
   
   if(sizeof(HBTReal)==RealTypeSize)
 	PhysicalVelocity=static_cast<HBTxyz *>(buf);
@@ -325,9 +325,9 @@ void ParticleSnapshot_t::LoadVelocity(Parameter_t &param)
 	  PhysicalVelocity[i][j]*=velocity_scale;
 }
 
-void ParticleSnapshot_t::LoadMass(Parameter_t &param)
+void ParticleSnapshot_t::LoadMass()
 {
-  void * buf=LoadBlock(param, BLOCK_ID_MASS, RealTypeSize, 1, true);
+  void * buf=LoadBlock( BLOCK_ID_MASS, RealTypeSize, 1, true);
   
   if(sizeof(HBTReal)==RealTypeSize)
 	ParticleMass=static_cast<HBTReal *>(buf);
