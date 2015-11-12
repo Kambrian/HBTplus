@@ -11,7 +11,7 @@ include Makefile.inc
 
 HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
 HBTboost:CXX=mpic++
-HBTboost:src/config_parser.o
+HBTboost:src/config_parser.o src/io/snapshot_io.o
 HBTboost: LDLIBS+=-lboost_serialization -lboost_mpi
 HBTdouble: HBT.o
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
