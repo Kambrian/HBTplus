@@ -135,17 +135,15 @@ void HaloSnapshot_t::GetFileNameFormat(string &format, int &FileCounts, bool &Is
 void HaloSnapshot_t::Load(int snapshot_index)
 {
   SetSnapshotIndex(snapshot_index);
-  int dummy_integer=0;
-  long dummy_long=0;
   switch(HBTConfig.GroupFileVariant)
   {
 	case GROUP_FORMAT_GADGET2_INT:
 	case GROUP_FORMAT_GADGET3_INT:
-	  LoadGroupV2V3(dummy_integer);
+	  LoadGroupV2V3<int>();
 	  break;
 	case GROUP_FORMAT_GADGET2_LONG:
 	case GROUP_FORMAT_GADGET3_LONG:
-	  LoadGroupV2V3(dummy_long);
+	  LoadGroupV2V3<long>();
 	  break;
 	default:
 	  cerr<<"GroupFileVariant="<<HBTConfig.GroupFileVariant<<" not implemented yet.\n";
@@ -164,8 +162,7 @@ void HaloSnapshot_t::Clear()
 #define IS_GROUP_V3 (GROUP_FORMAT_GADGET3_INT==HBTConfig.GroupFileVariant||GROUP_FORMAT_GADGET3_LONG==HBTConfig.GroupFileVariant)
 
 template <class PIDtype_t>
-void HaloSnapshot_t::LoadGroupV2V3(PIDtype_t dummy)
-//the value of dummy is irrelevant, only its type is used.
+void HaloSnapshot_t::LoadGroupV2V3()
 {
   FILE *fd;
   char filename[1024];
