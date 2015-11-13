@@ -116,7 +116,6 @@ class ParticleSnapshot_t: public Snapshot_t
   typedef HBTInt ParticleId_t;
   typedef vector <ParticleIndex_t> IndexList_t;
     
-  bool PeriodicBox;
   bool NeedByteSwap;
   int IntTypeSize;
   int RealTypeSize;
@@ -158,7 +157,6 @@ public:
   SnapshotHeader_t Header;
   ParticleSnapshot_t(): Snapshot_t(), Header(), LoadFlag()
   {
-	PeriodicBox=true;
 	NeedByteSwap=false;
 	IntTypeSize=0;
 	RealTypeSize=0;

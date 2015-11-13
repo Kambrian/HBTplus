@@ -135,7 +135,7 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
 	IntTypeSize=blocksize/NumPartInFile;
 	assert(sizeof(int)==IntTypeSize||sizeof(long)==IntTypeSize);
 	assert(sizeof(HBTInt)>=IntTypeSize);
-	if(sizeof(HBTReal)<RealTypeSize)
+	if(sizeof(HBTInt)<IntTypeSize)
 	  cerr<<"WARNING: loading size "<<IntTypeSize<<" integer in snapshot with size "<<sizeof(HBTInt)<<" int in HBT. possible data overflow.\n Please use ./HBTdouble unless you know what you are doing.";
   }
   
@@ -158,7 +158,6 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
 void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
 { 
   SetSnapshotIndex(snapshot_index);
-  PeriodicBox=HBTConfig.PeriodicBoundaryOn;
   
   LoadHeader();
   if(LoadFlag.Id)
