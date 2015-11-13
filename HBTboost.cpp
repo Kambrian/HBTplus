@@ -3,11 +3,11 @@ using namespace std;
 #include <string>
 #include <cstdlib>
 #include <omp.h>
-#include <boost/mpi.hpp>
-#include <boost/serialization/string.hpp>
-namespace mpi = boost::mpi;
 // #include "mpi.h"
 
+#include "src/datatypes.h"
+#include "src/config_parser.h"
+#include "src/boost_mpi.h"
 #include "src/snapshot.h"
 #include "src/halo.h"
 #include "src/subhalo.h"

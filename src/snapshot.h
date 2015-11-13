@@ -116,7 +116,6 @@ class ParticleSnapshot_t: public Snapshot_t
   typedef HBTInt ParticleId_t;
   typedef vector <ParticleIndex_t> IndexList_t;
     
-  bool PeriodicBox;
   bool NeedByteSwap;
   int IntTypeSize;
   int RealTypeSize;
@@ -134,17 +133,20 @@ class ParticleSnapshot_t: public Snapshot_t
   } LoadFlag;
   
   ParticleIndex_t NumberOfParticles;
-  ParticleId_t * ParticleId; //better hide this from the user!!!!! 
-  HBTxyz * ComovingPosition;
-  HBTxyz * PhysicalVelocity;
-  HBTReal * ParticleMass;
+  vector <ParticleId_t> ParticleId; //better hide this from the user!!!!! 
+  vector <HBTxyz> ComovingPosition;
+  vector <HBTxyz> PhysicalVelocity;
+  vector <HBTReal> ParticleMass;
   FlatIndexTable_t<ParticleId_t, ParticleIndex_t> FlatHash;
   MappedIndexTable_t<ParticleId_t, ParticleIndex_t> MappedHash;
   IndexTable_t<ParticleId_t, ParticleIndex_t> *ParticleHash;
 //   unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
   
-  void LoadFile(int ifile);
-  void LoadId();
+  void ReadFile(int ifile);
+  template <class T, class U>
+  void ReadScalarBlock(FILE *fp, size_t n_read, size_t n_skip, vector <U> &x);
+  template <class T>
+  void ReadXyzBlock(FILE *fp, size_t n_read, size_t n_skip, vector <HBTxyz> &x);
   void LoadPosition();
   void LoadVelocity();
   void LoadMass();
@@ -152,21 +154,14 @@ class ParticleSnapshot_t: public Snapshot_t
   bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
   ParticleIndex_t ReadNumberOfDMParticles(int ifile);
   size_t SkipBlock(FILE *fp);
-  size_t ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before=0, const size_t n_skip_after=0);
-  void * LoadBlock(int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
+  void * LoadBlock(int block_id, size_t element_size, bool is_massblock=false);
 public:
   SnapshotHeader_t Header;
-  ParticleSnapshot_t(): Snapshot_t(), Header(), LoadFlag()
+  ParticleSnapshot_t(): Snapshot_t(), Header(), LoadFlag(), ParticleId(), ComovingPosition(), PhysicalVelocity(), ParticleMass(), NumberOfParticles(0)
   {
-	PeriodicBox=true;
 	NeedByteSwap=false;
 	IntTypeSize=0;
 	RealTypeSize=0;
-	NumberOfParticles=0;
-	ParticleId=NULL;
-	ComovingPosition=NULL;
-	PhysicalVelocity=NULL;
-	ParticleMass=NULL;
   }
   ~ParticleSnapshot_t()
   {

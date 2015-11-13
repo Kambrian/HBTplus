@@ -2,6 +2,7 @@
 #define MYMATH_HEADER_INCLUDED
 
 #include <iostream>
+#include <iterator>
 
 #include <cstdlib>
 #include <cstdio>
@@ -55,8 +56,18 @@ public:
 // #endif
 #define get_bit(x,k) (((x)&(1<<k))>>k)
 extern int count_pattern_files(char *filename_pattern);
-extern std::ostream& operator << (std::ostream& o, HBTxyz &a);
+// extern std::ostream& operator << (std::ostream& o, HBTxyz &a);
 extern void swap_Nbyte(void *data2swap,size_t nel,size_t mbyte);
+
+template <class T, std::size_t N>
+ostream& operator<<(ostream& o, const array<T, N>& arr)
+{
+  o<<"(";
+  copy(arr.cbegin(), arr.cend(), ostream_iterator<T>(o, ", "));
+  o<<")";
+  return o;
+}
+
 inline size_t fread_swap(void *buf,const size_t member_size, const size_t member_count,FILE *fp, const bool FlagByteSwap)
 {
 	size_t Nread;
@@ -82,10 +93,6 @@ inline long int BytesToEOF(FILE *fp)
   
   return (offset_end-offset);
 }
-inline void copyHBTxyz(HBTxyz & dest, const HBTxyz & src)
-{
-  memcpy(dest, src, sizeof(HBTxyz));
-}
 inline HBTReal position_modulus(HBTReal x, HBTReal boxsize)
 {//shift the positions to within [0,boxsize)
 	HBTReal y;
@@ -93,18 +100,18 @@ inline HBTReal position_modulus(HBTReal x, HBTReal boxsize)
 	y=x/boxsize;
 	return (y-floor(y))*boxsize;
 }
-inline HBTReal distance(const HBTReal x[3], const HBTReal y[3])
+inline HBTReal distance(const HBTxyz &x, const HBTxyz &y)
 {
-	HBTReal dx[3];
+	HBTxyz dx;
 	dx[0]=x[0]-y[0];
 	dx[1]=x[1]-y[1];
 	dx[2]=x[2]-y[2];
 	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
 }
 #define NEAREST(x) (((x)>HBTConfig.BoxHalf)?((x)-HBTConfig.BoxSize):(((x)<-HBTConfig.BoxHalf)?((x)+HBTConfig.BoxSize):(x)))
-inline HBTReal PeriodicDistance(const HBTReal x[3], const HBTReal y[3])
+inline HBTReal PeriodicDistance(const HBTxyz &x, const HBTxyz &y)
 {
-	HBTReal dx[3];
+	HBTxyz dx;
 	dx[0]=x[0]-y[0];
 	dx[1]=x[1]-y[1];
 	dx[2]=x[2]-y[2];
@@ -116,4 +123,62 @@ inline HBTReal PeriodicDistance(const HBTReal x[3], const HBTReal y[3])
 	}
 	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
 }
+
+template <class T>
+class FortranBlock
+{
+  const size_t N;
+  T *Data;
+  typedef T Txyz[3];
+public:
+  FortranBlock(FILE *fp, const size_t n_read, const size_t n_skip, bool NeedByteSwap=false):N(n_read)
+/*read n_read members from the current block of fp. 
+ * skip n_skip elements before reading. 
+ * T specify the input datatype. if T and U has the same size, read directly into outbuffer; otherwise the elements are converted from type U to type T in a temporary buffer and then copied to outbuffer.
+ */
+  {
+  #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
+  #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
+	  int blocksize,blocksize2;
+	  ReadBlockSize(blocksize);
+	  size_t block_member_size=sizeof(T);
+	  Data=new T[n_read];
+	  fseek(fp, n_skip*block_member_size, SEEK_CUR);
+	  myfread(Data, block_member_size, n_read, fp);
+	  fseek(fp, blocksize-(n_skip+n_read)*block_member_size, SEEK_CUR);
+	  ReadBlockSize(blocksize2);
+	  assert(blocksize==blocksize2);
+  #undef ReadBlockSize
+  #undef myfread
+  }
+  ~FortranBlock()
+  {
+	delete [] Data;
+  }
+  const T * data()
+  {
+	return Data;
+  }
+  T & operator [](const size_t index) const
+  {
+	return Data[index];
+  }
+  const HBTInt size() const
+  {
+	return N;
+  }
+  T * begin()
+  {
+	return Data;
+  }
+  T* end()
+  {
+	return Data+N;
+  }
+  Txyz * data_reshape()
+  {
+	return (Txyz *)Data;
+  }
+};
+
 #endif

@@ -11,6 +11,7 @@ using namespace std;
 
 #include "../snapshot.h"
 #include "../mymath.h"
+#include "../boost_mpi.h"
 
 
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
@@ -18,6 +19,13 @@ using namespace std;
 #define SkipVelocityBlock SkipBlock	 
 #define SkipIdBlock SkipBlock
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
+
+#define BLOCK_ID_POS 0
+#define BLOCK_ID_VEL 1
+#define BLOCK_ID_PID 2
+#define BLOCK_ID_MASS 3
+static int BLOCK_DIMENSION[]={3,3,1,1};
+
 inline size_t ParticleSnapshot_t::SkipBlock(FILE *fp)
 {
   int blocksize,blocksize2;
@@ -82,7 +90,7 @@ bool ParticleSnapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
   myfread(&dummy2,sizeof(dummy2),1,fp);
   if(dummy!=dummy2)
   {
-	fprintf(stderr,"error!record brackets not match for header!\t%d,%d\n",dummy,dummy2);
+	cerr<<"Error: record brackets not match for header!"<<dummy<<dummy2<<endl;
 	exit(1);
   } 
   
@@ -135,7 +143,7 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
 	IntTypeSize=blocksize/NumPartInFile;
 	assert(sizeof(int)==IntTypeSize||sizeof(long)==IntTypeSize);
 	assert(sizeof(HBTInt)>=IntTypeSize);
-	if(sizeof(HBTReal)<RealTypeSize)
+	if(sizeof(HBTInt)<IntTypeSize)
 	  cerr<<"WARNING: loading size "<<IntTypeSize<<" integer in snapshot with size "<<sizeof(HBTInt)<<" int in HBT. possible data overflow.\n Please use ./HBTdouble unless you know what you are doing.";
   }
   
@@ -158,21 +166,160 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
 void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
 { 
   SetSnapshotIndex(snapshot_index);
-  PeriodicBox=HBTConfig.PeriodicBoundaryOn;
-  
   LoadHeader();
-  if(LoadFlag.Id)
-  {
-	LoadId();
-	if(fill_particle_hash)
-	  FillParticleHash();
-  }
+  
+  mpi::communicator world;
+  
+  int nfiles_read=round(1.*Header.num_files/world.size());
+  int nfiles_skip=nfiles_read*world.rank();
+  int nfiles_end=min(nfiles_read+nfiles_skip, Header.num_files);
+ 
+  accumulate(NumberOfDMParticleInFiles.begin()+nfiles_read, NumberOfDMParticleInFiles.begin()+nfiles_end, NumberOfParticles);
+  if(LoadFlag.Id)  
+	ParticleId.reserve(NumberOfParticles);
   if(LoadFlag.Pos)
-	LoadPosition();
+	ComovingPosition.reserve(NumberOfParticles);
   if(LoadFlag.Vel)
-	LoadVelocity();
-  if(LoadFlag.Mass)
-	if(0.==Header.mass[1]) LoadMass();
+	PhysicalVelocity.reserve(NumberOfParticles);
+  if(LoadFlag.Mass&&0.==Header.mass[1]) 
+	ParticleMass.reserve(NumberOfParticles);
+  
+  for(int iFile=nfiles_skip; (iFile<nfiles_read+nfiles_skip)&&(iFile<Header.num_files); iFile++)
+  {
+	ReadFile(iFile);
+  }
+ 
+ if(LoadFlag.Id&&fill_particle_hash)
+   FillParticleHash();
+   
+ if(HBTConfig.PeriodicBoundaryOn)//regularize coord
+  {
+	for(HBTInt i=0;i<NumberOfParticles;i++)
+	  for(int j=0;j<3;j++)
+		ComovingPosition[i][j]=position_modulus(ComovingPosition[i][j], HBTConfig.BoxSize);
+  }
+  HBTReal velocity_scale=sqrt(Header.ScaleFactor);
+  for(HBTInt i=0;i<NumberOfParticles;i++)
+	for(int j=0;j<3;j++)
+	  PhysicalVelocity[i][j]*=velocity_scale;
+
+/*
+  if((NumberOfParticles>1)&&(ParticleMass[0]!=ParticleMass[1]))
+  {
+	cout<<"Error: DM particles have different mass? not supported!\n";
+	exit(1);
+  }
+  else
+	Header.mass[1]=ParticleMass[0];*/
+
+  cout<<"Finished Reading on thread "<<world.rank()<<endl;
+  cout<<GetNumberOfParticles()<<" Particles loaded\n";
+  cout<<GetParticleId(10)<<endl;
+  cout<<GetComovingPosition(10)<<endl;
+  cout<<GetParticleMass(10)<<','<<GetParticleMass(100)<<endl;
+  cout<<GetParticleIndex(GetParticleId(10))<<endl;
+}
+template <class T, class U>
+void ParticleSnapshot_t::ReadScalarBlock(FILE *fp, size_t n_read, size_t n_skip, vector <U> &x)
+{
+	FortranBlock <T> block(fp, n_read, n_skip, NeedByteSwap);
+	x.assign(block.begin(), block.end());
+}
+template <class T>
+void ParticleSnapshot_t::ReadXyzBlock(FILE *fp, size_t n_read, size_t n_skip, vector <HBTxyz> &x)
+{
+	FortranBlock <T> block(fp, n_read*3, n_skip*3, NeedByteSwap);
+	//lacking assign operator for HBTxyz, has to manually assign
+	HBTInt n_old=x.size();
+	x.resize(n_old+n_read);
+	auto p=block.data_reshape();
+	for(auto it=x.begin()+n_read;it<x.end();it++)
+	{
+	  for(int j=0;j<3;j++)
+		(*it)[j]=(*p)[j];
+	  p++;
+	}
+}
+
+void ParticleSnapshot_t::ReadFile(int iFile)
+{ 
+  FILE *fp; 
+  string filename;
+  GetFileName( iFile, filename);
+  myfopen(fp, filename.c_str(), "r");
+  SnapshotHeader_t header;
+  ReadFileHeader(fp, header);
+  size_t n_read=header.npart[1], n_skip=header.npart[0];
+  
+  if(LoadFlag.Pos)
+  {
+	if(RealTypeSize==4)
+	  ReadXyzBlock<float>(fp, n_read, n_skip, ComovingPosition);
+	else
+	  ReadXyzBlock<double>(fp, n_read, n_skip, ComovingPosition);
+  }
+  else
+	SkipBlock(fp);
+  
+  if(LoadFlag.Vel)
+  {
+	if(RealTypeSize==4)
+	  ReadXyzBlock<float>(fp, n_read, n_skip, PhysicalVelocity);
+	else
+	  ReadXyzBlock<double>(fp, n_read, n_skip, PhysicalVelocity);
+  }
+  else
+	SkipBlock(fp);
+  
+  if(LoadFlag.Id&&HBTConfig.SnapshotHasIdBlock)
+  {
+	if(HBTConfig.ParticleIdRankStyle)
+	{
+	  cout<<"Error: ParticleIdRankStyle not implemented yet\n";
+	  exit(1);
+	}
+	
+	if(IntTypeSize==4)
+	{
+	  if(HBTConfig.SnapshotIdUnsigned)//unsigned int
+		ReadScalarBlock<unsigned>(fp, n_read, n_skip, ParticleId);
+	  else
+		ReadScalarBlock<int>(fp, n_read, n_skip, ParticleId);
+	}
+	else
+	  ReadScalarBlock<long>(fp, n_read, n_skip, ParticleId);
+  }
+  else
+	SkipBlock(fp);
+  
+  #define MassDataPresent(i) (0==header.mass[i])
+  if(LoadFlag.Mass&&MassDataPresent(1))
+  {
+	if(!MassDataPresent(0)) n_skip=0;
+	
+	if(RealTypeSize==4)
+	  ReadScalarBlock<float>(fp, n_read, n_skip, ParticleMass);
+	else
+	  ReadScalarBlock<double>(fp, n_read, n_skip, ParticleMass);
+  }
+  else
+  {
+	for(int i=0;i<NUMBER_OF_PARTICLE_TYPES;i++)
+	  if(MassDataPresent(i))
+	  {
+		SkipBlock(fp);
+		break;
+	  }
+  }
+  #undef MassDataPresent
+  
+  if(feof(fp))
+  {
+	cout<<"Error: End-of-File when reading "<<filename<<endl;
+	exit(1);
+  }
+  
+  fclose(fp);
 }
 
 void ParticleSnapshot_t::SetLoadFlags(bool load_id, bool load_pos, bool load_vel, bool load_mass)
@@ -184,189 +331,14 @@ void ParticleSnapshot_t::SetLoadFlags(bool load_id, bool load_pos, bool load_vel
   LoadFlag.Mass=load_mass;
 }
 
-size_t ParticleSnapshot_t::ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before, const size_t n_skip_after)
-{//read n_read members from the current block of fp into block. skip n_skip_* before and after. 
-  //return member size in block. 
- //has to specify the number of members in order to know the member size for byteswap
-	  int blocksize,blocksize2;
-	  
-	  ReadBlockSize(blocksize);	  
-	  size_t block_member_size=blocksize/(n_read+n_skip_before+n_skip_after);
-	  assert(4==block_member_size||8==block_member_size);
-	  fseek(fp, n_skip_before*block_member_size, SEEK_CUR);
-	  myfread(block, block_member_size, n_read, fp);
-	  fseek(fp, n_skip_after*block_member_size, SEEK_CUR);
-	  
-	  ReadBlockSize(blocksize2);
-	  assert(blocksize==blocksize2);
-	  
-	  return block_member_size;
-}
-void * ParticleSnapshot_t::LoadBlock( int block_id, size_t element_size, int dimension, bool is_massblock)
-{
-  char * buf=static_cast<char *>(::operator new(element_size*NumberOfParticles*dimension));
-  //#pragma omp parallel //can do task parallelization here.
-  for(int iFile=0; iFile<Header.num_files; iFile++)
-  {
-	FILE *fp; 
-	string filename;
-	GetFileName( iFile, filename);
-	myfopen(fp, filename.c_str(), "r");
-	
-	SnapshotHeader_t header;
-	ReadFileHeader(fp, header);
-	for(int iblock=0;iblock<block_id;iblock++)
-	  SkipBlock(fp);
-	size_t n_read=header.npart[1], n_skip_before=0, n_skip_after=0;
-#define MassDataPresent(i) (0==header.mass[i])
-	if(!is_massblock||MassDataPresent(0))
-	  n_skip_before=header.npart[0];
-	for(int i=2;i<NUMBER_OF_PARTICLE_TYPES;i++)
-	{
-	 if(!is_massblock||MassDataPresent(i))
-		n_skip_after+=header.npart[i];
-	}
-#undef MassDataPresent
-	size_t buf_member_size=ReadBlock(fp, buf+OffsetOfDMParticleInFiles[iFile]*dimension*element_size, n_read*dimension, n_skip_before*dimension, n_skip_after*dimension);
-	assert(buf_member_size==element_size);
-	
-	if(feof(fp))
-	{
-	  cerr<<"error:End-of-File in "<<filename<<endl;
-	  exit(1);  
-	}
-	
-	fclose(fp);
-  }
-  
-  return static_cast<void *>(buf);
-}
-
-template <class T, class U>
-static void AssignBlock(T *dest, const U *source, const size_t n)
-{
-  for(size_t i=0;i<n;i++)
-  {
-	dest[i]=source[i];
-  }
-}
-
-#define BLOCK_ID_POS 0
-#define BLOCK_ID_VEL 1
-#define BLOCK_ID_PID 2
-#define BLOCK_ID_MASS 3
-
-void ParticleSnapshot_t::LoadId()
-{//only do this after LoadHeader().
-  
-  if(!HBTConfig.SnapshotHasIdBlock) return;
-  
-  void * buf=LoadBlock( BLOCK_ID_PID, IntTypeSize, 1);
-  
-  if(HBTConfig.ParticleIdRankStyle)
-  {
-	cerr<<"Error: ParticleIdRankStyle not implemented yet\n";
-	exit(1);
-  }
-  else
-  {
-	if(HBTConfig.SnapshotIdUnsigned)//unsigned int
-	  AssignBlock(ParticleId, static_cast<unsigned *>(buf), NumberOfParticles);
-	else
-	{
-	  if(sizeof(HBTInt)==IntTypeSize)
-		ParticleId=static_cast<HBTInt *>(buf);
-	  else
-	  {
-		ParticleId=static_cast<HBTInt *>(::operator new(sizeof(HBTInt)*NumberOfParticles));
-		if(sizeof(int)==IntTypeSize)
-		  AssignBlock(ParticleId, static_cast<int *>(buf), NumberOfParticles);
-		else
-		  AssignBlock(ParticleId, static_cast<long *>(buf), NumberOfParticles);
-		::operator delete(buf);
-	  }
-	}
-  }
-}
-
-void ParticleSnapshot_t::LoadPosition()
-{
-  void * buf=LoadBlock( BLOCK_ID_POS, RealTypeSize, 3);
-  
-  if(sizeof(HBTReal)==RealTypeSize)
-	ComovingPosition=static_cast<HBTxyz *>(buf);
-  else
-  {
-	ComovingPosition=static_cast<HBTxyz *>(::operator new(sizeof(HBTxyz)*NumberOfParticles));
-	if(sizeof(HBTReal)==RealTypeSize)
-	  AssignBlock(reinterpret_cast<HBTReal *>(ComovingPosition), static_cast<float *>(buf), NumberOfParticles*3);
-	else
-	  AssignBlock(reinterpret_cast<HBTReal *>(ComovingPosition), static_cast<double *>(buf), NumberOfParticles*3);
-	::operator delete(buf);
-  }
-  
-  if(HBTConfig.PeriodicBoundaryOn)//regularize coord
-  {
-	for(HBTInt i=0;i<NumberOfParticles;i++)
-	  for(int j=0;j<3;j++)
-		ComovingPosition[i][j]=position_modulus(ComovingPosition[i][j], HBTConfig.BoxSize);
-  }
-}
-
-void ParticleSnapshot_t::LoadVelocity()
-{
-  void * buf=LoadBlock( BLOCK_ID_VEL, RealTypeSize, 3);
-  
-  if(sizeof(HBTReal)==RealTypeSize)
-	PhysicalVelocity=static_cast<HBTxyz *>(buf);
-  else
-  {
-	PhysicalVelocity=static_cast<HBTxyz *>(::operator new(sizeof(HBTxyz)*NumberOfParticles));
-	if(sizeof(HBTReal)==RealTypeSize)
-	  AssignBlock(reinterpret_cast<HBTReal *>(PhysicalVelocity), static_cast<float *>(buf), NumberOfParticles*3);
-	else
-	  AssignBlock(reinterpret_cast<HBTReal *>(PhysicalVelocity), static_cast<double *>(buf), NumberOfParticles*3);
-	::operator delete(buf);
-  }
-  
-  HBTReal velocity_scale=sqrt(Header.ScaleFactor);
-  for(HBTInt i=0;i<NumberOfParticles;i++)
-	for(int j=0;j<3;j++)
-	  PhysicalVelocity[i][j]*=velocity_scale;
-}
-
-void ParticleSnapshot_t::LoadMass()
-{
-  void * buf=LoadBlock( BLOCK_ID_MASS, RealTypeSize, 1, true);
-  
-  if(sizeof(HBTReal)==RealTypeSize)
-	ParticleMass=static_cast<HBTReal *>(buf);
-  else
-  {
-	ParticleMass=static_cast<HBTReal *>(::operator new(sizeof(HBTReal)*NumberOfParticles));
-	if(sizeof(HBTReal)==RealTypeSize)
-	  AssignBlock(ParticleMass, static_cast<float *>(buf), NumberOfParticles);
-	else
-	  AssignBlock(ParticleMass, static_cast<double *>(buf), NumberOfParticles);
-	::operator delete(buf);
-  }/*
-  if((NumberOfParticles>1)&&(ParticleMass[0]!=ParticleMass[1]))
-  {
-	cout<<"Error: DM particles have different mass? not supported!\n";
-	exit(1);
-  }
-  else
-	Header.mass[1]=ParticleMass[0];*/
-}
-
 void ParticleSnapshot_t::Clear()
 /*reset to empty*/
 {
-#define RESET(x) {::operator delete(x);x=nullptr;}
-  RESET(ParticleId);
-  RESET(ComovingPosition);
-  RESET(PhysicalVelocity);
-  RESET(ParticleMass);
+#define RESET(x, T) {vector <T>().swap(x);}
+  RESET(ParticleId, HBTInt);
+  RESET(ComovingPosition, HBTxyz);
+  RESET(PhysicalVelocity, HBTxyz);
+  RESET(ParticleMass, HBTReal);
 #undef RESET 
   ClearParticleHash();//even if you don't do this, the destructor will still clean up the memory.
 //   cout<<NumberOfParticles<<" particles cleared from snapshot "<<SnapshotIndex<<endl;
@@ -378,14 +350,31 @@ void ParticleSnapshot_t::Clear()
 
 int main(int argc, char **argv)
 {
-  HBTConfig.ParseConfigFile(argv[1]);
+    mpi::environment env;
+  mpi::communicator world;
+#ifdef _OPENMP
+ omp_set_nested(0);
+#endif
+   
+  int snapshot_start, snapshot_end;
+  if(0==world.rank())
+  {
+	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
+	mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
+	MarkHBTVersion();
+  }
+  broadcast(world, HBTConfig, 0);
+  
   ParticleSnapshot_t snapshot;
-  snapshot.Load(HBTConfig.MaxSnapshotIndex, true, true, false, true, true);
+  snapshot.Load(HBTConfig.MaxSnapshotIndex, true);
+
+  cout<<"Finished Loading on thread "<<world.rank()<<endl;
   cout<<snapshot.GetNumberOfParticles()<<endl;
   cout<<snapshot.GetParticleId(10)<<endl;
   cout<<snapshot.GetComovingPosition(10)<<endl;
   cout<<snapshot.GetParticleMass(10)<<','<<snapshot.GetParticleMass(100)<<endl;
-  cout<<snapshot.GetParticleIndex(snapshot.GetParticleId(10))<<endl;
+  cout<<snapshot.GetParticleIndex(snapshot.GetParticleId(10))<<endl<<endl;
+  
   return 0;
 }
 #endif

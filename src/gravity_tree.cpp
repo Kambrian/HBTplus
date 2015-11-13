@@ -238,7 +238,7 @@ Cells->sons[i] = -1;
 	return numnodes; 
 }
 
-double OctTree_t::EvaluatePotential(const HBTReal targetPos[3], const HBTReal targetMass)
+double OctTree_t::EvaluatePotential(const HBTxyz &targetPos, const HBTReal targetMass)
 /*return specific physical potential, GM/Rphysical. 
  * targetPos[] is comoving.
  * if targetMass!=0, then the self-potential from targetMass is excluded. 

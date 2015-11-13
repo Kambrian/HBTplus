@@ -54,7 +54,7 @@ public:
   void Reserve(const size_t max_num_part);
   HBTInt Build(const Snapshot_t &snapshot, HBTInt num_part=0);
   void Clear();
-  double EvaluatePotential(const HBTReal targetPos[3], const HBTReal targetMass=0.);
+  double EvaluatePotential(const HBTxyz &targetPos, const HBTReal targetMass=0.);
   double BindingEnergy(const HBTxyz &targetPos, const HBTxyz &targetVel, const HBTxyz &refPos, const HBTxyz &refVel, const HBTReal targetMass=0.);
   ~OctTree_t()
   {

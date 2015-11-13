@@ -13,13 +13,13 @@ int count_pattern_files(char *filename_pattern)
    globfree(&globbuf);
    return globbuf.gl_pathc;  
 }
-
+/*
 std::ostream& operator << (std::ostream& o, HBTxyz &a)
 {
    o << "(" << a[0] << ", " << a[1] << ", " << a[2] << ")";
    return o;
 };
-	
+*/
 HBTInt compile_offset(HBTInt Len[], HBTInt Offset[], HBTInt n)
 {//fill offset info, and return total length.
   HBTInt i,offset;
@@ -118,7 +118,7 @@ HBTReal vec_prod(HBTReal *a,HBTReal *b,HBTInt dim)
 		c+=a[i]*b[i];
 	return c;
 }
-void vec_cross(HBTReal a[3],HBTReal b[3],HBTReal c[3])
+void vec_cross(HBTxyz a,HBTxyz b,HBTxyz c)
 {
 	c[0]=a[1]*b[2]-a[2]*b[1];
 	c[1]=a[0]*b[2]-a[2]*b[0];

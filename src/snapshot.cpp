@@ -40,7 +40,7 @@ void ParticleSnapshot_t::FillParticleHash()
 	ParticleHash=&FlatHash;
   cout<<"Filling Hash Table...\n";
   auto begin = chrono::high_resolution_clock::now();
-  ParticleHash->Fill(ParticleId, NumberOfParticles);
+  ParticleHash->Fill(ParticleId.data(), NumberOfParticles);
   auto end = chrono::high_resolution_clock::now();
   auto elapsed = chrono::duration_cast<chrono::duration<double>>(end - begin);
   cout << "HashTableFilled in: " << elapsed.count() <<"seconds"<< endl;

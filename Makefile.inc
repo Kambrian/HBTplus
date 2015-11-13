@@ -1,10 +1,12 @@
 HDFINC=
 HDFLIB=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5
+BOOSTLIB=-lboost_serialization -lboost_mpi
 
-CXX=g++
+<!-- CXX=g++ -->
+CXX=mpic++
 CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 
 <!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
-LDLIBS+=$(HDFLIB) $(OMPFLAG)
+LDLIBS+=$(HDFLIB) $(OMPFLAG) $(BOOSTLIB)
 <!-- LINK.o=$(LINK.cpp) -->
 
 ifeq ($(CXX), g++)

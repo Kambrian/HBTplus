@@ -8,10 +8,7 @@
 #include <stdexcept>
 #include <vector>
 #include "datatypes.h"
-
-#include <boost/mpi.hpp>
-#include <boost/serialization/string.hpp>
-namespace mpi = boost::mpi;
+#include "boost_mpi.h"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
