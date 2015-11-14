@@ -4,7 +4,7 @@ BOOSTLIB=-lboost_serialization -lboost_mpi
 
 <!-- CXX=g++ -->
 CXX=mpic++
-CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 
+CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 -Wno-deprecated
 <!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
 LDLIBS+=$(HDFLIB) $(OMPFLAG) $(BOOSTLIB)
 <!-- LINK.o=$(LINK.cpp) -->

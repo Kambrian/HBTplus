@@ -62,6 +62,11 @@ void Parameter_t::ParseConfigFile(const char * param_file)
 {
   ifstream ifs;
   ifs.open(param_file);
+  if(!ifs.is_open())//or ifs.fail()
+  {
+	cerr<<"Error: failed to open configuration: "<<param_file<<endl;
+	exit(1);
+  }
   vector <string> lines;
   string line;
   

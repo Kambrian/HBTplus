@@ -8,6 +8,7 @@ using namespace std;
 #include <cstdlib>
 #include <cstdio>
 #include <chrono>
+#include <numeric> 
 
 #include "../snapshot.h"
 #include "../mymath.h"
@@ -44,21 +45,21 @@ void ParticleSnapshot_t::GetFileName(int ifile, string &filename)
   sprintf(buf,"%s/snapdir_%03d/%s_%03d.%d",HBTConfig.SnapshotPath.c_str(),SnapshotId,HBTConfig.SnapshotFileBase.c_str(),SnapshotId,ifile);
   if(ifile==0)
 	if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d",HBTConfig.SnapshotPath.c_str(),HBTConfig.SnapshotFileBase.c_str(),SnapshotId); //try the other convention
-  if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d.%d",HBTConfig.SnapshotPath.c_str(),HBTConfig.SnapshotFileBase.c_str(),SnapshotId,ifile); //try the other convention
-  if(!file_exist(buf)) sprintf(buf,"%s/%d/%s.%d",HBTConfig.SnapshotPath.c_str(),SnapshotId,HBTConfig.SnapshotFileBase.c_str(),ifile);//for BJL's RAMSES output
-  if(!file_exist(buf))
-  {
-	cerr<<"Failed to find a snapshot file at "<<buf<<endl;
-	exit(1);
-  }
-  filename=buf;
+	if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d.%d",HBTConfig.SnapshotPath.c_str(),HBTConfig.SnapshotFileBase.c_str(),SnapshotId,ifile); //try the other convention
+	if(!file_exist(buf)) sprintf(buf,"%s/%d/%s.%d",HBTConfig.SnapshotPath.c_str(),SnapshotId,HBTConfig.SnapshotFileBase.c_str(),ifile);//for BJL's RAMSES output
+	if(!file_exist(buf))
+	{
+	  cerr<<"Failed to find a snapshot file at "<<buf<<endl;
+	  exit(1);
+	}
+	filename=buf;
 }
 bool ParticleSnapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
 {
   //read the header part, assign header extensions, and check byteorder
   int headersize(SNAPSHOT_HEADER_SIZE),headersize_byteswap(SNAPSHOT_HEADER_SIZE);
   swap_Nbyte(&headersize_byteswap,1,sizeof(headersize_byteswap));
-
+  
   bool NeedByteSwap;
   int dummy,dummy2;
   size_t tmp_size=fread(&dummy,sizeof(dummy),1,fp);
@@ -110,7 +111,7 @@ HBTInt ParticleSnapshot_t::ReadNumberOfDMParticles(int ifile)
 void ParticleSnapshot_t::LoadHeader(int ifile)
 {
   //read the header part, assign header extensions, and check byteorder
-
+  
   FILE *fp; 
   string filename;
   GetFileName( ifile, filename);
@@ -166,15 +167,31 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
 void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
 { 
   SetSnapshotIndex(snapshot_index);
-  LoadHeader();
-  
+   
   mpi::communicator world;
   
-  int nfiles_read=round(1.*Header.num_files/world.size());
-  int nfiles_skip=nfiles_read*world.rank();
-  int nfiles_end=min(nfiles_read+nfiles_skip, Header.num_files);
- 
-  accumulate(NumberOfDMParticleInFiles.begin()+nfiles_read, NumberOfDMParticleInFiles.begin()+nfiles_end, NumberOfParticles);
+  {//load header
+  if(world.rank()==0)
+	LoadHeader(0);
+  broadcast(world, Header, 0);
+  broadcast(world, Hz, 0);
+  broadcast(world, ScaleFactor, 0);
+  broadcast(world, NeedByteSwap, 0);
+  broadcast(world, IntTypeSize, 0);
+  broadcast(world, RealTypeSize, 0);
+  broadcast(world, NumberOfDMParticleInFiles, 0);
+  broadcast(world, OffsetOfDMParticleInFiles, 0);
+  }
+  
+  int nfiles_remainder=Header.num_files%world.size();
+  int nfiles_read=Header.num_files/world.size();;
+  int nfiles_skip=nfiles_read*world.rank()+min(nfiles_remainder, world.rank());//distribute remainder to leading nodes
+  if(world.rank()<nfiles_remainder) 
+	nfiles_read++;
+  int nfiles_end=nfiles_read+nfiles_skip;
+  assert(nfiles_end<=Header.num_files);
+  
+  NumberOfParticles=accumulate(NumberOfDMParticleInFiles.begin()+nfiles_skip, NumberOfDMParticleInFiles.begin()+nfiles_end, 0);
   if(LoadFlag.Id)  
 	ParticleId.reserve(NumberOfParticles);
   if(LoadFlag.Pos)
@@ -184,15 +201,15 @@ void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
   if(LoadFlag.Mass&&0.==Header.mass[1]) 
 	ParticleMass.reserve(NumberOfParticles);
   
-  for(int iFile=nfiles_skip; (iFile<nfiles_read+nfiles_skip)&&(iFile<Header.num_files); iFile++)
+  for(int iFile=nfiles_skip; iFile<nfiles_end; iFile++)
   {
 	ReadFile(iFile);
   }
- 
- if(LoadFlag.Id&&fill_particle_hash)
-   FillParticleHash();
-   
- if(HBTConfig.PeriodicBoundaryOn)//regularize coord
+  
+  if(LoadFlag.Id&&fill_particle_hash)
+	FillParticleHash();
+  
+  if(HBTConfig.PeriodicBoundaryOn)//regularize coord
   {
 	for(HBTInt i=0;i<NumberOfParticles;i++)
 	  for(int j=0;j<3;j++)
@@ -202,43 +219,39 @@ void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
   for(HBTInt i=0;i<NumberOfParticles;i++)
 	for(int j=0;j<3;j++)
 	  PhysicalVelocity[i][j]*=velocity_scale;
-
-/*
-  if((NumberOfParticles>1)&&(ParticleMass[0]!=ParticleMass[1]))
-  {
-	cout<<"Error: DM particles have different mass? not supported!\n";
-	exit(1);
-  }
-  else
-	Header.mass[1]=ParticleMass[0];*/
-
-  cout<<"Finished Reading on thread "<<world.rank()<<endl;
-  cout<<GetNumberOfParticles()<<" Particles loaded\n";
-  cout<<GetParticleId(10)<<endl;
-  cout<<GetComovingPosition(10)<<endl;
-  cout<<GetParticleMass(10)<<','<<GetParticleMass(100)<<endl;
-  cout<<GetParticleIndex(GetParticleId(10))<<endl;
+	
+	/*
+	 i f((*NumberOfParticles>1)&&(ParticleMass[0]!=ParticleMass[1]))
+	 {
+	 cout<<"Error: DM particles have different mass? not supported!\n";
+	 exit(1);
+}
+else
+  Header.mass[1]=ParticleMass[0];*/
+	
+	cout<<"Finished Reading on thread "<<world.rank()<<" from file "<<nfiles_skip<<" to "<<nfiles_end-1;
+	cout<<" ( "<<Header.num_files<<" total files )."<<endl;
 }
 template <class T, class U>
 void ParticleSnapshot_t::ReadScalarBlock(FILE *fp, size_t n_read, size_t n_skip, vector <U> &x)
 {
-	FortranBlock <T> block(fp, n_read, n_skip, NeedByteSwap);
-	x.assign(block.begin(), block.end());
+  FortranBlock <T> block(fp, n_read, n_skip, NeedByteSwap);
+  x.assign(block.begin(), block.end());
 }
 template <class T>
 void ParticleSnapshot_t::ReadXyzBlock(FILE *fp, size_t n_read, size_t n_skip, vector <HBTxyz> &x)
 {
-	FortranBlock <T> block(fp, n_read*3, n_skip*3, NeedByteSwap);
-	//lacking assign operator for HBTxyz, has to manually assign
-	HBTInt n_old=x.size();
-	x.resize(n_old+n_read);
-	auto p=block.data_reshape();
-	for(auto it=x.begin()+n_read;it<x.end();it++)
-	{
-	  for(int j=0;j<3;j++)
-		(*it)[j]=(*p)[j];
-	  p++;
-	}
+  FortranBlock <T> block(fp, n_read*3, n_skip*3, NeedByteSwap);
+  //lacking assign operator for HBTxyz, has to manually assign
+  HBTInt n_old=x.size();
+  x.resize(n_old+n_read);
+  auto p=block.data_reshape();
+  for(auto it=x.begin()+n_old;it<x.end();it++)
+  {
+	for(int j=0;j<3;j++)
+	  (*it)[j]=(*p)[j];
+	p++;
+  }
 }
 
 void ParticleSnapshot_t::ReadFile(int iFile)
@@ -334,14 +347,14 @@ void ParticleSnapshot_t::SetLoadFlags(bool load_id, bool load_pos, bool load_vel
 void ParticleSnapshot_t::Clear()
 /*reset to empty*/
 {
-#define RESET(x, T) {vector <T>().swap(x);}
+  #define RESET(x, T) {vector <T>().swap(x);}
   RESET(ParticleId, HBTInt);
   RESET(ComovingPosition, HBTxyz);
   RESET(PhysicalVelocity, HBTxyz);
   RESET(ParticleMass, HBTReal);
-#undef RESET 
+  #undef RESET 
   ClearParticleHash();//even if you don't do this, the destructor will still clean up the memory.
-//   cout<<NumberOfParticles<<" particles cleared from snapshot "<<SnapshotIndex<<endl;
+  //   cout<<NumberOfParticles<<" particles cleared from snapshot "<<SnapshotIndex<<endl;
   NumberOfParticles=0;
 }
 
@@ -350,12 +363,12 @@ void ParticleSnapshot_t::Clear()
 
 int main(int argc, char **argv)
 {
-    mpi::environment env;
+  mpi::environment env;
   mpi::communicator world;
-#ifdef _OPENMP
- omp_set_nested(0);
-#endif
-   
+  #ifdef _OPENMP
+  omp_set_nested(0);
+  #endif
+  
   int snapshot_start, snapshot_end;
   if(0==world.rank())
   {
@@ -364,14 +377,15 @@ int main(int argc, char **argv)
 	MarkHBTVersion();
   }
   broadcast(world, HBTConfig, 0);
+  broadcast(world, snapshot_start, 0);
+  broadcast(world, snapshot_end, 0);
   
   ParticleSnapshot_t snapshot;
-  snapshot.Load(HBTConfig.MaxSnapshotIndex, true);
-
-  cout<<"Finished Loading on thread "<<world.rank()<<endl;
-  cout<<snapshot.GetNumberOfParticles()<<endl;
-  cout<<snapshot.GetParticleId(10)<<endl;
-  cout<<snapshot.GetComovingPosition(10)<<endl;
+  snapshot.Load(snapshot_start, true);
+  
+  cout<<snapshot.GetNumberOfParticles()<<" particles loaded on thread "<<world.rank()<<endl;
+  cout<<"Particle 10: "<<snapshot.GetParticleId(10);
+  cout<<snapshot.GetComovingPosition(10);
   cout<<snapshot.GetParticleMass(10)<<','<<snapshot.GetParticleMass(100)<<endl;
   cout<<snapshot.GetParticleIndex(snapshot.GetParticleId(10))<<endl<<endl;
   

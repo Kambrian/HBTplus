@@ -12,12 +12,17 @@
 #include "config_parser.h"
 #include "snapshot_number.h"
 #include "hash.h"
+#include "boost_mpi.h"
 
 #define NUMBER_OF_PARTICLE_TYPES 6
 #define SNAPSHOT_HEADER_SIZE 256
 
-struct SnapshotHeader_t
+class SnapshotHeader_t
 {
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version);//for boost 
+public:
   int      npart[NUMBER_OF_PARTICLE_TYPES];
   double   mass[NUMBER_OF_PARTICLE_TYPES];
   double   ScaleFactor;
@@ -32,12 +37,34 @@ struct SnapshotHeader_t
   double   OmegaLambda;
   double   HubbleParam; 
   char     fill[SNAPSHOT_HEADER_SIZE- NUMBER_OF_PARTICLE_TYPES*4- NUMBER_OF_PARTICLE_TYPES*8- 2*8- 2*4- NUMBER_OF_PARTICLE_TYPES*4- 2*4 - 4*8];  /* fills to 256 Bytes */
+  
 };
+template<class Archive>
+void SnapshotHeader_t::serialize(Archive& ar, const unsigned int version)
+{
+    ar &  npart;
+    ar &  mass;
+    ar &  ScaleFactor;
+    ar &  redshift;
+    ar &  flag_sfr;
+    ar &  flag_feedback;
+    ar &  npartTotal;
+    ar &  flag_cooling;
+    ar &  num_files;
+    ar &  BoxSize;
+    ar &  Omega0;
+    ar &  OmegaLambda;
+    ar &  HubbleParam;
+    ar &  fill; 
+}
 class Snapshot_t: public SnapshotNumber_t
 {
 public:
+  /*epoch header*/
   double Hz; //current Hubble param in internal units
   double ScaleFactor;
+  /*end epoch header*/
+  
   Snapshot_t(): Hz(0.), ScaleFactor(0.), SnapshotNumber_t()
   {
   }
@@ -49,8 +76,8 @@ public:
   {
 	ScaleFactor=scalefactor;
 	Hz=PhysicalConst::H0 * sqrt(Omega0 / (ScaleFactor * ScaleFactor * ScaleFactor) 
-  + (1 - Omega0 - OmegaLambda) / (ScaleFactor * ScaleFactor)
-  + OmegaLambda);//Hubble param for the current catalogue;
+	+ (1 - Omega0 - OmegaLambda) / (ScaleFactor * ScaleFactor)
+	+ OmegaLambda);//Hubble param for the current catalogue;
   }
   void SetEpoch(const Snapshot_t & snap)
   {
@@ -115,12 +142,13 @@ class ParticleSnapshot_t: public Snapshot_t
   typedef HBTInt ParticleIndex_t ;
   typedef HBTInt ParticleId_t;
   typedef vector <ParticleIndex_t> IndexList_t;
-    
+  /*header extension*/
   bool NeedByteSwap;
   int IntTypeSize;
   int RealTypeSize;
   vector <ParticleIndex_t> NumberOfDMParticleInFiles;
   vector <ParticleIndex_t> OffsetOfDMParticleInFiles;
+  
   struct LoadFlag_t
   {
 	bool Id;
@@ -140,7 +168,7 @@ class ParticleSnapshot_t: public Snapshot_t
   FlatIndexTable_t<ParticleId_t, ParticleIndex_t> FlatHash;
   MappedIndexTable_t<ParticleId_t, ParticleIndex_t> MappedHash;
   IndexTable_t<ParticleId_t, ParticleIndex_t> *ParticleHash;
-//   unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
+  //   unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
   
   void ReadFile(int ifile);
   template <class T, class U>
@@ -195,7 +223,7 @@ inline HBTInt ParticleSnapshot_t::GetMemberId(const HBTInt index) const
 }
 inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetParticleIndex(const ParticleId_t particle_id) const
 {
-//   return ParticleHash.at(particle_id);//this is safe
+  //   return ParticleHash.at(particle_id);//this is safe
   return ParticleHash->GetIndex(particle_id);
 }
 inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetNumberOfParticles() const
