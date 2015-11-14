@@ -57,6 +57,8 @@ void SnapshotHeader_t::serialize(Archive& ar, const unsigned int version)
     ar &  HubbleParam;
     ar &  fill; 
 }
+BOOST_IS_MPI_DATATYPE(SnapshotHeader_t)
+
 class Snapshot_t: public SnapshotNumber_t
 {
 public:
