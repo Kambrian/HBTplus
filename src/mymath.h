@@ -10,6 +10,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <chrono>
+#include <vector>
 
 #include "datatypes.h"
 #include "config_parser.h"
@@ -64,6 +65,15 @@ ostream& operator<<(ostream& o, const array<T, N>& arr)
 {
   o<<"(";
   copy(arr.cbegin(), arr.cend(), ostream_iterator<T>(o, ", "));
+  o<<")";
+  return o;
+}
+
+template <class T>
+ostream& operator<<(ostream& o, const vector<T>& vec)
+{
+  o<<"(";
+  copy(vec.cbegin(), vec.cend(), ostream_iterator<T>(o, ", "));
   o<<")";
   return o;
 }
@@ -180,5 +190,8 @@ public:
 	return (Txyz *)Data;
   }
 };
+
+extern int LargestRootFactor(int N, int dim);
+extern vector <int> ClosestFactors(int N, int dim);
 
 #endif

@@ -10,17 +10,26 @@ using namespace std;
 #include "src/halo.h"
 #include "src/subhalo.h"
 #include "src/mymath.h"
+#include "src/boost_mpi.h"
 
 int main(int argc, char **argv)
 {
+ 
+ mpi::environment env;
+ mpi::communicator world;
 #ifdef _OPENMP
  omp_set_nested(0);
 #endif
+   
   int snapshot_start, snapshot_end;
-  ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
-  mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
-  MarkHBTVersion();
-	
+  if(0==world.rank())
+  {
+	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
+	mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
+	MarkHBTVersion();
+  }
+  broadcast(world, HBTConfig, 0);
+  	
   SubhaloSnapshot_t subsnap;
   
   subsnap.Load(snapshot_start-1, true);
@@ -32,7 +41,7 @@ int main(int argc, char **argv)
   {
 	timer.Tick();
 	ParticleSnapshot_t partsnap;
-	partsnap.Load(isnap);
+	partsnap.Load(world, isnap);
 	subsnap.SetSnapshotIndex(isnap);
 	
 	HaloSnapshot_t halosnap;

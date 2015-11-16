@@ -11,7 +11,7 @@ void Subhalo_t::UpdateTrack(HBTInt snapshot_index)
 {
   if(TrackId==SpecialConst::NullTrackId) return;
   
-  if(0==Rank) SnapshotIndexOfLastIsolation=snapshot_index;
+  if(0==Rank||SpecialConst::NullHaloId==HostHaloId) SnapshotIndexOfLastIsolation=snapshot_index;
   if(Nbound>=LastMaxMass) 
   {
 	SnapshotIndexOfLastMaxMass=snapshot_index;
@@ -144,7 +144,7 @@ void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
   static vector<HBTInt> ParticleToHost;//to make it shared
 #pragma omp single
 {
-   ParticleToHost.assign(SnapshotPointer->GetNumberOfParticles(), SpecialConst::NullHaloId);
+   ParticleToHost.assign(SnapshotPointer->size(), SpecialConst::NullHaloId);
    ParallelizeHaloes=halo_snap.NumPartOfLargestHalo<0.1*halo_snap.TotNumberOfParticles;//no dominating objects
 }
 #pragma omp for
@@ -216,7 +216,7 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
   #pragma omp single
   {
   Npro=Subhalos.size();
-  //Subhalos.reserve(Snapshot->GetNumberOfParticles()*0.1);//reserve enough	branches.......
+  //Subhalos.reserve(Snapshot->size()*0.1);//reserve enough	branches.......
   Subhalos.resize(Npro+MemberTable.NBirth);
   }
   #pragma omp for

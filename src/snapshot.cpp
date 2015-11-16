@@ -31,6 +31,22 @@ void ParticleSnapshot_t::ClearParticleHash()
   ParticleHash.clear();
 }
 */
+class ParticleKeyList_t: public KeyList_t <HBTInt, HBTInt>
+{
+  typedef HBTInt Index_t;
+  typedef HBTInt Key_t;
+  const ParticleSnapshot_t &Snap;
+public:
+  ParticleKeyList_t(ParticleSnapshot_t &snap): Snap(snap) {};
+  Index_t size() const
+  {
+	return Snap.size();
+  }
+  Key_t GetKey(Index_t i) const
+  {
+	return Snap.GetId(i);
+  }
+};
 
 void ParticleSnapshot_t::FillParticleHash()
 {
@@ -38,22 +54,19 @@ void ParticleSnapshot_t::FillParticleHash()
 	ParticleHash=&MappedHash;
   else
 	ParticleHash=&FlatHash;
-  cout<<"Filling Hash Table...\n";
-  auto begin = chrono::high_resolution_clock::now();
-  ParticleHash->Fill(ParticleId.data(), NumberOfParticles);
-  auto end = chrono::high_resolution_clock::now();
-  auto elapsed = chrono::duration_cast<chrono::duration<double>>(end - begin);
-  cout << "HashTableFilled in: " << elapsed.count() <<"seconds"<< endl;
+
+  ParticleKeyList_t Ids(*this); 
+  ParticleHash->Fill(Ids);
 }
 void ParticleSnapshot_t::ClearParticleHash()
 {
   ParticleHash->Clear();
 }
 
-void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const
+void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const HBTInt Particles[], HBTInt NumPart) const
 /*mass weighted average position*/
 {
-	ParticleIndex_t i,j;
+	HBTInt i,j;
 	double sx[3],origin[3],msum;
 	
 	if(0==NumPart) return;
@@ -71,7 +84,7 @@ void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Part
 	
 	for(i=0;i<NumPart;i++)
 	{
-	  HBTReal m=GetParticleMass(Particles[i]);
+	  HBTReal m=GetMass(Particles[i]);
 	  msum+=m;
 	  for(j=0;j<3;j++)
 	  if(HBTConfig.PeriodicBoundaryOn)
@@ -87,10 +100,10 @@ void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Part
 		CoM[j]=sx[j];
 	}
 }
-void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const
+void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const HBTInt Particles[], HBTInt NumPart) const
 /*mass weighted average velocity*/
 {
-	ParticleIndex_t i,j;
+	HBTInt i,j;
 	double sv[3],msum;
 	
 	if(0==NumPart) return;
@@ -105,7 +118,7 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Part
 	
 	for(i=0;i<NumPart;i++)
 	{
-	  HBTReal m=GetParticleMass(Particles[i]);
+	  HBTReal m=GetMass(Particles[i]);
 	  msum+=m;
 	  for(j=0;j<3;j++)
 		sv[j]+=GetPhysicalVelocity(Particles[i])[j]*m;

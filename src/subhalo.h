@@ -148,19 +148,19 @@ public:
   {
 	return Subhalos.size();
   }
-  HBTInt GetMemberId(const HBTInt index)
+  HBTInt GetId(HBTInt index) const
   {
 	return Subhalos[index].TrackId;
   }
-  const HBTxyz & GetComovingPosition(const HBTInt index) const
+  const HBTxyz & GetComovingPosition(HBTInt index) const
   {
 	return Subhalos[index].ComovingPosition;
   }
-  const HBTxyz & GetPhysicalVelocity(const HBTInt index) const
+  const HBTxyz & GetPhysicalVelocity(HBTInt index) const
   {
 	return Subhalos[index].PhysicalVelocity;
   }
-  HBTReal GetMass(const HBTInt index) const
+  HBTReal GetMass(HBTInt index) const
   {
 	return Subhalos[index].Particles.size();
   }

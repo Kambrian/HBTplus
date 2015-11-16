@@ -17,6 +17,15 @@
 #define NUMBER_OF_PARTICLE_TYPES 6
 #define SNAPSHOT_HEADER_SIZE 256
 
+struct Particle_t
+{
+  HBTInt Id;
+//   HBTInt ParticleIndex;
+  HBTxyz ComovingPosition;
+  HBTxyz PhysicalVelocity;
+  HBTReal Mass;
+};
+
 class SnapshotHeader_t
 {
   friend class boost::serialization::access;
@@ -87,13 +96,13 @@ public:
 	Hz=snap.Hz;
   }
   virtual HBTInt size() const=0;
-  virtual HBTInt GetMemberId(const HBTInt index) const
+  virtual HBTInt GetId(HBTInt index) const
   {
 	return index;
   }
-  virtual const HBTxyz & GetComovingPosition(const HBTInt index) const=0;
-  virtual const HBTxyz & GetPhysicalVelocity(const HBTInt index) const=0;
-  virtual HBTReal GetMass(const HBTInt index) const=0;
+  virtual const HBTxyz & GetComovingPosition(HBTInt index) const=0;
+  virtual const HBTxyz & GetPhysicalVelocity(HBTInt index) const=0;
+  virtual HBTReal GetMass(HBTInt index) const=0;
 };
 class SnapshotView_t: public Snapshot_t
 {
@@ -113,7 +122,7 @@ public:
   {
 	SetEpoch(fullsnapshot);
   };
-  HBTInt ReSize(HBTInt n)
+  void ReSize(HBTInt n)
   {
 	N=n;
   }
@@ -121,19 +130,19 @@ public:
   {
 	return N;
   }
-  HBTInt GetMemberId(const HBTInt i) const
+  HBTInt GetId(HBTInt i) const
   {
-	return Ids[i];
+	return Snapshot.GetId(Ids[i]);
   }
-  HBTReal GetMass(const HBTInt i) const
+  HBTReal GetMass(HBTInt i) const
   {
 	return Snapshot.GetMass(Ids[i]);
   }
-  const HBTxyz & GetPhysicalVelocity(const HBTInt i) const
+  const HBTxyz & GetPhysicalVelocity(HBTInt i) const
   {
 	return Snapshot.GetPhysicalVelocity(Ids[i]);
   }
-  const HBTxyz & GetComovingPosition(const HBTInt i) const
+  const HBTxyz & GetComovingPosition(HBTInt i) const
   {
 	return Snapshot.GetComovingPosition(Ids[i]);
   }
@@ -141,53 +150,29 @@ public:
 
 class ParticleSnapshot_t: public Snapshot_t
 {
-  typedef HBTInt ParticleIndex_t ;
-  typedef HBTInt ParticleId_t;
-  typedef vector <ParticleIndex_t> IndexList_t;
+  typedef vector <HBTInt> IndexList_t;
   /*header extension*/
   bool NeedByteSwap;
   int IntTypeSize;
   int RealTypeSize;
-  vector <ParticleIndex_t> NumberOfDMParticleInFiles;
-  vector <ParticleIndex_t> OffsetOfDMParticleInFiles;
-  
-  struct LoadFlag_t
-  {
-	bool Id;
-	bool Pos;
-	bool Vel;
-	bool Mass;
-	LoadFlag_t(): Id(true), Pos(true), Vel(true), Mass(true)
-	{
-	}
-  } LoadFlag;
-  
-  ParticleIndex_t NumberOfParticles;
-  vector <ParticleId_t> ParticleId; //better hide this from the user!!!!! 
-  vector <HBTxyz> ComovingPosition;
-  vector <HBTxyz> PhysicalVelocity;
-  vector <HBTReal> ParticleMass;
-  FlatIndexTable_t<ParticleId_t, ParticleIndex_t> FlatHash;
-  MappedIndexTable_t<ParticleId_t, ParticleIndex_t> MappedHash;
-  IndexTable_t<ParticleId_t, ParticleIndex_t> *ParticleHash;
-  //   unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
+  vector <HBTInt> NumberOfDMParticleInFiles;
+  vector <HBTInt> OffsetOfDMParticleInFiles;
+    
+  HBTInt NumberOfParticles;
+  vector <Particle_t> Particle;
+  FlatIndexTable_t<HBTInt, HBTInt> FlatHash;
+  MappedIndexTable_t<HBTInt, HBTInt> MappedHash;
+  IndexTable_t<HBTInt, HBTInt> *ParticleHash;
   
   void ReadFile(int ifile);
-  template <class T, class U>
-  void ReadScalarBlock(FILE *fp, size_t n_read, size_t n_skip, vector <U> &x);
-  template <class T>
-  void ReadXyzBlock(FILE *fp, size_t n_read, size_t n_skip, vector <HBTxyz> &x);
-  void LoadPosition();
-  void LoadVelocity();
-  void LoadMass();
   void LoadHeader(int ifile=0);
   bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
-  ParticleIndex_t ReadNumberOfDMParticles(int ifile);
+  HBTInt ReadNumberOfDMParticles(int ifile);
   size_t SkipBlock(FILE *fp);
-  void * LoadBlock(int block_id, size_t element_size, bool is_massblock=false);
+  void ExchangeParticles(mpi::communicator &world);
 public:
   SnapshotHeader_t Header;
-  ParticleSnapshot_t(): Snapshot_t(), Header(), LoadFlag(), ParticleId(), ComovingPosition(), PhysicalVelocity(), ParticleMass(), NumberOfParticles(0)
+  ParticleSnapshot_t(): Snapshot_t(), Header(), Particle(), NumberOfParticles(0), ParticleHash()
   {
 	NeedByteSwap=false;
 	IntTypeSize=0;
@@ -197,62 +182,48 @@ public:
   {
 	Clear();
   }
-  HBTInt size() const;
-  HBTInt GetMemberId(const HBTInt index) const;
   void FillParticleHash();
   void ClearParticleHash();
-  ParticleIndex_t GetParticleIndex(const ParticleId_t particle_id) const;
   void GetFileName(int ifile, string &filename);
+  
+  HBTInt size() const;
+  HBTInt GetId(HBTInt index) const;
+  HBTInt GetIndex(HBTInt particle_id) const;
+  const HBTxyz & GetComovingPosition(HBTInt index) const;
+  const HBTxyz & GetPhysicalVelocity(HBTInt index) const;
+  HBTReal GetMass(HBTInt index) const;
+  
+  void Load(mpi::communicator &world, int snapshot_index, bool fill_particle_hash=true);
   void Clear();
-  ParticleIndex_t GetNumberOfParticles() const;
-  ParticleId_t GetParticleId(const ParticleIndex_t index) const;
-  const HBTxyz &GetComovingPosition(const ParticleIndex_t index) const;
-  const HBTxyz &GetPhysicalVelocity(const ParticleIndex_t index) const;
-  HBTReal GetParticleMass(const ParticleIndex_t index) const;
-  HBTReal GetMass(const ParticleIndex_t index) const;
-  void Load(int snapshot_index, bool fill_particle_hash=true);
-  void SetLoadFlags(bool load_id, bool load_pos, bool load_vel, bool load_mass);
-  void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
-  void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
+  
+  void AveragePosition(HBTxyz & CoM, const HBTInt Particles[], HBTInt NumPart) const; 
+  void AverageVelocity(HBTxyz & CoV, const HBTInt Particles[], HBTInt NumPart) const;
 };
 inline HBTInt ParticleSnapshot_t::size() const
 {
-  return NumberOfParticles;
+  return Particle.size();
 }
-inline HBTInt ParticleSnapshot_t::GetMemberId(const HBTInt index) const
+inline HBTInt ParticleSnapshot_t::GetId(HBTInt index) const
 {
-  return ParticleId[index];
+  return Particle[index].Id;
 }
-inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetParticleIndex(const ParticleId_t particle_id) const
+inline HBTInt ParticleSnapshot_t::GetIndex(HBTInt particle_id) const
 {
-  //   return ParticleHash.at(particle_id);//this is safe
   return ParticleHash->GetIndex(particle_id);
 }
-inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetNumberOfParticles() const
+inline const HBTxyz& ParticleSnapshot_t::GetComovingPosition(HBTInt index) const
 {
-  return NumberOfParticles;
+  return Particle[index].ComovingPosition;
 }
-inline ParticleSnapshot_t::ParticleId_t ParticleSnapshot_t::GetParticleId(const ParticleIndex_t index) const
+inline const HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(HBTInt index) const
 {
-  return ParticleId[index];
+  return Particle[index].PhysicalVelocity;
 }
-inline const HBTxyz& ParticleSnapshot_t::GetComovingPosition(const ParticleIndex_t index) const
-{
-  return ComovingPosition[index];
-}
-inline const HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(const ParticleIndex_t index) const
-{
-  return PhysicalVelocity[index];
-}
-inline HBTReal ParticleSnapshot_t::GetParticleMass(const ParticleIndex_t index) const
+inline HBTReal ParticleSnapshot_t::GetMass(HBTInt index) const
 {
   if(Header.mass[1])
 	return Header.mass[1];
   else
-	return ParticleMass[index];
-}
-inline HBTReal ParticleSnapshot_t::GetMass(const HBTInt index) const
-{
-  return GetParticleMass(index);
+	return Particle[index].Mass;
 }
 #endif

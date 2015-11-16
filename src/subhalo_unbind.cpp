@@ -78,21 +78,25 @@ public:
   {
 	return N;
   }
-  HBTInt GetMemberId(const HBTInt i) const
+  HBTInt GetId(HBTInt i) const
+  {
+	return Snapshot.GetId(GetParticle(i));
+  }
+  HBTInt GetParticle(HBTInt i) const
   {
 	return Elist[i].pid;
   }
-  HBTReal GetMass(const HBTInt i) const
+  HBTReal GetMass(HBTInt i) const
   {
-	return Snapshot.GetMass(GetMemberId(i));
+	return Snapshot.GetMass(GetParticle(i));
   }
-  const HBTxyz & GetPhysicalVelocity(const HBTInt i) const
+  const HBTxyz & GetPhysicalVelocity(HBTInt i) const
   {
-	return Snapshot.GetPhysicalVelocity(GetMemberId(i));
+	return Snapshot.GetPhysicalVelocity(GetParticle(i));
   }
-  const HBTxyz & GetComovingPosition(const HBTInt i) const
+  const HBTxyz & GetComovingPosition(HBTInt i) const
   {
-	return Snapshot.GetComovingPosition(GetMemberId(i));
+	return Snapshot.GetComovingPosition(GetParticle(i));
   }
 };
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
@@ -117,7 +121,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  for(HBTInt i=0;i<Nlast;i++)
 	  {
 		HBTInt pid=Elist[i].pid;
-		Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingPosition, PhysicalVelocity, snapshot.GetParticleMass(pid));
+		Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingPosition, PhysicalVelocity, snapshot.GetMass(pid));
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
 		if(Nbound<HBTConfig.MinNumPartOfSub)

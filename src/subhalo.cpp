@@ -30,7 +30,7 @@ void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 	  Subhalo_t::ParticleList_t & Particles=Subhalos[subid].Particles;
 	  HBTInt nP=Particles.size();
 	  for(HBTInt pid=0;pid<nP;pid++)
-		Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);
+		Particles[pid]=snapshot.GetIndex(Particles[pid]);
 	}
 }
 void SubhaloSnapshot_t::ParticleIndexToId()
@@ -41,7 +41,7 @@ void SubhaloSnapshot_t::ParticleIndexToId()
 	Subhalo_t::ParticleList_t & Particles=Subhalos[subid].Particles;
 	HBTInt nP=Particles.size();
 	for(HBTInt pid=0;pid<nP;pid++)
-	  Particles[pid]=SnapshotPointer->GetParticleId(Particles[pid]);
+	  Particles[pid]=SnapshotPointer->GetId(Particles[pid]);
   }
 #pragma omp single
   SnapshotPointer=nullptr;

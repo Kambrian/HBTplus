@@ -172,3 +172,24 @@ HBTReal psort(HBTInt k, HBTInt numel, HBTReal arr[])
 	}
 	#undef SWAP
 }
+
+int LargestRootFactor(int N, int dim)
+/*find an integer factor of N that is the largest subject to x<=N**(1./dim)*/
+{
+  int x=floor(pow(N, 1./dim));
+  for(;x>0;x--)
+	if(N%x==0) return x;
+}
+vector <int> ClosestFactors(int N, int dim)
+/* return a factorization of `N` into `dim` factors that are as close as possible to each other*/
+{
+  vector <int> factors;
+  for(;dim>0;dim--)
+  {
+	int x=LargestRootFactor(N, dim);
+	factors.push_back(x);
+	N/=x;
+  }
+//   sort(factors.begin(), factors.end());
+  return factors;
+}

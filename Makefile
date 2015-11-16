@@ -7,7 +7,7 @@ EXE=HBT HBTdouble HBTboost
 default: HBTboost
 include Makefile.inc
 
-# $(EXE): $(OBJS_COMM)
+$(EXE): $(OBJS_COMM)
 
 HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
 HBTboost:src/config_parser.o #src/io/snapshot_io.o src/mymath.o src/snapshot.o

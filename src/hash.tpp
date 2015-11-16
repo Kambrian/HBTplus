@@ -17,8 +17,9 @@ inline bool CompPair(const IndexedKey_t<Key_t, Index_t> & a, const IndexedKey_t<
   return (a.Key<b.Key);
 };
 template <class Key_t, class Index_t>
-void MappedIndexTable_t<Key_t, Index_t>::Fill(const Key_t* keys, const Index_t n)
+void MappedIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t <Key_t, Index_t> &Keys)
 {
+  Index_t n=Keys.size();
 	Map.resize(n);
 	#pragma omp parallel for
 	for(Index_t i=0;i<n;i++)
@@ -26,7 +27,7 @@ void MappedIndexTable_t<Key_t, Index_t>::Fill(const Key_t* keys, const Index_t n
 		#ifdef PID_ORDERED
 		Map[i].Key=i+1;
 		#else
-		Map[i].Key=keys[i];
+		Map[i].Key=Keys.GetKey(i);
 		#endif
 		Map[i].Index=i;
 	}
@@ -55,17 +56,18 @@ Index_t MappedIndexTable_t<Key_t, Index_t>::GetIndex(const Key_t key) const
 }
 
 template <class Key_t, class Index_t>
-void FlatIndexTable_t<Key_t, Index_t>::Fill(const Key_t* keys, const Index_t n)
+void FlatIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t<Key_t, Index_t> &Keys)
 {
+  Index_t n=Keys.size();
 	#ifndef PID_ORDERED
 	Key_t keymax,keymin;
-	keymax=keys[0];keymin=keys[0];
+	keymax=Keys.GetKey(0);keymin=Keys.GetKey(0);
 	for(Index_t i=1;i<n;i++)
 	{
-		if(keys[i]>keymax)
-			keymax=keys[i];
-		else if(keys[i]<keymin)	
-			keymin=keys[i];
+		if(Keys.GetKey(i)>keymax)
+			keymax=Keys.GetKey(i);
+		else if(Keys.GetKey(i)<keymin)	
+			keymin=Keys.GetKey(i);
 	}
 	KeySpan=keymax-keymin+1;
 	Index=new Index_t[KeySpan];
@@ -81,7 +83,7 @@ void FlatIndexTable_t<Key_t, Index_t>::Fill(const Key_t* keys, const Index_t n)
 	/*====make ID index for query====*/
 	#pragma omp for
 	for(Index_t i=0;i<n;i++)
-	  Index[keys[i]]=i;		
+	  Index[Keys.GetKey(i)]=i;		
 	}
 	#else
 	KeySpan=n;

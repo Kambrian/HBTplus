@@ -6,6 +6,14 @@
 #include <exception>
 #include <string>
 
+template <class Key_t, class Index_t>
+class KeyList_t
+{
+public:
+  virtual Key_t GetKey(const Index_t i) const=0;
+  virtual Index_t size() const=0;
+};
+
 class InvalidPIdException_t : public exception
 {
 private:
@@ -40,7 +48,7 @@ public:
 //   typedef HBTInt Index_t;
   static const Index_t NullIndex=-1;
   
-  virtual void Fill(const Key_t *keys, const Index_t n)=0;
+  virtual void Fill(const KeyList_t<Key_t, Index_t> &Keys)=0;
   virtual void Clear()=0;
   virtual Index_t GetIndex(const Key_t key) const =0;
 };
@@ -57,7 +65,7 @@ public:
   FlatIndexTable_t(): Index(), Offset(0), KeySpan(0)
   {
   }
-  void Fill(const Key_t *keys, const Index_t n);
+  void Fill(const KeyList_t <Key_t, Index_t> &Keys);
   void Clear();
   Index_t GetIndex(const Key_t key) const;
   ~FlatIndexTable_t()
@@ -78,7 +86,7 @@ public:
   MappedIndexTable_t(): Map()
   {
   }
-  void Fill(const Key_t *keys, const Index_t n);
+  void Fill(const KeyList_t <Key_t, Index_t> &Keys);
   void Clear();
   Index_t GetIndex(const Key_t key) const;
   ~MappedIndexTable_t()

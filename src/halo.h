@@ -40,15 +40,15 @@ public:
   { 
 	return Halos.size();
   }
-  const HBTxyz & GetComovingPosition(const HBTInt index) const
+  const HBTxyz & GetComovingPosition(HBTInt index) const
   {
 	return Halos[index].ComovingPosition;
   }
-  const HBTxyz & GetPhysicalVelocity(const HBTInt index) const
+  const HBTxyz & GetPhysicalVelocity(HBTInt index) const
   {
 	return Halos[index].PhysicalVelocity;
   }
-  HBTReal GetMass(const HBTInt index) const
+  HBTReal GetMass(HBTInt index) const
   {
 	return Halos[index].Particles.size();
   }
