@@ -11,7 +11,7 @@ void Subhalo_t::UpdateTrack(HBTInt snapshot_index)
 {
   if(TrackId==SpecialConst::NullTrackId) return;
   
-  if(0==Rank) SnapshotIndexOfLastIsolation=snapshot_index;
+  if(0==Rank||SpecialConst::NullHaloId==HostHaloId) SnapshotIndexOfLastIsolation=snapshot_index;
   if(Nbound>=LastMaxMass) 
   {
 	SnapshotIndexOfLastMaxMass=snapshot_index;
