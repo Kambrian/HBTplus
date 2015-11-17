@@ -183,7 +183,7 @@ void ParticleSnapshot_t::Load(mpi::communicator & world, int snapshot_index, boo
   assert(nfiles_end<=Header.num_files);
   
   NumberOfParticles=accumulate(NumberOfDMParticleInFiles.begin()+nfiles_skip, NumberOfDMParticleInFiles.begin()+nfiles_end, 0);
-  Particle.reserve(NumberOfParticles);
+  Particles.reserve(NumberOfParticles);
   
   for(int iFile=nfiles_skip; iFile<nfiles_end; iFile++)
   {
@@ -195,17 +195,17 @@ void ParticleSnapshot_t::Load(mpi::communicator & world, int snapshot_index, boo
   
   if(!HBTConfig.SnapshotHasIdBlock)
   for(HBTInt i=0;i<size();i++)
-	Particle[i].Id=OffsetOfDMParticleInFiles[nfiles_skip]+i;
+	Particles[i].Id=OffsetOfDMParticleInFiles[nfiles_skip]+i;
   if(HBTConfig.PeriodicBoundaryOn)//regularize coord
   {
 	for(HBTInt i=0;i<size();i++)
 	  for(int j=0;j<3;j++)
-		Particle[i].ComovingPosition[j]=position_modulus(Particle[i].ComovingPosition[j], HBTConfig.BoxSize);
+		Particles[i].ComovingPosition[j]=position_modulus(Particles[i].ComovingPosition[j], HBTConfig.BoxSize);
   }
   HBTReal velocity_scale=sqrt(Header.ScaleFactor);
   for(HBTInt i=0;i<size();i++)
 	for(int j=0;j<3;j++)
-	  Particle[i].PhysicalVelocity[j]*=velocity_scale;
+	  Particles[i].PhysicalVelocity[j]*=velocity_scale;
 	
 	/*
 	 i f((size()>1)&&(ParticleMass[0]!=ParticleMass[1]))
@@ -231,14 +231,14 @@ void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
 
 #define ReadScalarBlock(dtype, Attr) {\
 FortranBlock <dtype> block(fp, n_read, n_skip, NeedByteSwap);\
-  auto p=Particle.data()+Particle.size()-n_read;\
+  auto p=Particles.data()+Particles.size()-n_read;\
   for(HBTInt i=0;i<n_read;i++)\
 	p[i].Attr=block[i];	\
 }
 
 #define ReadXYZBlock(dtype, Attr) {\
   FortranBlock <dtype> block(fp, n_read*3, n_skip*3, NeedByteSwap);\
-  auto p=Particle.data()+Particle.size()-n_read;\
+  auto p=Particles.data()+Particles.size()-n_read;\
   auto pblock=block.data_reshape();\
   for(HBTInt i=0;i<n_read;i++)\
 	for(int j=0;j<3;j++)\
@@ -255,7 +255,7 @@ void ParticleSnapshot_t::ReadFile(int iFile)
   ReadFileHeader(fp, header);
   size_t n_read=header.npart[1], n_skip=header.npart[0];
   
-  Particle.resize(Particle.size()+n_read);
+  Particles.resize(Particles.size()+n_read);
   
 	if(RealTypeSize==4)
 	{
@@ -302,7 +302,7 @@ void ParticleSnapshot_t::ReadFile(int iFile)
   }
   else
   {
-	for(auto it=Particle.end()-n_read; it<Particle.end();it++)
+	for(auto it=Particles.end()-n_read; it<Particles.end();it++)
 	  it->Mass=header.mass[1]; 
 
 	if(!HBTConfig.SnapshotNoMassBlock)
@@ -328,7 +328,7 @@ void ParticleSnapshot_t::Clear()
 /*reset to empty*/
 {
   #define RESET(x, T) {vector <T>().swap(x);}
-  RESET(Particle, Particle_t);
+  RESET(Particles, Particle_t);
   #undef RESET 
   ClearParticleHash();//even if you don't do this, the destructor will still clean up the memory.
   //   cout<<NumberOfParticles<<" particles cleared from snapshot "<<SnapshotIndex<<endl;

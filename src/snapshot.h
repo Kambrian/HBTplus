@@ -159,7 +159,7 @@ class ParticleSnapshot_t: public Snapshot_t
   vector <HBTInt> OffsetOfDMParticleInFiles;
     
   HBTInt NumberOfParticles;
-  vector <Particle_t> Particle;
+  vector <Particle_t> Particles;
   FlatIndexTable_t<HBTInt, HBTInt> FlatHash;
   MappedIndexTable_t<HBTInt, HBTInt> MappedHash;
   IndexTable_t<HBTInt, HBTInt> *ParticleHash;
@@ -172,7 +172,7 @@ class ParticleSnapshot_t: public Snapshot_t
   void ExchangeParticles(mpi::communicator &world);
 public:
   SnapshotHeader_t Header;
-  ParticleSnapshot_t(): Snapshot_t(), Header(), Particle(), NumberOfParticles(0), ParticleHash()
+  ParticleSnapshot_t(): Snapshot_t(), Header(), Particles(), NumberOfParticles(0), ParticleHash()
   {
 	NeedByteSwap=false;
 	IntTypeSize=0;
@@ -201,11 +201,11 @@ public:
 };
 inline HBTInt ParticleSnapshot_t::size() const
 {
-  return Particle.size();
+  return Particles.size();
 }
 inline HBTInt ParticleSnapshot_t::GetId(HBTInt index) const
 {
-  return Particle[index].Id;
+  return Particles[index].Id;
 }
 inline HBTInt ParticleSnapshot_t::GetIndex(HBTInt particle_id) const
 {
@@ -213,17 +213,17 @@ inline HBTInt ParticleSnapshot_t::GetIndex(HBTInt particle_id) const
 }
 inline const HBTxyz& ParticleSnapshot_t::GetComovingPosition(HBTInt index) const
 {
-  return Particle[index].ComovingPosition;
+  return Particles[index].ComovingPosition;
 }
 inline const HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(HBTInt index) const
 {
-  return Particle[index].PhysicalVelocity;
+  return Particles[index].PhysicalVelocity;
 }
 inline HBTReal ParticleSnapshot_t::GetMass(HBTInt index) const
 {
   if(Header.mass[1])
 	return Header.mass[1];
   else
-	return Particle[index].Mass;
+	return Particles[index].Mass;
 }
 #endif
