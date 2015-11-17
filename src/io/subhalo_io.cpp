@@ -170,7 +170,7 @@ void SubhaloSnapshot_t::Save()
   vl[Ngroups].len=MemberTable.SubGroups[-1].size();
   vl[Ngroups].p=MemberTable.SubGroups[-1].data();
   writeHDFmatrix(datagrp, vl.data(), "GroupedTrackIds", ndim, dim_grp, H5T_HBTIntArr);
-  H5LTset_attribute_string(datagrp.getId(),"GroupedTrackIds","Comment","Nhalo+1 groups. The last group contain tracks outside any host halo (i.e., field subhaloes).");
+  H5LTset_attribute_string(datagrp.getId(),"GroupedTrackIds","Comment","Nhalo+1 groups. The last group contains tracks outside any host halo (i.e., field subhaloes).");
   
   //now write the particle list for each subhalo
   vl.resize(Subhalos.size());

@@ -48,7 +48,7 @@ public:
   bool SnapshotIdUnsigned;
   vector <int> SnapshotIdList;
   
-  bool TrimNonHostParticles; //whether to trim particles outside the host halo when finding hosts
+  bool TrimNonHostParticles; //whether to trim particles outside the host halo when finding hosts; to be implemented..
   HBTReal MajorProgenitorMassRatio; 
   HBTReal BoundMassPrecision;
   HBTReal SourceSubRelaxFactor;
