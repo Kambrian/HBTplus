@@ -16,16 +16,7 @@ using namespace std;
 
 
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
-#define SkipPositionBlock SkipBlock
-#define SkipVelocityBlock SkipBlock	 
-#define SkipIdBlock SkipBlock
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
-
-#define BLOCK_ID_POS 0
-#define BLOCK_ID_VEL 1
-#define BLOCK_ID_PID 2
-#define BLOCK_ID_MASS 3
-static int BLOCK_DIMENSION[]={3,3,1,1};
 
 inline size_t ParticleSnapshot_t::SkipBlock(FILE *fp)
 {
@@ -130,17 +121,17 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
   HBTInt NumPartInFile=0;
   for(int i=0;i<NUMBER_OF_PARTICLE_TYPES;i++) 
 	NumPartInFile+=Header.npart[i];
-  int blocksize=SkipPositionBlock(fp);
+  int blocksize=SkipBlock(fp);
   RealTypeSize=blocksize/NumPartInFile/3;
   assert(sizeof(float)==RealTypeSize||sizeof(double)==RealTypeSize);
-  blocksize=SkipVelocityBlock(fp);
+  blocksize=SkipBlock(fp);
   assert(blocksize==RealTypeSize*NumPartInFile*3);
   if(sizeof(HBTReal)<RealTypeSize)
 	cerr<<"WARNING: loading size "<<RealTypeSize<<" float in snapshot with size "<<sizeof(HBTReal)<<" float in HBT. possible loss of accuracy.\n Please use ./HBTdouble unless you know what you are doing.";
   
   if(HBTConfig.SnapshotHasIdBlock)
   {
-	blocksize=SkipIdBlock(fp);
+	blocksize=SkipBlock(fp);
 	IntTypeSize=blocksize/NumPartInFile;
 	assert(sizeof(int)==IntTypeSize||sizeof(long)==IntTypeSize);
 	assert(sizeof(HBTInt)>=IntTypeSize);
@@ -314,6 +305,7 @@ void ParticleSnapshot_t::ReadFile(int iFile)
 	for(auto it=Particle.end()-n_read; it<Particle.end();it++)
 	  it->Mass=header.mass[1]; 
 
+	if(!HBTConfig.SnapshotNoMassBlock)
 	for(int i=0;i<NUMBER_OF_PARTICLE_TYPES;i++)
 	  if(MassDataPresent(i))
 	  {

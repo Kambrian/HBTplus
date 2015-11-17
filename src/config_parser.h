@@ -18,7 +18,7 @@ namespace PhysicalConst
 
 #define NumberOfCompulsaryConfigEntries 7
 class Parameter_t
-{
+{/*!remember to register members in serialize() function if you change them!*/
 private:
     friend class boost::serialization::access;
     template<class Archive>
@@ -43,6 +43,7 @@ public:
   HBTReal VelInKmS;
   bool PeriodicBoundaryOn;
   bool SnapshotHasIdBlock;
+  bool SnapshotNoMassBlock;//to disable checking for presence of mass block, even if some header.mass==0.
   bool ParticleIdRankStyle;//load particleId as id ranks
   bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
@@ -75,6 +76,7 @@ public:
 	VelInKmS=1.;
 	PeriodicBoundaryOn=true;
 	SnapshotHasIdBlock=true;
+	SnapshotNoMassBlock=false;
 	ParticleIdRankStyle=false;
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
@@ -131,6 +133,7 @@ void Parameter_t::serialize(Archive& ar, const unsigned int version)
   ar & VelInKmS;
   ar & PeriodicBoundaryOn;
   ar & SnapshotHasIdBlock;
+  ar & SnapshotNoMassBlock;
   ar & ParticleIdRankStyle;//load particleId as id ranks
   ar & ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   ar & SnapshotIdUnsigned;
