@@ -9,12 +9,18 @@ CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 -Wno-deprecated
 LDLIBS+=$(HDFLIB) $(OMPFLAG) $(BOOSTLIB)
 <!-- LINK.o=$(LINK.cpp) -->
 
-ifeq ($(CXX), g++)
+ifeq ($(CXX), mpic++)
+BASECXX=$(shell mpic++ -show|cut -c1-3)
+else
+BASECXX=$(CXX)
+endif
+  
+ifeq ($(BASECXX), g++)
 OMPFLAG=-fopenmp
 else
 OMPFLAG=-openmp
 endif
-
+  
 %.test.o: %.cpp
 	$(CXX) $^ -DTEST_$(basename $<) $(CXXFLAGS) -c -o $@
 %.test: %.test.o
