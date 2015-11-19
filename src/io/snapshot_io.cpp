@@ -189,10 +189,7 @@ void ParticleSnapshot_t::Load(mpi::communicator & world, int snapshot_index, boo
   {
 	ReadFile(iFile);
   }
-  
-  if(fill_particle_hash)
-	FillParticleHash();
-  
+    
   if(!HBTConfig.SnapshotHasIdBlock)
   for(HBTInt i=0;i<size();i++)
 	Particles[i].Id=OffsetOfDMParticleInFiles[nfiles_skip]+i;
@@ -220,6 +217,9 @@ else
 	cout<<" ( "<<Header.num_files<<" total files )."<<endl;
 	
 	ExchangeParticles(world);
+	
+	if(fill_particle_hash)
+	FillParticleHash();
 }
 inline int GetGrid(HBTReal x, HBTReal step, int dim)
 {
