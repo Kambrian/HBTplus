@@ -17,14 +17,26 @@
 #define NUMBER_OF_PARTICLE_TYPES 6
 #define SNAPSHOT_HEADER_SIZE 256
 
-struct Particle_t
+class Particle_t
 {
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version)
+  {
+	ar & Id;
+	ar & ComovingPosition;
+	ar & PhysicalVelocity;
+	ar & Mass;
+  }
+public:
   HBTInt Id;
 //   HBTInt ParticleIndex;
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
   HBTReal Mass;
 };
+BOOST_IS_MPI_DATATYPE(Particle_t)
+BOOST_CLASS_TRACKING(Particle_t,track_never)
 
 class SnapshotHeader_t
 {

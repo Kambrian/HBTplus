@@ -8,4 +8,4 @@ OUTPUTS=$(wildcard *.hdf5)
 
 include ../../Makefile.inc
 test_omptask:CXXFLAGS+=-O0
-
+test_boostmpi_mem: CXXFLAGS+=-DUSE_BOOST

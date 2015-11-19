@@ -221,12 +221,54 @@ else
 	
 	ExchangeParticles(world);
 }
-
+inline int GetGrid(HBTReal x, HBTReal step, int dim)
+{
+  int i=floor(x/step);
+  if(i<0) i=0;
+  if(i>=dim) i=dim-1;
+  return i;
+}
+inline int AssignCell(HBTxyz & Pos, const HBTReal step[3], const vector <int> &dims)
+{
+  #define GRIDtoRank(g0,g1,g2) (((g0)*dims[1]+(g1))*dims[2]+(g2))
+  #define GID(i) GetGrid(Pos[i], step[i], dims[i])
+  return GRIDtoRank(GID(0), GID(1), GID(2));
+}
 void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
 {
   auto dims=ClosestFactors(world.size(), 3);
-//   linklist(dims);
-//   all_to_all();
+  HBTReal step[3];
+  for(int i=0;i<3;i++)
+	step[i]=HBTConfig.BoxSize/dims[i];
+  
+  typedef vector <Particle_t> ParticleList_t;
+  
+  vector <ParticleList_t> SendCells(world.size(), ParticleList_t());
+  for(HBTInt i=0;i<Particles.size();i++)
+  {
+	int rank=AssignCell(Particles[i].ComovingPosition, step, dims);
+	SendCells[rank].push_back(Particles[i]);
+  }
+//   Particles.clear();
+  cout<<"Ready to send "<<Particles.size()<<" particles on "<<world.rank()<<endl;
+  
+  vector <ParticleList_t> ReceiveCells(world.size(), ParticleList_t());
+//   for(int i=0;i<world.size();i++)
+//   {
+// 	for(int j=0;j<world.size();j++)
+// 	  world.send(j, i, SendCells[j]);
+// 	for(int j=0;j<world.size();j++)
+// 	  world.recv(i, i, ReceiveCells[i]);
+// 	scatter(world, SendCells, ReceiveCells[i], i);
+//   }
+  all_to_all(world, SendCells, ReceiveCells);
+//   SendCells.clear();
+  
+  ParticleList_t p;
+  for(int i=0;i<world.size();i++)
+	p.insert(p.end(), ReceiveCells[i].begin(), ReceiveCells[i].end());
+  
+  cout<<p.size()<<" particles received on node "<<world.rank()<<endl;
 }
 
 #define ReadScalarBlock(dtype, Attr) {\
