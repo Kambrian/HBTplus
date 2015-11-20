@@ -137,9 +137,9 @@ void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_st
 
 void MarkHBTVersion()
 {
-  char * versionstr=getenv("HBT_VERSION");
-  if(versionstr) 
-	ofstream version_file(HBTConfig.SubhaloPath+"/VER"+versionstr, fstream::trunc);
-  else
-	cout<<"Warning: HBT_VERSION not set. Better write down which version you are using.\n";
+#ifndef HBT_VERSION
+	cout<<"Warning: HBT_VERSION unknown.\n";
+#define HBT_VERSION "unknown"
+#endif
+	ofstream version_file(HBTConfig.SubhaloPath+"/VER"HBT_VERSION, fstream::trunc);
 }
