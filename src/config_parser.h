@@ -9,6 +9,8 @@
 #include <vector>
 #include "datatypes.h"
 
+#define HBT_VERSION "1.3.0"
+
 namespace PhysicalConst
 {//initialized after reading parameter file.
   extern HBTReal G;

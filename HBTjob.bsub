@@ -23,7 +23,6 @@ ulimit -s unlimited
 
 #~ source /etc/profile.d/modules.csh
 
-export HBT_VERSION=1.3.0
 # export OMP_SCHEDULE=dynamic
 # export OMP_DYNAMIC=FALSE # this works for icc v11.1.072, 
 # but seems not always use the maximum available number of cpus allowed by NUM_THREADS
