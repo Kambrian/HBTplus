@@ -214,7 +214,7 @@ else
   Header.mass[1]=ParticleMass[0];*/
 	
 	cout<<"Finished Reading on thread "<<world.rank()<<" from file "<<nfiles_skip<<" to "<<nfiles_end-1;
-	cout<<" ( "<<Header.num_files<<" total files )."<<endl;
+	cout<<" ( "<<Header.num_files<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 	
 	ExchangeParticles(world);
 	
@@ -243,16 +243,14 @@ void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
   
   typedef vector <Particle_t> ParticleList_t;
   
-  vector <ParticleList_t> SendCells(world.size(), ParticleList_t());
+  vector <ParticleList_t> SendCells(world.size());
   for(HBTInt i=0;i<Particles.size();i++)
   {
 	int rank=AssignCell(Particles[i].ComovingPosition, step, dims);
 	SendCells[rank].push_back(Particles[i]);
   }
-//   Particles.clear();
-  cout<<"Ready to send "<<Particles.size()<<" particles on "<<world.rank()<<endl;
   
-  vector <ParticleList_t> ReceiveCells(world.size(), ParticleList_t());
+  vector <ParticleList_t> ReceiveCells(world.size());
 //   for(int i=0;i<world.size();i++)
 //   {
 // 	for(int j=0;j<world.size();j++)
@@ -263,12 +261,11 @@ void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
 //   }
   all_to_all(world, SendCells, ReceiveCells);
 //   SendCells.clear();
-  
-  ParticleList_t p;
+  Particles.clear();
   for(int i=0;i<world.size();i++)
-	p.insert(p.end(), ReceiveCells[i].begin(), ReceiveCells[i].end());
+	Particles.insert(Particles.end(), ReceiveCells[i].begin(), ReceiveCells[i].end());
   
-  cout<<p.size()<<" particles received on node "<<world.rank()<<endl;
+  cout<<Particles.size()<<" particles received on node "<<world.rank()<<endl;
 }
 
 #define ReadScalarBlock(dtype, Attr) {\
