@@ -18,25 +18,15 @@ public:
   HBTxyz PhysicalVelocity;
 };
 
-struct GroupFileSize_t
-{
-  HBTInt NumberOfGroups;
-  HBTInt NumberOfParticles;
-};
-
 class HaloSnapshot_t: public Snapshot_t
 {  
   typedef vector <Halo_t> HaloList_t;
-  void ReadFile(int iFile, GroupFileSize_t &filesize, int read_level, HBTInt start_particle=0, HBTInt end_particle=-1);
-  template <class PIDtype_t>
-  void ReadFileV2V3(int iFile, GroupFileSize_t &filesize, int read_level, HBTInt start_particle, HBTInt end_particle);
-  int CountFiles();
-  void GetFileNameFormat(string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 public:
   const ParticleSnapshot_t * ParticleSnapshot;
   HaloList_t Halos;
   HBTInt TotNumberOfParticles;
   HBTInt NumPartOfLargestHalo;
+  
   HaloSnapshot_t(): Snapshot_t(), Halos(), ParticleSnapshot(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
   }
