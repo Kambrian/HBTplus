@@ -46,7 +46,7 @@ class IndexTable_t
 public: 
 //   typedef HBTInt Key_t;
 //   typedef HBTInt Index_t;
-  static const Index_t NullIndex=-1;
+  static const Index_t NullIndex=SpecialConst::NullParticleId;
   
   virtual void Fill(const KeyList_t<Key_t, Index_t> &Keys)=0;
   virtual void Clear()=0;

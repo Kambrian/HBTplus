@@ -36,9 +36,11 @@ typedef float HBTReal;
 #ifdef HBT_INT8
 typedef long HBTInt;  
 #define HBTIFMT "%ld"
+#define MPI_HBT_INT MPI_LONG
 #else 
 typedef int HBTInt;
 #define HBTIFMT "%d"
+#define MPI_HBT_INT MPI_INT
 #endif
 
 #if (defined INPUT_REAL8 && defined HBT_REAL8)||(!defined INPUT_REAL8 && !defined HBT_REAL8)

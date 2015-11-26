@@ -11,9 +11,16 @@
 #include <sys/stat.h>
 #include <chrono>
 #include <vector>
+#include <algorithm>
 
 #include "datatypes.h"
 #include "config_parser.h"
+
+template <class T, class UnaryPredicate>
+inline void RemoveFromVector(vector <T> &v, UnaryPredicate p)
+{
+  v.erase(remove_if(v.begin(), v.end(), p), v.end());
+}
 
 class Timer_t
 {

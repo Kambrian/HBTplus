@@ -171,7 +171,6 @@ class ParticleSnapshot_t: public Snapshot_t
   vector <HBTInt> OffsetOfDMParticleInFiles;
     
   HBTInt NumberOfParticles;
-  vector <Particle_t> Particles;
   FlatIndexTable_t<HBTInt, HBTInt> FlatHash;
   MappedIndexTable_t<HBTInt, HBTInt> MappedHash;
   IndexTable_t<HBTInt, HBTInt> *ParticleHash;
@@ -184,6 +183,8 @@ class ParticleSnapshot_t: public Snapshot_t
   void ExchangeParticles(mpi::communicator &world);
 public:
   SnapshotHeader_t Header;
+  vector <Particle_t> Particles;
+  
   ParticleSnapshot_t(): Snapshot_t(), Header(), Particles(), NumberOfParticles(0), ParticleHash()
   {
 	NeedByteSwap=false;

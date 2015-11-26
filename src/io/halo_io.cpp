@@ -23,6 +23,63 @@ typedef vector <int> CountBuffer_t;
 #define READ_LEN_OFFSET 1
 #define READ_PARTICLES 2
 
+inline bool IsNullParticle(const Particle_t &p)
+{
+  return p.Id==SpecialConst::NullParticleId;
+}
+void Halo_t::Relocate(mpi::communicator &world, int root, ParticleSnapshot_t &snap)
+{//remember to rebuild hash after all have been updated!
+	broadcast(world, HaloId, root);
+	broadcast(world, Particles, root);
+	struct SizeRank_t
+	{
+	  HBTInt np;
+	  int rank;
+	} size, maxsize;
+	size.np=Particles.size();
+	size.rank=world.rank();
+	for(HBTInt i=0;i<Particles.size();i++)
+	{
+	  Particles[i]=snap.GetIndex(Particles[i]);
+	  if(Particles[i]==SpecialConst::NullParticleId)
+		size.np--;
+	}
+#ifdef HBT_INT8
+#define MPI_HBTPair MPI_LONG_INT
+#else
+#define MPI_HBTPair MPI_2INT
+#endif
+	MPI_Allreduce(&size, &maxsize, 1, MPI_HBTPair, MPI_MAXLOC, world);
+	
+	vector <Particle_t> SendBuffer, ReceiveBuffer;
+	if(world.rank()==maxsize.rank)
+	  ReceiveBuffer.resize(Particles.size()-maxsize.np);
+	else
+	{
+	  SendBuffer.reserve(size.np);
+	  for(HBTInt i=0;i<Particles.size();i++)
+	  {
+		if(Particles[i]!=SpecialConst::NullParticleId)
+		{
+		  SendBuffer.push_back(snap.Particles[Particles[i]]);
+		  snap.Particles[Particles[i]].Id=SpecialConst::NullParticleId;//flag to be removed
+		}
+	  }
+	  RemoveFromVector(snap.Particles, IsNullParticle);
+	}
+	gather(world, SendBuffer.data(), SendBuffer.size(), ReceiveBuffer, maxsize.rank);
+	if(world.rank()==maxsize.rank)
+	{
+	  HBTInt newind=snap.Particles.size();
+	  snap.Particles.insert(snap.Particles.end(), ReceiveBuffer.begin(), ReceiveBuffer.end());
+	  for(HBTInt i=0;i<Particles.size();i++)
+	  {
+		if(Particles[i]==SpecialConst::NullParticleId)
+		  Particles[i]=newind++;
+	  }
+	}
+}
+  
 struct GroupV4Header_t
 {
   int Ngroups;
@@ -208,13 +265,13 @@ void GroupFileReader_t::ReadV2V3(int read_level, HBTInt start_particle, HBTInt e
 	  cout<<"File count mismatch for file "<<filename<<": expect "<<FileCounts<<", got "<<NFiles<<endl;
 	  exit(1);
 	}
-	if(read_level==0) 
+	if(read_level==READ_META_DATA) 
 	{
 	  fclose(fd);
 	  return;
 	}
 	
-	if(read_level==1)
+	if(read_level==READ_LEN_OFFSET)
 	{
 	  Len.resize(Ngroups);
 	  Offset.resize(Ngroups);
@@ -345,8 +402,7 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   SetSnapshotIndex(snapshot_index);
   GroupFileReader_t Reader(snapshot_index);
   int FileCounts=Reader.FileCounts;
-  ParticleBuffer_t ParticleBuffer;
-  CountBuffer_t HaloLenBuffer, HaloOffsetBuffer;
+  CountBuffer_t HaloLenBuffer;
   
   /*distribute tasks*/
   vector <FileAssignment_t> alltasks;
@@ -354,7 +410,7 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   if(world.rank()==0)
   {
 	HBTInt Ngroups=0,Nparticles=0;
-	CountBuffer_t FileOffset;
+	CountBuffer_t HaloOffsetBuffer, FileOffset;
 	FileOffset.resize(FileCounts);
 	for(int iFile=0;iFile<FileCounts;iFile++)
 	{
@@ -366,7 +422,11 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
 	HaloLenBuffer.reserve(Ngroups);
 	HaloOffsetBuffer.reserve(Ngroups);
 	for(int iFile=0;iFile<FileCounts;iFile++)
+	{
 	  Reader.Read(iFile, READ_LEN_OFFSET);
+	  HaloLenBuffer.insert(HaloLenBuffer.end(), Reader.Len.begin(), Reader.Len.end());
+	  HaloOffsetBuffer.insert(HaloOffsetBuffer.end(), Reader.Offset.begin(), Reader.Offset.end());
+	}
 	HaloOffsetBuffer.push_back(Nparticles);//end offset
 	alltasks.resize(world.size());
 	int nworkers=world.size(), npart_begin=0; 
@@ -387,6 +447,7 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   }
   
   /* read particles*/
+  ParticleBuffer_t ParticleBuffer;
   ParticleBuffer.reserve(thistask.npart);
   for(int iFile=thistask.ifile_begin;iFile<thistask.ifile_end;iFile++)
   {
@@ -394,6 +455,7 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
 	if(iFile==thistask.ifile_begin) start_particle=thistask.firstfile_begin_part;
 	if(iFile==thistask.ifile_end-1) end_particle=thistask.lastfile_end_part;
 	Reader.Read(iFile, READ_PARTICLES, start_particle, end_particle);
+	ParticleBuffer.insert(ParticleBuffer.end(), Reader.Particles.begin(), Reader.Particles.end());
   }
   
   /* populate haloes*/
@@ -415,17 +477,32 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   assert(TotNumberOfParticles==thistask.npart);
   
   /*clear up buffers*/
-  vector <HBTInt>().swap(ParticleBuffer);
-  vector <int>().swap(HaloLenBuffer);
-  vector <int>().swap(HaloOffsetBuffer);
+  ParticleBuffer_t().swap(ParticleBuffer);
+  CountBuffer_t().swap(HaloLenBuffer);
   
   /*distribute groups into domains*/
+  ExchangeGroups(world);
   
   cout<<"Finished reading "<<Halos.size()<<" groups ("<<TotNumberOfParticles<<" particles) from file "<<thistask.ifile_begin<<" to "<<thistask.ifile_end-1<<" (total "<<FileCounts<<" files) on thread "<<world.rank()<<endl;  
   if(Halos.size())
 	cout<<"Halos loaded: "<<Halos.front().HaloId<<"-"<<Halos.back().HaloId<<endl; 
 }
-
+void HaloSnapshot_t::ExchangeGroups(mpi::communicator &world)
+{
+ /* for(int rank=0;rank<world.size();rank++)//one by one through the nodes
+  {
+	broadcast(world, Halos, rank);
+	if(rank==world.rank())
+	{
+	  
+	}
+	else
+	{
+	  
+	}
+  }
+  */
+}
 void HaloSnapshot_t::Clear()
 /* call this to reset the HaloSnapshot to empty.
  This is usually not necessary because the destructor will release the memory automatically*/
