@@ -174,21 +174,14 @@ void ParticleSnapshot_t::Load(mpi::communicator & world, int snapshot_index, boo
   broadcast(world, OffsetOfDMParticleInFiles, 0);
   }
   
-  int nfiles_remainder=Header.num_files%world.size();
-  int nfiles_read=Header.num_files/world.size();;
-  int nfiles_skip=nfiles_read*world.rank()+min(nfiles_remainder, world.rank());//distribute remainder to leading nodes
-  if(world.rank()<nfiles_remainder) 
-	nfiles_read++;
-  int nfiles_end=nfiles_read+nfiles_skip;
-  assert(nfiles_end<=Header.num_files);
+  int nfiles_skip, nfiles_end;
+  AssignTasks(world.rank(), world.size(), Header.num_files, nfiles_skip, nfiles_end);
   
   NumberOfParticles=accumulate(NumberOfDMParticleInFiles.begin()+nfiles_skip, NumberOfDMParticleInFiles.begin()+nfiles_end, 0);
   Particles.reserve(NumberOfParticles);
   
   for(int iFile=nfiles_skip; iFile<nfiles_end; iFile++)
-  {
 	ReadFile(iFile);
-  }
     
   if(!HBTConfig.SnapshotHasIdBlock)
   for(HBTInt i=0;i<size();i++)
@@ -251,14 +244,6 @@ void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
   }
   
   vector <ParticleList_t> ReceiveCells(world.size());
-//   for(int i=0;i<world.size();i++)
-//   {
-// 	for(int j=0;j<world.size();j++)
-// 	  world.send(j, i, SendCells[j]);
-// 	for(int j=0;j<world.size();j++)
-// 	  world.recv(i, i, ReceiveCells[i]);
-// 	scatter(world, SendCells, ReceiveCells[i], i);
-//   }
   all_to_all(world, SendCells, ReceiveCells);
 //   SendCells.clear();
   Particles.clear();
@@ -387,11 +372,7 @@ int main(int argc, char **argv)
   
   int snapshot_start, snapshot_end;
   if(0==world.rank())
-  {
 	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
-	mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
-	MarkHBTVersion();
-  }
   broadcast(world, HBTConfig, 0);
   broadcast(world, snapshot_start, 0);
   broadcast(world, snapshot_end, 0);

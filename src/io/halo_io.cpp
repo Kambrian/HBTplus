@@ -74,7 +74,14 @@ static bool GetGroupFileByteOrder(const char *filename, const int FileCounts, co
   cerr<<"endianness check failed for: "<<filename<<", file format not expected:"<<Nfiles<<';'<<n<<';'<<ns<<endl;
   exit(1);
 }
-
+int HaloSnapshot_t::CountFiles()
+{
+  string format;
+  bool IsSubFile, NeedByteSwap;
+  int FileCounts;
+  GetFileNameFormat(format, FileCounts, IsSubFile, NeedByteSwap);
+  return FileCounts;
+}
 void HaloSnapshot_t::GetFileNameFormat(string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap)
 {
   IsSubFile=false;
@@ -131,26 +138,154 @@ void HaloSnapshot_t::GetFileNameFormat(string &format, int &FileCounts, bool &Is
   cerr<<"Error: no group files found under "<<HBTConfig.HaloPath<<" at snapshot "<<SnapshotId<<endl;
   exit(1);
 }
+//for locally loaded file contents
+vector <HBTInt> HaloParticleBuffer;
+vector <int> HaloLenBuffer,HaloOffsetBuffer;
+#define READ_META_DATA 0
+#define READ_LEN_OFFSET 1
+#define READ_PARTICLES 2
+struct FileAssignment_t
+{
+  int nfile_begin, nfile_end;
+  HBTInt npart_begin, npart_end;
+  HBTInt fileoffset_begin, fileoffset_end;
+  HBTInt haloid_begin, nhalo;
+private:
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version)
+  {
+	ar & nfile_begin;
+	ar & nfile_end;
+	ar & npart_begin;
+	ar & npart_end;
+	ar & fileoffset_begin;
+	ar & fileoffset_end;
+	ar & haloid_begin;
+	ar & nhalo;
+  }
+};
+BOOST_IS_MPI_DATATYPE(FileAssignment_t)
 
-void HaloSnapshot_t::Load(int snapshot_index)
+void AssignHaloTasks(int nworkers, int npart_tot, const vector <HBTInt> &FileOffsets, int & npart_begin, FileAssignment_t &task)
+{
+  int npart_this=(npart_tot-npart_begin)/nworkers;
+  int npart_end=npart_begin+npart_this;
+  task.haloid_begin=lower_bound(HaloOffsetBuffer.begin(), HaloOffsetBuffer.end()-1, npart_begin)-HaloOffsetBuffer.begin();
+  HBTInt endhalo=lower_bound(HaloOffsetBuffer.begin(), HaloOffsetBuffer.end()-1, npart_end)-HaloOffsetBuffer.begin();
+  task.nhalo=endhalo-task.haloid_begin;
+  task.npart_begin=npart_begin;//to subtract fileoffset!!
+  task.npart_end=HaloOffsetBuffer.at(endhalo);
+  
+  task.nfile_begin=upper_bound(FileOffsets.begin(), FileOffsets.end(), task.npart_begin)-1-FileOffsets.begin();
+  task.nfile_end=lower_bound(FileOffsets.begin(), FileOffsets.end(), task.npart_end)-FileOffsets.begin();
+  
+  task.fileoffset_begin=FileOffsets[task.nfile_begin];
+  task.fileoffset_end=FileOffsets[task.nfile_end-1];
+  
+  npart_begin=task.npart_end;
+}
+void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
 {
   SetSnapshotIndex(snapshot_index);
+  int FileCounts=CountFiles();
+
+  /*distribute tasks*/
+  vector <FileAssignment_t> alltasks;
+  FileAssignment_t thistask;
+  HBTInt Ngroups=0,Nparticles=0;
+  GroupFileSize_t filesize;
+  if(world.rank()==0)
+  {
+	vector <HBTInt> FileOffsets;
+	FileOffsets.resize(FileCounts);
+	for(int iFile=0;iFile<FileCounts;iFile++)
+	{
+	  FileOffsets[iFile]=Nparticles;
+	  ReadFile(iFile, filesize, READ_META_DATA);
+	  Ngroups+=filesize.NumberOfGroups;
+	  Nparticles+=filesize.NumberOfParticles;
+	}
+	HaloLenBuffer.reserve(Ngroups);
+	HaloOffsetBuffer.reserve(Ngroups);
+	for(int iFile=0;iFile<FileCounts;iFile++)
+	  ReadFile(iFile, filesize, READ_LEN_OFFSET);
+	HaloOffsetBuffer.push_back(Nparticles);//end offset
+	
+	alltasks.resize(world.size());
+	{
+	  int nworkers=world.size(), npart_begin=0; 
+	  for(int rank=0;rank<world.size();rank++)
+		AssignHaloTasks(nworkers--, Nparticles, FileOffsets, npart_begin, alltasks[rank]);
+	}
+  }
+  scatter(world, alltasks, thistask, 0);
+  if(world.rank()==0)
+  {
+	for(int rank=1;rank<world.size();rank++)
+	  world.send(rank, 0, HaloLenBuffer.data()+alltasks[rank].haloid_begin, alltasks[rank].nhalo);
+	HaloLenBuffer.resize(thistask.nhalo);
+  }
+  else
+  {
+	HaloLenBuffer.resize(thistask.nhalo);
+	world.recv(0,0,HaloLenBuffer.data(), HaloLenBuffer.size());
+  }
+  
+  /* read particles*/
+  HaloParticleBuffer.reserve(thistask.npart_end-thistask.npart_begin);
+  for(int iFile=thistask.nfile_begin;iFile<thistask.nfile_end;iFile++)
+  {
+	HBTInt start_particle=0, end_particle=-1;
+	if(iFile==thistask.nfile_begin) start_particle=thistask.npart_begin-thistask.fileoffset_begin;
+	if(iFile==thistask.nfile_end-1) end_particle=thistask.npart_end-thistask.fileoffset_end;
+	ReadFile(iFile, filesize, READ_PARTICLES, start_particle, end_particle);
+  }
+  
+  /* populate haloes*/
+  Halos.resize(thistask.nhalo);
+  auto p=HaloParticleBuffer.begin();
+  for(HBTInt i=0;i<Halos.size();i++)
+  {
+	Halos[i].Particles.assign(p, p+HaloLenBuffer[i]);
+	p+=HaloLenBuffer[i];
+  }
+  assert(p==HaloLenBuffer.end());
+  
+  for(auto &&np: HaloLenBuffer)
+  {
+	TotNumberOfParticles+=np;//local
+	if(NumPartOfLargestHalo<np) NumPartOfLargestHalo=np;//local
+  }
+  assert(TotNumberOfParticles==(thistask.npart_end-thistask.npart_begin));
+  
+  /*clear up buffers*/
+  vector <HBTInt>().swap(HaloParticleBuffer);
+  vector <int>().swap(HaloLenBuffer);
+  vector <int>().swap(HaloOffsetBuffer);
+  
+  /*distribute groups into domains*/
+  
+  cout<<"Finished reading "<<Halos.size()<<" groups ("<<TotNumberOfParticles<<" particles) from file "<<thistask.nfile_begin<<" to "<<thistask.nfile_end-1<<" (total "<<FileCounts<<" files) on thread "<<world.rank()<<endl;  
+}
+
+void HaloSnapshot_t::ReadFile(int iFile, GroupFileSize_t &filesize, int read_level, HBTInt start_particle, HBTInt end_particle)
+{
   switch(HBTConfig.GroupFileVariant)
   {
 	case GROUP_FORMAT_GADGET2_INT:
 	case GROUP_FORMAT_GADGET3_INT:
-	  LoadGroupV2V3<int>();
+	  ReadFileV2V3<int>(iFile, filesize, read_level, start_particle, end_particle);
 	  break;
 	case GROUP_FORMAT_GADGET2_LONG:
 	case GROUP_FORMAT_GADGET3_LONG:
-	  LoadGroupV2V3<long>();
+	  ReadFileV2V3<long>(iFile, filesize, read_level, start_particle, end_particle);
 	  break;
 	default:
 	  cerr<<"GroupFileVariant="<<HBTConfig.GroupFileVariant<<" not implemented yet.\n";
 	  exit(1);
   }
 }
-
 void HaloSnapshot_t::Clear()
 /* call this to reset the HaloSnapshot to empty.
  This is usually not necessary because the destructor will release the memory automatically*/
@@ -162,13 +297,12 @@ void HaloSnapshot_t::Clear()
 #define IS_GROUP_V3 (GROUP_FORMAT_GADGET3_INT==HBTConfig.GroupFileVariant||GROUP_FORMAT_GADGET3_LONG==HBTConfig.GroupFileVariant)
 
 template <class PIDtype_t>
-void HaloSnapshot_t::LoadGroupV2V3()
+void HaloSnapshot_t::ReadFileV2V3(int iFile, GroupFileSize_t &filesize, int read_level, HBTInt start_particle, HBTInt end_particle)
+/*read_level: 0: meta data only ; 1: further read group len and offset; 2: further read particle lists*/
 {
   FILE *fd;
   char filename[1024];
-  vector <int> Len, Offset;
   int Ngroups, TotNgroups, Nids, NFiles;
-  HBTInt NumberOfParticles,NumberOfHaloes;
   long long TotNids;
   bool NeedByteSwap;
   bool IsGroupV3=IS_GROUP_V3;
@@ -178,10 +312,6 @@ void HaloSnapshot_t::LoadGroupV2V3()
   int FileCounts;
   GetFileNameFormat(filename_format, FileCounts, IsSubFile, NeedByteSwap);
   
-  long long Nload=0;
-NumberOfParticles=0;  
-  for(int iFile=0;iFile<FileCounts;iFile++)
-  {
 	if(FileCounts>1)
 	  sprintf(filename, filename_format.c_str(), "tab", iFile);
 	else
@@ -200,8 +330,9 @@ NumberOfParticles=0;
 	  myfread(&Nids, sizeof(Nids), 1, fd);
 	  myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
 	}
+	filesize.NumberOfGroups=Ngroups;
+	filesize.NumberOfParticles=Nids;
 	myfread(&NFiles, sizeof(NFiles), 1, fd);
-	NumberOfParticles+=Nids;
 	if(IsSubFile)
 	{
 	  int Nsub,TotNsub;
@@ -213,108 +344,67 @@ NumberOfParticles=0;
 	  cout<<"File count mismatch for file "<<filename<<": expect "<<FileCounts<<", got "<<NFiles<<endl;
 	  exit(1);
 	}
-	
-	if(0==iFile)
+	if(read_level==0) 
 	{
-	  NumberOfHaloes=TotNgroups; 	  
-	  Len.resize(TotNgroups);
-	  Offset.resize(TotNgroups);
+	  fclose(fd);
+	  return;
 	}
 	
-	myfread(Len.data()+Nload, sizeof(int), Ngroups, fd);
-	myfread(Offset.data()+Nload, sizeof(int), Ngroups, fd);
-	if(feof(fd))
+	if(read_level==1)
 	{
-	  fprintf(stderr,"error:End-of-File in %s\n",filename);
-	  fflush(stderr);exit(1);  
+	  HaloLenBuffer.resize(HaloLenBuffer.size()+Ngroups);
+	  HaloOffsetBuffer.resize(HaloOffsetBuffer.size()+Ngroups);
+	  myfread(HaloLenBuffer.data()+HaloLenBuffer.size()-Ngroups, sizeof(int), Ngroups, fd);
+	  myfread(HaloOffsetBuffer.data()+HaloOffsetBuffer.size()-Ngroups, sizeof(int), Ngroups, fd);
+  // 	fseek(fd,sizeof(int)*Ngroups, SEEK_CUR);//skip offset
+	  if(feof(fd))
+	  {
+		fprintf(stderr,"error:End-of-File in %s\n",filename);
+		fflush(stderr);exit(1);  
+	  }
+	  fclose(fd);
+	  return;
 	}
-	Nload+=Ngroups;
-	fclose(fd);
-  }
-  if(Nload!=NumberOfHaloes)
-  {
-	cerr<<"error:Num groups loaded not match: "<<Nload<<','<<NumberOfHaloes<<"\n";
-	exit(1);
-  }
-  cout<<"GroupSnap="<<SnapshotIndex<<" ("<<SnapshotId<<") TotNids="<<NumberOfParticles<<" TotNgroups="<<TotNgroups<<" NFiles="<<NFiles<<endl;
-  
-  vector <PIDtype_t> PIDs(NumberOfParticles);
-  
-  Nload=0;  
-  for(int iFile=0;iFile<FileCounts;iFile++)
-  {
-	if(FileCounts>1)
+ 
+  if(FileCounts>1)
 	  sprintf(filename, filename_format.c_str(), "ids", iFile);
 	else
 	  sprintf(filename, filename_format.c_str(), "ids");
 	
 	myfopen(fd,filename,"r");
-	myfread(&Ngroups, sizeof(Ngroups), 1, fd);
+	int fileoffset;
 	if(IsGroupV3)
-	{
-	  myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
-	  myfread(&Nids, sizeof(Nids), 1, fd);
-	  myfread(&TotNids,sizeof(TotNids),1,fd);
-	}
+	  fseek(fd, sizeof(Ngroups)+sizeof(TotNgroups)+sizeof(Nids)+sizeof(TotNids)+sizeof(NFiles)+sizeof(fileoffset), SEEK_CUR);
 	else
-	{
-	  myfread(&Nids, sizeof(Nids), 1, fd);
-	  myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
-	}
-	myfread(&NFiles, sizeof(NFiles), 1, fd);
-	//file offset:
-	if(IsGroupV3)
-	{
-	  int file_offset;
-	  myfread(&file_offset,sizeof(int),1,fd);
-	}
+	  fseek(fd, sizeof(Ngroups)+sizeof(Nids)+sizeof(TotNgroups)+sizeof(NFiles), SEEK_CUR);
 	
-	myfread(&PIDs[Nload], sizeof(PIDtype_t), Nids, fd);
+	assert(end_particle<=Nids);
+	if(end_particle<0) end_particle=Nids;
+	HBTInt Nread=end_particle-start_particle;
+	vector <PIDtype_t> PIDs(Nread);
+	fseek(fd, sizeof(PIDtype_t)*start_particle, SEEK_CUR);
+	myfread(PIDs.data(), sizeof(PIDtype_t), Nread, fd);
+	fseek(fd, sizeof(PIDtype_t)*(Nids-end_particle), SEEK_CUR);
 	if(long int extra_bytes=BytesToEOF(fd))
 	{
 	  cerr<<"Error: unexpected format of "<<filename<<endl;
 	  cerr<<extra_bytes<<" extra bytes beyond particleId block! Check if particleId has a different type?\n";
 	  exit(1);
 	}
-	
 	if(feof(fd))
 	{
 	  fprintf(stderr,"error:End-of-File in %s\n",filename);
 	  fflush(stderr);exit(1);  
 	}
-	Nload+=Nids;
 	fclose(fd);
-  }
   
-  if(Nload!=NumberOfParticles)
-  {
-	cerr<<"error:Number of  group particles loaded not match: "<<Nload<<','<<NumberOfParticles<<endl;
-	exit(1);
-  }
-  
-  TotNumberOfParticles=NumberOfParticles;
-  Halos.resize(NumberOfHaloes);
   if(HBTConfig.ParticleIdRankStyle)
   {
 	cerr<<"ParticleIdRankStyle not implemented for group files\n";
 	exit(1);
   } else
   {
-#pragma omp parallel for
-	for(int i=0;i<NumberOfHaloes;i++)
-		Halos[i].Particles.assign(PIDs.begin()+Offset[i], PIDs.begin()+Offset[i]+Len[i]);
-// 	if(typeid(HBTInt)==typeid(PIDtype_t))//consider optimizing by using memcpy
-  }
-  
-  NumPartOfLargestHalo=*max_element(Len.begin(), Len.end());
-  
-  for(int i=1;i<NumberOfHaloes;i++)
-  {
-	if(Len[i]>Len[i-1])
-	{
-	  fprintf(stderr, "warning: groups not sorted with mass\n");
-	  break;
-	}
+	HaloParticleBuffer.insert(HaloParticleBuffer.end(), PIDs.begin(), PIDs.end());
   }
 }
 
@@ -324,12 +414,19 @@ NumberOfParticles=0;
 
 int main(int argc, char **argv)
 {
-  HBTConfig.ParseConfigFile(argv[1]);
+  mpi::environment env;
+  mpi::communicator world;
+  
+  int snapshot_start, snapshot_end;
+  if(0==world.rank())
+	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
+  broadcast(world, HBTConfig, 0);
+  broadcast(world, snapshot_start, 0);
+  broadcast(world, snapshot_end, 0);
+  
   HaloSnapshot_t halo;
-  halo.Load(HBTConfig.MaxSnapshotIndex);
-  cout<<halo.Halos.size()<<";"<<halo.TotNumberOfParticles<<endl;
-  cout<<halo.Halos[10].Particles.size()<<endl;
-  cout<<halo.Halos[10].Particles[0]<<endl;
+  halo.Load(world, HBTConfig.MaxSnapshotIndex);
+  cout<<" Halo 0 from thread "<<world.rank()<<":"<<halo.Halos[0].Particles.size()<<", "<<halo.Halos[0].Particles[0]<<endl;
   return 0;
 }
 #endif

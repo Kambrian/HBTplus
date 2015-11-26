@@ -193,5 +193,5 @@ public:
 
 extern int LargestRootFactor(int N, int dim);
 extern vector <int> ClosestFactors(int N, int dim);
-
+extern void AssignTasks(int worker_id, int nworkers, int ntasks, int &task_begin, int &task_end);
 #endif

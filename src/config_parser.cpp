@@ -141,5 +141,5 @@ void MarkHBTVersion()
 	cout<<"Warning: HBT_VERSION unknown.\n";
 #define HBT_VERSION "unknown"
 #endif
-	ofstream version_file(HBTConfig.SubhaloPath+"/VER"HBT_VERSION, fstream::trunc);
+	ofstream version_file(HBTConfig.SubhaloPath+"/VER"+HBT_VERSION, fstream::trunc);
 }

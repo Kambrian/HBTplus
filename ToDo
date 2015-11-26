@@ -1,4 +1,4 @@
-debug snapshot_io mpi
+write class HaloFile() for halo_io
 
 Better parallelization/Minisnapshot
 

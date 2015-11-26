@@ -17,11 +17,19 @@ public:
   HBTxyz PhysicalVelocity;
 };
 
+struct GroupFileSize_t
+{
+  HBTInt NumberOfGroups;
+  HBTInt NumberOfParticles;
+};
+
 class HaloSnapshot_t: public Snapshot_t
 {  
   typedef vector <Halo_t> HaloList_t;
+  void ReadFile(int iFile, GroupFileSize_t &filesize, int read_level, HBTInt start_particle=0, HBTInt end_particle=-1);
   template <class PIDtype_t>
-  void LoadGroupV2V3();
+  void ReadFileV2V3(int iFile, GroupFileSize_t &filesize, int read_level, HBTInt start_particle, HBTInt end_particle);
+  int CountFiles();
   void GetFileNameFormat(string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 public:
   const ParticleSnapshot_t * ParticleSnapshot;
@@ -31,7 +39,7 @@ public:
   HaloSnapshot_t(): Snapshot_t(), Halos(), ParticleSnapshot(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
   }
-  void Load(int snapshot_index);
+  void Load(mpi::communicator & world, int snapshot_index);
   void Clear();
   void ParticleIdToIndex(const ParticleSnapshot_t & snapshot);
   void ParticleIndexToId();
