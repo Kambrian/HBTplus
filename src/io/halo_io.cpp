@@ -247,10 +247,11 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   auto p=HaloParticleBuffer.begin();
   for(HBTInt i=0;i<Halos.size();i++)
   {
+	Halos[i].HaloId=thistask.haloid_begin+i;
 	Halos[i].Particles.assign(p, p+HaloLenBuffer[i]);
 	p+=HaloLenBuffer[i];
   }
-  assert(p==HaloLenBuffer.end());
+  assert(p==HaloParticleBuffer.end());
   
   for(auto &&np: HaloLenBuffer)
   {
@@ -267,6 +268,8 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   /*distribute groups into domains*/
   
   cout<<"Finished reading "<<Halos.size()<<" groups ("<<TotNumberOfParticles<<" particles) from file "<<thistask.nfile_begin<<" to "<<thistask.nfile_end-1<<" (total "<<FileCounts<<" files) on thread "<<world.rank()<<endl;  
+  if(Halos.size())
+	cout<<"Halos loaded: "<<Halos.front().HaloId<<"-"<<Halos.back().HaloId<<endl; 
 }
 
 void HaloSnapshot_t::ReadFile(int iFile, GroupFileSize_t &filesize, int read_level, HBTInt start_particle, HBTInt end_particle)

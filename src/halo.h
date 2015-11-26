@@ -13,6 +13,7 @@ class Halo_t
 public:
   typedef vector <HBTInt> ParticleList_t;
   ParticleList_t Particles;
+  HBTInt HaloId;
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
 };
