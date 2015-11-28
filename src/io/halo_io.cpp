@@ -25,11 +25,13 @@ inline bool IsNullParticle(const Particle_t &p)
 {
   return p.Id==SpecialConst::NullParticleId;
 }
-void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHalos, vector <Halo_t> & OutHalos, ParticleSnapshot_t &snap)
+void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHalos, vector <Halo_t> & OutHalos, const ParticleSnapshot_t &snap)
 /*distribute InHalos from root to around world. 
  *the destination of each halo is the one whose particle snapshot holds the most of this halo's particles. 
- *the distributed haloes are appended to OutHalos on each node.*/
+ *the distributed haloes are appended to OutHalos on each node.
+ *ToDo: create MPI-datatypes and use mpi functions to minimize data-copying and memory-copying*/
 {
+  typedef vector <Halo_t> HaloList_t;
   HaloList_t HaloBuffer;
   HaloList_t & WorkingHalos=(world.rank()==root)?InHalos:HaloBuffer;
   broadcast(world, WorkingHalos, root);
@@ -61,73 +63,23 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHa
 #endif
 	MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTPair, MPI_MAXLOC, world);
 	
-	typedef vector <Particle_t> ParticleData_t;
-	vector <ParticleData_t> SendBuffers(world.size()), ReceiveBuffers(world.size());
-	typedef vector <HBTInt> HaloSizeBuffer_t;
-	vector <HaloSizeBuffer_t> SendSizes(world.size()), ReceiveSizes(world.size());
+	vector <HaloList_t> SendBuffers(world.size()), ReceiveBuffers(world.size());
 	vector <HBTInt> TotBufferSizes(world.size(),0);
-	for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)
-	{
-	  int destnode=maxsize[haloid].rank;
-	  SendSizes[destnode].push_back(size[haloid].np);
-	  TotBufferSizes[destnode]+=size[haloid].np;
-	}
-	for(HBTInt destnode=0;destnode<world.size;destnode++)
-	  SendBuffers[destnode].reserve(TotBufferSizes[destnode]);
 		
 	for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)//packing
-	{
-	  int destnode=maxsize[haloid].rank;
-	  Halo_t::ParticleList_t &Particles=WorkingHalos[haloid].Particles;
-	  if(world.rank()!=destnode)
-	  {
-		for(HBTInt i=0;i<Particles.size();i++)
-		{
-		  if(Particles[i]!=SpecialConst::NullParticleId)
-		  {
-			SendBuffers[destnode].push_back(snap.Particles[Particles[i]]);
-			snap.Particles[Particles[i]].Id=SpecialConst::NullParticleId;//flag to be removed; note the host haloes shall not have duplicate particles in this case.
-		  }
-		}
-// 		RemoveFromVector(snap.Particles, IsNullParticle);
-	  }
-	}
+	  SendBuffers[maxsize[haloid].rank].push_back(WorkingHalos[haloid]);//TODO: optimize this; using pointers to populate sendbuffers?
 	all_to_all(world, SendBuffers, ReceiveBuffers);
-	all_to_all(world, SendSizes, ReceiveSizes);
-	
-	HBTInt newind=snap.Particles.size();
-	for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)//unpacking
+
+	HBTInt NumNewHalos=ReceiveBuffers[0].size();
+	for(HBTInt haloid=0;haloid<NumNewHalos;haloid++)
 	{
-	  int destnode=maxsize[haloid].rank;
-	  Halo_t::ParticleList_t &Particles=WorkingHalos[haloid].Particles;
-	  if(world.rank()==destnode)
+	  OutHalos.push_back(ReceiveBuffers[0][haloid]);
+	  auto & Particles=OutHalos.back().Particles;
+	  for(int rank=1; rank<ReceiveBuffers.size(); rank++)
 	  {
-// 		snap.Particles.insert(snap.Particles.end(), ReceiveBuffer.begin(), ReceiveBuffer.end());
-		for(HBTInt i=0;i<Particles.size();i++)
-		{
-		  if(Particles[i]==SpecialConst::NullParticleId)
-			Particles[i]=newind++;
-		}
+		auto & NewParticles=ReceiveBuffers[rank][haloid].Particles;
+		Particles.insert(Particles.end(), NewParticles.begin(), NewParticles.end());
 	  }
-	}
-	
-	ParticleData_t NewParticles;
-	vector <HaloSizeBuffer_t> ReceiveOffsets(world.size());
-	for(int rank=0; rank<world.size(); rank++)
-	{
-	  ReceiveOffsets[rank].resize(ReceiveSizes[rank].size());
-	  HBTInt offset=0;
-	  for(HBTInt i=0;i<ReceiveSizes[rank].size();i++)
-	  {
-		ReceiveOffsets[rank][i]=offset;
-		offset+=ReceiveSizes[rank][i];
-	  }
-	}
-	
-	for(HBTInt haloid=0;haloid<ReceiveBuffers[0].size();haloid++)
-	{
-	  for(HBTInt rank=0;rank<world.size();rank++)
-		NewParticles.insert(NewParticles.end(), ReceiveBuffers[rank].begin()+ReceiveOffsets[rank][haloid], ReceiveBuffers[rank].begin()+ReceiveOffsets[rank][haloid]+ReceiveSizes[rank][haloid]);
 	}
 }
   
@@ -450,7 +402,7 @@ void AssignHaloTasks(int nworkers, int npart_tot, const CountBuffer_t & HaloOffs
     
   npart_begin=npart_end;
 }
-void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
+void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index, const ParticleSnapshot_t &snap)
 {
   SetSnapshotIndex(snapshot_index);
   GroupFileReader_t Reader(snapshot_index);
@@ -534,27 +486,18 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   CountBuffer_t().swap(HaloLenBuffer);
   
   /*distribute groups into domains*/
-  ExchangeGroups(world);
+  ExchangeGroups(world, snap);
   
   cout<<"Finished reading "<<Halos.size()<<" groups ("<<TotNumberOfParticles<<" particles) from file "<<thistask.ifile_begin<<" to "<<thistask.ifile_end-1<<" (total "<<FileCounts<<" files) on thread "<<world.rank()<<endl;  
   if(Halos.size())
 	cout<<"Halos loaded: "<<Halos.front().HaloId<<"-"<<Halos.back().HaloId<<endl; 
 }
-void HaloSnapshot_t::ExchangeGroups(mpi::communicator &world)
+void HaloSnapshot_t::ExchangeGroups(mpi::communicator &world, const ParticleSnapshot_t &snap)
 {
- /* for(int rank=0;rank<world.size();rank++)//one by one through the nodes
-  {
-	broadcast(world, Halos, rank);
-	if(rank==world.rank())
-	{
-	  
-	}
-	else
-	{
-	  
-	}
-  }
-  */
+  HaloList_t LocalHalos;
+  for(int rank=0;rank<world.size();rank++)//one by one through the nodes
+	DistributeHaloes(world, rank, Halos, LocalHalos, snap);
+  Halos.swap(LocalHalos);
 }
 void HaloSnapshot_t::Clear()
 /* call this to reset the HaloSnapshot to empty.

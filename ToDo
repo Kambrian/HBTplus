@@ -1,4 +1,4 @@
-write class HaloFile() for halo_io
+remove ParticleIdToIndex() functions. no longer needed.
 
 Better parallelization/Minisnapshot
 

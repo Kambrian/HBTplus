@@ -26,13 +26,12 @@ public:
   HBTInt HaloId;
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
-  void Relocate(mpi::communicator &world, int root, ParticleSnapshot_t &snap);
 };
 
 class HaloSnapshot_t: public Snapshot_t
 {  
   typedef vector <Halo_t> HaloList_t;
-  void ExchangeGroups(mpi::communicator &world);
+  void ExchangeGroups(mpi::communicator &world, const ParticleSnapshot_t &snap);
 public:
   const ParticleSnapshot_t * ParticleSnapshot;
   HaloList_t Halos;
@@ -42,7 +41,7 @@ public:
   HaloSnapshot_t(): Snapshot_t(), Halos(), ParticleSnapshot(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
   }
-  void Load(mpi::communicator & world, int snapshot_index);
+  void Load(mpi::communicator & world, int snapshot_index, const ParticleSnapshot_t &snap);
   void Clear();
   void ParticleIdToIndex(const ParticleSnapshot_t & snapshot);
   void ParticleIndexToId();
