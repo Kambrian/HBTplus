@@ -17,8 +17,6 @@
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
 
-typedef vector <HBTInt> ParticleBuffer_t;
-typedef vector <int> CountBuffer_t;
 #define READ_META_DATA 0
 #define READ_LEN_OFFSET 1
 #define READ_PARTICLES 2
@@ -27,56 +25,109 @@ inline bool IsNullParticle(const Particle_t &p)
 {
   return p.Id==SpecialConst::NullParticleId;
 }
-void Halo_t::Relocate(mpi::communicator &world, int root, ParticleSnapshot_t &snap)
-{//remember to rebuild hash after all have been updated!
-	broadcast(world, HaloId, root);
-	broadcast(world, Particles, root);
-	struct SizeRank_t
-	{
-	  HBTInt np;
-	  int rank;
-	} size, maxsize;
-	size.np=Particles.size();
-	size.rank=world.rank();
+void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHalos, vector <Halo_t> & OutHalos, ParticleSnapshot_t &snap)
+/*distribute InHalos from root to around world. 
+ *the destination of each halo is the one whose particle snapshot holds the most of this halo's particles. 
+ *the distributed haloes are appended to OutHalos on each node.*/
+{
+  HaloList_t HaloBuffer;
+  HaloList_t & WorkingHalos=(world.rank()==root)?InHalos:HaloBuffer;
+  broadcast(world, WorkingHalos, root);
+  
+  struct SizeRank_t
+  {
+	HBTInt np;
+	int rank;
+  };
+  vector <SizeRank_t> size(WorkingHalos.size()), maxsize(WorkingHalos.size());
+  for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)
+  {
+	Halo_t::ParticleList_t & Particles=WorkingHalos[haloid].Particles;
+	size[haloid].np=Particles.size();
+	size[haloid].rank=world.rank();
+	HBTInt &np=size[haloid].np;
 	for(HBTInt i=0;i<Particles.size();i++)
 	{
-	  Particles[i]=snap.GetIndex(Particles[i]);
-	  if(Particles[i]==SpecialConst::NullParticleId)
-		size.np--;
+	  HBTInt index=snap.GetIndex(Particles[i]);
+	  if(index!=SpecialConst::NullParticleId)
+		Particles[np++]=snap.Particles[index];
 	}
+	Particles.resize(np);
+  }
 #ifdef HBT_INT8
 #define MPI_HBTPair MPI_LONG_INT
 #else
 #define MPI_HBTPair MPI_2INT
 #endif
-	MPI_Allreduce(&size, &maxsize, 1, MPI_HBTPair, MPI_MAXLOC, world);
+	MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTPair, MPI_MAXLOC, world);
 	
-	vector <Particle_t> SendBuffer, ReceiveBuffer;
-	if(world.rank()==maxsize.rank)
-	  ReceiveBuffer.resize(Particles.size()-maxsize.np);
-	else
+	typedef vector <Particle_t> ParticleData_t;
+	vector <ParticleData_t> SendBuffers(world.size()), ReceiveBuffers(world.size());
+	typedef vector <HBTInt> HaloSizeBuffer_t;
+	vector <HaloSizeBuffer_t> SendSizes(world.size()), ReceiveSizes(world.size());
+	vector <HBTInt> TotBufferSizes(world.size(),0);
+	for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)
 	{
-	  SendBuffer.reserve(size.np);
-	  for(HBTInt i=0;i<Particles.size();i++)
+	  int destnode=maxsize[haloid].rank;
+	  SendSizes[destnode].push_back(size[haloid].np);
+	  TotBufferSizes[destnode]+=size[haloid].np;
+	}
+	for(HBTInt destnode=0;destnode<world.size;destnode++)
+	  SendBuffers[destnode].reserve(TotBufferSizes[destnode]);
+		
+	for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)//packing
+	{
+	  int destnode=maxsize[haloid].rank;
+	  Halo_t::ParticleList_t &Particles=WorkingHalos[haloid].Particles;
+	  if(world.rank()!=destnode)
 	  {
-		if(Particles[i]!=SpecialConst::NullParticleId)
+		for(HBTInt i=0;i<Particles.size();i++)
 		{
-		  SendBuffer.push_back(snap.Particles[Particles[i]]);
-		  snap.Particles[Particles[i]].Id=SpecialConst::NullParticleId;//flag to be removed
+		  if(Particles[i]!=SpecialConst::NullParticleId)
+		  {
+			SendBuffers[destnode].push_back(snap.Particles[Particles[i]]);
+			snap.Particles[Particles[i]].Id=SpecialConst::NullParticleId;//flag to be removed; note the host haloes shall not have duplicate particles in this case.
+		  }
+		}
+// 		RemoveFromVector(snap.Particles, IsNullParticle);
+	  }
+	}
+	all_to_all(world, SendBuffers, ReceiveBuffers);
+	all_to_all(world, SendSizes, ReceiveSizes);
+	
+	HBTInt newind=snap.Particles.size();
+	for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)//unpacking
+	{
+	  int destnode=maxsize[haloid].rank;
+	  Halo_t::ParticleList_t &Particles=WorkingHalos[haloid].Particles;
+	  if(world.rank()==destnode)
+	  {
+// 		snap.Particles.insert(snap.Particles.end(), ReceiveBuffer.begin(), ReceiveBuffer.end());
+		for(HBTInt i=0;i<Particles.size();i++)
+		{
+		  if(Particles[i]==SpecialConst::NullParticleId)
+			Particles[i]=newind++;
 		}
 	  }
-	  RemoveFromVector(snap.Particles, IsNullParticle);
 	}
-	gather(world, SendBuffer.data(), SendBuffer.size(), ReceiveBuffer, maxsize.rank);
-	if(world.rank()==maxsize.rank)
+	
+	ParticleData_t NewParticles;
+	vector <HaloSizeBuffer_t> ReceiveOffsets(world.size());
+	for(int rank=0; rank<world.size(); rank++)
 	{
-	  HBTInt newind=snap.Particles.size();
-	  snap.Particles.insert(snap.Particles.end(), ReceiveBuffer.begin(), ReceiveBuffer.end());
-	  for(HBTInt i=0;i<Particles.size();i++)
+	  ReceiveOffsets[rank].resize(ReceiveSizes[rank].size());
+	  HBTInt offset=0;
+	  for(HBTInt i=0;i<ReceiveSizes[rank].size();i++)
 	  {
-		if(Particles[i]==SpecialConst::NullParticleId)
-		  Particles[i]=newind++;
+		ReceiveOffsets[rank][i]=offset;
+		offset+=ReceiveSizes[rank][i];
 	  }
+	}
+	
+	for(HBTInt haloid=0;haloid<ReceiveBuffers[0].size();haloid++)
+	{
+	  for(HBTInt rank=0;rank<world.size();rank++)
+		NewParticles.insert(NewParticles.end(), ReceiveBuffers[rank].begin()+ReceiveOffsets[rank][haloid], ReceiveBuffers[rank].begin()+ReceiveOffsets[rank][haloid]+ReceiveSizes[rank][haloid]);
 	}
 }
   
@@ -110,11 +161,11 @@ private:
   template <class PIDtype_t>
   void ReadV2V3(int read_level, HBTInt start_particle, HBTInt end_particle);
   
-public:
+public: 
   HBTInt NumberOfGroups;//in file, not necessarily the same as read
   HBTInt NumberOfParticles;//in file, not necessarily the same as read
-  ParticleBuffer_t Particles;
-  CountBuffer_t Len, Offset;
+  vector <HBTInt> Particles;
+  vector <int> Len, Offset;
   int FileCounts;
   
   GroupFileReader_t(int snapshot_index): SnapshotNumber_t(), iFile(0), NumberOfGroups(0), NumberOfParticles(0), Particles(), Len(), Offset()
@@ -378,6 +429,8 @@ private:
 };
 BOOST_IS_MPI_DATATYPE(FileAssignment_t)
 
+typedef vector <HBTInt> ParticleIdBuffer_t;
+typedef vector <int> CountBuffer_t;
 void AssignHaloTasks(int nworkers, int npart_tot, const CountBuffer_t & HaloOffsets, const CountBuffer_t &FileOffsets, int & npart_begin, FileAssignment_t &task)
 {
   int npart_this=(npart_tot-npart_begin)/nworkers;
@@ -447,7 +500,7 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   }
   
   /* read particles*/
-  ParticleBuffer_t ParticleBuffer;
+  ParticleIdBuffer_t ParticleBuffer;
   ParticleBuffer.reserve(thistask.npart);
   for(int iFile=thistask.ifile_begin;iFile<thistask.ifile_end;iFile++)
   {
@@ -460,14 +513,14 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   
   /* populate haloes*/
   Halos.resize(thistask.nhalo);
-  auto p=ParticleBuffer.begin();
+  auto p=ParticleBuffer.data();
   for(HBTInt i=0;i<Halos.size();i++)
   {
 	Halos[i].HaloId=thistask.haloid_begin+i;
-	Halos[i].Particles.assign(p, p+HaloLenBuffer[i]);
-	p+=HaloLenBuffer[i];
+	Halos[i].Particles.resize(HaloLenBuffer[i]);
+	for(HBTInt j=0;j<HaloLenBuffer[i];j++)
+	  Halos[i].Particles[j].Id=*(p++);
   }
-  assert(p==ParticleBuffer.end());
   
   for(auto &&np: HaloLenBuffer)
   {
@@ -477,7 +530,7 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
   assert(TotNumberOfParticles==thistask.npart);
   
   /*clear up buffers*/
-  ParticleBuffer_t().swap(ParticleBuffer);
+  ParticleIdBuffer_t().swap(ParticleBuffer);
   CountBuffer_t().swap(HaloLenBuffer);
   
   /*distribute groups into domains*/

@@ -21,7 +21,7 @@ class Halo_t
 	ar & PhysicalVelocity;
   }  
 public:
-  typedef vector <HBTInt> ParticleList_t;
+  typedef vector <Particle_t> ParticleList_t;
   ParticleList_t Particles;
   HBTInt HaloId;
   HBTxyz ComovingPosition;

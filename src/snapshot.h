@@ -202,6 +202,7 @@ public:
   HBTInt size() const;
   HBTInt GetId(HBTInt index) const;
   HBTInt GetIndex(HBTInt particle_id) const;
+  HBTInt GetIndex(Particle_t & particle) const;
   const HBTxyz & GetComovingPosition(HBTInt index) const;
   const HBTxyz & GetPhysicalVelocity(HBTInt index) const;
   HBTReal GetMass(HBTInt index) const;
@@ -223,6 +224,10 @@ inline HBTInt ParticleSnapshot_t::GetId(HBTInt index) const
 inline HBTInt ParticleSnapshot_t::GetIndex(HBTInt particle_id) const
 {
   return ParticleHash->GetIndex(particle_id);
+}
+inline HBTInt ParticleSnapshot_t::GetIndex(Particle_t & particle) const
+{
+  return ParticleHash->GetIndex(particle.Id);
 }
 inline const HBTxyz& ParticleSnapshot_t::GetComovingPosition(HBTInt index) const
 {
