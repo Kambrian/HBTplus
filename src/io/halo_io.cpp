@@ -485,6 +485,7 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index, const P
   ParticleIdBuffer_t().swap(ParticleBuffer);
   CountBuffer_t().swap(HaloLenBuffer);
   
+  cout<<"Groups loaded, now exchanging...\n";
   /*distribute groups into domains*/
   ExchangeGroups(world, snap);
   
@@ -523,8 +524,11 @@ int main(int argc, char **argv)
   broadcast(world, snapshot_end, 0);
   
   HaloSnapshot_t halo;
-  halo.Load(world, HBTConfig.MaxSnapshotIndex);
-  cout<<" Halo 0 from thread "<<world.rank()<<":"<<halo.Halos[0].Particles.size()<<", "<<halo.Halos[0].Particles[0]<<endl;
+  ParticleSnapshot_t snap;
+  snap.Load(world, HBTConfig.MaxSnapshotIndex);
+  cout<<"snapshot loaded\n";
+  halo.Load(world, HBTConfig.MaxSnapshotIndex, snap);
+  cout<<" Halo 0 from thread "<<world.rank()<<":"<<halo.Halos[0].Particles.size()<<", "<<halo.Halos[0].Particles[0].Id<<endl;
   return 0;
 }
 #endif

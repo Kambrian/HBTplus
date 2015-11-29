@@ -50,6 +50,10 @@ public:
   { 
 	return Halos.size();
   }
+  HBTInt GetId(HBTInt index) const
+  {
+	return Halos[index].HaloId;
+  }
   const HBTxyz & GetComovingPosition(HBTInt index) const
   {
 	return Halos[index].ComovingPosition;
