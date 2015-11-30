@@ -227,6 +227,7 @@ inline int AssignCell(HBTxyz & Pos, const HBTReal step[3], const vector <int> &d
   #define GID(i) GetGrid(Pos[i], step[i], dims[i])
   return GRIDtoRank(GID(0), GID(1), GID(2));
 }
+/* chunked version
 void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
 {
   #define MSG_SIZE 1024
@@ -261,33 +262,47 @@ void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
   }
   cout<<NewParticles.size()<<" particles received on node "<<world.rank()<<endl;
   Particles.swap(NewParticles);
-}
-/* deprecated: exchange whole snapshot.
- * void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
+} */
+void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
 {
   auto dims=ClosestFactors(world.size(), 3);
   HBTReal step[3];
   for(int i=0;i<3;i++)
 	step[i]=HBTConfig.BoxSize/dims[i];
   
-  typedef vector <Particle_t> ParticleList_t;
-  
-  vector <ParticleList_t> SendCells(world.size());
+  vector <int> CellIds(Particles.size());
+  vector <int> CellSizes(world.size(),0), CellOffsets(world.size());
+   
   for(HBTInt i=0;i<Particles.size();i++)
   {
 	int rank=AssignCell(Particles[i].ComovingPosition, step, dims);
-	SendCells[rank].push_back(Particles[i]);
+	CellIds[i]=rank;
+	CellSizes[rank]++;
+  }
+  if(CompileOffsets(CellSizes, CellOffsets)>INT_MAX)
+  {
+	cerr<<"Error: sending more than INT_MAX particles around with MPI causes overflow. try increase the number of mpi threads.\n";
+	exit(1);
+  }
+
+  vector <Particle_t> SendBuffer(Particles.size());
+  {
+  vector <int> CellCounter=CellOffsets;
+  for(HBTInt i=0;i<Particles.size();i++)
+	SendBuffer[CellCounter[CellIds[i]]++]=Particles[i];
   }
   
-  vector <ParticleList_t> ReceiveCells(world.size());
-  all_to_all(world, SendCells, ReceiveCells);
-//   SendCells.clear();
-  Particles.clear();
-  for(int i=0;i<world.size();i++)
-	Particles.insert(Particles.end(), ReceiveCells[i].begin(), ReceiveCells[i].end());
+  vector <int> ReceiveSizes(world.size(),0), ReceiveOffsets(world.size());
+  all_to_all(world, CellSizes, ReceiveSizes);
+  Particles.resize(CompileOffsets(ReceiveSizes, ReceiveOffsets));//TODO: sort particles in place instead of using SendBuffer, and create a new vector for ReceivedParticles, then swap.
   
+  MPI_Datatype MPI_HBT_Particle;
+  create_MPI_Particle_type(MPI_HBT_Particle);
+  MPI_Alltoallv(SendBuffer.data(), CellSizes.data(), CellOffsets.data(), MPI_HBT_Particle, 
+				Particles.data(), ReceiveSizes.data(), ReceiveOffsets.data(), MPI_HBT_Particle, world);
+
   cout<<Particles.size()<<" particles received on node "<<world.rank()<<endl;
-}*/
+}
 
 #define ReadScalarBlock(dtype, Attr) {\
 FortranBlock <dtype> block(fp, n_read, n_skip, NeedByteSwap);\

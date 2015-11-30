@@ -28,8 +28,10 @@ typedef int IDatInt;
 /*datatype for internal calculation and output*/
 #ifdef HBT_REAL8
 typedef double HBTReal;
+#define MPI_HBT_REAL MPI_DOUBLE
 #else
 typedef float HBTReal;
+#define MPI_HBT_REAL MPI_FLOAT
 #endif
 
 // the user should ganrantee that HBTInt can at least hold NP_DM (when HBTPID_RANKSTYLE is defined)

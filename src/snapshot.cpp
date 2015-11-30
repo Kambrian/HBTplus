@@ -127,3 +127,50 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const HBTInt Particles[], 
 	for(j=0;j<3;j++)
 	  CoV[j]=sv[j]/msum;
 }
+
+void create_MPI_Particle_type(MPI_Datatype &MPI_HBTParticle_t)
+{
+/*to create the struct data type for communication*/	
+Particle_t p;
+#define NumAttr 4
+MPI_Datatype oldtypes[NumAttr];
+MPI_Aint   offsets[NumAttr], origin,extent;
+int blockcounts[NumAttr];
+
+MPI_Get_address(&p,&origin);
+MPI_Get_address(&p.Id,offsets);
+MPI_Get_address(p.ComovingPosition.data(),offsets+1);//caution: this might be implementation dependent??
+MPI_Get_address(p.PhysicalVelocity.data(),offsets+2);
+MPI_Get_address(&p.Mass,offsets+3);
+MPI_Get_address((&p)+1,&extent);//to get the extent of s
+
+for(int i=0;i<NumAttr;i++)
+  offsets[i]-=origin;
+
+oldtypes[0] = MPI_HBT_INT;
+blockcounts[0] = 1;
+
+oldtypes[1] = MPI_HBT_REAL;
+blockcounts[1] = 3;
+
+oldtypes[2] = MPI_HBT_REAL;
+blockcounts[2] = 3;
+
+oldtypes[3] = MPI_HBT_REAL;
+blockcounts[3] = 1;
+
+extent-=origin;
+
+assert(offsets[2]-offsets[1]==sizeof(HBTReal)*3);//to make sure HBTxyz is stored locally.
+/*
+for(int i=0;i<NumAttr;i++)
+  cout<<offsets[i]<<',';
+cout<<endl<<extent<<endl;
+*/
+MPI_Type_create_struct(NumAttr,blockcounts,offsets,oldtypes, &MPI_HBTParticle_t);//some padding is added automatically by MPI as well
+MPI_Type_create_resized(MPI_HBTParticle_t,(MPI_Aint)0, extent, &MPI_HBTParticle_t);
+MPI_Type_commit(&MPI_HBTParticle_t);
+//~ MPI_Type_get_extent(*pMPIshearprof,&origin,&extent);
+//~ printf("%d\n",extent);
+#undef NumAttr
+}

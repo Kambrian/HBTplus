@@ -16,6 +16,19 @@
 #include "datatypes.h"
 #include "config_parser.h"
 
+template <class T>
+T CompileOffsets(const vector <T> &Counts, vector <T> &Offsets)
+{
+  T offset=0;
+  Offsets.resize(Counts.size());
+  for(size_t i=0;i<Counts.size();i++)
+  {
+	Offsets[i]=offset;
+	offset+=Counts[i];
+  }
+  return offset;
+}
+
 template <class T, class UnaryPredicate>
 inline void RemoveFromVector(vector <T> &v, UnaryPredicate p)
 {
