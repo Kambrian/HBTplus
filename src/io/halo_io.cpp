@@ -525,9 +525,9 @@ int main(int argc, char **argv)
   
   HaloSnapshot_t halo;
   ParticleSnapshot_t snap;
-  snap.Load(world, HBTConfig.MaxSnapshotIndex);
+  snap.Load(world, snapshot_start);
   cout<<"snapshot loaded\n";
-  halo.Load(world, HBTConfig.MaxSnapshotIndex, snap);
+  halo.Load(world, snapshot_start, snap);
   cout<<" Halo 0 from thread "<<world.rank()<<":"<<halo.Halos[0].Particles.size()<<", "<<halo.Halos[0].Particles[0].Id<<endl;
   return 0;
 }

@@ -13,7 +13,7 @@
 
 #include "mymath.h"
 #include "halo.h"
-
+/* deprecated.
 void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 {
   chrono::high_resolution_clock::time_point time_begin, time_end;
@@ -54,3 +54,4 @@ void HaloSnapshot_t::AverageCoordinates()
 	ParticleSnapshot->AverageVelocity(Halos[i].PhysicalVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
   }
 }
+*/
