@@ -29,12 +29,14 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHa
 /*distribute InHalos from root to around world. 
  *the destination of each halo is the one whose particle snapshot holds the most of this halo's particles. 
  *the distributed haloes are appended to OutHalos on each node.
- *ToDo: create MPI-datatypes and use mpi functions to minimize data-copying and memory-copying*/
+*/
 {
   typedef vector <Halo_t> HaloList_t;
+  typedef vector <Halo_t *> HaloPointerList_t;
+  int thisrank=world.rank();
   HaloList_t HaloBuffer;
   HaloList_t & WorkingHalos=(world.rank()==root)?InHalos:HaloBuffer;
-  broadcast(world, WorkingHalos, root);
+  broadcast(world, WorkingHalos, root);//TODO: rewrite this with MPI.
   
   struct SizeRank_t
   {
@@ -45,8 +47,8 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHa
   for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)
   {
 	Halo_t::ParticleList_t & Particles=WorkingHalos[haloid].Particles;
-	size[haloid].np=Particles.size();
-	size[haloid].rank=world.rank();
+	size[haloid].np=0;
+	size[haloid].rank=thisrank;
 	HBTInt &np=size[haloid].np;
 	for(HBTInt i=0;i<Particles.size();i++)
 	{
@@ -63,23 +65,59 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHa
 #endif
 	MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTPair, MPI_MAXLOC, world);
 	
-	vector <HaloList_t> SendBuffers(world.size()), ReceiveBuffers(world.size());
-	vector <HBTInt> TotBufferSizes(world.size(),0);
-		
+	vector <vector <MPI_Aint> > SendBuffers(world.size()), ReceiveBuffers(world.size());
+	vector <vector<int> > SendSizes(world.size()), ReceiveSizes(world.size());
+	vector <MPI_Datatype> SendTypes(world.size()), ReceiveTypes(world.size());
+	
 	for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)//packing
-	  SendBuffers[maxsize[haloid].rank].push_back(WorkingHalos[haloid]);//TODO: optimize this; using pointers to populate sendbuffers?
-	all_to_all(world, SendBuffers, ReceiveBuffers);
-
-	HBTInt NumNewHalos=ReceiveBuffers[0].size();
+	{
+	  int rank=maxsize[haloid].rank;
+	  auto & Particles=WorkingHalos[haloid].Particles;
+	  MPI_Aint p;
+	  MPI_Address(Particles.data(),&p);
+	  SendBuffers[rank].push_back(p);
+	  SendSizes[rank].push_back(Particles.size());
+	}
+	for(int rank=0;rank<world.size();rank++)
+	{
+	  if(accumulate(SendSizes[rank].begin(), SendSizes[rank].end(), 0L)>INT_MAX)
+		throw runtime_error("Error: sending more than INT_MAX particles around with MPI causes overflow. try increase the number of mpi threads.\n");
+	  MPI_Type_create_hindexed(SendSizes[rank].size(), SendSizes[rank].data(), SendBuffers[rank].data(), MPI_HBT_INT, &SendTypes[rank]);
+	}
+	
+	all_to_all(world, SendSizes, ReceiveSizes);
+	HBTInt NumNewHalos=ReceiveSizes[0].size();
+	OutHalos.resize(OutHalos.size()+NumNewHalos);
+	auto NewHalos=OutHalos.end()-NumNewHalos;
+	for(int rank=0;rank<world.size();rank++)
+	  ReceiveBuffers[rank].resize(NumNewHalos);
 	for(HBTInt haloid=0;haloid<NumNewHalos;haloid++)
 	{
-	  OutHalos.push_back(ReceiveBuffers[0][haloid]);
-	  auto & Particles=OutHalos.back().Particles;
-	  for(int rank=1; rank<ReceiveBuffers.size(); rank++)
+	  HBTInt np=0;
+	  for(int rank=0; rank<world.size(); rank++)
+		np+=ReceiveSizes[rank][haloid];
+	  auto &Particles=NewHalos[haloid].Particles;
+	  Particles.resize(np);
+	  np=0;
+	  for(int rank=0; rank<world.size(); rank++)
 	  {
-		auto & NewParticles=ReceiveBuffers[rank][haloid].Particles;
-		Particles.insert(Particles.end(), NewParticles.begin(), NewParticles.end());
+		MPI_Aint p;
+		MPI_Address(Particles.data()+np, &p);
+		ReceiveBuffers[rank][haloid]=p;
+		np+=ReceiveSizes[rank][haloid];
 	  }
+	}	
+	for(int rank=0;rank<world.size();rank++)
+	  MPI_Type_create_hindexed(NumNewHalos, ReceiveSizes[rank].data(), ReceiveBuffers[rank].data(), MPI_HBT_INT, &ReceiveTypes[rank]);
+	
+	vector <int> Counts(world.size(),1), Disps(world.size(),0);
+	MPI_Alltoallw(MPI_BOTTOM, Counts.data(), Disps.data(), SendTypes.data(), MPI_BOTTOM, Counts.data(), Disps.data(), ReceiveTypes.data(), world);
+	
+	//copy other properties
+	for(HBTInt haloid=0,i=0;haloid<WorkingHalos.size();haloid++)
+	{
+	  if(maxsize[haloid].rank==thisrank)
+		NewHalos[i++].HaloId=WorkingHalos[haloid].HaloId;
 	}
 }
   
@@ -499,6 +537,15 @@ void HaloSnapshot_t::ExchangeGroups(mpi::communicator &world, const ParticleSnap
   for(int rank=0;rank<world.size();rank++)//one by one through the nodes
 	DistributeHaloes(world, rank, Halos, LocalHalos, snap);
   Halos.swap(LocalHalos);
+  
+  TotNumberOfParticles=0;
+  NumPartOfLargestHalo=0;
+  for(auto &&h: LocalHalos)
+  {
+	HBTInt np=h.Particles.size();
+	TotNumberOfParticles+=np;//local
+	if(NumPartOfLargestHalo<np) NumPartOfLargestHalo=np;//local
+  }
 }
 void HaloSnapshot_t::Clear()
 /* call this to reset the HaloSnapshot to empty.
@@ -528,6 +575,7 @@ int main(int argc, char **argv)
   snap.Load(world, snapshot_start);
   cout<<"snapshot loaded\n";
   halo.Load(world, snapshot_start, snap);
+  if(halo.Halos.size())
   cout<<" Halo 0 from thread "<<world.rank()<<":"<<halo.Halos[0].Particles.size()<<", "<<halo.Halos[0].Particles[0].Id<<endl;
   return 0;
 }

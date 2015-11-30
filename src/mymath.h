@@ -17,9 +17,9 @@
 #include "config_parser.h"
 
 template <class T>
-T CompileOffsets(const vector <T> &Counts, vector <T> &Offsets)
+size_t CompileOffsets(const vector <T> &Counts, vector <T> &Offsets)
 {
-  T offset=0;
+  size_t offset=0;
   Offsets.resize(Counts.size());
   for(size_t i=0;i<Counts.size();i++)
   {
