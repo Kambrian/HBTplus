@@ -229,6 +229,42 @@ inline int AssignCell(HBTxyz & Pos, const HBTReal step[3], const vector <int> &d
 }
 void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
 {
+  #define MSG_SIZE 1024
+  
+  auto dims=ClosestFactors(world.size(), 3);
+  HBTReal step[3];
+  for(int i=0;i<3;i++)
+	step[i]=HBTConfig.BoxSize/dims[i];
+  
+  typedef vector <Particle_t> ParticleList_t;
+  ParticleList_t NewParticles;
+  vector <ParticleList_t> SendCells(world.size());
+  vector <ParticleList_t> ReceiveCells(world.size());
+  auto current_particle=Particles.begin(), end_particle=current_particle, max_particle=Particles.end();
+  HBTInt nloop=ceil(1.*Particles.size()/MSG_SIZE);
+  nloop=mpi::all_reduce(world, nloop, mpi::maximum<HBTInt>());
+  for(HBTInt iloop=0;iloop<nloop;iloop++)
+  {
+	end_particle=min(current_particle+MSG_SIZE, max_particle);
+	for(;current_particle<end_particle;current_particle++)//pick
+	{
+	  int rank=AssignCell(current_particle->ComovingPosition, step, dims);
+	  SendCells[rank].push_back(*current_particle);
+	}
+	all_to_all(world, SendCells, ReceiveCells);//deliver
+  	for(int i=0;i<world.size();i++)//insert
+	{
+	  NewParticles.insert(NewParticles.end(), ReceiveCells[i].begin(), ReceiveCells[i].end());
+	  ReceiveCells[i].clear();
+	  SendCells[i].clear();
+	}
+  }
+  cout<<NewParticles.size()<<" particles received on node "<<world.rank()<<endl;
+  Particles.swap(NewParticles);
+}
+/* deprecated: exchange whole snapshot.
+ * void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
+{
   auto dims=ClosestFactors(world.size(), 3);
   HBTReal step[3];
   for(int i=0;i<3;i++)
@@ -251,7 +287,7 @@ void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
 	Particles.insert(Particles.end(), ReceiveCells[i].begin(), ReceiveCells[i].end());
   
   cout<<Particles.size()<<" particles received on node "<<world.rank()<<endl;
-}
+}*/
 
 #define ReadScalarBlock(dtype, Attr) {\
 FortranBlock <dtype> block(fp, n_read, n_skip, NeedByteSwap);\
