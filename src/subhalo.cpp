@@ -19,7 +19,11 @@ void MemberShipTable_t::TrackIdToSubId(SubhaloList_t& Subhalos)
 cout<<"Warning: TrackIdToSubId ToBe fully Implemented!\n";
 // exit(1);
 }
+void SubhaloSnapshot_t::UpdateParticles(mpi::communicator& world, const ParticleSnapshot_t& snapshot)
+{
 
+}
+/*
 void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 {//also bind to snapshot
 #pragma omp single
@@ -46,7 +50,7 @@ void SubhaloSnapshot_t::ParticleIndexToId()
 #pragma omp single
   SnapshotPointer=nullptr;
 }
-
+*/
 inline HBTInt GetCoreSize(HBTInt nbound)
 {
   int coresize=nbound*HBTConfig.SubCoreSizeFactor;

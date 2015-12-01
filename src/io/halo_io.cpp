@@ -20,160 +20,12 @@
 #define READ_META_DATA 0
 #define READ_LEN_OFFSET 1
 #define READ_PARTICLES 2
-
+/*
 inline bool IsNullParticle(const Particle_t &p)
 {
   return p.Id==SpecialConst::NullParticleId;
 }
-void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHalos, vector <Halo_t> & OutHalos, const ParticleSnapshot_t &snap)
-/*distribute InHalos from root to around world. 
- *the destination of each halo is the one whose particle snapshot holds the most of this halo's particles. 
- *the distributed haloes are appended to OutHalos on each node.
-*/
-{
-  typedef vector <Halo_t> HaloList_t;
-  int thisrank=world.rank();
-  HaloList_t HaloBuffer;
-  HaloList_t & WorkingHalos=(world.rank()==root)?InHalos:HaloBuffer;
-  MPI_Datatype MPI_HBT_Particle;
-  create_MPI_Particle_type(MPI_HBT_Particle);
- 
-  //broadcast haloes
-  {
-  HBTInt nhalo=WorkingHalos.size();
-  MPI_Bcast(&nhalo, 1, MPI_HBT_INT, root, world);
-  if(world.rank()!=root)
-	WorkingHalos.resize(nhalo);
-  //send id
-  MPI_Datatype MPI_HBTHalo_Id_t;
-  create_MPI_Halo_Id_type(MPI_HBTHalo_Id_t);
-  MPI_Bcast(WorkingHalos.data(), nhalo, MPI_HBTHalo_Id_t, root, world);
-  MPI_Type_free(&MPI_HBTHalo_Id_t);
-  
-  //send sizes and prepare buffer
-  vector <HBTInt> HaloSizes(nhalo);
-  if(world.rank()==root)
-  {
-	for(HBTInt i=0;i<nhalo;i++)
-	  HaloSizes[i]=WorkingHalos[i].Particles.size();
-  }
-  MPI_Bcast(HaloSizes.data(), nhalo, MPI_HBT_INT, root, world);
-  if(world.rank()!=root)
-  {
-	for(HBTInt i=0;i<nhalo;i++)
-	  WorkingHalos[i].Particles.resize(HaloSizes[i]);
-  }
-  
-  //send particles
-  vector <MPI_Aint> HaloBuffer(nhalo);
-  for(HBTInt i=0;i<nhalo;i++)
-  {
-	 MPI_Aint p;
-	 MPI_Address(WorkingHalos[i].Particles.data(),&p);
-	 HaloBuffer[i]=p;
-  }
-  MPI_Datatype HaloType;
-  MPI_Type_create_hindexed(nhalo, HaloSizes.data(), HaloBuffer.data(), MPI_HBT_Particle, &HaloType);
-  MPI_Type_commit(&HaloType);
-  MPI_Bcast(MPI_BOTTOM, 1, HaloType, root, world);
-  MPI_Type_free(&HaloType);
-  }
-  
-  //fill particles and decide movement
-  struct SizeRank_t
-  {
-	HBTInt np;
-	int rank;
-  };
-  vector <SizeRank_t> size(WorkingHalos.size()), maxsize(WorkingHalos.size());
-  for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)
-  {
-	Halo_t::ParticleList_t & Particles=WorkingHalos[haloid].Particles;
-	size[haloid].np=0;
-	size[haloid].rank=thisrank;
-	HBTInt &np=size[haloid].np;
-	for(HBTInt i=0;i<Particles.size();i++)
-	{
-	  HBTInt index=snap.GetIndex(Particles[i]);
-	  if(index!=SpecialConst::NullParticleId)
-		Particles[np++]=snap.Particles[index];
-	}
-	Particles.resize(np);
-  }
-#ifdef HBT_INT8
-#define MPI_HBTPair MPI_LONG_INT
-#else
-#define MPI_HBTPair MPI_2INT
-#endif
-	MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTPair, MPI_MAXLOC, world);
-	
-	vector <vector <MPI_Aint> > SendBuffers(world.size()), ReceiveBuffers(world.size());
-	vector <vector<int> > SendSizes(world.size()), ReceiveSizes(world.size());
-	vector <MPI_Datatype> SendTypes(world.size()), ReceiveTypes(world.size());
-  
-	for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)//packing
-	{
-	  int rank=maxsize[haloid].rank;
-	  auto & Particles=WorkingHalos[haloid].Particles;
-	  MPI_Aint p;
-	  MPI_Address(Particles.data(),&p);
-	  SendBuffers[rank].push_back(p);
-	  SendSizes[rank].push_back(Particles.size());
-	}
-	for(int rank=0;rank<world.size();rank++)
-	{
-	  if(accumulate(SendSizes[rank].begin(), SendSizes[rank].end(), 0L)>INT_MAX)
-		throw runtime_error("Error: sending more than INT_MAX particles around with MPI causes overflow. try increase the number of mpi threads.\n");
-	  MPI_Type_create_hindexed(SendSizes[rank].size(), SendSizes[rank].data(), SendBuffers[rank].data(), MPI_HBT_Particle, &SendTypes[rank]);
-	  MPI_Type_commit(&SendTypes[rank]);
-	}
-
-	VectorAllToAll(world, SendSizes, ReceiveSizes, MPI_INT);
-	
-	HBTInt NumNewHalos=ReceiveSizes[0].size();
-	OutHalos.resize(OutHalos.size()+NumNewHalos);
-	auto NewHalos=OutHalos.end()-NumNewHalos;
-	for(int rank=0;rank<world.size();rank++)
-	  ReceiveBuffers[rank].resize(NumNewHalos);
-	for(HBTInt haloid=0;haloid<NumNewHalos;haloid++)
-	{
-	  HBTInt np=0;
-	  for(int rank=0; rank<world.size(); rank++)
-		np+=ReceiveSizes[rank][haloid];
-	  auto &Particles=NewHalos[haloid].Particles;
-	  Particles.resize(np);
-	  np=0;
-	  for(int rank=0; rank<world.size(); rank++)
-	  {
-		MPI_Aint p;
-		MPI_Address(Particles.data()+np, &p);
-		ReceiveBuffers[rank][haloid]=p;
-		np+=ReceiveSizes[rank][haloid];
-	  }
-	}	
-	for(int rank=0;rank<world.size();rank++)
-	{
-	  MPI_Type_create_hindexed(NumNewHalos, ReceiveSizes[rank].data(), ReceiveBuffers[rank].data(), MPI_HBT_Particle, &ReceiveTypes[rank]);
-	  MPI_Type_commit(&ReceiveTypes[rank]);
-	}
-	
-	vector <int> Counts(world.size(),1), Disps(world.size(),0);
-	MPI_Alltoallw(MPI_BOTTOM, Counts.data(), Disps.data(), SendTypes.data(), MPI_BOTTOM, Counts.data(), Disps.data(), ReceiveTypes.data(), world);
-	for(int rank=0;rank<world.size();rank++)
-	{
-	  MPI_Type_free(&SendTypes[rank]);
-	  MPI_Type_free(&ReceiveTypes[rank]);
-	}
-	MPI_Type_free(&MPI_HBT_Particle);
-	
-	//copy other properties
-	for(HBTInt haloid=0,i=0;haloid<WorkingHalos.size();haloid++)
-	{
-	  if(maxsize[haloid].rank==thisrank)
-		NewHalos[i++].HaloId=WorkingHalos[haloid].HaloId;
-	}
-}
-  
+  */
 struct GroupV4Header_t
 {
   int Ngroups;
@@ -493,7 +345,7 @@ void AssignHaloTasks(int nworkers, int npart_tot, const CountBuffer_t & HaloOffs
     
   npart_begin=npart_end;
 }
-void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index, const ParticleSnapshot_t &snap)
+void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
 {
   SetSnapshotIndex(snapshot_index);
   GroupFileReader_t Reader(snapshot_index);
@@ -575,30 +427,10 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index, const P
   /*clear up buffers*/
   ParticleIdBuffer_t().swap(ParticleBuffer);
   CountBuffer_t().swap(HaloLenBuffer);
-  
-  cout<<"Groups loaded, now exchanging...\n";
-  /*distribute groups into domains*/
-  ExchangeGroups(world, snap);
-  
+    
   cout<<"Finished reading "<<Halos.size()<<" groups ("<<TotNumberOfParticles<<" particles) from file "<<thistask.ifile_begin<<" to "<<thistask.ifile_end-1<<" (total "<<FileCounts<<" files) on thread "<<world.rank()<<endl;  
   if(Halos.size())
 	cout<<"Halos loaded: "<<Halos.front().HaloId<<"-"<<Halos.back().HaloId<<endl; 
-}
-void HaloSnapshot_t::ExchangeGroups(mpi::communicator &world, const ParticleSnapshot_t &snap)
-{
-  HaloList_t LocalHalos;
-  for(int rank=0;rank<world.size();rank++)//one by one through the nodes
-	DistributeHaloes(world, rank, Halos, LocalHalos, snap);
-  Halos.swap(LocalHalos);
-  
-  TotNumberOfParticles=0;
-  NumPartOfLargestHalo=0;
-  for(auto &&h: LocalHalos)
-  {
-	HBTInt np=h.Particles.size();
-	TotNumberOfParticles+=np;//local
-	if(NumPartOfLargestHalo<np) NumPartOfLargestHalo=np;//local
-  }
 }
 void HaloSnapshot_t::Clear()
 /* call this to reset the HaloSnapshot to empty.
@@ -627,7 +459,8 @@ int main(int argc, char **argv)
   ParticleSnapshot_t snap;
   snap.Load(world, snapshot_start);
   cout<<"snapshot loaded\n";
-  halo.Load(world, snapshot_start, snap);
+  halo.Load(world, snapshot_start);
+  halo.UpdateParticles(world, snap);
   if(halo.Halos.size()>1)
   {
 	auto & h=halo.Halos[1];

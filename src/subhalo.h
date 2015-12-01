@@ -25,7 +25,7 @@
 class Subhalo_t
 {
 public:
-  typedef vector <HBTInt> ParticleList_t;
+  typedef vector <Particle_t> ParticleList_t;
   HBTInt TrackId;
   HBTInt Nbound;
   HBTInt HostHaloId;
@@ -137,8 +137,8 @@ public:
 	//TODO
 	cout<<"Clean() not implemented yet\n";
   }
-  void ParticleIdToIndex(const ParticleSnapshot_t & snapshot);
-  void ParticleIndexToId();
+  void UpdateParticles(mpi::communicator & world, const ParticleSnapshot_t & snapshot);
+//   void ParticleIndexToId();
   void AverageCoordinates();
   void AssignHosts(const HaloSnapshot_t &halo_snap);
   void PrepareCentrals(HaloSnapshot_t &halo_snap);

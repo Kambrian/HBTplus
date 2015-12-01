@@ -41,10 +41,10 @@ public:
   HaloSnapshot_t(): Snapshot_t(), Halos(), ParticleSnapshot(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
   }
-  void Load(mpi::communicator & world, int snapshot_index, const ParticleSnapshot_t &snap);
+  void Load(mpi::communicator & world, int snapshot_index);
   void Clear();
-  void ParticleIdToIndex(const ParticleSnapshot_t & snapshot);
-  void ParticleIndexToId();
+  void UpdateParticles(mpi::communicator & world, const ParticleSnapshot_t & snapshot);
+//   void ParticleIndexToId();
   void AverageCoordinates();
   HBTInt size() const
   { 

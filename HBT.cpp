@@ -47,10 +47,10 @@ int main(int argc, char **argv)
 	HaloSnapshot_t halosnap;
 	halosnap.Load(isnap);
 	timer.Tick();
+	halosnap.UpdateParticles(world, partsnap);
+	subsnap.UpdateParticles(world, partsnap);
 	#pragma omp parallel
 	{
-	halosnap.ParticleIdToIndex(partsnap);
-	subsnap.ParticleIdToIndex(partsnap);
 	#pragma omp master
 	timer.Tick();
 	subsnap.AssignHosts(halosnap);
