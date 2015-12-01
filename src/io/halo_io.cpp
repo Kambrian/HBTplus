@@ -330,6 +330,19 @@ int main(int argc, char **argv)
   cout<<halo.Halos.size()<<";"<<halo.TotNumberOfParticles<<endl;
   cout<<halo.Halos[10].Particles.size()<<endl;
   cout<<halo.Halos[10].Particles[0]<<endl;
+/*  ParticleSnapshot_t snap;
+  snap.Load(HBTConfig.MaxSnapshotIndex);
+  halo.ParticleIdToIndex(snap);
+  int ids[]={1,53};
+  for(auto &hid: ids)
+  {
+	auto & h=halo.Halos[hid];
+	auto pid=h.Particles[5];
+	const HBTxyz &pos=snap.GetComovingPosition(pid);
+	const HBTxyz &vel=snap.GetPhysicalVelocity(pid);
+	cout<<" Halo id="<<hid<<","<<h.Particles.size()<<", ["<<snap.GetParticleId(pid)<<","<<snap.GetParticleMass(pid)<<",("<<pos[0]<<","<<pos[1]<<","<<pos[2]<<"), ("<<vel[0]<<","<<vel[1]<<","<<vel[2]<<") ]"<<endl;
+  }
+  */
   return 0;
 }
 #endif

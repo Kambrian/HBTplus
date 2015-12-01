@@ -9,6 +9,8 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <chrono>
+#include <array>
+#include <iterator>
 
 #include "datatypes.h"
 #include "config_parser.h"
@@ -86,6 +88,16 @@ inline void copyHBTxyz(HBTxyz & dest, const HBTxyz & src)
 {
   memcpy(dest, src, sizeof(HBTxyz));
 }
+
+template <class T, std::size_t N>
+ostream& operator<<(ostream& o, const array<T, N>& arr)
+{
+  o<<"(";
+  copy(arr.cbegin(), arr.cend(), ostream_iterator<T>(o, ", "));
+  o<<")";
+  return o;
+}
+
 inline HBTReal position_modulus(HBTReal x, HBTReal boxsize)
 {//shift the positions to within [0,boxsize)
 	HBTReal y;
