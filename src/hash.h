@@ -60,7 +60,7 @@ private:
   typedef IndexTable_t<Key_t, Index_t> BaseClass_t;
   Index_t * Index;
   Index_t Offset;
-  Key_t KeySpan;
+  Key_t KeySpan, KeyMax, KeyMin;
 public:
   FlatIndexTable_t(): Index(), Offset(0), KeySpan(0)
   {
