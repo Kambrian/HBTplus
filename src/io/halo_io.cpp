@@ -628,8 +628,11 @@ int main(int argc, char **argv)
   snap.Load(world, snapshot_start);
   cout<<"snapshot loaded\n";
   halo.Load(world, snapshot_start, snap);
-  if(halo.Halos.size())
-  cout<<" Halo 0 from thread "<<world.rank()<<":"<<halo.Halos[0].Particles.size()<<", "<<halo.Halos[0].Particles[0].Id<<endl;
+  if(halo.Halos.size()>1)
+  {
+	auto & h=halo.Halos[1];
+	cout<<" Halo 1 from thread "<<world.rank()<<":"<<"id="<<h.HaloId<<","<<h.Particles.size()<<", "<<h.Particles[5]<<endl;
+  }
   return 0;
 }
 #endif

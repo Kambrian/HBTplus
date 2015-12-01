@@ -13,6 +13,11 @@ using namespace std;
 #include "mymath.h"
 #include <mpi.h>
 
+ostream& operator << (ostream& o, Particle_t &p)
+{
+   o << "[" << p.Id << ", " <<p.Mass<<", " << p.ComovingPosition << ", " << p.PhysicalVelocity << "]";
+   return o;
+};
 /*
 void ParticleSnapshot_t::FillParticleHash()
 {

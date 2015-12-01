@@ -38,6 +38,7 @@ public:
 BOOST_IS_MPI_DATATYPE(Particle_t)
 BOOST_CLASS_TRACKING(Particle_t,track_never)
 extern void create_MPI_Particle_type(MPI_Datatype &MPI_HBTParticle_t);
+extern ostream& operator << (ostream& o, Particle_t &p);
 
 class SnapshotHeader_t
 {
