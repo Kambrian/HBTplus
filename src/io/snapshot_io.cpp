@@ -301,6 +301,8 @@ void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
   MPI_Alltoallv(SendBuffer.data(), CellSizes.data(), CellOffsets.data(), MPI_HBT_Particle, 
 				Particles.data(), ReceiveSizes.data(), ReceiveOffsets.data(), MPI_HBT_Particle, world);
 
+  MPI_Type_free(&MPI_HBT_Particle);
+  
   cout<<Particles.size()<<" particles received on node "<<world.rank()<<endl;
 }
 
