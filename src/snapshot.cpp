@@ -11,6 +11,7 @@ using namespace std;
 
 #include "snapshot.h"
 #include "mymath.h"
+#include <mpi.h>
 
 /*
 void ParticleSnapshot_t::FillParticleHash()

@@ -8,7 +8,7 @@
 #include "datatypes.h"
 #include "snapshot_number.h"
 #include "snapshot.h"
-
+extern void create_MPI_Halo_Id_type(MPI_Datatype &MPI_HBTHalo_Id_t);
 class Halo_t
 {
   friend class boost::serialization::access;

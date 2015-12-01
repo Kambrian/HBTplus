@@ -35,8 +35,51 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHa
   int thisrank=world.rank();
   HaloList_t HaloBuffer;
   HaloList_t & WorkingHalos=(world.rank()==root)?InHalos:HaloBuffer;
-  broadcast(world, WorkingHalos, root);//TODO: rewrite this with MPI; try to serialize only the properties of haloes, and send particles separately with MPI?
+  MPI_Datatype MPI_HBT_Particle;
+  create_MPI_Particle_type(MPI_HBT_Particle);
+ 
+  //broadcast haloes
+  {
+  HBTInt nhalo=WorkingHalos.size();
+  MPI_Bcast(&nhalo, 1, MPI_HBT_INT, root, world);
+  if(world.rank()!=root)
+	WorkingHalos.resize(nhalo);
+  //send id
+  MPI_Datatype MPI_HBTHalo_Id_t;
+  create_MPI_Halo_Id_type(MPI_HBTHalo_Id_t);
+  MPI_Bcast(WorkingHalos.data(), nhalo, MPI_HBTHalo_Id_t, root, world);
+  MPI_Type_free(&MPI_HBTHalo_Id_t);
   
+  //send sizes and prepare buffer
+  vector <HBTInt> HaloSizes(nhalo);
+  if(world.rank()==root)
+  {
+	for(HBTInt i=0;i<nhalo;i++)
+	  HaloSizes[i]=WorkingHalos[i].Particles.size();
+  }
+  MPI_Bcast(HaloSizes.data(), nhalo, MPI_HBT_INT, root, world);
+  if(world.rank()!=root)
+  {
+	for(HBTInt i=0;i<nhalo;i++)
+	  WorkingHalos[i].Particles.resize(HaloSizes[i]);
+  }
+  
+  //send particles
+  vector <MPI_Aint> HaloBuffer(nhalo);
+  for(HBTInt i=0;i<nhalo;i++)
+  {
+	 MPI_Aint p;
+	 MPI_Address(WorkingHalos[i].Particles.data(),&p);
+	 HaloBuffer[i]=p;
+  }
+  MPI_Datatype HaloType;
+  MPI_Type_create_hindexed(nhalo, HaloSizes.data(), HaloBuffer.data(), MPI_HBT_Particle, &HaloType);
+  MPI_Type_commit(&HaloType);
+  MPI_Bcast(MPI_BOTTOM, 1, HaloType, root, world);
+  MPI_Type_free(&HaloType);
+  }
+  
+  //fill particles and decide movement
   struct SizeRank_t
   {
 	HBTInt np;
@@ -67,8 +110,6 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHa
 	vector <vector <MPI_Aint> > SendBuffers(world.size()), ReceiveBuffers(world.size());
 	vector <vector<int> > SendSizes(world.size()), ReceiveSizes(world.size());
 	vector <MPI_Datatype> SendTypes(world.size()), ReceiveTypes(world.size());
-	MPI_Datatype MPI_HBT_Particle;
-	create_MPI_Particle_type(MPI_HBT_Particle);
   
 	for(HBTInt haloid=0;haloid<WorkingHalos.size();haloid++)//packing
 	{
@@ -84,9 +125,11 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHa
 	  if(accumulate(SendSizes[rank].begin(), SendSizes[rank].end(), 0L)>INT_MAX)
 		throw runtime_error("Error: sending more than INT_MAX particles around with MPI causes overflow. try increase the number of mpi threads.\n");
 	  MPI_Type_create_hindexed(SendSizes[rank].size(), SendSizes[rank].data(), SendBuffers[rank].data(), MPI_HBT_Particle, &SendTypes[rank]);
+	  MPI_Type_commit(&SendTypes[rank]);
 	}
+
+	VectorAllToAll(world, SendSizes, ReceiveSizes, MPI_INT);
 	
-	all_to_all(world, SendSizes, ReceiveSizes);
 	HBTInt NumNewHalos=ReceiveSizes[0].size();
 	OutHalos.resize(OutHalos.size()+NumNewHalos);
 	auto NewHalos=OutHalos.end()-NumNewHalos;
@@ -109,11 +152,18 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHa
 	  }
 	}	
 	for(int rank=0;rank<world.size();rank++)
+	{
 	  MPI_Type_create_hindexed(NumNewHalos, ReceiveSizes[rank].data(), ReceiveBuffers[rank].data(), MPI_HBT_Particle, &ReceiveTypes[rank]);
+	  MPI_Type_commit(&ReceiveTypes[rank]);
+	}
 	
 	vector <int> Counts(world.size(),1), Disps(world.size(),0);
 	MPI_Alltoallw(MPI_BOTTOM, Counts.data(), Disps.data(), SendTypes.data(), MPI_BOTTOM, Counts.data(), Disps.data(), ReceiveTypes.data(), world);
-	
+	for(int rank=0;rank<world.size();rank++)
+	{
+	  MPI_Type_free(&SendTypes[rank]);
+	  MPI_Type_free(&ReceiveTypes[rank]);
+	}
 	MPI_Type_free(&MPI_HBT_Particle);
 	
 	//copy other properties

@@ -13,6 +13,36 @@
 
 #include "mymath.h"
 #include "halo.h"
+#include <mpi.h>
+
+void create_MPI_Halo_Id_type(MPI_Datatype &MPI_HBTHalo_Id_t)
+{
+/*to create the struct data type for communication*/	
+Halo_t p;
+#define NumAttr 1
+MPI_Datatype oldtypes[NumAttr]={MPI_HBT_INT};
+int blockcounts[NumAttr]={1};
+MPI_Aint   offsets[NumAttr], origin,extent;
+
+MPI_Get_address(&p,&origin);
+MPI_Get_address(&p.HaloId,offsets);
+// MPI_Get_address(p.ComovingPosition.data(),offsets+1);//caution: this might be implementation dependent??
+// MPI_Get_address(p.PhysicalVelocity.data(),offsets+2);
+MPI_Get_address((&p)+1,&extent);//to get the extent of s
+
+for(int i=0;i<NumAttr;i++)
+  offsets[i]-=origin;
+
+extent-=origin;
+
+// assert(offsets[2]-offsets[1]==sizeof(HBTReal)*3);//to make sure HBTxyz is stored locally.
+
+MPI_Type_create_struct(NumAttr,blockcounts,offsets,oldtypes, &MPI_HBTHalo_Id_t);//some padding is added automatically by MPI as well
+MPI_Type_create_resized(MPI_HBTHalo_Id_t,(MPI_Aint)0, extent, &MPI_HBTHalo_Id_t);
+MPI_Type_commit(&MPI_HBTHalo_Id_t);
+#undef NumAttr
+}
+
 /* deprecated.
 void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 {
