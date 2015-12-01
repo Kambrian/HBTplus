@@ -36,7 +36,7 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_t> & InHa
   int thisrank=world.rank();
   HaloList_t HaloBuffer;
   HaloList_t & WorkingHalos=(world.rank()==root)?InHalos:HaloBuffer;
-  broadcast(world, WorkingHalos, root);//TODO: rewrite this with MPI.
+  broadcast(world, WorkingHalos, root);//TODO: rewrite this with MPI; try to serialize only the properties of haloes, and send particles separately with MPI?
   
   struct SizeRank_t
   {
