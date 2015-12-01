@@ -180,3 +180,68 @@ MPI_Type_commit(&MPI_HBTParticle_t);
 //~ printf("%d\n",extent);
 #undef NumAttr
 }
+
+void AveragePosition(HBTxyz& CoM, const Particle_t Particles[], HBTInt NumPart)
+/*mass weighted average position*/
+{
+	HBTInt i,j;
+	double sx[3],origin[3],msum;
+	
+	if(0==NumPart) return;
+	if(1==NumPart) 
+	{
+	  copyHBTxyz(CoM, Particles[0].ComovingPosition);
+	  return;
+	}
+	
+	sx[0]=sx[1]=sx[2]=0.;
+	msum=0.;
+	if(HBTConfig.PeriodicBoundaryOn)
+	  for(j=0;j<3;j++)
+		origin[j]=Particles[0].ComovingPosition[j];
+	
+	for(i=0;i<NumPart;i++)
+	{
+	  HBTReal m=Particles[i].Mass;
+	  msum+=m;
+	  for(j=0;j<3;j++)
+	  if(HBTConfig.PeriodicBoundaryOn)
+		  sx[j]+=NEAREST(Particles[i].ComovingPosition[j]-origin[j])*m;
+	  else
+		  sx[j]+=Particles[i].ComovingPosition[j]*m;
+	}
+	
+	for(j=0;j<3;j++)
+	{
+		sx[j]/=msum;
+		if(HBTConfig.PeriodicBoundaryOn) sx[j]+=origin[j];
+		CoM[j]=sx[j];
+	}
+}
+void AverageVelocity(HBTxyz& CoV, const Particle_t Particles[], HBTInt NumPart)
+/*mass weighted average velocity*/
+{
+	HBTInt i,j;
+	double sv[3],msum;
+	
+	if(0==NumPart) return;
+	if(1==NumPart) 
+	{
+	  copyHBTxyz(CoV, Particles[0].PhysicalVelocity);
+	  return;
+	}
+	
+	sv[0]=sv[1]=sv[2]=0.;
+	msum=0.;
+	
+	for(i=0;i<NumPart;i++)
+	{
+	  HBTReal m=Particles[i].Mass;
+	  msum+=m;
+	  for(j=0;j<3;j++)
+		sv[j]+=Particles[i].PhysicalVelocity[j]*m;
+	}
+	
+	for(j=0;j<3;j++)
+	  CoV[j]=sv[j]/msum;
+}

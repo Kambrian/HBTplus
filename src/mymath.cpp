@@ -1,7 +1,9 @@
 #include <iostream>
 #include <glob.h>
+#include <assert.h>
 
 #include "mymath.h"
+
 
 int count_pattern_files(char *filename_pattern)
 {

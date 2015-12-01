@@ -246,4 +246,7 @@ inline HBTReal ParticleSnapshot_t::GetMass(HBTInt index) const
   else
 	return Particles[index].Mass;
 }
+
+extern void AveragePosition(HBTxyz& CoM, const Particle_t Particles[], HBTInt NumPart);
+extern void AverageVelocity(HBTxyz& CoV, const Particle_t Particles[], HBTInt NumPart);
 #endif
