@@ -58,25 +58,24 @@ template <class Key_t, class Index_t>
 void FlatIndexTable_t<Key_t, Index_t>::Fill(const Key_t* keys, const Index_t n)
 {
 	#ifndef PID_ORDERED
-	Key_t keymax,keymin;
-	keymax=keys[0];keymin=keys[0];
+	KeyMax=keys[0];KeyMin=keys[0];
 	for(Index_t i=1;i<n;i++)
 	{
-		if(keys[i]>keymax)
-			keymax=keys[i];
-		else if(keys[i]<keymin)	
-			keymin=keys[i];
+		if(keys[i]>KeyMax)
+			KeyMax=keys[i];
+		else if(keys[i]<KeyMin)	
+			KeyMin=keys[i];
 	}
-	KeySpan=keymax-keymin+1;
+	KeySpan=KeyMax-KeyMin+1;
 	Index=new Index_t[KeySpan];
-	Offset=keymin;
-	Index-=Offset;/*shift PIndex by keymin element so that it is accessed through PIndex[keymin~keymax],
+	Offset=KeyMin;
+	Index-=Offset;/*shift PIndex by KeyMin element so that it is accessed through PIndex[KeyMin~KeyMax],
 					i.e.,its subscript ranges the same as particle ID range. PID_all[PIndex[Id]]=Id;*/
 	
 	#pragma omp parallel 
 	{
 	#pragma omp for
-	for(Key_t i=keymin;i<=keymax;i++)
+	for(Key_t i=KeyMin;i<=KeyMax;i++)
 		Index[i]=BaseClass_t::NullIndex; //initialize with -1, although not necessary
 	/*====make ID index for query====*/
 	#pragma omp for
@@ -105,7 +104,7 @@ Index_t FlatIndexTable_t<Key_t, Index_t>::GetIndex(const Key_t key) const
 	#ifdef PID_ORDERED
 	return key-1; //change from ID [1,N] to Index [0,N-1]
 	#else
-	if(key<0) return BaseClass_t::NullIndex;//no match
+	if(key<KeyMin||key>KeyMax) return BaseClass_t::NullIndex;//no match
 	return Index[key];
 	#endif	
 }
