@@ -51,7 +51,6 @@ public:
   bool SnapshotIdUnsigned;
   vector <int> SnapshotIdList;
   
-  bool TrimNonHostParticles; //whether to trim particles outside the host halo when finding hosts; to be implemented..
   HBTReal MajorProgenitorMassRatio; 
   HBTReal BoundMassPrecision;
   HBTReal SourceSubRelaxFactor;
@@ -78,11 +77,10 @@ public:
 	VelInKmS=1.;
 	PeriodicBoundaryOn=true;
 	SnapshotHasIdBlock=true;
-	SnapshotNoMassBlock=false;
-	ParticleIdRankStyle=false;
+	SnapshotNoMassBlock=false;//to be removed
+	ParticleIdRankStyle=false;//to be removed
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
-	TrimNonHostParticles=false;
 	MajorProgenitorMassRatio=0.67;
 	BoundMassPrecision=0.9;
 	SourceSubRelaxFactor=3.;
@@ -141,7 +139,6 @@ void Parameter_t::serialize(Archive& ar, const unsigned int version)
   ar & SnapshotIdUnsigned;
   ar & SnapshotIdList;
   
-  ar & TrimNonHostParticles; //whether to trim particles outside the host halo when finding hosts
   ar & MajorProgenitorMassRatio; 
   ar & BoundMassPrecision;
   ar & SourceSubRelaxFactor;
