@@ -49,8 +49,8 @@ public:
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
 	LastMaxMass=0;
   }
-  void MoveTo(Subhalo_t & dest)
-  {//override dest with this, leaving this unspecified.
+  void MoveTo(Subhalo_t & dest, bool MoveParticle=true)
+  {//override dest with this, leaving this unspecified if MoveParticle=true.
 	dest.TrackId=TrackId;
 	dest.Nbound=Nbound;
 	dest.HostHaloId=HostHaloId;
@@ -60,7 +60,8 @@ public:
 	dest.SnapshotIndexOfLastIsolation=SnapshotIndexOfLastIsolation;
 	copyHBTxyz(dest.ComovingPosition, ComovingPosition);
 	copyHBTxyz(dest.PhysicalVelocity, PhysicalVelocity);
-	dest.Particles.swap(Particles);
+	if(MoveParticle)
+	  dest.Particles.swap(Particles);
   }
   void Unbind(const ParticleSnapshot_t &part_snap);
   HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
@@ -119,6 +120,8 @@ private:
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void BuildHDFDataType();
   H5::CompType H5T_SubhaloInMem, H5T_SubhaloInDisk;
+  MPI_Datatype MPI_HBT_SubhaloShell_t;//MPI datatype ignoring the particle list
+  void BuildMPIDataType();
 public:
   const ParticleSnapshot_t * SnapshotPointer;
   SubhaloList_t Subhalos;
@@ -127,6 +130,11 @@ public:
   SubhaloSnapshot_t(): Snapshot_t(), Subhalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubhaloInMem(sizeof(Subhalo_t)), ParallelizeHaloes(true)
   {
 	BuildHDFDataType();
+	BuildMPIDataType();
+  }
+  ~SubhaloSnapshot_t()
+  {
+	MPI_Type_free(&MPI_HBT_SubhaloShell_t);
   }
   void GetSubFileName(string &filename);
   void GetSrcFileName(string &filename);

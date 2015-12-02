@@ -1,4 +1,4 @@
-remove ParticleIdToIndex() functions. no longer needed.
+remove ParticleSnapshot pointer from halosnap and subsnap.
 
 Better parallelization/Minisnapshot
 
