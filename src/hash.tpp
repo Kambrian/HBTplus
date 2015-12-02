@@ -55,7 +55,10 @@ template <class Key_t, class Index_t>
 void FlatIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t<Key_t, Index_t> &Keys, Index_t null_index)
 {
   BaseClass_t::NullIndex=null_index;
+  Clear();
   Index_t n=Keys.size();
+  if(0==n) return;
+  
 	KeyMax=Keys.GetKey(0);KeyMin=Keys.GetKey(0);
 	for(Index_t i=1;i<n;i++)
 	{
@@ -94,6 +97,6 @@ void FlatIndexTable_t<Key_t, Index_t>::Clear()
 template <class Key_t, class Index_t>
 Index_t FlatIndexTable_t<Key_t, Index_t>::GetIndex(const Key_t key) const
 {
-	if(key<KeyMin||key>KeyMax) return BaseClass_t::NullIndex;//no match
+	if(KeySpan==0||key<KeyMin||key>KeyMax) return BaseClass_t::NullIndex;//no match
 	return Index[key];
 }

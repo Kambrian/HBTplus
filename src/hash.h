@@ -1,4 +1,5 @@
 /*hash table data for ID2Index*/
+//TODO: rename Index to Value, to avoid confusion when used for (Key,Val) pairs rather than ordered Keys.
 #ifndef HASH_HEADER_INCLUDED
 #define HASH_HEADER_INCLUDED
 
