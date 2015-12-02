@@ -11,6 +11,7 @@ class KeyList_t
 {
 public:
   virtual Key_t GetKey(const Index_t i) const=0;
+  virtual Index_t GetIndex(const Index_t i) const=0;
   virtual Index_t size() const=0;
 };
 
@@ -46,9 +47,9 @@ class IndexTable_t
 public: 
 //   typedef HBTInt Key_t;
 //   typedef HBTInt Index_t;
-  static const Index_t NullIndex=SpecialConst::NullParticleId;
+  Index_t NullIndex;
   
-  virtual void Fill(const KeyList_t<Key_t, Index_t> &Keys)=0;
+  virtual void Fill(const KeyList_t<Key_t, Index_t> &Keys, Index_t null_index=SpecialConst::NullParticleId)=0;
   virtual void Clear()=0;
   virtual Index_t GetIndex(const Key_t key) const =0;
 };
@@ -65,7 +66,7 @@ public:
   FlatIndexTable_t(): Index(), Offset(0), KeySpan(0)
   {
   }
-  void Fill(const KeyList_t <Key_t, Index_t> &Keys);
+  void Fill(const KeyList_t <Key_t, Index_t> &Keys, Index_t null_index=SpecialConst::NullParticleId);
   void Clear();
   Index_t GetIndex(const Key_t key) const;
   ~FlatIndexTable_t()
@@ -86,7 +87,7 @@ public:
   MappedIndexTable_t(): Map()
   {
   }
-  void Fill(const KeyList_t <Key_t, Index_t> &Keys);
+  void Fill(const KeyList_t <Key_t, Index_t> &Keys, Index_t null_index=SpecialConst::NullParticleId);
   void Clear();
   Index_t GetIndex(const Key_t key) const;
   ~MappedIndexTable_t()

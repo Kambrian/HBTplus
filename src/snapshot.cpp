@@ -52,6 +52,10 @@ public:
   {
 	return Snap.GetId(i);
   }
+  Index_t GetIndex(Index_t i) const
+  {
+	return i;
+  }
 };
 
 void ParticleSnapshot_t::FillParticleHash()
