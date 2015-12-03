@@ -64,7 +64,7 @@ public:
 	if(MoveParticle)
 	  dest.Particles.swap(Particles);
   }*/
-  void Unbind(const ParticleSnapshot_t &part_snap);
+  void Unbind(const Snapshot_t &epoch);
   HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
   void UpdateTrack(HBTInt snapshot_index);
   bool IsCentral()
@@ -93,7 +93,7 @@ private:
   vector <MemberList_t> Mem_SubGroups; //list of subhaloes inside each host halo, with the storage of each subgroup mapped to a location in Mem_AllMembers 
   vector <HBTInt> Mem_AllMembers; //the storage for all the MemberList_t
 public:
-  VectorView_t <HBTInt> AllMembers; //the complete list of all the subhaloes in SubGroups.
+  VectorView_t <HBTInt> AllMembers; //the complete list of all the subhaloes in SubGroups. (contains local subhaloid, i.e., the index of subhaloes in the local SubhaloSnapshot_t)
   VectorView_t <MemberList_t> SubGroups; //list of subhaloes inside each host halo. contain one more group than halo catalogue, to hold field subhaloes. It is properly offseted so that SubGroup[hostid=-1] gives field subhaloes, and hostid>=0 for the normal groups.
   HBTInt NBirth; //newly born halos, excluding fake halos
   HBTInt NFake; //Fake (unbound) halos with no progenitors
@@ -116,18 +116,20 @@ public:
 class SubhaloSnapshot_t: public Snapshot_t
 { 
 private:
-  void RegisterNewTracks();
+  bool ParallelizeHaloes;
+  H5::CompType H5T_SubhaloInMem, H5T_SubhaloInDisk;
+  MPI_Datatype MPI_HBT_SubhaloShell_t;//MPI datatype ignoring the particle list
+  
+  void RegisterNewTracks(mpi::communicator &world);
   void DecideCentrals(const HaloSnapshot_t &halo_snap);
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void BuildHDFDataType();
-  H5::CompType H5T_SubhaloInMem, H5T_SubhaloInDisk;
-  MPI_Datatype MPI_HBT_SubhaloShell_t;//MPI datatype ignoring the particle list
   void BuildMPIDataType();
 public:
   const ParticleSnapshot_t * SnapshotPointer;
   SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;
-  bool ParallelizeHaloes;
+  
   SubhaloSnapshot_t(): Snapshot_t(), Subhalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubhaloInMem(sizeof(Subhalo_t)), ParallelizeHaloes(true)
   {
 	BuildHDFDataType();
@@ -137,10 +139,10 @@ public:
   {
 	MPI_Type_free(&MPI_HBT_SubhaloShell_t);
   }
-  void GetSubFileName(string &filename);
-  void GetSrcFileName(string &filename);
-  void Load(int snapshot_index, bool load_src=false);
-  void Save();
+  void GetSubFileName(string &filename, int iFile);
+  void GetSrcFileName(string &filename, int iFile);
+  void Load(mpi::communicator &world, int snapshot_index, bool load_src=false);
+  void Save(mpi::communicator &world);
   void Clear()
   {
 	//TODO
@@ -152,7 +154,7 @@ public:
   void AssignHosts(mpi::communicator &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap);
   void PrepareCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
-  void UpdateTracks();
+  void UpdateTracks(mpi::communicator &world, const HaloSnapshot_t &halo_snap);
   HBTInt size() const
   {
 	return Subhalos.size();

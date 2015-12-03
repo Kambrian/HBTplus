@@ -48,6 +48,7 @@ void HaloSnapshot_t::BuildMPIDataType()
 }
 void HaloSnapshot_t::UpdateParticles(mpi::communicator &world, const ParticleSnapshot_t &snap)
 {
+  SetEpoch(snap);
   HaloList_t LocalHalos;
   for(int rank=0;rank<world.size();rank++)//one by one through the nodes
 	DistributeHaloes(world, rank, Halos, LocalHalos, snap, MPI_HBT_HaloId_t);
@@ -68,7 +69,7 @@ class HaloParticleKeyList_t: public KeyList_t <HBTInt, HBTInt>
   typedef HBTInt Index_t;
   typedef HBTInt Key_t;
   vector <HBTInt> ParticleIds;
-  vector <HBTInt> HaloIds;
+  vector <HBTInt> HaloIds;//local haloid
 public:
   HaloParticleKeyList_t(HaloSnapshot_t &snap)
   {

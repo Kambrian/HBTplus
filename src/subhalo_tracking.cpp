@@ -11,7 +11,7 @@ void Subhalo_t::UpdateTrack(HBTInt snapshot_index)
 {
   if(TrackId==SpecialConst::NullTrackId) return;
   
-  if(0==Rank||SpecialConst::NullHaloId==HostHaloId) SnapshotIndexOfLastIsolation=snapshot_index;
+  if(0==Rank) SnapshotIndexOfLastIsolation=snapshot_index;
   if(Nbound>=LastMaxMass) 
   {
 	SnapshotIndexOfLastMaxMass=snapshot_index;
@@ -63,7 +63,7 @@ void MemberShipTable_t::CountMembers(const SubhaloList_t& Subhalos)
 	SubGroups[Subhalos[subid].HostHaloId].IncrementBind();
 }
 void MemberShipTable_t::FillMemberLists(const SubhaloList_t& Subhalos)
-{
+{//fill with local subhaloid
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 	SubGroups[Subhalos[subid].HostHaloId].PushBack(subid);
@@ -97,8 +97,15 @@ void MemberShipTable_t::SortSatellites(const SubhaloList_t & Subhalos)
 }
 void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
 {
+  //field subhaloes
+  {
+	MemberList_t & SubGroup=SubGroups[-1];
+  #pragma omp for
+	for(HBTInt i=0;i<SubGroup.size();i++)
+	  Subhalos[SubGroup[i]].Rank=0;
+  }
 #pragma omp for
-  for(HBTInt haloid=-1;haloid<SubGroups.size();haloid++)
+  for(HBTInt haloid=0;haloid<SubGroups.size();haloid++)
   {
 	MemberList_t & SubGroup=SubGroups[haloid];
 	for(HBTInt i=0;i<SubGroup.size();i++)
@@ -304,10 +311,11 @@ void FindOtherHosts(mpi::communicator &world, int root, const HaloSnapshot_t &ha
 	MPI_Scatterv(TmpHalos.data(), Counts.data(), Disps.data(), MPI_Subhalo_Shell_Type, &NewSubhalos[0], NumNewSubs, MPI_Subhalo_Shell_Type, root, world);
 }
 void SubhaloSnapshot_t::AssignHosts(mpi::communicator &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap)
+/* find host haloes for subhaloes, and build MemberTable. Each subhalo is moved to the processor of its host halo, with its HostHaloId set to the local haloid of the host*/
 {
-  
   ParallelizeHaloes=halo_snap.NumPartOfLargestHalo<0.1*halo_snap.TotNumberOfParticles;//no dominating objects
-  {//exchange subhaloes according to hosts
+  
+  //exchange subhaloes according to hosts
   vector <Subhalo_t> LocalSubhalos;
   LocalSubhalos.reserve(Subhalos.size());
   halo_snap.FillParticleHash();
@@ -316,8 +324,7 @@ void SubhaloSnapshot_t::AssignHosts(mpi::communicator &world, HaloSnapshot_t &ha
 	FindOtherHosts(world, rank, halo_snap, part_snap, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t);
   Subhalos.swap(LocalSubhalos);
   halo_snap.ClearParticleHash();
-  }
-  
+    
   MemberTable.Build(halo_snap.Halos.size(), Subhalos);
   //   MemberTable.AssignRanks(Subhalos); //not needed here
 }
@@ -387,49 +394,67 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	else
 	  Subhalos[Members[0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles
   }
-  #pragma omp single
-  halo_snap.Clear();//to avoid misuse
+//   #pragma omp single
+//   halo_snap.Clear();//to avoid misuse
 }
 void SubhaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
 {
+  #pragma omp parallel
+  {
   halo_snap.AverageCoordinates();
   AverageCoordinates();
   DecideCentrals(halo_snap);
   FeedCentrals(halo_snap);
+  }
 }
 
-void SubhaloSnapshot_t::RegisterNewTracks()
+void SubhaloSnapshot_t::RegisterNewTracks(mpi::communicator &world)
 /*assign trackId to new bound ones, remove unbound ones, and record membership*/
 {
   HBTInt NTot=Subhalos.size();
-  HBTInt TrackId=NTot-MemberTable.NBirth, NFake=0;
+  HBTInt Nsub=NTot-MemberTable.NBirth;
   MemberTable.ResizeAllMembers(NTot);
-  for(HBTInt i=TrackId;i<NTot;i++)
+  for(HBTInt i=Nsub;i<NTot;i++)
   {
 	if(Subhalos[i].Nbound>1)
 	{
-	  if(i!=TrackId)
-		Subhalos[TrackId]=move(Subhalos[i]);
-// 		Subhalos[i].MoveTo(Subhalos[TrackId]);
-	  Subhalos[TrackId].TrackId=TrackId;
-	  MemberTable.AllMembers[TrackId]=TrackId; //this trackId is also the subhalo index
-// 	  assert(MemberTable.SubGroups[Subhalos[TrackId].HostHaloId].size()==0);
-	  MemberTable.SubGroups[Subhalos[TrackId].HostHaloId].Bind(1, &MemberTable.AllMembers[TrackId]);
-	  TrackId++;
+	  if(i!=Nsub)
+		Subhalos[Nsub]=move(Subhalos[i]);
+	  MemberTable.AllMembers[Nsub]=Nsub; //the MemberTable stores local subid, not TrackId.
+	  MemberTable.SubGroups[Subhalos[Nsub].HostHaloId].Bind(1, &MemberTable.AllMembers[Nsub]);
+	  Nsub++;
 	}
   }
-  MemberTable.NFake=NTot-TrackId;
+  MemberTable.NFake=NTot-Nsub;
   MemberTable.NBirth-=MemberTable.NFake;
-  Subhalos.resize(TrackId);
+  Subhalos.resize(Nsub);
+//   MemberTable.ResizeAllMembers(Nsub); //not necessary
+  
+  //now assign a global TrackId
+  HBTInt TrackIdOffset, NBirth=MemberTable.NBirth, Nsub_last=Nsub-NBirth, GlobalNumberOfSubs;
+  MPI_Allreduce(&Nsub_last, &GlobalNumberOfSubs, 1, MPI_HBT_INT, MPI_SUM, world); 
+  MPI_Scan(&NBirth, &TrackIdOffset, 1, MPI_HBT_INT, MPI_SUM, world); 
+  TrackIdOffset=TrackIdOffset+GlobalNumberOfSubs-NBirth;
+  for(HBTInt i=Nsub_last;i<Nsub;i++)
+	Subhalos[i].TrackId=TrackIdOffset++;
 }
-void SubhaloSnapshot_t::UpdateTracks()
+void SubhaloSnapshot_t::UpdateTracks(mpi::communicator &world, const HaloSnapshot_t &halo_snap)
 {
   /*renew ranks after unbinding*/
-#pragma omp single
-  RegisterNewTracks();
-  MemberTable.SortMemberLists(Subhalos);//reorder
+  RegisterNewTracks(world);
+  #pragma omp parallel
+  {
+  MemberTable.SortMemberLists(Subhalos);//reorder, so the central might change if necessary
   MemberTable.AssignRanks(Subhalos);
-#pragma omp for
+  #pragma omp for
   for(HBTInt i=0;i<Subhalos.size();i++)
+  {
 	Subhalos[i].UpdateTrack(SnapshotIndex);
+	HBTInt HostId=Subhalos[i].HostHaloId;
+	if(HostId<0)
+	  Subhalos[i].HostHaloId=-1;
+	else
+	  Subhalos[i].HostHaloId=halo_snap.Halos[HostId].HaloId;//restore global haloid
+  }
+  }
 }

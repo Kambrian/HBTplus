@@ -66,13 +66,18 @@ static void PopMostBoundParticle(ParticleEnergy_t * Edata, const HBTInt Nbound)
 }
 class EnergySnapshot_t: public Snapshot_t
 {
+  HBTInt GetParticle(HBTInt i) const
+  {
+	return Elist[i].pid;
+  }
 public:
   ParticleEnergy_t * Elist;
+  typedef vector <Particle_t> ParticleList_t;
   HBTInt N;
-  const Snapshot_t & Snapshot;
-  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const Snapshot_t & fullsnapshot): Elist(e), N(n), Snapshot(fullsnapshot)
+  const ParticleList_t & Particles;
+  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const ParticleList_t &particles, const Snapshot_t & epoch): Elist(e), N(n), Particles(particles)
   {
-	SetEpoch(fullsnapshot);
+	SetEpoch(epoch);
   };
   HBTInt size() const
   {
@@ -80,30 +85,26 @@ public:
   }
   HBTInt GetId(HBTInt i) const
   {
-	return Snapshot.GetId(GetParticle(i));
-  }
-  HBTInt GetParticle(HBTInt i) const
-  {
-	return Elist[i].pid;
+	return Particles[GetParticle(i)].Id;
   }
   HBTReal GetMass(HBTInt i) const
   {
-	return Snapshot.GetMass(GetParticle(i));
+	return Particles[GetParticle(i)].Mass;
   }
   const HBTxyz & GetPhysicalVelocity(HBTInt i) const
   {
-	return Snapshot.GetPhysicalVelocity(GetParticle(i));
+	return Particles[GetParticle(i)].PhysicalVelocity;
   }
   const HBTxyz & GetComovingPosition(HBTInt i) const
   {
-	return Snapshot.GetComovingPosition(GetParticle(i));
+	return Particles[GetParticle(i)].ComovingPosition;
   }
 };
-void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
-{//the reference frame should already be initialized before unbinding.
+void Subhalo_t::Unbind(const Snapshot_t &epoch)
+{//the reference frame (pos and vel) should already be initialized before unbinding.
   if(1==Particles.size()) return;
   
-  HBTInt OldMostBoundParticle=Particles[0];
+  const HBTInt OldMostBoundParticle=0;
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
@@ -111,8 +112,8 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   
   vector <ParticleEnergy_t> Elist(Nbound);
 	for(HBTInt i=0;i<Nbound;i++)
-	  Elist[i].pid=Particles[i];
-  EnergySnapshot_t ESnap(Elist.data(), Elist.size(), snapshot);
+	  Elist[i].pid=i;
+  EnergySnapshot_t ESnap(Elist.data(), Elist.size(), Particles, epoch);
 	while(true)
 	{
 		Nlast=Nbound;
@@ -121,7 +122,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  for(HBTInt i=0;i<Nlast;i++)
 	  {
 		HBTInt pid=Elist[i].pid;
-		Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingPosition, PhysicalVelocity, snapshot.GetMass(pid));
+		Elist[i].E=tree.BindingEnergy(Particles[pid].ComovingPosition, Particles[pid].PhysicalVelocity, ComovingPosition, PhysicalVelocity, Particles[pid].Mass);
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
 		if(Nbound<HBTConfig.MinNumPartOfSub)
@@ -134,8 +135,8 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
 		  PopMostBoundParticle(Elist.data(), Nbound);
 		}
-		copyHBTxyz(ComovingPosition, snapshot.GetComovingPosition(Elist[0].pid));
-		copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
+		copyHBTxyz(ComovingPosition, Particles[Elist[0].pid].ComovingPosition);
+		copyHBTxyz(PhysicalVelocity, Particles[Elist[0].pid].PhysicalVelocity);
 		if(0==Nbound||Nbound>Nlast*HBTConfig.BoundMassPrecision)  break;
 	}
 	if(Nbound)
@@ -143,14 +144,18 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
 	  Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
 	  if(Nlast>Particles.size()) Nlast=Particles.size();
-	  for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
+	  //todo: optimize this with in-place permutation, to avoid mem alloc and copying.
+	  ParticleList_t p(Nlast);
+	  for(HBTInt i=0;i<Nlast;i++) 
+		p[i]=Particles[Elist[i].pid];
+	  Particles.swap(p);
 	}
 	else
 	{
 	  Nbound=1;
 	  Nlast=1;//what if this is a central?? any fixes?
+	  Particles.resize(Nlast);//keep old particle order, just shrink.
 	}
-  Particles.resize(Nlast);
   //todo: output angular momentum and total energy as well, for calculation of spin.
 }
 void SubhaloSnapshot_t::RefineParticles()
@@ -167,7 +172,7 @@ void SubhaloSnapshot_t::RefineParticles()
   {
 	try
 	{
-	  Subhalos[subid].Unbind(*SnapshotPointer);
+	  Subhalos[subid].Unbind(*this);
 	}
 	catch(OctTreeExceeded_t &tree_exception)
 	{

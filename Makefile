@@ -4,10 +4,10 @@ OBJS_COMM=$(SRC_COMM:%.cpp=%.o)
 SRC=$(wildcard *.cpp)
 EXE=HBT HBTdouble HBTboost
 
-default: HBTboost
+default: HBT
 include Makefile.inc
 
-# $(EXE): $(OBJS_COMM)
+$(EXE): $(OBJS_COMM)
 
 HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
 HBTboost:src/config_parser.o src/mymath.o #src/io/snapshot_io.o src/snapshot.o

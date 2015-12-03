@@ -7,10 +7,9 @@
 #include "snapshot_number.h"
 #include "subhalo.h"
 #include "gravity_tree.h"
-
+/*
 void MemberShipTable_t::SubIdToTrackId(const SubhaloList_t& Subhalos)
 {
-  /*not necessary currently*/
    for(HBTInt i=0;i<AllMembers.size();i++)
 	AllMembers[i]=Subhalos[AllMembers[i]].TrackId;
 }
@@ -19,6 +18,7 @@ void MemberShipTable_t::TrackIdToSubId(SubhaloList_t& Subhalos)
 cout<<"Warning: TrackIdToSubId ToBe fully Implemented!\n";
 // exit(1);
 }
+*/
   
 void SubhaloSnapshot_t::BuildMPIDataType()
 {
@@ -55,6 +55,7 @@ MPI_Type_commit(&MPI_HBT_SubhaloShell_t);
 }
 void SubhaloSnapshot_t::UpdateParticles(mpi::communicator& world, const ParticleSnapshot_t& snapshot)
 {
+  SetEpoch(snapshot);
   SubhaloList_t LocalSubhalos;
   for(int rank=0;rank<world.size();rank++)//one by one through the nodes
 	DistributeHaloes(world, rank, Subhalos, LocalSubhalos, snapshot, MPI_HBT_SubhaloShell_t);
