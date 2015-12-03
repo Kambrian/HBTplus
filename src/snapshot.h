@@ -195,7 +195,7 @@ public:
   }
   ~ParticleSnapshot_t()
   {
-	Clear();
+	Clear();//not necessary
   }
   void FillParticleHash();
   void ClearParticleHash();

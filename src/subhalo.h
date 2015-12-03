@@ -49,7 +49,8 @@ public:
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
 	LastMaxMass=0;
   }
-  void MoveTo(Subhalo_t & dest, bool MoveParticle=true)
+ /* deprecated. use move assignement instead.
+  * void MoveTo(Subhalo_t & dest, bool MoveParticle=true)
   {//override dest with this, leaving this unspecified if MoveParticle=true.
 	dest.TrackId=TrackId;
 	dest.Nbound=Nbound;
@@ -62,7 +63,7 @@ public:
 	copyHBTxyz(dest.PhysicalVelocity, PhysicalVelocity);
 	if(MoveParticle)
 	  dest.Particles.swap(Particles);
-  }
+  }*/
   void Unbind(const ParticleSnapshot_t &part_snap);
   HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
   void UpdateTrack(HBTInt snapshot_index);
@@ -148,7 +149,7 @@ public:
   void UpdateParticles(mpi::communicator & world, const ParticleSnapshot_t & snapshot);
 //   void ParticleIndexToId();
   void AverageCoordinates();
-  void AssignHosts(const HaloSnapshot_t &halo_snap);
+  void AssignHosts(mpi::communicator &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap);
   void PrepareCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
   void UpdateTracks();

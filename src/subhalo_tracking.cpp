@@ -139,38 +139,187 @@ void MemberShipTable_t::Build(const HBTInt nhalos, const SubhaloList_t & Subhalo
 //   std::sort(AllMembers.begin(), AllMembers.end(), CompareHostAndMass);
 }
 
-void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
+inline HBTInt GetLocalHostId(HBTInt pid, const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap)
 {
-  static vector<HBTInt> ParticleToHost;//to make it shared
-#pragma omp single
-{
-   ParticleToHost.assign(SnapshotPointer->size(), SpecialConst::NullHaloId);
-   ParallelizeHaloes=halo_snap.NumPartOfLargestHalo<0.1*halo_snap.TotNumberOfParticles;//no dominating objects
+	HBTInt hostid=halo_snap.ParticleHash.GetIndex(pid);
+	if(hostid<0)//not in the haloes, =-1
+	{
+	  if(part_snap.GetIndex(pid)==SpecialConst::NullParticleId)
+		hostid--;//not in this snapshot either, =-2
+	}
+	return hostid;
 }
-#pragma omp for
-  for(HBTInt haloid=0;haloid<halo_snap.Halos.size();haloid++)
-  {
-	const Halo_t::ParticleList_t & Particles=halo_snap.Halos[haloid].Particles;
-	for(HBTInt i=0;i<Particles.size();i++)
-	  ParticleToHost[Particles[i]]=haloid;
-  }
-#pragma omp for 
+void FindLocalHosts(const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap, vector <Subhalo_t> & Subhalos, vector <Subhalo_t> &LocalSubhalos)
+{
+  #pragma omp parallel for 
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	Subhalos[subid].HostHaloId=GetLocalHostId(Subhalos[subid].Particles[0].Id, halo_snap, part_snap);
+  
+  HBTInt nsub_old=Subhalos.size(), nsub=0;
+  for(HBTInt subid=0;subid<nsub;subid++)
   {
-	//rely on most-bound particle
-	Subhalos[subid].HostHaloId=ParticleToHost[Subhalos[subid].Particles[0]];
-	//alternatives: CoreTrack; Split;
+	if(Subhalos[subid].HostHaloId<0)
+	{
+	  if(subid>nsub)
+		Subhalos[nsub++]=move(Subhalos[subid]);//there should be a default move assignement operator.
+	}
+	else
+	  LocalSubhalos.push_back(move(Subhalos[subid]));
   }
-#pragma omp single
-  vector <HBTInt>().swap(ParticleToHost);//free the memory.
-#pragma omp single nowait
-  if(HBTConfig.TrimNonHostParticles)
+  Subhalos.resize(nsub);
+}
+
+void FindOtherHosts(mpi::communicator &world, int root, const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap, vector <Subhalo_t> &Subhalos, vector <Subhalo_t> &LocalSubhalos, MPI_Datatype MPI_Subhalo_Shell_Type)
+/*scatter Subhalos from process root to LocalSubhalos in every other process
+ Note Subalos are "moved", so are in a unspecified state upon return.*/
+{
+  int thisrank=world.rank();
+  vector <HBTInt> TrackParticleIds;
+  HBTInt NumSubhalos;
+  
+  //broadcast trackparticles
+  if(thisrank==root) 
   {
-	cout<<"Error: TrimNonHostParticles not implemented yet...\n";
-	exit(1);
+	NumSubhalos=Subhalos.size();
+	if(NumSubhalos>INT_MAX)
+	  throw runtime_error("Error: in FindOtherHosts(), sending more subhaloes than INT_MAX will cause MPI message to overflow. Please try more MPI threads. aborting.\n");
   }
+  MPI_Bcast(&NumSubhalos, 1, MPI_HBT_INT, root, world);
+  TrackParticleIds.resize(NumSubhalos);
+  if(thisrank==root)
+  {
+	for(HBTInt i=0;i<Subhalos.size();i++)
+	  TrackParticleIds[i]=Subhalos[i].Particles[0].Id;
+  }
+  MPI_Bcast(TrackParticleIds.data(), NumSubhalos, MPI_HBT_INT, root, world);
+  
+  //find hosts
+  vector <SizeRank_t> LocalHostIds(NumSubhalos), GlobalHostIds(NumSubhalos);
+  if(thisrank==root)
+  {
+	#pragma omp parallel for if(NumSubhalos>20)
+	for(HBTInt i=0;i<NumSubhalos;i++)
+	{
+	  LocalHostIds[i].n=Subhalos[i].HostHaloId;//already found previously
+	  LocalHostIds[i].rank=thisrank;
+	}
+  }
+  else
+  {
+	#pragma omp parallel for if(NumSubhalos>20)
+	for(HBTInt i=0;i<NumSubhalos;i++)
+	{
+	  LocalHostIds[i].n=GetLocalHostId(TrackParticleIds[i], halo_snap, part_snap);
+	  LocalHostIds[i].rank=thisrank;
+	}
+  }
+
+  MPI_Allreduce(LocalHostIds.data(), GlobalHostIds.data(), NumSubhalos, MPI_HBTRankPair, MPI_MAXLOC, world);
+
+  //scatter free subhaloes from root to everywhere
+  //send particles; no scatterw, do it manually
+  MPI_Datatype MPI_HBT_Particle;
+  create_MPI_Particle_type(MPI_HBT_Particle);
+  vector <vector<int> > SendSizes(world.size());  
+  vector <MPI_Request> Req0,Req1;
+  if(thisrank==root)
+  {
+	vector <vector <MPI_Aint> > SendBuffers(world.size());
+	for(HBTInt subid=0;subid<NumSubhalos;subid++)//packing
+	{
+	  int rank=GlobalHostIds[subid].rank;
+	  auto & Particles=Subhalos[subid].Particles;
+	  MPI_Aint p;
+	  MPI_Address(Particles.data(),&p);
+	  SendBuffers[rank].push_back(p);
+	  SendSizes[rank].push_back(Particles.size());
+	}
+	Req0.resize(world.size());
+	Req1.resize(world.size());
+	for(int rank=0;rank<world.size();rank++)
+	{//todo: have to use Isend here..... to receive on root later; otherwise root send will deadlock waiting for receive to return.
+	  MPI_Isend(SendSizes[rank].data(), SendSizes[rank].size(), MPI_INT, rank, 0, world, &Req0[rank]);
+	  MPI_Datatype SendType;
+	  MPI_Type_create_hindexed(SendSizes[rank].size(), SendSizes[rank].data(), SendBuffers[rank].data(), MPI_HBT_Particle, &SendType);
+	  MPI_Type_commit(&SendType);
+	  MPI_Isend(MPI_BOTTOM, 1, SendType, rank, 1, world, &Req1[rank]);
+	  MPI_Type_free(&SendType);
+	}
+  }
+  //receive on every process, including root
+	vector <MPI_Aint> ReceiveBuffer;
+	vector <int> ReceiveSize;
+	int NumNewSubs;
+	MPI_Status stat;
+	MPI_Probe(root, 0, world, &stat);
+	MPI_Get_count(&stat, MPI_INT, &NumNewSubs);
+	ReceiveSize.resize(NumNewSubs);
+	MPI_Recv(ReceiveSize.data(), NumNewSubs, MPI_INT, root, 0, world, &stat);
+	LocalSubhalos.resize(LocalSubhalos.size()+NumNewSubs);
+	auto NewSubhalos=LocalSubhalos.end()-NumNewSubs;
+	ReceiveBuffer.resize(NumNewSubs);
+	for(int i=0;i<NumNewSubs;i++)
+	{
+	  auto &Particles=NewSubhalos[i].Particles;
+	  Particles.resize(ReceiveSize[i]);
+	  MPI_Aint p;
+	  MPI_Address(Particles.data(),&p);
+	  ReceiveBuffer[i]=p;
+	}
+	MPI_Datatype ReceiveType;
+	MPI_Type_create_hindexed(NumNewSubs, ReceiveSize.data(), ReceiveBuffer.data(), MPI_HBT_Particle, &ReceiveType);
+	MPI_Type_commit(&ReceiveType);
+	MPI_Recv(MPI_BOTTOM, 1, ReceiveType, root, 1, world, &stat);
+	MPI_Type_free(&ReceiveType);
+	
+	MPI_Type_free(&MPI_HBT_Particle);
+	
+	if(thisrank==root)
+	{
+// 	  vector <MPI_Status> stats(world.size());
+	  MPI_Waitall(world.size(), Req0.data(), MPI_STATUS_IGNORE);
+	  MPI_Waitall(world.size(), Req1.data(), MPI_STATUS_IGNORE);
+	}
+  
+  //copy other properties
+    vector <int> Counts(world.size()), Disps(world.size());
+	vector <Subhalo_t> TmpHalos;
+	if(world.rank()==root)
+	{//reuse GlobalHostIds for sorting
+	  for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	  {
+		Subhalos[subid].HostHaloId=GlobalHostIds[subid].n;
+// 		assert(GlobalHostIds[subid].n>=-1);
+		GlobalHostIds[subid].n=subid;
+	  }
+	  stable_sort(GlobalHostIds.begin(), GlobalHostIds.end(), CompareRank);
+	  TmpHalos.resize(Subhalos.size());
+	  for(HBTInt subid=0;subid<Subhalos.size();subid++)
+		TmpHalos[subid]=move(Subhalos[GlobalHostIds[subid].n]);
+// 		Subhalos[GlobalHostIds[subid].n].MoveTo(TmpHalos[subid], false);
+	  for(int rank=0;rank<world.size();rank++)
+		Counts[rank]=SendSizes[rank].size();
+	  CompileOffsets(Counts, Disps);
+	}
+	MPI_Scatterv(TmpHalos.data(), Counts.data(), Disps.data(), MPI_Subhalo_Shell_Type, &NewSubhalos[0], NumNewSubs, MPI_Subhalo_Shell_Type, root, world);
+}
+void SubhaloSnapshot_t::AssignHosts(mpi::communicator &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap)
+{
+  
+  ParallelizeHaloes=halo_snap.NumPartOfLargestHalo<0.1*halo_snap.TotNumberOfParticles;//no dominating objects
+  {//exchange subhaloes according to hosts
+  vector <Subhalo_t> LocalSubhalos;
+  LocalSubhalos.reserve(Subhalos.size());
+  halo_snap.FillParticleHash();
+  FindLocalHosts(halo_snap, part_snap, Subhalos, LocalSubhalos);
+  for(int rank=0;rank<world.size();rank++)
+	FindOtherHosts(world, rank, halo_snap, part_snap, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t);
+  Subhalos.swap(LocalSubhalos);
+  halo_snap.ClearParticleHash();
+  }
+  
   MemberTable.Build(halo_snap.Halos.size(), Subhalos);
-//   MemberTable.AssignRanks(Subhalos); //not needed here
+  //   MemberTable.AssignRanks(Subhalos); //not needed here
 }
 
 void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
@@ -260,7 +409,8 @@ void SubhaloSnapshot_t::RegisterNewTracks()
 	if(Subhalos[i].Nbound>1)
 	{
 	  if(i!=TrackId)
-		Subhalos[i].MoveTo(Subhalos[TrackId]);
+		Subhalos[TrackId]=move(Subhalos[i]);
+// 		Subhalos[i].MoveTo(Subhalos[TrackId]);
 	  Subhalos[TrackId].TrackId=TrackId;
 	  MemberTable.AllMembers[TrackId]=TrackId; //this trackId is also the subhalo index
 // 	  assert(MemberTable.SubGroups[Subhalos[TrackId].HostHaloId].size()==0);
