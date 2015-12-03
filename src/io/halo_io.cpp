@@ -438,6 +438,7 @@ void HaloSnapshot_t::Clear()
 {
 //   Halos.clear(); //this does not actually clear
   HaloList_t().swap(Halos);//this deeply cleans it
+  ParticleHash.Clear();
 }
 
 #ifdef TEST_halo_io

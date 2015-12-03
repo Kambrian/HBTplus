@@ -62,6 +62,51 @@ void HaloSnapshot_t::UpdateParticles(mpi::communicator &world, const ParticleSna
 	if(NumPartOfLargestHalo<np) NumPartOfLargestHalo=np;//local
   }
 }
+
+class HaloParticleKeyList_t: public KeyList_t <HBTInt, HBTInt>
+{
+  typedef HBTInt Index_t;
+  typedef HBTInt Key_t;
+  vector <HBTInt> ParticleIds;
+  vector <HBTInt> HaloIds;
+public:
+  HaloParticleKeyList_t(HaloSnapshot_t &snap)
+  {
+	ParticleIds.reserve(snap.TotNumberOfParticles);
+	HaloIds.reserve(snap.TotNumberOfParticles);
+	for(HBTInt i=0;i<snap.Halos.size();i++)
+	{
+	  auto &Part=snap.Halos[i].Particles;
+	  for(auto && p: Part)
+	  {
+		ParticleIds.push_back(p.Id);
+		HaloIds.push_back(i);//local haloid
+	  }
+	}
+  };
+  Index_t size() const
+  {
+	return ParticleIds.size();
+  }
+  Key_t GetKey(Index_t i) const
+  {
+	return ParticleIds[i];
+  }
+  Index_t GetIndex(Index_t i) const
+  {
+	return HaloIds[i];
+  }
+};
+
+void HaloSnapshot_t::FillParticleHash()
+{
+  HaloParticleKeyList_t Ids(*this); 
+  ParticleHash.Fill(Ids, SpecialConst::NullHaloId);
+}
+void HaloSnapshot_t::ClearParticleHash()
+{
+  ParticleHash.Clear();
+}
 /* deprecated.
 void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 {

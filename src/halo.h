@@ -25,6 +25,8 @@ public:
   HBTInt HaloId;
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
+  /* deprecated; use move assignment instead; 
+   * shall not define destructor in order for default move to be implemented by the compiler.
   void MoveTo(Halo_t & dest, bool MoveParticle=true)
   {
 	dest.HaloId=HaloId;
@@ -33,6 +35,7 @@ public:
 	if(MoveParticle)
 	  dest.Particles.swap(Particles);
   }
+  */
 };
 
 class HaloSnapshot_t: public Snapshot_t
@@ -45,6 +48,7 @@ public:
   HaloList_t Halos;
   HBTInt TotNumberOfParticles;
   HBTInt NumPartOfLargestHalo;
+  MappedIndexTable_t<HBTInt, HBTInt> ParticleHash;
   
   HaloSnapshot_t(): Snapshot_t(), Halos(), ParticleSnapshot(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
@@ -52,6 +56,7 @@ public:
   }
   ~HaloSnapshot_t()
   {
+// 	Clear();
 	MPI_Type_free(&MPI_HBT_HaloId_t);
   }
   void Load(mpi::communicator & world, int snapshot_index);
@@ -59,6 +64,8 @@ public:
   void UpdateParticles(mpi::communicator & world, const ParticleSnapshot_t & snapshot);
 //   void ParticleIndexToId();
   void AverageCoordinates();
+  void FillParticleHash();
+  void ClearParticleHash();
   HBTInt size() const
   { 
 	return Halos.size();
@@ -83,9 +90,14 @@ public:
 
 struct SizeRank_t
 {
-	HBTInt np;
+	HBTInt n;
 	int rank;
 };
+#ifdef HBT_INT8
+#define MPI_HBTRankPair MPI_LONG_INT
+#else
+#define MPI_HBTRankPair MPI_2INT
+#endif
 inline bool CompareRank(const SizeRank_t &a, const SizeRank_t &b)
 {
   return (a.rank<b.rank);
@@ -95,6 +107,7 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 /*distribute InHalos from root to around world. 
  *the destination of each halo is the one whose particle snapshot holds the most of this halo's particles. 
  *the distributed haloes are appended to OutHalos on each node.
+ * Note InHalos are "moved", so are in a unspecified state upon return.
 */
 {
   int thisrank=world.rank();
@@ -149,9 +162,9 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
   for(HBTInt haloid=0;haloid<HaloBuffers.size();haloid++)
   {
 	typename Halo_T::ParticleList_t & Particles=HaloBuffers[haloid];
-	size[haloid].np=0;
+	size[haloid].n=0;
 	size[haloid].rank=thisrank;
-	HBTInt &np=size[haloid].np;
+	HBTInt &np=size[haloid].n;
 	for(HBTInt i=0;i<Particles.size();i++)
 	{
 	  HBTInt index=snap.GetIndex(Particles[i]);
@@ -160,12 +173,8 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 	}
 	Particles.resize(np);
   }
-#ifdef HBT_INT8
-#define MPI_HBTPair MPI_LONG_INT
-#else
-#define MPI_HBTPair MPI_2INT
-#endif
-	MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTPair, MPI_MAXLOC, world);
+
+	MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTRankPair, MPI_MAXLOC, world);
 	
 	vector <vector <MPI_Aint> > SendBuffers(world.size()), ReceiveBuffers(world.size());
 	vector <vector<int> > SendSizes(world.size()), ReceiveSizes(world.size());
@@ -183,7 +192,7 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 	for(int rank=0;rank<world.size();rank++)
 	{
 	  if(accumulate(SendSizes[rank].begin(), SendSizes[rank].end(), 0L)>INT_MAX)
-		throw runtime_error("Error: sending more than INT_MAX particles around with MPI causes overflow. try increase the number of mpi threads.\n");
+		throw runtime_error("Error: in DistributeHaloes(), sending more than INT_MAX particles around with MPI causes overflow. try increase the number of mpi threads.\n");
 	  MPI_Type_create_hindexed(SendSizes[rank].size(), SendSizes[rank].data(), SendBuffers[rank].data(), MPI_HBT_Particle, &SendTypes[rank]);
 	  MPI_Type_commit(&SendTypes[rank]);
 	}
@@ -231,11 +240,12 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 	if(world.rank()==root)
 	{//reuse maxsize for sorting
 	  for(HBTInt haloid=0;haloid<InHalos.size();haloid++)
-		maxsize[haloid].np=haloid;
+		maxsize[haloid].n=haloid;
 	  stable_sort(maxsize.begin(), maxsize.end(), CompareRank);
 	  TmpHalos.resize(InHalos.size());
 	  for(HBTInt haloid=0;haloid<InHalos.size();haloid++)
-		InHalos[maxsize[haloid].np].MoveTo(TmpHalos[haloid], false);
+		TmpHalos[haloid]=move(InHalos[maxsize[haloid].n]);
+// 		InHalos[maxsize[haloid].n].MoveTo(TmpHalos[haloid], false);
 	  for(int rank=0;rank<world.size();rank++)
 		Counts[rank]=SendSizes[rank].size();
 	  CompileOffsets(Counts, Disps);
