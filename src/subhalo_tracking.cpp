@@ -162,8 +162,8 @@ void FindLocalHosts(const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &p
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
 	Subhalos[subid].HostHaloId=GetLocalHostId(Subhalos[subid].Particles[0].Id, halo_snap, part_snap);
   
-  HBTInt nsub_old=Subhalos.size(), nsub=0;
-  for(HBTInt subid=0;subid<nsub;subid++)
+  HBTInt nsub=0;
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 	if(Subhalos[subid].HostHaloId<0)
 	{
