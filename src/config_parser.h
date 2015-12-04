@@ -93,6 +93,18 @@ public:
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
   void CheckUnsetParameters();
+  void BroadCast(mpi::communicator &world, int root)
+  {
+	broadcast(world, *this, root);
+	broadcast(world, PhysicalConst::G, root);
+	broadcast(world, PhysicalConst::H0, root);
+  }
+  void BroadCast(mpi::communicator &world, int root, int &snapshot_start, int &snapshot_end)
+  {
+	BroadCast(world, root);
+	broadcast(world, snapshot_start, root);
+	broadcast(world, snapshot_end, root);
+  }
 };
 
 extern Parameter_t HBTConfig;

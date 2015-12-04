@@ -28,9 +28,7 @@ int main(int argc, char **argv)
 	mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
 	MarkHBTVersion();
   }
-  broadcast(world, HBTConfig, 0);
-  broadcast(world, snapshot_start, 0);
-  broadcast(world, snapshot_end, 0);
+  HBTConfig.BroadCast(world, 0, snapshot_start, snapshot_end);
   	
   SubhaloSnapshot_t subsnap;
   

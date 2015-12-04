@@ -426,9 +426,7 @@ int main(int argc, char **argv)
   int snapshot_start, snapshot_end;
   if(0==world.rank())
 	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
-  broadcast(world, HBTConfig, 0);
-  broadcast(world, snapshot_start, 0);
-  broadcast(world, snapshot_end, 0);
+  HBTConfig.BroadCast(world, 0, snapshot_start, snapshot_end);
   
   ParticleSnapshot_t snapshot;
   snapshot.Load(world, snapshot_start, true);
