@@ -44,13 +44,12 @@ class HaloSnapshot_t: public Snapshot_t
   MPI_Datatype MPI_HBT_HaloId_t;//MPI datatype ignoring the particle list
   void BuildMPIDataType();
 public:
-  const ParticleSnapshot_t * ParticleSnapshot;
   HaloList_t Halos;
   HBTInt TotNumberOfParticles;
   HBTInt NumPartOfLargestHalo;
   MappedIndexTable_t<HBTInt, HBTInt> ParticleHash;
   
-  HaloSnapshot_t(): Snapshot_t(), Halos(), ParticleSnapshot(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
+  HaloSnapshot_t(): Snapshot_t(), Halos(), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
 	BuildMPIDataType();
   }

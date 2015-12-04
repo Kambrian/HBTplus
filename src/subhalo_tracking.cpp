@@ -18,7 +18,7 @@ void Subhalo_t::UpdateTrack(HBTInt snapshot_index)
 	LastMaxMass=Nbound;
   }
 }
-HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const ParticleSnapshot_t &snapshot)
+HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &snapshot)
 {
   HBTReal dx=PeriodicDistance(halo.ComovingPosition, ComovingPosition);
   HBTReal dv=distance(halo.PhysicalVelocity, PhysicalVelocity);
@@ -344,11 +344,11 @@ void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 		if(Subhalos[List[n_major]].Nbound<MassLimit) break;
 	  if(n_major>1)
 	  {
-		HBTReal dmin=Subhalos[List[0]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
+		HBTReal dmin=Subhalos[List[0]].KineticDistance(halo_snap.Halos[hostid], *this);
 		int icenter=0;
 		for(int i=1;i<n_major;i++)
 		{
-		  HBTReal d=Subhalos[List[i]].KineticDistance(halo_snap.Halos[hostid], *SnapshotPointer);
+		  HBTReal d=Subhalos[List[i]].KineticDistance(halo_snap.Halos[hostid], *this);
 		  if(dmin>d)
 		  {
 			dmin=d;

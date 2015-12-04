@@ -65,7 +65,7 @@ public:
 	  dest.Particles.swap(Particles);
   }*/
   void Unbind(const Snapshot_t &epoch);
-  HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
+  HBTReal KineticDistance(const Halo_t & halo, const Snapshot_t & partsnap);
   void UpdateTrack(HBTInt snapshot_index);
   bool IsCentral()
   {
@@ -126,11 +126,10 @@ private:
   void BuildHDFDataType();
   void BuildMPIDataType();
 public:
-  const ParticleSnapshot_t * SnapshotPointer;
   SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;
   
-  SubhaloSnapshot_t(): Snapshot_t(), Subhalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubhaloInMem(sizeof(Subhalo_t)), ParallelizeHaloes(true)
+  SubhaloSnapshot_t(): Snapshot_t(), Subhalos(), MemberTable(), H5T_SubhaloInMem(sizeof(Subhalo_t)), ParallelizeHaloes(true)
   {
 	BuildHDFDataType();
 	BuildMPIDataType();
