@@ -56,7 +56,7 @@ void HaloSnapshot_t::UpdateParticles(mpi::communicator &world, const ParticleSna
   
   TotNumberOfParticles=0;
   NumPartOfLargestHalo=0;
-  for(auto &&h: LocalHalos)
+  for(auto &&h: Halos)
   {
 	HBTInt np=h.Particles.size();
 	TotNumberOfParticles+=np;//local
