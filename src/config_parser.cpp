@@ -28,6 +28,12 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(MinSnapshotIndex)
   else TrySetPar(MinNumPartOfSub)
   else TrySetPar(GroupFileVariant)
+//   else TrySetPar(GroupParticleIdMask)
+  else if(name=="GroupParticleIdMask")
+  {
+	ss>>hex>>GroupParticleIdMask>>dec;
+	cout<<"GroupParticleIdMask = "<<hex<<GroupParticleIdMask<<dec<<endl;
+  }
   else TrySetPar(MassInMsunh)
   else TrySetPar(LengthInMpch)
   else TrySetPar(VelInKmS)

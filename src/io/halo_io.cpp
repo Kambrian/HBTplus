@@ -251,6 +251,12 @@ void GroupFileReader_t::ReadV2V3(int read_level, HBTInt start_particle, HBTInt e
 	vector <PIDtype_t> PIDs(Nread);
 	fseek(fd, sizeof(PIDtype_t)*start_particle, SEEK_CUR);
 	myfread(PIDs.data(), sizeof(PIDtype_t), Nread, fd);
+	#define ID_MASK 0x00000003FFFFFFFF //only the least significant 34bits are the actual ids
+	PIDtype_t Mask=HBTConfig.GroupParticleIdMask;
+	if(Mask) 
+	#pragma omp parallel for
+	for(HBTInt i=0;i<Nread;i++)
+	  PIDs[i]&=Mask;
 	fseek(fd, sizeof(PIDtype_t)*(Nids-end_particle), SEEK_CUR);
 	if(long int extra_bytes=BytesToEOF(fd))
 	{
