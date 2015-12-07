@@ -128,13 +128,13 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 	HaloBuffers.resize(nhalo);
     
   //broadcast sizes and prepare buffer
-  vector <HBTInt> HaloSizes(nhalo);
+  vector <int> HaloSizes(nhalo);
   if(world.rank()==root)
   {
 	for(HBTInt i=0;i<nhalo;i++)
 	  HaloSizes[i]=HaloBuffers[i].size();
   }
-  MPI_Bcast(HaloSizes.data(), nhalo, MPI_HBT_INT, root, world);
+  MPI_Bcast(HaloSizes.data(), nhalo, MPI_INT, root, world);
   if(world.rank()!=root)
   {
 	for(HBTInt i=0;i<nhalo;i++)
