@@ -1,8 +1,8 @@
 #!/bin/bash
 # this file is intended to be used with bsub, for job submition
 ##BSUB -L /bin/bash       # script shell language (/bin/tcsh, /bin/ksh etc.) NOTE: this cause problem on SHAO cluster of missing libimf.so
-#BSUB -n 3              # number of cores required
-#BSUB -M 100000        #max (MB)
+#BSUB -n 4              # number of cores required
+##BSUB -M 100000        #max (MB)
 ##BSUB -m "cosma-f"
 ##BSUB -R "rusage[mem=3000]"  #reserve 3gb
 #BSUB -J HBT               # name of job
@@ -30,5 +30,4 @@ ulimit -s unlimited
 # export KMP_BLOCKTIME=0  # this seems to help a lot, to reuse thread immediately after its job is finished
 export OMP_NUM_THREADS=12
 
-snapstart=127
-mpirun -np $LSB_DJOB_NUMPROC src/io/halo_io.test configs/AqA5.conf $snapstart $snapend
+mpirun -np $LSB_DJOB_NUMPROC HBTdouble configs/MilliMill.conf $snapstart $snapend
