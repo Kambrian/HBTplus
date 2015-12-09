@@ -240,10 +240,10 @@ inline const HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(HBTInt index) const
   return Particles[index].PhysicalVelocity;
 }
 inline HBTReal ParticleSnapshot_t::GetMass(HBTInt index) const
-{
+{/*
   if(Header.mass[1])
 	return Header.mass[1];
-  else
+  else*/
 	return Particles[index].Mass;
 }
 
