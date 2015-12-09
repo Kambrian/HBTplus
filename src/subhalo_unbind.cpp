@@ -94,6 +94,33 @@ public:
   {
 	return Snapshot.GetComovingPosition(GetMemberId(i));
   }
+  void AverageVelocity(HBTxyz& CoV, const HBTInt NumPart)
+  /*mass weighted average velocity*/
+  {
+	HBTInt i,j;
+	double sv[3],msum;
+	
+	if(0==NumPart) return;
+	if(1==NumPart) 
+	{
+	  copyHBTxyz(CoV, GetPhysicalVelocity(0));
+	  return;
+	}
+	
+	sv[0]=sv[1]=sv[2]=0.;
+	msum=0.;
+	
+	for(i=0;i<NumPart;i++)
+	{
+	  HBTReal m=GetMass(i);
+	  msum+=m;
+	  for(j=0;j<3;j++)
+		sv[j]+=GetPhysicalVelocity(i)[j]*m;
+	}
+	
+	for(j=0;j<3;j++)
+	  CoV[j]=sv[j]/msum;
+  }
 };
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
@@ -130,10 +157,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
 		  PopMostBoundParticle(Elist.data(), Nbound);
-		  vector <HBTInt> BoundParticles(Nbound);
-		  for(HBTInt i=0;i<Nbound;i++)
-			BoundParticles[i]=Elist[i].pid;
-		  snapshot.AverageVelocity(PhysicalVelocity, BoundParticles.data(), Nbound);
+		  ESnap.AverageVelocity(PhysicalVelocity, Nbound);
 		}
 		copyHBTxyz(ComovingPosition, snapshot.GetComovingPosition(Elist[0].pid));
 // 		copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
