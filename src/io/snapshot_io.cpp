@@ -364,7 +364,7 @@ void ParticleSnapshot_t::ReadFile(int iFile)
 		ReadScalarBlock(long, Id)
   }
   
-  #define MassDataPresent(i) (0==header.mass[i])
+  #define MassDataPresent(i) ((0==header.mass[i])&&(header.npartTotal[i]))
   if(MassDataPresent(1))
   {
 	size_t n_skip_old=n_skip;
@@ -382,7 +382,7 @@ void ParticleSnapshot_t::ReadFile(int iFile)
 	for(auto it=Particles.end()-n_read; it<Particles.end();it++)
 	  it->Mass=header.mass[1]; 
 
-	if(!HBTConfig.SnapshotNoMassBlock)
+// 	if(!HBTConfig.SnapshotNoMassBlock)
 	for(int i=0;i<NUMBER_OF_PARTICLE_TYPES;i++)
 	  if(MassDataPresent(i))
 	  {
