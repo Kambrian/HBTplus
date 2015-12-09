@@ -28,6 +28,6 @@ ulimit -s unlimited
 # but seems not always use the maximum available number of cpus allowed by NUM_THREADS
 # so better not allow it to adjust. shit.
 # export KMP_BLOCKTIME=0  # this seems to help a lot, to reuse thread immediately after its job is finished
-export OMP_NUM_THREADS=12
+export OMP_NUM_THREADS=24
 
-./HBT configs/AqA5.conf $snapstart $snapend
+./HBT configs/DynamicMerger.conf $snapstart $snapend
