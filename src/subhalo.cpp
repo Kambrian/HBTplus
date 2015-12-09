@@ -101,8 +101,8 @@ void SubhaloSnapshot_t::AverageCoordinates()
 #pragma omp for
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
-	int coresize=GetCoreSize(Subhalos[subid].Nbound);
-	AveragePosition(Subhalos[subid].ComovingPosition, Subhalos[subid].Particles.data(), coresize);
-	AverageVelocity(Subhalos[subid].PhysicalVelocity, Subhalos[subid].Particles.data(), coresize);
+// 	int coresize=GetCoreSize(Subhalos[subid].Nbound);
+	AveragePosition(Subhalos[subid].ComovingPosition, Subhalos[subid].Particles.data(), 1);
+	AverageVelocity(Subhalos[subid].PhysicalVelocity, Subhalos[subid].Particles.data(), Subhalos[subid].Nbound);
   }
 }
