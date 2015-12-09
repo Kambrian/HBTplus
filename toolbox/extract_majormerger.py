@@ -23,7 +23,7 @@ def getData(isnap):
 data=np.array([getData(i) for i in xrange(101)])
 np.savetxt(rootdir+'history.txt', data)
 
-plt.plot(data[:,0])
-plt.plot(data[:,4])
+plt.plot(data[:,0]/1e6)
+plt.plot(data[:,4]/1e6)
 plt.figure();
 plt.plot(data[:,-1])

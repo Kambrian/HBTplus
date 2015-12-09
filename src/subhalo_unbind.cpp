@@ -124,14 +124,19 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		{
 		  Nbound=0;
 		  Elist[0].pid=OldMostBoundParticle;
+		  copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(OldMostBoundParticle));
 		}
 		else
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
 		  PopMostBoundParticle(Elist.data(), Nbound);
+		  vector <HBTInt> BoundParticles(Nbound);
+		  for(HBTInt i=0;i<Nbound;i++)
+			BoundParticles[i]=Elist[i].pid;
+		  snapshot.AverageVelocity(PhysicalVelocity, BoundParticles.data(), Nbound);
 		}
 		copyHBTxyz(ComovingPosition, snapshot.GetComovingPosition(Elist[0].pid));
-		copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
+// 		copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
 		if(0==Nbound||Nbound>Nlast*HBTConfig.BoundMassPrecision)  break;
 	}
 	if(Nbound)

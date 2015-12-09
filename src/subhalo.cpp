@@ -60,7 +60,7 @@ void SubhaloSnapshot_t::AverageCoordinates()
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 	int coresize=GetCoreSize(Subhalos[subid].Nbound);
-	SnapshotPointer->AveragePosition(Subhalos[subid].ComovingPosition, Subhalos[subid].Particles.data(), coresize);
-	SnapshotPointer->AverageVelocity(Subhalos[subid].PhysicalVelocity, Subhalos[subid].Particles.data(), coresize);
+	SnapshotPointer->AveragePosition(Subhalos[subid].ComovingPosition, Subhalos[subid].Particles.data(), 1);
+	SnapshotPointer->AverageVelocity(Subhalos[subid].PhysicalVelocity, Subhalos[subid].Particles.data(), Subhalos[subid].Nbound);
   }
 }
