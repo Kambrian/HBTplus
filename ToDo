@@ -12,8 +12,7 @@ analysis routines/check compare
 
 segregate the effect of MassPrecision (run one HBT1 with 0.9 mass prec)
 
-MPI version
-
+switch back to exclusive subhaloes 
 -------------------
 snapshot contain multiple arrays for separate/efficient load; maybe not a problem/even a benefit to use particle cell with MPI.
 

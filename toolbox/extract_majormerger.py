@@ -28,6 +28,8 @@ np.savetxt(rootdir+'history.txt', data)
 plt.figure();
 plt.plot(data[:,0]/1e6)
 plt.plot(data[:,4]/1e6)
+plt.savefig(rootdir+'/figure_1.png')
 plt.figure();
 plt.plot(data[:,-1])
+plt.savefig(rootdir+'/figure_2.png')
 plt.show()

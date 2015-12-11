@@ -165,5 +165,16 @@ public:
 	return Subhalos[index].Particles.size();
   }
 };
-
+inline HBTInt GetCoreSize(HBTInt nbound)
+/* get the size of the core that determines the position of the subhalo.
+ * coresize controlled by SubCoreSizeFactor and SubCoreSizeMin.
+ * if you do not want a cored center, then
+ * set SubCoreSizeFactor=0 and SubCoreSizeMin=1 to use most-bound particle;
+ * set SubCoreSizeFactor=1 to use all the particles*/
+{
+  int coresize=nbound*HBTConfig.SubCoreSizeFactor;
+  if(coresize<HBTConfig.SubCoreSizeMin) coresize=HBTConfig.SubCoreSizeMin;
+  if(coresize>nbound) coresize=nbound;
+  return coresize;
+}
 #endif
