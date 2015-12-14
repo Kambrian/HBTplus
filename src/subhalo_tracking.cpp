@@ -107,8 +107,20 @@ void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
   for(HBTInt haloid=0;haloid<SubGroups.size();haloid++)
   {
 	MemberList_t & SubGroup=SubGroups[haloid];
+#ifdef ALLOW_BINARY_SYSTEMS
+	HBTInt rankoffset=0;
+	if(SubGroup.size()>1)
+	{
+	  if(SubGroup[1]>SubGroup[0]*HBTConfig.BinaryMassRatioLimit)
+		rankoffset=1;//binary system, rank start from 1.
+	}
+#endif
 	for(HBTInt i=0;i<SubGroup.size();i++)
+#ifdef ALLOW_BINARY_SYSTEMS
+	  Subhalos[SubGroup[i]].Rank=i+rankoffset;
+#else
 	  Subhalos[SubGroup[i]].Rank=i;
+#endif
   }
 }
 void MemberShipTable_t::CountBirth()
@@ -188,6 +200,13 @@ void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 	MemberShipTable_t::MemberList_t &List=MemberTable.SubGroups[hostid];
 	if(List.size()>1)
 	{
+#ifdef ALLOW_BINARY_SYSTEMS
+	  if(Subhalos[List[1]].Nbound>Subhalos[List[0]].Nbound*HBTConfig.BinaryMassRatioLimit)
+	  {
+		List[0]*=-1;//mark as a binary system. do not FeedCentral.
+		continue;
+	  }
+#endif	  
 	  int n_major;
 	  HBTInt MassLimit=Subhalos[List[0]].Nbound*HBTConfig.MajorProgenitorMassRatio;
 	  for(n_major=1;n_major<List.size();n_major++)
@@ -242,7 +261,14 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	  Subhalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
 	}
 	else
-	  Subhalos[Members[0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles
+	{
+#ifdef ALLOW_BINARY_SYSTEMS	  
+	  if(Members[0]<0)
+		Members[0]*=-1; //restore the physical id, but do not update particles.
+	  else
+#endif		
+		Subhalos[Members[0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles
+	}
   }
   #pragma omp single
   halo_snap.Clear();//to avoid misuse

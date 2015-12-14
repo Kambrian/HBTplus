@@ -47,6 +47,9 @@ public:
   
   bool TrimNonHostParticles; //whether to trim particles outside the host halo when finding hosts
   HBTReal MajorProgenitorMassRatio; 
+#ifdef ALLOW_BINARY_SYSTEM
+  HBTReal BinaryMassRatioLimit;//the lower limit of the mass ratio of the two most-massive subhaloes (<=1), above which the system is marked as a binary system with no central subhalo (no Rank=0 sub). 
+#endif
   HBTReal BoundMassPrecision;
   HBTReal SourceSubRelaxFactor;
   HBTReal SubCoreSizeFactor; //coresize=Nbound*CoreSizeFactor, to get center coordinates for the KineticDistance test.
@@ -77,6 +80,9 @@ public:
 	SnapshotIdUnsigned=false;
 	TrimNonHostParticles=false;
 	MajorProgenitorMassRatio=0.67;
+#ifdef ALLOW_BINARY_SYSTEM
+	BinaryMassRatioLimit=1.; //default: no binary system will be marked.
+#endif
 	BoundMassPrecision=0.9;
 	SourceSubRelaxFactor=3.;
 	SubCoreSizeFactor=0.25;
