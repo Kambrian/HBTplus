@@ -1,4 +1,4 @@
-Better parallelization/Minisnapshot
+special treatment for major merger: do not update central (no central).
 
 Add Virial/Vmax: test bound vs all: how much does the virial mass/radius differ? is the density profile still NFW? is it correct with the mass/concentration parameters?
 
@@ -12,7 +12,7 @@ analysis routines/check compare
 
 segregate the effect of MassPrecision (run one HBT1 with 0.9 mass prec)
 
-switch back to exclusive subhaloes 
+switch back to exclusive subhaloes? no
 -------------------
 snapshot contain multiple arrays for separate/efficient load; maybe not a problem/even a benefit to use particle cell with MPI.
 
