@@ -11,7 +11,7 @@ void Subhalo_t::UpdateTrack(HBTInt snapshot_index)
 {
   if(TrackId==SpecialConst::NullTrackId) return;
   
-  if(0==Rank||SpecialConst::NullHaloId==HostHaloId) SnapshotIndexOfLastIsolation=snapshot_index;
+  if(0==Rank) SnapshotIndexOfLastIsolation=snapshot_index;
   if(Nbound>=LastMaxMass) 
   {
 	SnapshotIndexOfLastMaxMass=snapshot_index;
@@ -97,8 +97,14 @@ void MemberShipTable_t::SortSatellites(const SubhaloList_t & Subhalos)
 }
 void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
 {
+  {
+  MemberList_t & SubGroup=SubGroups[-1];
 #pragma omp for
-  for(HBTInt haloid=-1;haloid<SubGroups.size();haloid++)
+	for(HBTInt i=0;i<SubGroup.size();i++)
+	  Subhalos[SubGroup[i]].Rank=0;
+  }
+#pragma omp for
+  for(HBTInt haloid=0;haloid<SubGroups.size();haloid++)
   {
 	MemberList_t & SubGroup=SubGroups[haloid];
 	for(HBTInt i=0;i<SubGroup.size();i++)
