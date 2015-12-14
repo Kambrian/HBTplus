@@ -44,6 +44,9 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(ParticleIdNeedHash)
   else TrySetPar(SnapshotIdUnsigned)
   else TrySetPar(MajorProgenitorMassRatio)
+#ifdef ALLOW_BINARY_SYSTEM
+  else TrySetPar(BinaryMassRatioLimit)
+#endif
   else TrySetPar(BoundMassPrecision)
   else TrySetPar(SourceSubRelaxFactor)
   else TrySetPar(SubCoreSizeFactor)

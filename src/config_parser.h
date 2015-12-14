@@ -53,6 +53,9 @@ public:
   vector <int> SnapshotIdList;
   
   HBTReal MajorProgenitorMassRatio; 
+#ifdef ALLOW_BINARY_SYSTEM
+  HBTReal BinaryMassRatioLimit;//the lower limit of the mass ratio of the two most-massive subhaloes (<=1), above which the system is marked as a binary system with no central subhalo (no Rank=0 sub). 
+#endif
   HBTReal BoundMassPrecision;
   HBTReal SourceSubRelaxFactor;
   HBTReal SubCoreSizeFactor; //coresize=Nbound*CoreSizeFactor, to get center coordinates for the KineticDistance test.
@@ -84,6 +87,9 @@ public:
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
 	MajorProgenitorMassRatio=0.67;
+#ifdef ALLOW_BINARY_SYSTEM
+	BinaryMassRatioLimit=1.; //default: no binary system will be marked.
+#endif
 	BoundMassPrecision=0.9;
 	SourceSubRelaxFactor=3.;
 	SubCoreSizeFactor=0.25;
@@ -155,6 +161,9 @@ void Parameter_t::serialize(Archive& ar, const unsigned int version)
   ar & SnapshotIdList;
   
   ar & MajorProgenitorMassRatio; 
+#ifdef ALLOW_BINARY_SYSTEM
+  ar & BinaryMassRatioLimit;
+#endif
   ar & BoundMassPrecision;
   ar & SourceSubRelaxFactor;
   ar & SubCoreSizeFactor; //coresize=Nbound*CoreSizeFactor, to get center coordinates for the KineticDistance test.
