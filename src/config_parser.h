@@ -10,7 +10,7 @@
 #include "datatypes.h"
 #include "boost_mpi.h"
 
-#define HBT_VERSION "1.3.0"
+#define HBT_VERSION "1.4.0"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.

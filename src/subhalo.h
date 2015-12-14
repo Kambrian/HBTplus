@@ -176,4 +176,11 @@ public:
   }
 };
 
+inline HBTInt GetCoreSize(HBTInt nbound)
+{
+  int coresize=nbound*HBTConfig.SubCoreSizeFactor;
+  if(coresize<HBTConfig.SubCoreSizeMin) coresize=HBTConfig.SubCoreSizeMin;
+  if(coresize>nbound) coresize=nbound;
+  return coresize;
+}
 #endif

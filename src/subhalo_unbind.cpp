@@ -126,6 +126,43 @@ public:
 	for(j=0;j<3;j++)
 	  CoV[j]=sv[j]/msum;
   }
+  void AveragePosition(HBTxyz& CoM, HBTInt NumPart)
+  /*mass weighted average position*/
+  {
+	HBTInt i,j;
+	double sx[3],origin[3],msum;
+	
+	if(0==NumPart) return;
+	if(1==NumPart) 
+	{
+	  copyHBTxyz(CoM, GetComovingPosition(0));
+	  return;
+	}
+	
+	sx[0]=sx[1]=sx[2]=0.;
+	msum=0.;
+	if(HBTConfig.PeriodicBoundaryOn)
+	  for(j=0;j<3;j++)
+		origin[j]=GetComovingPosition(0)[j];
+	  
+	  for(i=0;i<NumPart;i++)
+	  {
+		HBTReal m=GetMass(i);
+		msum+=m;
+		for(j=0;j<3;j++)
+		  if(HBTConfig.PeriodicBoundaryOn)
+			sx[j]+=NEAREST(GetComovingPosition(i)[j]-origin[j])*m;
+		  else
+			sx[j]+=GetComovingPosition(i)[j]*m;
+	  }
+	  
+	  for(j=0;j<3;j++)
+	  {
+		sx[j]/=msum;
+		if(HBTConfig.PeriodicBoundaryOn) sx[j]+=origin[j];
+		CoM[j]=sx[j];
+	  }
+  }
 };
 void Subhalo_t::Unbind(const Snapshot_t &epoch)
 {//the reference frame (pos and vel) should already be initialized before unbinding.
@@ -156,15 +193,17 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		{
 		  Nbound=0;
 		  Elist[0].pid=OldMostBoundParticle;
+		  copyHBTxyz(ComovingPosition, Particles[Elist[0].pid].ComovingPosition);
 		  copyHBTxyz(PhysicalVelocity, Particles[Elist[0].pid].PhysicalVelocity);
 		}
 		else
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
 		  PopMostBoundParticle(Elist.data(), Nbound);
+		  HBTInt coresize=GetCoreSize(Nbound);
+		  ESnap.AveragePosition(ComovingPosition, coresize);
 		  ESnap.AverageVelocity(PhysicalVelocity, Nbound);
 		}
-		copyHBTxyz(ComovingPosition, Particles[Elist[0].pid].ComovingPosition);
 		if(0==Nbound||Nbound>Nlast*HBTConfig.BoundMassPrecision)  break;
 	}
 	if(Nbound)
