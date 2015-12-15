@@ -107,7 +107,7 @@ void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
   for(HBTInt haloid=0;haloid<SubGroups.size();haloid++)
   {
 	MemberList_t & SubGroup=SubGroups[haloid];
-#ifdef ALLOW_BINARY_SYSTEMS
+#ifdef ALLOW_BINARY_SYSTEM
 	HBTInt rankoffset=0;
 	if(SubGroup.size()>1)
 	{
@@ -116,7 +116,7 @@ void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
 	}
 #endif
 	for(HBTInt i=0;i<SubGroup.size();i++)
-#ifdef ALLOW_BINARY_SYSTEMS
+#ifdef ALLOW_BINARY_SYSTEM
 	  Subhalos[SubGroup[i]].Rank=i+rankoffset;
 #else
 	  Subhalos[SubGroup[i]].Rank=i;
@@ -194,16 +194,22 @@ void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 /* to select central subhalo according to KineticDistance, and move each central to the beginning of each list in MemberTable*/
 {
+  //initialize the ranks
+#ifdef ALLOW_BINARY_SYSTEM
+#pragma omp for
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	Subhalos[subid].Rank=0;
+#endif
 #pragma omp for
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   {
 	MemberShipTable_t::MemberList_t &List=MemberTable.SubGroups[hostid];
 	if(List.size()>1)
 	{
-#ifdef ALLOW_BINARY_SYSTEMS
+#ifdef ALLOW_BINARY_SYSTEM
 	  if(Subhalos[List[1]].Nbound>Subhalos[List[0]].Nbound*HBTConfig.BinaryMassRatioLimit)
 	  {
-		List[0]*=-1;//mark as a binary system. do not FeedCentral.
+		Subhalos[List[0]].Rank=1;//mark as a binary system. do not FeedCentral.
 		continue;
 	  }
 #endif	  
@@ -262,10 +268,8 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	}
 	else
 	{
-#ifdef ALLOW_BINARY_SYSTEMS	  
-	  if(Members[0]<0)
-		Members[0]*=-1; //restore the physical id, but do not update particles.
-	  else
+#ifdef ALLOW_BINARY_SYSTEM	  
+	  if(0==Subhalos[Members[0]].Rank)//only update particles if not a binary system
 #endif		
 		Subhalos[Members[0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles
 	}
