@@ -6,3 +6,17 @@ new implementation of HBT in C++ . This is the OpenMP version for share memory m
 - HDF5 C and C++ library
 
 Core part done. More post-processing to be added.
+
+## Compile
+To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte float), do
+	make
+. If you need double-precision, do
+    make HBTdouble
+ 
+## Run
+ 
+    ./HBT configs/Example.conf [snapshotstart] [snapshotend]
+
+Check configs/Example.conf for a sample parameter file.
+
+If snapshotend is omitted, only process snapshotstart. If snapshotstart is also omitted, will run from MinSnapshotIndex (default=0) to MaxSnapshotIndex (specified in config file).
