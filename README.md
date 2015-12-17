@@ -3,7 +3,7 @@ new implementation of HBT in C++ . This is the OpenMP version for share memory m
 ## Prerequisites
 
 - a `c++` compiler with `c++11` support (e.g., `gcc 4.6.3` above)
-- HDF5 C and C++ library
+- HDF5 (https://www.hdfgroup.org/) C and C++ library
 
 Core part done. More post-processing to be added.
 
