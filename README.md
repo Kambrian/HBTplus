@@ -23,3 +23,5 @@ To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte fl
 Check `configs/Example.conf` for a sample parameter file.
 
 If `snapshotend` is omitted, only process `snapshotstart`. If `snapshotstart` is also omitted, will run from `MinSnapshotIndex` (default=0) to `MaxSnapshotIndex` (specified in config file).
+
+To submit to a batch queue, check `HBTjob.bsub`
