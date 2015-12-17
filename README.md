@@ -9,8 +9,11 @@ Core part done. More post-processing to be added.
 
 ## Compile
 To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte float), do
+
 	make
+
 . If you need double-precision, do
+
     make HBTdouble
  
 ## Run
