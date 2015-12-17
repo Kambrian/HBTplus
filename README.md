@@ -1,4 +1,4 @@
-new implementation of HBT in C++ . This is the boost_mpi version.
+new implementation of HBT in C++ . This is the MPI version.
 
 ## Prerequisites
 
