@@ -236,6 +236,7 @@ NumberOfParticles=0;
 	cerr<<"error:Num groups loaded not match: "<<Nload<<','<<NumberOfHaloes<<"\n";
 	exit(1);
   }
+  assert(CompileOffsets(Len, Offset)==NumberOfParticles);//compile offsets in case the stored offsets are wrong.
   cout<<"GroupSnap="<<SnapshotIndex<<" ("<<SnapshotId<<") TotNids="<<NumberOfParticles<<" TotNgroups="<<TotNgroups<<" NFiles="<<NFiles<<endl;
   
   vector <PIDtype_t> PIDs(NumberOfParticles);
