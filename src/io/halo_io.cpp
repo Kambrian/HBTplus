@@ -353,9 +353,10 @@ void AssignHaloTasks(int nworkers, int npart_tot, const CountBuffer_t & HaloOffs
   task.haloid_begin=lower_bound(HaloOffsets.begin(), HaloOffsets.end()-1, npart_begin)-HaloOffsets.begin();
   HBTInt endhalo=lower_bound(HaloOffsets.begin(), HaloOffsets.end()-1, npart_end)-HaloOffsets.begin();
   task.nhalo=endhalo-task.haloid_begin;
+  
   npart_end=HaloOffsets.at(endhalo);//need to append np to HaloOffsets to avoid overflow.
   task.npart=npart_end-npart_begin;
-  
+
   task.ifile_begin=upper_bound(FileOffsets.begin(), FileOffsets.end(), npart_begin)-1-FileOffsets.begin();
   task.ifile_end=lower_bound(FileOffsets.begin(), FileOffsets.end(), npart_end)-FileOffsets.begin();
   
@@ -387,13 +388,14 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
 	  Nparticles+=Reader.NumberOfParticles;
 	}
 	HaloLenBuffer.reserve(Ngroups);
-	HaloOffsetBuffer.reserve(Ngroups);
+	HaloOffsetBuffer.reserve(Ngroups+1);
 	for(int iFile=0;iFile<FileCounts;iFile++)
 	{
 	  Reader.Read(iFile, READ_LEN_OFFSET);
 	  HaloLenBuffer.insert(HaloLenBuffer.end(), Reader.Len.begin(), Reader.Len.end());
 	  HaloOffsetBuffer.insert(HaloOffsetBuffer.end(), Reader.Offset.begin(), Reader.Offset.end());
 	}
+	assert(CompileOffsets(HaloLenBuffer, HaloOffsetBuffer)==Nparticles);//the offsets in the group file may not always be correct. recompile.
 	HaloOffsetBuffer.push_back(Nparticles);//end offset
 	alltasks.resize(world.size());
 	int nworkers=world.size(), npart_begin=0; 
