@@ -1,7 +1,7 @@
 SRC=$(wildcard *.cpp)
 EXE=$(basename $(SRC))
 default: $(EXE)
-test_parse:  ../config_parser.o
+test_parse:  ../config_parser.o #../mymath.o
 test_closestfactor: ../mymath.o
 
 OUTPUTS=$(wildcard *.hdf5)

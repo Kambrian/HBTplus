@@ -1,7 +1,38 @@
-#include "../config_parser.h"
+using namespace std;
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <omp.h>
+#include "mpi.h"
 
-int main()
+#include "../datatypes.h"
+#include "../config_parser.h"
+#include "../boost_mpi.h"
+#include "../mymath.h"
+
+int main(int argc, char **argv)
 {
-	Parameter_t config;
-	config.ParseConfigFile("../HBT.conf");
+  mpi::environment env;
+  mpi::communicator world;
+#ifdef _OPENMP
+ omp_set_nested(0);
+#endif
+   
+  int snapshot_start, snapshot_end;
+  if(0==world.rank())
+  {
+	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
+	mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
+	MarkHBTVersion();
+  }
+  HBTConfig.BroadCast(world, 0, snapshot_start, snapshot_end);
+  
+  cout<< HBTConfig.SnapshotPath<< " from "<<world.rank()<<" of "<<world.size()<<" on "<<env.processor_name()<<endl;
+  cout<< HBTConfig.SnapshotIdList<< " from "<<world.rank()<<" of "<<world.size()<<" on "<<env.processor_name()<<endl;
+  cout<< HBTConfig.IsSet[2]<< " from "<<world.rank()<<" of "<<world.size()<<" on "<<env.processor_name()<<endl;
+  cout<< HBTConfig.GroupParticleIdMask<< " from "<<world.rank()<<" of "<<world.size()<<" on "<<env.processor_name()<<endl;
+  long x=0x1234567123456789;
+  cout<<hex<<(x&HBTConfig.GroupParticleIdMask)<<","<<(x&0x00000003FFFFFFFF)<<endl;
+  
+  return 0;
 }
