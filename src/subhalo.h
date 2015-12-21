@@ -6,16 +6,16 @@
 #include <vector>
 #include "hdf5.h"
 #include "hdf5_hl.h"	
-#include "H5Cpp.h"
+// #include "H5Cpp.h"
 #ifdef HBT_REAL8
-#define H5T_HBTReal H5::PredType::NATIVE_DOUBLE
+#define H5T_HBTReal H5T_NATIVE_DOUBLE
 #else
-#define H5T_HBTReal H5::PredType::NATIVE_FLOAT
+#define H5T_HBTReal H5T_NATIVE_FLOAT
 #endif
 #ifdef HBT_INT8
-#define H5T_HBTInt H5::PredType::NATIVE_LONG
+#define H5T_HBTInt H5T_NATIVE_LONG
 #else 
-#define H5T_HBTInt H5::PredType::NATIVE_INT
+#define H5T_HBTInt H5T_NATIVE_INT
 #endif
 
 #include "datatypes.h"
@@ -117,7 +117,7 @@ class SubhaloSnapshot_t: public Snapshot_t
 { 
 private:
   bool ParallelizeHaloes;
-  H5::CompType H5T_SubhaloInMem, H5T_SubhaloInDisk;
+  hid_t H5T_SubhaloInMem, H5T_SubhaloInDisk;
   MPI_Datatype MPI_HBT_SubhaloShell_t;//MPI datatype ignoring the particle list
   
   void RegisterNewTracks(mpi::communicator &world);
@@ -129,13 +129,15 @@ public:
   SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;
   
-  SubhaloSnapshot_t(): Snapshot_t(), Subhalos(), MemberTable(), H5T_SubhaloInMem(sizeof(Subhalo_t)), ParallelizeHaloes(true)
+  SubhaloSnapshot_t(): Snapshot_t(), Subhalos(), MemberTable(), ParallelizeHaloes(true)
   {
 	BuildHDFDataType();
 	BuildMPIDataType();
   }
   ~SubhaloSnapshot_t()
   {
+	H5Tclose(H5T_SubhaloInDisk);
+	H5Tclose(H5T_SubhaloInMem);
 	MPI_Type_free(&MPI_HBT_SubhaloShell_t);
   }
   void GetSubFileName(string &filename, int iFile);
