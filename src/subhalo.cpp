@@ -23,7 +23,10 @@ cout<<"Warning: TrackIdToSubId ToBe fully Implemented!\n";
 void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 {//also bind to snapshot
 #pragma omp single
-  SnapshotPointer=&snapshot;
+  {
+	SetEpoch(snapshot);
+	SnapshotPointer=&snapshot;
+  }
 #pragma omp for
 	for(HBTInt subid=0;subid<Subhalos.size();subid++)
 	{
