@@ -1,5 +1,5 @@
 HDFINC=
-HDFLIB=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5
+HDFLIB=-lhdf5_hl -lhdf5 
 BOOSTLIB=-lboost_serialization -lboost_mpi
 
 <!-- CXX=g++ -->
