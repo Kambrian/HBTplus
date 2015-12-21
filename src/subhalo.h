@@ -6,16 +6,16 @@
 #include <vector>
 #include "hdf5.h"
 #include "hdf5_hl.h"	
-#include "H5Cpp.h"
+// #include "H5Cpp.h"
 #ifdef HBT_REAL8
-#define H5T_HBTReal H5::PredType::NATIVE_DOUBLE
+#define H5T_HBTReal H5T_NATIVE_DOUBLE
 #else
-#define H5T_HBTReal H5::PredType::NATIVE_FLOAT
+#define H5T_HBTReal H5T_NATIVE_FLOAT
 #endif
 #ifdef HBT_INT8
-#define H5T_HBTInt H5::PredType::NATIVE_LONG
+#define H5T_HBTInt H5T_NATIVE_LONG
 #else 
-#define H5T_HBTInt H5::PredType::NATIVE_INT
+#define H5T_HBTInt H5T_NATIVE_INT
 #endif
 
 #include "datatypes.h"
@@ -115,16 +115,17 @@ class SubhaloSnapshot_t: public Snapshot_t
 { 
 private:
   void RegisterNewTracks();
+  bool ParallelizeHaloes;
+  hid_t H5T_SubhaloInMem, H5T_SubhaloInDisk;
+  
   void DecideCentrals(const HaloSnapshot_t &halo_snap);
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void BuildHDFDataType();
-  H5::CompType H5T_SubhaloInMem, H5T_SubhaloInDisk;
 public:
   const ParticleSnapshot_t * SnapshotPointer;
   SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;
-  bool ParallelizeHaloes;
-  SubhaloSnapshot_t(): Snapshot_t(), Subhalos(), MemberTable(), SnapshotPointer(nullptr), H5T_SubhaloInMem(sizeof(Subhalo_t)), ParallelizeHaloes(true)
+  SubhaloSnapshot_t(): Snapshot_t(), Subhalos(), MemberTable(), SnapshotPointer(nullptr),  ParallelizeHaloes(true)
   {
 	BuildHDFDataType();
   }
@@ -132,6 +133,11 @@ public:
   void GetSrcFileName(string &filename);
   void Load(int snapshot_index, bool load_src=false);
   void Save();
+  ~SubhaloSnapshot_t()
+  {
+	H5Tclose(H5T_SubhaloInDisk);
+	H5Tclose(H5T_SubhaloInMem);
+  }
   void Clear()
   {
 	//TODO
