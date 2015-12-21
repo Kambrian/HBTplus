@@ -10,10 +10,24 @@
 #include <sys/stat.h>
 #include <chrono>
 #include <array>
+#include <vector>
 #include <iterator>
 
 #include "datatypes.h"
 #include "config_parser.h"
+
+template <class T>
+size_t CompileOffsets(const vector <T> &Counts, vector <T> &Offsets)
+{
+  size_t offset=0;
+  Offsets.resize(Counts.size());
+  for(size_t i=0;i<Counts.size();i++)
+  {
+        Offsets[i]=offset;
+        offset+=Counts[i];
+  }
+  return offset;
+}
 
 class Timer_t
 {
