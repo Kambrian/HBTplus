@@ -3,7 +3,7 @@ HDFLIB=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5
 BOOSTLIB=-lboost_serialization -lboost_mpi
 
 <!-- CXX=g++ -->
-CC=mpicc
+<!--CC=mpicc-->
 CXX=mpic++
 CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 -Wno-deprecated -g
 <!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
