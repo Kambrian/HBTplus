@@ -120,7 +120,7 @@ private:
   hid_t H5T_SubhaloInMem, H5T_SubhaloInDisk;
   MPI_Datatype MPI_HBT_SubhaloShell_t;//MPI datatype ignoring the particle list
   
-  void RegisterNewTracks(mpi::communicator &world);
+  void RegisterNewTracks(MpiWorker_t &world);
   void DecideCentrals(const HaloSnapshot_t &halo_snap);
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void BuildHDFDataType();
@@ -142,20 +142,20 @@ public:
   }
   void GetSubFileName(string &filename, int iFile);
   void GetSrcFileName(string &filename, int iFile);
-  void Load(mpi::communicator &world, int snapshot_index, bool load_src=false);
-  void Save(mpi::communicator &world);
+  void Load(MpiWorker_t &world, int snapshot_index, bool load_src=false);
+  void Save(MpiWorker_t &world);
   void Clear()
   {
 	//TODO
 	cout<<"Clean() not implemented yet\n";
   }
-  void UpdateParticles(mpi::communicator & world, const ParticleSnapshot_t & snapshot);
+  void UpdateParticles(MpiWorker_t & world, const ParticleSnapshot_t & snapshot);
 //   void ParticleIndexToId();
   void AverageCoordinates();
-  void AssignHosts(mpi::communicator &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap);
+  void AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap);
   void PrepareCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
-  void UpdateTracks(mpi::communicator &world, const HaloSnapshot_t &halo_snap);
+  void UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap);
   HBTInt size() const
   {
 	return Subhalos.size();

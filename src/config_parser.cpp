@@ -151,3 +151,65 @@ void MarkHBTVersion()
 #endif
 	ofstream version_file(HBTConfig.SubhaloPath+"/VER"+HBT_VERSION, fstream::trunc);
 }
+
+void Parameter_t::BroadCast(MpiWorker_t &world, int root)
+/*sync parameters and physical consts across*/
+{
+  #define _SyncVec(x,t) world.SyncContainer(x,t,root)	
+  #define _SyncAtom(x,t) world.SyncAtom(x,t,root)
+  #define _SyncBool(x) world.SyncAtomBool(x, root)
+  #define _SyncVecBool(x) world.SyncVectorBool(x, root)
+  #define _SyncReal(x) _SyncAtom(x, MPI_HBT_REAL)
+  
+  _SyncVec(SnapshotPath, MPI_CHAR);
+  _SyncVec(HaloPath, MPI_CHAR);
+  _SyncVec(SubhaloPath, MPI_CHAR);
+  _SyncVec(SnapshotFileBase, MPI_CHAR);
+  _SyncAtom(MaxSnapshotIndex, MPI_INT);
+  _SyncReal(BoxSize);
+  _SyncReal(SofteningHalo);
+  _SyncVecBool(IsSet);
+  
+  _SyncAtom(MinSnapshotIndex, MPI_INT);
+  _SyncAtom(MinNumPartOfSub, MPI_INT);
+  _SyncAtom(GroupFileVariant, MPI_INT);
+  _SyncAtom(GroupParticleIdMask, MPI_LONG);
+  _SyncReal(MassInMsunh);
+  _SyncReal(LengthInMpch);
+  _SyncReal(VelInKmS);
+  _SyncBool(PeriodicBoundaryOn);
+  _SyncBool(SnapshotHasIdBlock);
+  _SyncBool(ParticleIdRankStyle);
+  _SyncBool(ParticleIdNeedHash);
+  _SyncBool(SnapshotIdUnsigned);
+  _SyncVec(SnapshotIdList, MPI_INT);
+  
+  _SyncReal(MajorProgenitorMassRatio);
+  #ifdef ALLOW_BINARY_SYSTEM
+  _SyncReal(BinaryMassRatioLimit);
+  #endif
+  _SyncReal(BoundMassPrecision);
+  _SyncReal(SourceSubRelaxFactor);
+  _SyncReal(SubCoreSizeFactor);
+  _SyncAtom(SubCoreSizeMin, MPI_HBT_INT);
+  
+  _SyncReal(TreeAllocFactor);
+  _SyncReal(TreeNodeOpenAngle);
+  _SyncAtom(TreeMinNumOfCells, MPI_HBT_INT);
+  
+  _SyncReal(TreeNodeOpenAngleSquare);
+  _SyncReal(TreeNodeResolution);
+  _SyncReal(TreeNodeResolutionHalf);
+  _SyncReal(BoxHalf);
+  
+  //---------------end sync params-------------------------//	
+  
+  _SyncReal(PhysicalConst::G);
+  _SyncReal(PhysicalConst::H0);
+  
+  #undef _SyncVec
+  #undef _SyncAtom 
+  #undef _SyncBool 
+  #undef _SyncVecBool 
+  #undef _SyncReal 
+}

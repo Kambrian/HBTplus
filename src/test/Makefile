@@ -8,6 +8,7 @@ test_closestfactor: ../mymath.o
 
 OUTPUTS=$(wildcard *.hdf5)
 
+# BOOSTLIB=-lboost_serialization -lboost_mpi
 include ../../Makefile.inc
 test_omptask:CXXFLAGS+=-O0
 test_boostmpi_mem: CXXFLAGS+=-DUSE_BOOST

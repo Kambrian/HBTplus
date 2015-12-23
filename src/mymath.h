@@ -12,6 +12,7 @@
 #include <chrono>
 #include <vector>
 #include <algorithm>
+#include <assert.h>
 
 #include "datatypes.h"
 #include "config_parser.h"
@@ -193,7 +194,7 @@ public:
   {
 	return Data[index];
   }
-  const HBTInt size() const
+  HBTInt size() const
   {
 	return N;
   }

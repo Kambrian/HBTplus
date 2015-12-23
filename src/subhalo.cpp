@@ -53,7 +53,7 @@ MPI_Type_create_resized(MPI_HBT_SubhaloShell_t,(MPI_Aint)0, extent, &MPI_HBT_Sub
 MPI_Type_commit(&MPI_HBT_SubhaloShell_t);
 #undef NumAttr
 }
-void SubhaloSnapshot_t::UpdateParticles(mpi::communicator& world, const ParticleSnapshot_t& snapshot)
+void SubhaloSnapshot_t::UpdateParticles(MpiWorker_t& world, const ParticleSnapshot_t& snapshot)
 {
   SetEpoch(snapshot);
   SubhaloList_t LocalSubhalos;

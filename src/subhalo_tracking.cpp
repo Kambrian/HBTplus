@@ -188,7 +188,7 @@ void FindLocalHosts(const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &p
   Subhalos.resize(nsub);
 }
 
-void FindOtherHosts(mpi::communicator &world, int root, const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap, vector <Subhalo_t> &Subhalos, vector <Subhalo_t> &LocalSubhalos, MPI_Datatype MPI_Subhalo_Shell_Type)
+void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap, vector <Subhalo_t> &Subhalos, vector <Subhalo_t> &LocalSubhalos, MPI_Datatype MPI_Subhalo_Shell_Type)
 /*scatter Subhalos from process root to LocalSubhalos in every other process
  Note Subalos are "moved", so are in a unspecified state upon return.*/
 {
@@ -203,14 +203,14 @@ void FindOtherHosts(mpi::communicator &world, int root, const HaloSnapshot_t &ha
 	if(NumSubhalos>INT_MAX)
 	  throw runtime_error("Error: in FindOtherHosts(), sending more subhaloes than INT_MAX will cause MPI message to overflow. Please try more MPI threads. aborting.\n");
   }
-  MPI_Bcast(&NumSubhalos, 1, MPI_HBT_INT, root, world);
+  MPI_Bcast(&NumSubhalos, 1, MPI_HBT_INT, root, world.Communicator);
   TrackParticleIds.resize(NumSubhalos);
   if(thisrank==root)
   {
 	for(HBTInt i=0;i<Subhalos.size();i++)
 	  TrackParticleIds[i]=Subhalos[i].Particles[0].Id;
   }
-  MPI_Bcast(TrackParticleIds.data(), NumSubhalos, MPI_HBT_INT, root, world);
+  MPI_Bcast(TrackParticleIds.data(), NumSubhalos, MPI_HBT_INT, root, world.Communicator);
   
   //find hosts
   vector <SizeRank_t> LocalHostIds(NumSubhalos), GlobalHostIds(NumSubhalos);
@@ -233,12 +233,12 @@ void FindOtherHosts(mpi::communicator &world, int root, const HaloSnapshot_t &ha
 	}
   }
 
-  MPI_Allreduce(LocalHostIds.data(), GlobalHostIds.data(), NumSubhalos, MPI_HBTRankPair, MPI_MAXLOC, world);
+  MPI_Allreduce(LocalHostIds.data(), GlobalHostIds.data(), NumSubhalos, MPI_HBTRankPair, MPI_MAXLOC, world.Communicator);
 
   //scatter free subhaloes from root to everywhere
   //send particles; no scatterw, do it manually
   MPI_Datatype MPI_HBT_Particle;
-  create_MPI_Particle_type(MPI_HBT_Particle);
+  Particle_t().create_MPI_type(MPI_HBT_Particle);
   vector <vector<int> > SendSizes(world.size());  
   vector <MPI_Request> Req0,Req1;
   if(thisrank==root)
@@ -256,12 +256,12 @@ void FindOtherHosts(mpi::communicator &world, int root, const HaloSnapshot_t &ha
 	Req0.resize(world.size());
 	Req1.resize(world.size());
 	for(int rank=0;rank<world.size();rank++)
-	{//todo: have to use Isend here..... to receive on root later; otherwise root send will deadlock waiting for receive to return.
-	  MPI_Isend(SendSizes[rank].data(), SendSizes[rank].size(), MPI_INT, rank, 0, world, &Req0[rank]);
+	{
+	  MPI_Isend(SendSizes[rank].data(), SendSizes[rank].size(), MPI_INT, rank, 0, world.Communicator, &Req0[rank]);
 	  MPI_Datatype SendType;
 	  MPI_Type_create_hindexed(SendSizes[rank].size(), SendSizes[rank].data(), SendBuffers[rank].data(), MPI_HBT_Particle, &SendType);
 	  MPI_Type_commit(&SendType);
-	  MPI_Isend(MPI_BOTTOM, 1, SendType, rank, 1, world, &Req1[rank]);
+	  MPI_Isend(MPI_BOTTOM, 1, SendType, rank, 1, world.Communicator, &Req1[rank]);
 	  MPI_Type_free(&SendType);
 	}
   }
@@ -270,10 +270,10 @@ void FindOtherHosts(mpi::communicator &world, int root, const HaloSnapshot_t &ha
 	vector <int> ReceiveSize;
 	int NumNewSubs;
 	MPI_Status stat;
-	MPI_Probe(root, 0, world, &stat);
+	MPI_Probe(root, 0, world.Communicator, &stat);
 	MPI_Get_count(&stat, MPI_INT, &NumNewSubs);
 	ReceiveSize.resize(NumNewSubs);
-	MPI_Recv(ReceiveSize.data(), NumNewSubs, MPI_INT, root, 0, world, &stat);
+	MPI_Recv(ReceiveSize.data(), NumNewSubs, MPI_INT, root, 0, world.Communicator, &stat);
 	LocalSubhalos.resize(LocalSubhalos.size()+NumNewSubs);
 	auto NewSubhalos=LocalSubhalos.end()-NumNewSubs;
 	ReceiveBuffer.resize(NumNewSubs);
@@ -288,7 +288,7 @@ void FindOtherHosts(mpi::communicator &world, int root, const HaloSnapshot_t &ha
 	MPI_Datatype ReceiveType;
 	MPI_Type_create_hindexed(NumNewSubs, ReceiveSize.data(), ReceiveBuffer.data(), MPI_HBT_Particle, &ReceiveType);
 	MPI_Type_commit(&ReceiveType);
-	MPI_Recv(MPI_BOTTOM, 1, ReceiveType, root, 1, world, &stat);
+	MPI_Recv(MPI_BOTTOM, 1, ReceiveType, root, 1, world.Communicator, &stat);
 	MPI_Type_free(&ReceiveType);
 	
 	MPI_Type_free(&MPI_HBT_Particle);
@@ -320,9 +320,9 @@ void FindOtherHosts(mpi::communicator &world, int root, const HaloSnapshot_t &ha
 		Counts[rank]=SendSizes[rank].size();
 	  CompileOffsets(Counts, Disps);
 	}
-	MPI_Scatterv(TmpHalos.data(), Counts.data(), Disps.data(), MPI_Subhalo_Shell_Type, &NewSubhalos[0], NumNewSubs, MPI_Subhalo_Shell_Type, root, world);
+	MPI_Scatterv(TmpHalos.data(), Counts.data(), Disps.data(), MPI_Subhalo_Shell_Type, &NewSubhalos[0], NumNewSubs, MPI_Subhalo_Shell_Type, root, world.Communicator);
 }
-void SubhaloSnapshot_t::AssignHosts(mpi::communicator &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap)
+void SubhaloSnapshot_t::AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap)
 /* find host haloes for subhaloes, and build MemberTable. Each subhalo is moved to the processor of its host halo, with its HostHaloId set to the local haloid of the host*/
 {
   ParallelizeHaloes=halo_snap.NumPartOfLargestHalo<0.1*halo_snap.TotNumberOfParticles;//no dominating objects
@@ -438,7 +438,7 @@ void SubhaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
   }
 }
 
-void SubhaloSnapshot_t::RegisterNewTracks(mpi::communicator &world)
+void SubhaloSnapshot_t::RegisterNewTracks(MpiWorker_t &world)
 /*assign trackId to new bound ones, remove unbound ones, and record membership*/
 {
   HBTInt NTot=Subhalos.size();
@@ -462,13 +462,13 @@ void SubhaloSnapshot_t::RegisterNewTracks(mpi::communicator &world)
   
   //now assign a global TrackId
   HBTInt TrackIdOffset, NBirth=MemberTable.NBirth, Nsub_last=Nsub-NBirth, GlobalNumberOfSubs;
-  MPI_Allreduce(&Nsub_last, &GlobalNumberOfSubs, 1, MPI_HBT_INT, MPI_SUM, world); 
-  MPI_Scan(&NBirth, &TrackIdOffset, 1, MPI_HBT_INT, MPI_SUM, world); 
+  MPI_Allreduce(&Nsub_last, &GlobalNumberOfSubs, 1, MPI_HBT_INT, MPI_SUM, world.Communicator); 
+  MPI_Scan(&NBirth, &TrackIdOffset, 1, MPI_HBT_INT, MPI_SUM, world.Communicator); 
   TrackIdOffset=TrackIdOffset+GlobalNumberOfSubs-NBirth;
   for(HBTInt i=Nsub_last;i<Nsub;i++)
 	Subhalos[i].TrackId=TrackIdOffset++;
 }
-void SubhaloSnapshot_t::UpdateTracks(mpi::communicator &world, const HaloSnapshot_t &halo_snap)
+void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap)
 {
   /*renew ranks after unbinding*/
   RegisterNewTracks(world);

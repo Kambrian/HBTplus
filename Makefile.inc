@@ -1,11 +1,11 @@
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5 
-BOOSTLIB=-lboost_serialization -lboost_mpi
 
-<!-- CXX=g++ -->
 <!--CC=mpicc-->
-CXX=mpic++
-CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 -Wno-deprecated -g
+<!-- CXX=g++ -->
+CXX=mpicxx
+CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 -Wno-deprecated -g  
+<!-- CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs -->
 <!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
 LDLIBS+=$(HDFLIB) $(OMPFLAG) $(BOOSTLIB)
 <!-- LINK.o=$(LINK.cpp) -->

@@ -13,6 +13,42 @@ using namespace std;
 #include "mymath.h"
 #include <mpi.h>
 
+void SnapshotHeader_t::create_MPI_type(MPI_Datatype& dtype)
+{
+  /*to create the struct data type for communication*/	
+  SnapshotHeader_t &p=*this;
+  #define NumAttr 13
+  MPI_Datatype oldtypes[NumAttr];
+  int blockcounts[NumAttr];
+  MPI_Aint   offsets[NumAttr], origin,extent;
+  
+  MPI_Get_address(&p,&origin);
+  MPI_Get_address((&p)+1,&extent);//to get the extent of s
+  extent-=origin;
+  
+  int i=0;
+  #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
+  RegisterAttr(npart, MPI_INT, NUMBER_OF_PARTICLE_TYPES)
+  RegisterAttr(mass, MPI_DOUBLE, NUMBER_OF_PARTICLE_TYPES)
+  RegisterAttr(ScaleFactor, MPI_DOUBLE, 1)
+  RegisterAttr(redshift, MPI_DOUBLE, 1)
+  RegisterAttr(flag_sfr, MPI_INT, 1)
+  RegisterAttr(flag_feedback, MPI_INT, 1)
+  RegisterAttr(npartTotal, MPI_UNSIGNED, 1)
+  RegisterAttr(flag_cooling, MPI_INT, 1)
+  RegisterAttr(num_files, MPI_INT, 1)
+  RegisterAttr(BoxSize, MPI_DOUBLE, 1)
+  RegisterAttr(Omega0, MPI_DOUBLE, 1)
+  RegisterAttr(OmegaLambda, MPI_DOUBLE, 1)
+  RegisterAttr(HubbleParam, MPI_DOUBLE, 1)
+  #undef RegisterAttr
+  assert(i==NumAttr);
+  
+  MPI_Type_create_struct(NumAttr,blockcounts,offsets,oldtypes, &dtype);
+  MPI_Type_create_resized(dtype,(MPI_Aint)0, extent, &dtype);
+  MPI_Type_commit(&dtype);
+  #undef NumAttr
+}
 ostream& operator << (ostream& o, Particle_t &p)
 {
    o << "[" << p.Id << ", " <<p.Mass<<", " << p.ComovingPosition << ", " << p.PhysicalVelocity << "]";
@@ -138,10 +174,10 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const HBTInt Particles[], 
 	  CoV[j]=sv[j]/msum;
 }
 
-void create_MPI_Particle_type(MPI_Datatype &MPI_HBTParticle_t)
+void Particle_t::create_MPI_type(MPI_Datatype &MPI_HBTParticle_t)
 {
 /*to create the struct data type for communication*/	
-Particle_t p;
+Particle_t &p=*this;
 #define NumAttr 4
 MPI_Datatype oldtypes[NumAttr];
 MPI_Aint   offsets[NumAttr], origin,extent;

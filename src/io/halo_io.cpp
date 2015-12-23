@@ -4,15 +4,17 @@
 #include <string>
 #include <typeinfo>
 #include <assert.h>
-#include <cstdlib>
-#include <cstdio>
 #include <glob.h>
 #include <climits>
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
+#include <cstdio>
 
 #include "../mymath.h"
 #include "../halo.h"
+
+
 
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
@@ -327,21 +329,37 @@ struct FileAssignment_t
 	haloid_begin=0;
 	nhalo=0;
   }
-private:
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int version)
+  void create_MPI_type(MPI_Datatype &dtype)
+  /*to create the struct data type for communication*/	
   {
-	ar & ifile_begin;
-	ar & ifile_end;
-	ar & firstfile_begin_part;
-	ar & lastfile_end_part;
-	ar & npart;
-	ar & haloid_begin;
-	ar & nhalo;
+	FileAssignment_t &p=*this;
+	#define NumAttr 7
+	MPI_Datatype oldtypes[NumAttr];
+	int blockcounts[NumAttr];
+	MPI_Aint   offsets[NumAttr], origin,extent;
+	
+	MPI_Get_address(&p,&origin);
+	MPI_Get_address((&p)+1,&extent);//to get the extent of s
+	extent-=origin;
+	
+	int i=0;
+	#define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
+	RegisterAttr(ifile_begin, MPI_INT, 1)
+	RegisterAttr(ifile_end, MPI_INT, 1)
+	RegisterAttr(firstfile_begin_part, MPI_HBT_INT, 1)
+	RegisterAttr(lastfile_end_part, MPI_HBT_INT, 1)
+	RegisterAttr(npart, MPI_HBT_INT, 1)
+	RegisterAttr(haloid_begin, MPI_HBT_INT, 1)
+	RegisterAttr(nhalo, MPI_HBT_INT, 1)
+	#undef RegisterAttr
+	assert(i==NumAttr);
+	
+	MPI_Type_create_struct(NumAttr,blockcounts,offsets,oldtypes, &dtype);
+	MPI_Type_create_resized(dtype,(MPI_Aint)0, extent, &dtype);
+	MPI_Type_commit(&dtype);
+	#undef NumAttr
   }
 };
-BOOST_IS_MPI_DATATYPE(FileAssignment_t)
 
 typedef vector <HBTInt> ParticleIdBuffer_t;
 typedef vector <int> CountBuffer_t;
@@ -365,7 +383,7 @@ void AssignHaloTasks(int nworkers, int npart_tot, const CountBuffer_t & HaloOffs
     
   npart_begin=npart_end;
 }
-void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
+void HaloSnapshot_t::Load(MpiWorker_t & world, int snapshot_index)
 {
   SetSnapshotIndex(snapshot_index);
   GroupFileReader_t Reader(snapshot_index);
@@ -402,17 +420,20 @@ void HaloSnapshot_t::Load(mpi::communicator & world, int snapshot_index)
 	for(int rank=0;rank<world.size();rank++)
 	  AssignHaloTasks(nworkers--, Nparticles, HaloOffsetBuffer, FileOffset, npart_begin, alltasks[rank]);
   }
-  scatter(world, alltasks, thistask, 0);
+  MPI_Datatype MPI_FileAssignment_t;
+  FileAssignment_t().create_MPI_type(MPI_FileAssignment_t);
+  MPI_Scatter(alltasks.data(), 1, MPI_FileAssignment_t, &thistask, 1, MPI_FileAssignment_t, 0, world.Communicator);
+  MPI_Type_free(&MPI_FileAssignment_t);
   if(world.rank()==0)
   {
 	for(int rank=1;rank<world.size();rank++)
-	  world.send(rank, 0, HaloLenBuffer.data()+alltasks[rank].haloid_begin, alltasks[rank].nhalo);
+	  MPI_Send(HaloLenBuffer.data()+alltasks[rank].haloid_begin, alltasks[rank].nhalo, MPI_INT, rank, 0, world.Communicator);
 	HaloLenBuffer.resize(thistask.nhalo);
   }
   else
   {
 	HaloLenBuffer.resize(thistask.nhalo);
-	world.recv(0,0,HaloLenBuffer.data(), HaloLenBuffer.size());
+	MPI_Recv(HaloLenBuffer.data(), HaloLenBuffer.size(), MPI_INT, 0, 0, world.Communicator, MPI_STATUS_IGNORE);
   }
   
   /* read particles*/
@@ -468,7 +489,7 @@ void HaloSnapshot_t::Clear()
 int main(int argc, char **argv)
 {
   mpi::environment env;
-  mpi::communicator world;
+  MpiWorker_t world;
   
   int snapshot_start, snapshot_end;
   if(0==world.rank())

@@ -12,39 +12,25 @@
 #include "config_parser.h"
 #include "snapshot_number.h"
 #include "hash.h"
-#include "boost_mpi.h"
+#include "mpi_wrapper.h"
 
 #define NUMBER_OF_PARTICLE_TYPES 6
 #define SNAPSHOT_HEADER_SIZE 256
 
 class Particle_t
 {
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int version)
-  {
-	ar & Id;
-	ar & ComovingPosition;
-	ar & PhysicalVelocity;
-	ar & Mass;
-  }
 public:
   HBTInt Id;
 //   HBTInt ParticleIndex;
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
   HBTReal Mass;
+  void create_MPI_type(MPI_Datatype &MPI_HBTParticle_t);
 };
-BOOST_IS_MPI_DATATYPE(Particle_t)
-BOOST_CLASS_TRACKING(Particle_t,track_never)
-extern void create_MPI_Particle_type(MPI_Datatype &MPI_HBTParticle_t);
 extern ostream& operator << (ostream& o, Particle_t &p);
 
 class SnapshotHeader_t
 {
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int version);//for boost 
 public:
   int      npart[NUMBER_OF_PARTICLE_TYPES];
   double   mass[NUMBER_OF_PARTICLE_TYPES];
@@ -60,27 +46,8 @@ public:
   double   OmegaLambda;
   double   HubbleParam; 
   char     fill[SNAPSHOT_HEADER_SIZE- NUMBER_OF_PARTICLE_TYPES*4- NUMBER_OF_PARTICLE_TYPES*8- 2*8- 2*4- NUMBER_OF_PARTICLE_TYPES*4- 2*4 - 4*8];  /* fills to 256 Bytes */
-  
+  void create_MPI_type(MPI_Datatype &dtype);
 };
-template<class Archive>
-void SnapshotHeader_t::serialize(Archive& ar, const unsigned int version)
-{
-    ar &  npart;
-    ar &  mass;
-    ar &  ScaleFactor;
-    ar &  redshift;
-    ar &  flag_sfr;
-    ar &  flag_feedback;
-    ar &  npartTotal;
-    ar &  flag_cooling;
-    ar &  num_files;
-    ar &  BoxSize;
-    ar &  Omega0;
-    ar &  OmegaLambda;
-    ar &  HubbleParam;
-    ar &  fill; 
-}
-BOOST_IS_MPI_DATATYPE(SnapshotHeader_t)
 
 class Snapshot_t: public SnapshotNumber_t
 {
@@ -182,7 +149,7 @@ class ParticleSnapshot_t: public Snapshot_t
   bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
   HBTInt ReadNumberOfDMParticles(int ifile);
   size_t SkipBlock(FILE *fp);
-  void ExchangeParticles(mpi::communicator &world);
+  void ExchangeParticles(MpiWorker_t &world);
 public:
   SnapshotHeader_t Header;
   vector <Particle_t> Particles;
@@ -209,7 +176,7 @@ public:
   const HBTxyz & GetPhysicalVelocity(HBTInt index) const;
   HBTReal GetMass(HBTInt index) const;
   
-  void Load(mpi::communicator &world, int snapshot_index, bool fill_particle_hash=true);
+  void Load(MpiWorker_t &world, int snapshot_index, bool fill_particle_hash=true);
   void Clear();
   
   void AveragePosition(HBTxyz & CoM, const HBTInt Particles[], HBTInt NumPart) const; 

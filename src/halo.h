@@ -1,24 +1,17 @@
 #ifndef HALO_H_INCLUDED
 #define HALO_H_INCLUDED
 
+#include <climits>
 #include <iostream>
 #include <new>
 #include <algorithm>
+#include <numeric>
 
 #include "datatypes.h"
 #include "snapshot_number.h"
 #include "snapshot.h"
 class Halo_t
 {
-  friend class boost::serialization::access;
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int version)
-  {
-	ar & Particles;
-	ar & HaloId;
-	ar & ComovingPosition;
-	ar & PhysicalVelocity;
-  }  
 public:
   typedef vector <Particle_t> ParticleList_t;
   ParticleList_t Particles;
@@ -58,9 +51,9 @@ public:
 // 	Clear();
 	MPI_Type_free(&MPI_HBT_HaloId_t);
   }
-  void Load(mpi::communicator & world, int snapshot_index);
+  void Load(MpiWorker_t & world, int snapshot_index);
   void Clear();
-  void UpdateParticles(mpi::communicator & world, const ParticleSnapshot_t & snapshot);
+  void UpdateParticles(MpiWorker_t & world, const ParticleSnapshot_t & snapshot);
 //   void ParticleIndexToId();
   void AverageCoordinates();
   void FillParticleHash();
@@ -102,7 +95,7 @@ inline bool CompareRank(const SizeRank_t &a, const SizeRank_t &b)
   return (a.rank<b.rank);
 }
 template <class Halo_T>
-void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, const ParticleSnapshot_t &snap, MPI_Datatype MPI_Halo_Shell_Type)
+void DistributeHaloes(MpiWorker_t &world, int root, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, const ParticleSnapshot_t &snap, MPI_Datatype MPI_Halo_Shell_Type)
 /*distribute InHalos from root to around world. 
  *the destination of each halo is the one whose particle snapshot holds the most of this halo's particles. 
  *the distributed haloes are appended to OutHalos on each node.
@@ -118,12 +111,12 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 	  HaloBuffers[i].swap(InHalos[i].Particles);
   }
   MPI_Datatype MPI_HBT_Particle;
-  create_MPI_Particle_type(MPI_HBT_Particle);
+  Particle_t().create_MPI_type(MPI_HBT_Particle);
  
   //broadcast haloes
   {
   HBTInt nhalo=HaloBuffers.size();
-  MPI_Bcast(&nhalo, 1, MPI_HBT_INT, root, world);
+  MPI_Bcast(&nhalo, 1, MPI_HBT_INT, root, world.Communicator);
   if(world.rank()!=root)
 	HaloBuffers.resize(nhalo);
     
@@ -134,7 +127,7 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 	for(HBTInt i=0;i<nhalo;i++)
 	  HaloSizes[i]=HaloBuffers[i].size();
   }
-  MPI_Bcast(HaloSizes.data(), nhalo, MPI_INT, root, world);
+  MPI_Bcast(HaloSizes.data(), nhalo, MPI_INT, root, world.Communicator);
   if(world.rank()!=root)
   {
 	for(HBTInt i=0;i<nhalo;i++)
@@ -152,7 +145,7 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
   MPI_Datatype HaloType;
   MPI_Type_create_hindexed(nhalo, HaloSizes.data(), HaloAddress.data(), MPI_HBT_Particle, &HaloType);
   MPI_Type_commit(&HaloType);
-  MPI_Bcast(MPI_BOTTOM, 1, HaloType, root, world);
+  MPI_Bcast(MPI_BOTTOM, 1, HaloType, root, world.Communicator);
   MPI_Type_free(&HaloType);
   }
   
@@ -173,7 +166,7 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 	Particles.resize(np);
   }
 
-	MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTRankPair, MPI_MAXLOC, world);
+	MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTRankPair, MPI_MAXLOC, world.Communicator);
 	
 	vector <vector <MPI_Aint> > SendBuffers(world.size()), ReceiveBuffers(world.size());
 	vector <vector<int> > SendSizes(world.size()), ReceiveSizes(world.size());
@@ -226,7 +219,7 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 	}
 	
 	vector <int> Counts(world.size(),1), Disps(world.size(),0);
-	MPI_Alltoallw(MPI_BOTTOM, Counts.data(), Disps.data(), SendTypes.data(), MPI_BOTTOM, Counts.data(), Disps.data(), ReceiveTypes.data(), world);
+	MPI_Alltoallw(MPI_BOTTOM, Counts.data(), Disps.data(), SendTypes.data(), MPI_BOTTOM, Counts.data(), Disps.data(), ReceiveTypes.data(), world.Communicator);
 	for(int rank=0;rank<world.size();rank++)
 	{
 	  MPI_Type_free(&SendTypes[rank]);
@@ -249,6 +242,6 @@ void DistributeHaloes(mpi::communicator &world, int root, vector <Halo_T> & InHa
 		Counts[rank]=SendSizes[rank].size();
 	  CompileOffsets(Counts, Disps);
 	}
-	MPI_Scatterv(TmpHalos.data(), Counts.data(), Disps.data(), MPI_Halo_Shell_Type, &NewHalos[0], NumNewHalos, MPI_Halo_Shell_Type, root, world);
+	MPI_Scatterv(TmpHalos.data(), Counts.data(), Disps.data(), MPI_Halo_Shell_Type, &NewHalos[0], NumNewHalos, MPI_Halo_Shell_Type, root, world.Communicator);
 }
 #endif

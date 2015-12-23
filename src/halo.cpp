@@ -4,16 +4,16 @@
 #include <string>
 #include <typeinfo>
 #include <assert.h>
-#include <cstdlib>
-#include <cstdio>
 #include <glob.h>
-#include <climits>
 #include <algorithm>
 #include <chrono>
 
+#include "mpi_wrapper.h"
 #include "mymath.h"
 #include "halo.h"
-#include <mpi.h>
+
+#include <cstdio>
+#include <cstdlib>
 
 static void create_MPI_Halo_Id_type(MPI_Datatype &MPI_HBTHalo_Id_t)
 {
@@ -46,7 +46,7 @@ void HaloSnapshot_t::BuildMPIDataType()
 {
   create_MPI_Halo_Id_type(MPI_HBT_HaloId_t);
 }
-void HaloSnapshot_t::UpdateParticles(mpi::communicator &world, const ParticleSnapshot_t &snap)
+void HaloSnapshot_t::UpdateParticles(MpiWorker_t &world, const ParticleSnapshot_t &snap)
 {
   SetEpoch(snap);
   HaloList_t LocalHalos;

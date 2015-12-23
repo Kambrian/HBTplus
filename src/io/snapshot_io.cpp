@@ -5,15 +5,14 @@ using namespace std;
 #include <string>
 #include <typeinfo>
 #include <assert.h>
-#include <cstdlib>
-#include <cstdio>
 #include <chrono>
 #include <numeric> 
+#include <cstdlib>
+#include <cstdio>
 
+#include "../mpi_wrapper.h"
 #include "../snapshot.h"
 #include "../mymath.h"
-#include "../boost_mpi.h"
-
 
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
@@ -155,23 +154,24 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
   
 }
 
-void ParticleSnapshot_t::Load(mpi::communicator & world, int snapshot_index, bool fill_particle_hash)
+void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill_particle_hash)
 { 
   SetSnapshotIndex(snapshot_index);
    
-//   mpi::communicator world;
-  
   {//load header
   if(world.rank()==0)
 	LoadHeader(0);
-  broadcast(world, Header, 0);
-  broadcast(world, Hz, 0);
-  broadcast(world, ScaleFactor, 0);
-  broadcast(world, NeedByteSwap, 0);
-  broadcast(world, IntTypeSize, 0);
-  broadcast(world, RealTypeSize, 0);
-  broadcast(world, NumberOfDMParticleInFiles, 0);
-  broadcast(world, OffsetOfDMParticleInFiles, 0);
+  MPI_Datatype MPI_SnapshotHeader_t;
+  SnapshotHeader_t().create_MPI_type(MPI_SnapshotHeader_t);
+  MPI_Bcast(&Header,1, MPI_SnapshotHeader_t, 0, world.Communicator);
+  MPI_Type_free(&MPI_SnapshotHeader_t);
+  world.SyncAtom(Hz, MPI_DOUBLE, 0);
+  world.SyncAtom(ScaleFactor, MPI_DOUBLE, 0);
+  world.SyncAtomBool(NeedByteSwap, 0);
+  world.SyncAtom(IntTypeSize, MPI_INT, 0);
+  world.SyncAtom(RealTypeSize, MPI_INT, 0);
+  world.SyncContainer(NumberOfDMParticleInFiles, MPI_HBT_INT, 0);
+  world.SyncContainer(OffsetOfDMParticleInFiles, MPI_HBT_INT, 0);
   }
   
   int nfiles_skip, nfiles_end;
@@ -228,7 +228,7 @@ inline int AssignCell(HBTxyz & Pos, const HBTReal step[3], const vector <int> &d
   return GRIDtoRank(GID(0), GID(1), GID(2));
 }
 /* chunked version
-void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
+void ParticleSnapshot_t::ExchangeParticles(MpiWorker_t &world)
 {
   #define MSG_SIZE 1024
   
@@ -263,7 +263,7 @@ void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
   cout<<NewParticles.size()<<" particles received on node "<<world.rank()<<endl;
   Particles.swap(NewParticles);
 } */
-void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
+void ParticleSnapshot_t::ExchangeParticles(MpiWorker_t &world)
 {
   auto dims=ClosestFactors(world.size(), 3);
   HBTReal step[3];
@@ -293,13 +293,13 @@ void ParticleSnapshot_t::ExchangeParticles(mpi::communicator &world)
   }
   
   vector <int> ReceiveSizes(world.size(),0), ReceiveOffsets(world.size());
-  all_to_all(world, CellSizes, ReceiveSizes);
+  MPI_Alltoall(CellSizes.data(), 1, MPI_INT, ReceiveSizes.data(), 1, MPI_INT, world.Communicator);
   Particles.resize(CompileOffsets(ReceiveSizes, ReceiveOffsets));//TODO: sort particles in place instead of using SendBuffer, and create a new vector for ReceivedParticles, then swap.
   
   MPI_Datatype MPI_HBT_Particle;
-  create_MPI_Particle_type(MPI_HBT_Particle);
+  Particle_t().create_MPI_type(MPI_HBT_Particle);
   MPI_Alltoallv(SendBuffer.data(), CellSizes.data(), CellOffsets.data(), MPI_HBT_Particle, 
-				Particles.data(), ReceiveSizes.data(), ReceiveOffsets.data(), MPI_HBT_Particle, world);
+				Particles.data(), ReceiveSizes.data(), ReceiveOffsets.data(), MPI_HBT_Particle, world.Communicator);
 
   MPI_Type_free(&MPI_HBT_Particle);
   
@@ -418,7 +418,7 @@ void ParticleSnapshot_t::Clear()
 int main(int argc, char **argv)
 {
   mpi::environment env;
-  mpi::communicator world;
+  MpiWorker_t world;
   #ifdef _OPENMP
   omp_set_nested(0);
   #endif

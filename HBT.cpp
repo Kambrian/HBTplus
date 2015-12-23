@@ -1,22 +1,21 @@
 using namespace std;
+#include <cstdlib>
 #include <iostream>
 #include <string>
-#include <cstdlib>
 #include <omp.h>
 
+#include "src/mpi_wrapper.h"
 #include "src/datatypes.h"
 #include "src/config_parser.h"
 #include "src/snapshot.h"
 #include "src/halo.h"
 #include "src/subhalo.h"
 #include "src/mymath.h"
-#include "src/boost_mpi.h"
 
 int main(int argc, char **argv)
 {
- 
- mpi::environment env;
- mpi::communicator world;
+ MPI_Init(&argc, &argv);
+ MpiWorker_t world(MPI_COMM_WORLD);
 #ifdef _OPENMP
  omp_set_nested(0);
 #endif
@@ -80,5 +79,6 @@ int main(int argc, char **argv)
   }
   }
   
+  MPI_Finalize();
   return 0;
 }

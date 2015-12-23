@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <vector>
 #include "datatypes.h"
-#include "boost_mpi.h"
+#include "mpi_wrapper.h"
 
 #define HBT_VERSION "1.4.0.MPI"
 
@@ -20,11 +20,7 @@ namespace PhysicalConst
 
 #define NumberOfCompulsaryConfigEntries 7
 class Parameter_t
-{/*!remember to register members in serialize() function if you change them!*/
-private:
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int version);
+{/*!remember to register members in BroadCast() and SetParameterValue() functions if you change them!*/
 public:
   /*compulsory parameters*/
   string SnapshotPath;
@@ -101,17 +97,12 @@ public:
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
   void CheckUnsetParameters();
-  void BroadCast(mpi::communicator &world, int root)
-  {
-	broadcast(world, *this, root);
-	broadcast(world, PhysicalConst::G, root);
-	broadcast(world, PhysicalConst::H0, root);
-  }
-  void BroadCast(mpi::communicator &world, int root, int &snapshot_start, int &snapshot_end)
+  void BroadCast(MpiWorker_t &world, int root);
+  void BroadCast(MpiWorker_t &world, int root, int &snapshot_start, int &snapshot_end)
   {
 	BroadCast(world, root);
-	broadcast(world, snapshot_start, root);
-	broadcast(world, snapshot_end, root);
+	world.SyncAtom(snapshot_start, MPI_INT, root);
+	world.SyncAtom(snapshot_end, MPI_INT, root);
   }
 };
 
@@ -131,52 +122,5 @@ inline void trim_trailing_garbage(string &s, const string &garbage_list)
   int pos=s.find_first_of(garbage_list);
   if(string::npos!=pos)  
 	s.erase(pos);
-}
-
-template<class Archive>
-void Parameter_t::serialize(Archive& ar, const unsigned int version)
-{
-  ar & SnapshotPath;
-  ar & HaloPath;
-  ar & SubhaloPath;
-  ar & SnapshotFileBase;
-  ar & MaxSnapshotIndex;
-  ar & BoxSize; //to check the unit of snapshot according to the BoxSize in header
-  ar & SofteningHalo;
-  ar & IsSet;
-  
-  ar & MinSnapshotIndex;
-  ar & MinNumPartOfSub;
-  ar & GroupFileVariant;
-  ar & GroupParticleIdMask;
-  ar & MassInMsunh;
-  ar & LengthInMpch;
-  ar & VelInKmS;
-  ar & PeriodicBoundaryOn;
-  ar & SnapshotHasIdBlock;
-//   ar & SnapshotNoMassBlock;
-  ar & ParticleIdRankStyle;//load particleId as id ranks
-  ar & ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
-  ar & SnapshotIdUnsigned;
-  ar & SnapshotIdList;
-  
-  ar & MajorProgenitorMassRatio; 
-#ifdef ALLOW_BINARY_SYSTEM
-  ar & BinaryMassRatioLimit;
-#endif
-  ar & BoundMassPrecision;
-  ar & SourceSubRelaxFactor;
-  ar & SubCoreSizeFactor; //coresize=Nbound*CoreSizeFactor, to get center coordinates for the KineticDistance test.
-  ar & SubCoreSizeMin; //Minimum coresize
-  
-  ar & TreeAllocFactor;
-  ar & TreeNodeOpenAngle;
-  ar & TreeMinNumOfCells;
-  
-  /*derived parameters; do not require user input*/
-  ar & TreeNodeOpenAngleSquare;
-  ar & TreeNodeResolution;
-  ar & TreeNodeResolutionHalf;
-  ar & BoxHalf; 
 }
 #endif

@@ -180,7 +180,8 @@ int LargestRootFactor(int N, int dim)
 {
   int x=floor(pow(N, 1./dim));
   for(;x>0;x--)
-	if(N%x==0) return x;
+	if(N%x==0) break;
+  return x;
 }
 vector <int> ClosestFactors(int N, int dim)
 /* return a factorization of `N` into `dim` factors that are as close as possible to each other*/

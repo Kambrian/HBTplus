@@ -3,10 +3,11 @@
 #include <algorithm>
 #include <omp.h>
 
+#include "../mpi_wrapper.h"
 #include "../datatypes.h"
 #include "../snapshot_number.h"
 #include "../subhalo.h"
-#include "../boost_mpi.h"
+
 
 void SubhaloSnapshot_t::BuildHDFDataType()
 {
@@ -78,7 +79,7 @@ inline herr_t ReadDataset(hid_t file, const char *name, hid_t dtype, void *buf)
   status=H5Dclose(dset);
   return status;
 }
-void SubhaloSnapshot_t::Load(mpi::communicator &world, int snapshot_index, bool load_src)
+void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_src)
 {
   if(snapshot_index<HBTConfig.MinSnapshotIndex)
   {
@@ -174,7 +175,7 @@ inline void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsiz
 {
   writeHDFmatrix(file, buf, name, ndim, dims, dtype, dtype);
 }
-void SubhaloSnapshot_t::Save(mpi::communicator &world)
+void SubhaloSnapshot_t::Save(MpiWorker_t &world)
 {
   int iFile=world.rank();
   stringstream formater;
