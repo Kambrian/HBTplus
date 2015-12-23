@@ -11,7 +11,10 @@ Run on major merger and satellite infall; make movie comparison.
 sort subhalos to move disrupted ones to the end; add number_of_live_subs; add live_sub_properties block: virial, rmax/vmax, rhalf, rpoisson...
 
 check for robustness of most-bound descendent algorithm: some bound subhaloes are in the background, are they real (AqA5 snap127)? maybe consider host-looking again after unbinding, to increase consistency.
+
+check compatibility with other compilers/MPIs
 --------
+
 remove id=-1 from pidhash: do not allow this. just exit, or throw exception
 
 analysis routines/check compare

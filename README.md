@@ -4,7 +4,7 @@ new implementation of HBT in C++ . This is the MPI version.
 
 - a `c++` compiler with `c++11` support (e.g., `gcc 4.6.3` above)
 - [HDF5](https://www.hdfgroup.org/) C library (1.8.0 and above)
-- [Boost](http://www.boost.org/) C++ library with MPI enabled (which requires a MPI library)
+- MPI library
 
 Core part done. More post-processing to be added.
 
