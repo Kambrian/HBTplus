@@ -1,4 +1,4 @@
-new implementation of HBT in C++ . This is the OpenMP version for share memory machines. Check the `boost` branch for a MPI version.
+new implementation of HBT in C++ . This is the OpenMP version for share memory machines. Check the `MPI` branch for a MPI version.
 
 ## Prerequisites
 
