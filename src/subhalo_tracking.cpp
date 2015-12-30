@@ -296,7 +296,7 @@ void SubhaloSnapshot_t::RegisterNewTracks()
 	if(Subhalos[i].Nbound>1)
 	{
 	  if(i!=TrackId)
-		Subhalos[i].MoveTo(Subhalos[TrackId]);
+		Subhalos[TrackId]=move(Subhalos[i]);
 	  Subhalos[TrackId].TrackId=TrackId;
 	  MemberTable.AllMembers[TrackId]=TrackId; //this trackId is also the subhalo index
 // 	  assert(MemberTable.SubGroups[Subhalos[TrackId].HostHaloId].size()==0);

@@ -49,7 +49,7 @@ public:
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
 	LastMaxMass=0;
   }
-  void MoveTo(Subhalo_t & dest)
+  /*void MoveTo(Subhalo_t & dest)
   {//override dest with this, leaving this unspecified.
 	dest.TrackId=TrackId;
 	dest.Nbound=Nbound;
@@ -61,7 +61,7 @@ public:
 	copyHBTxyz(dest.ComovingPosition, ComovingPosition);
 	copyHBTxyz(dest.PhysicalVelocity, PhysicalVelocity);
 	dest.Particles.swap(Particles);
-  }
+  }*/
   void Unbind(const ParticleSnapshot_t &part_snap);
   HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
   void UpdateTrack(HBTInt snapshot_index);
