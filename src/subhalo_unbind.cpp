@@ -222,6 +222,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 	  Nbound=1;
 	  Nlast=1;//what if this is a central?? any fixes?
 	  Particles.resize(Nlast);//keep old particle order, just shrink.
+	  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
 	}
   //todo: output angular momentum and total energy as well, for calculation of spin.
 }

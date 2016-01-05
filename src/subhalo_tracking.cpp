@@ -415,6 +415,8 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	  copyHBTxyz(Subhalos[subid].ComovingPosition, halo_snap.Halos[hostid].ComovingPosition); 
 	  copyHBTxyz(Subhalos[subid].PhysicalVelocity, halo_snap.Halos[hostid].PhysicalVelocity);
 	  Subhalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
+	  
+	  Subhalos[subid].SnapshotIndexOfBirth=SnapshotIndex;
 	}
 	else
 	{
