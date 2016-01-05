@@ -60,3 +60,55 @@ void SubhaloSnapshot_t::AverageCoordinates()
 	SnapshotPointer->AverageVelocity(Subhalos[subid].PhysicalVelocity, Subhalos[subid].Particles.data(), Subhalos[subid].Nbound);
   }
 }
+
+void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
+{
+  /* to calculate the following density-profile related properties
+   *  currently only support const particle masses.
+   * 
+  HBTReal RmaxComoving;
+  HBTReal VmaxPhysical;
+  HBTReal LastMaxVmax;
+  HBTInt SnapshotIndexOfLastMaxVmax; //the snapshot when it has the maximum Vmax, only considering past snapshots.
+  
+  HBTReal R2SigmaComoving;
+  HBTReal RHalfComoving;
+  
+  HBTReal R200CritComoving;
+  HBTReal R200MeanComoving;
+  HBTReal RVirComoving;
+  HBTReal M200Crit;
+  HBTReal M200Mean;
+  HBTReal MVir;
+   */
+  HBTReal VelocityUnit=sqrt(PhysicalConst::G*part_snap.GetMass(0)/part_snap.ScaleFactor);
+  
+  const HBTxyz &cen=part_snap.GetComovingPosition(Particles[0]); //most-bound particle as center.
+  
+  vector <HBTReal> r(Nbound), v(Nbound);
+  for(HBTInt i=0;i<Nbound;i++)
+	r[i]=PeriodicDistance(cen, part_snap.GetComovingPosition(Particles[i]));
+  sort(r.begin(), r.end());
+  for(HBTInt i=0;i<Nbound;i++)
+  {
+	  if(r[i]<HBTConfig.SofteningHalo) r[i]=HBTConfig.SofteningHalo; //resolution
+	  v[i]=sqrt((HBTReal)(i+1)/r[i]);
+  }
+  HBTInt imax=max_element(v.begin(), v.end())-v.begin();
+  RmaxComoving=r[imax];
+  VmaxPhysical=v[imax]*VelocityUnit;
+  RHalfComoving=r[Nbound/2];
+  R2SigmaComoving=r[(HBTInt)(Nbound*0.955)];
+  
+  HBTReal virialF_tophat, virialF_b200, virialF_c200;
+  part_snap.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
+  part_snap.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, r);
+  part_snap.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, r);
+  part_snap.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, r);
+  
+  if(VmaxPhysical>=LastMaxVmaxPhysical)
+  {
+	SnapshotIndexOfLastMaxVmax=part_snap.GetSnapshotIndex();
+	LastMaxVmaxPhysical=VmaxPhysical;
+  }
+}

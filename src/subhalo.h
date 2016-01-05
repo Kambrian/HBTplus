@@ -37,12 +37,13 @@ public:
   HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
   HBTInt SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved; only set if currentsnapshot>=SnapshotIndexOfDeath.
   
+  //profile properties
   HBTReal RmaxComoving;
   HBTReal VmaxPhysical;
-  HBTReal LastMaxVmax;
+  HBTReal LastMaxVmaxPhysical;
   HBTInt SnapshotIndexOfLastMaxVmax; //the snapshot when it has the maximum Vmax, only considering past snapshots.
   
-  HBTReal RPoissonComoving;
+  HBTReal R2SigmaComoving; //95.5% containment radius
   HBTReal RHalfComoving;
   
   HBTReal R200CritComoving;
@@ -52,12 +53,14 @@ public:
   HBTReal M200Mean;
   HBTReal MVir;
   
+  //kinetic properties
   HBTReal SpecificSelfPotentialEnergy;
   HBTReal SpecificSelfKineticEnergy;
   HBTReal SpecificAngularMomentum;
   HBTReal SpinPeebles;
   HBTReal SpinBullock;
   
+  //shapes
   HBTxyz InertialEigenVector[3];
   HBTxyz InertialEigenVectorWeighted[3];
   
@@ -96,11 +99,12 @@ public:
   }*/
   void Unbind(const ParticleSnapshot_t &part_snap);
   HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
-  void UpdateTrack(HBTInt snapshot_index);
+  void UpdateTrack(const ParticleSnapshot_t &part_snap);
   bool IsCentral()
   {
 	return 0==Rank;
   }
+  void CalculateProfileProperties(const ParticleSnapshot_t &part_snap);
 };
 
 typedef vector <Subhalo_t> SubhaloList_t;

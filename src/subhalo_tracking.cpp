@@ -7,16 +7,18 @@
 #include "snapshot_number.h"
 #include "subhalo.h"
 
-void Subhalo_t::UpdateTrack(HBTInt snapshot_index)
+void Subhalo_t::UpdateTrack(const ParticleSnapshot_t &part_snap)
 {
   if(TrackId==SpecialConst::NullTrackId) return;
   
-  if(0==Rank) SnapshotIndexOfLastIsolation=snapshot_index;
+  if(0==Rank) SnapshotIndexOfLastIsolation=part_snap.GetSnapshotIndex();
   if(Nbound>=LastMaxMass) 
   {
-	SnapshotIndexOfLastMaxMass=snapshot_index;
+	SnapshotIndexOfLastMaxMass=part_snap.GetSnapshotIndex();
 	LastMaxMass=Nbound;
   }
+  
+  CalculateProfileProperties(part_snap);
 }
 HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const ParticleSnapshot_t &snapshot)
 {
@@ -319,5 +321,5 @@ void SubhaloSnapshot_t::UpdateTracks()
   MemberTable.AssignRanks(Subhalos);
 #pragma omp for
   for(HBTInt i=0;i<Subhalos.size();i++)
-	Subhalos[i].UpdateTrack(SnapshotIndex);
+	Subhalos[i].UpdateTrack(*SnapshotPointer);
 }
