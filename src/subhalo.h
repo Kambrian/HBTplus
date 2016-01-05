@@ -33,13 +33,42 @@ public:
   HBTInt LastMaxMass;
   HBTInt SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   HBTInt SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
-//   HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
-//   HBTInt SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved.
-//   HBTReal RmaxComoving;
-//   HBTReal VmaxPhysical;
-//   HBTReal RPoissonComoving;
+  
+  HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
+  HBTInt SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved; only set if currentsnapshot>=SnapshotIndexOfDeath.
+  
+  HBTReal RmaxComoving;
+  HBTReal VmaxPhysical;
+  HBTReal LastMaxVmax;
+  HBTInt SnapshotIndexOfLastMaxVmax; //the snapshot when it has the maximum Vmax, only considering past snapshots.
+  
+  HBTReal RPoissonComoving;
+  HBTReal RHalfComoving;
+  
+  HBTReal R200CritComoving;
+  HBTReal R200MeanComoving;
+  HBTReal RVirComoving;
+  HBTReal M200Crit;
+  HBTReal M200Mean;
+  HBTReal MVir;
+  
+  HBTReal SpecificSelfPotentialEnergy;
+  HBTReal SpecificSelfKineticEnergy;
+  HBTReal SpecificAngularMomentum;
+  HBTReal SpinPeebles;
+  HBTReal SpinBullock;
+  
+  HBTxyz InertialEigenVector[3];
+  HBTxyz InertialEigenVectorWeighted[3];
+  
+  HBTxyz ComovingAveragePosition;
+  HBTxyz PhysicalAverageVelocity;
+  HBTxyz ComovingMostBoundPosition;
+  HBTxyz PhysicalMostBoundVelocity;
+  
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
+  
   ParticleList_t Particles;
   
   Subhalo_t(): Nbound(0), Rank(0)
@@ -48,6 +77,9 @@ public:
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
 	LastMaxMass=0;
+	
+	SnapshotIndexOfBirth=-1;
+	SnapshotIndexOfDeath=-1;
   }
   /*void MoveTo(Subhalo_t & dest)
   {//override dest with this, leaving this unspecified.

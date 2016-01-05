@@ -22,6 +22,8 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(LastMaxMass, H5T_HBTInt);
   InsertMember(SnapshotIndexOfLastMaxMass, H5T_HBTInt);
   InsertMember(SnapshotIndexOfLastIsolation, H5T_HBTInt);
+  InsertMember(SnapshotIndexOfBirth, H5T_HBTInt);
+  InsertMember(SnapshotIndexOfDeath, H5T_HBTInt);
   #undef InsertMember	
   H5T_SubhaloInDisk=H5Tcopy(H5T_SubhaloInMem);
   H5Tpack(H5T_SubhaloInDisk); //clear fields not added.

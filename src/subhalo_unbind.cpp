@@ -211,6 +211,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	{
 	  Nbound=1;
 	  Nlast=1;//what if this is a central?? any fixes?
+	  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
 	}
   Particles.resize(Nlast);
   //todo: output angular momentum and total energy as well, for calculation of spin.
