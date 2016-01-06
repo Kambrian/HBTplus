@@ -1,3 +1,4 @@
+//TODO: unify the reference frame for specificProperties...
 #include <iostream>
 #include <new>
 #include <algorithm>
@@ -158,6 +159,46 @@ public:
 		CoM[j]=sx[j];
 	}
   }
+  void AverageKinematics(HBTReal &SpecificPotentialEnergy, HBTReal &SpecificKineticEnergy, HBTxyz &SpecificAngularMomentum, HBTInt NumPart, const HBTxyz & refPos, const HBTxyz &refVel)
+  /*obtain specific potential, kinetic energy, and angular momentum for the first NumPart particles
+   * currently only support fixed particle mass
+   * 
+   * TODO: extend to variable mass?
+   * Note there is a slight inconsistency in the energy since they were calculated from the previous unbinding loop, but the refVel has been updated.
+   */
+  {
+	if(NumPart<=1)
+	{
+	  SpecificPotentialEnergy=0.;
+	  SpecificKineticEnergy=0.;
+	  SpecificAngularMomentum[0]=SpecificAngularMomentum[1]=SpecificAngularMomentum[2]=0.;
+	  return;
+	}
+	double E=0., K=0., AM[3]={0.};
+	for(HBTInt i=0;i<NumPart;i++)
+	{
+	  E+=Elist[i].E;
+	  const HBTxyz & x=GetComovingPosition(i);
+	  const HBTxyz & v=GetPhysicalVelocity(i);
+	  double dx[3], dv[3];
+	  for(int j=0;j<3;j++)
+	  {
+		dx[j]=x[j]-refPos[j];
+		if(HBTConfig.PeriodicBoundaryOn) dx[j]=NEAREST(dx[j]);
+		dv[j]=v[j]-refVel[j]+Hz*ScaleFactor*dx[j];
+		K+=dv[j]*dv[j];
+	  }
+	  AM[0]+=dx[1]*dv[2]-dx[2]*dv[1];
+	  AM[1]+=dx[0]*dv[2]-dx[2]*dv[0];
+	  AM[2]+=dx[0]*dv[1]-dx[1]*dv[0];
+	}
+	E/=NumPart;
+	K*=0.5/NumPart;
+	SpecificPotentialEnergy=E-K;
+	SpecificKineticEnergy=K;
+	for(int j=0;j<3;j++) 
+	  SpecificAngularMomentum[j]=AM[j]/NumPart;	
+  }
 };
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
@@ -214,7 +255,8 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
 	}
   Particles.resize(Nlast);
-  //todo: output angular momentum and total energy as well, for calculation of spin.
+  ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingPosition, PhysicalVelocity);
+  //TODO: consistent reference frame in subhalo property calculation?
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 

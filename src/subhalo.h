@@ -43,7 +43,7 @@ public:
   HBTReal LastMaxVmaxPhysical;
   HBTInt SnapshotIndexOfLastMaxVmax; //the snapshot when it has the maximum Vmax, only considering past snapshots.
   
-  HBTReal R2SigmaComoving; //95.5% containment radius
+  HBTReal R2SigmaComoving; //95.5% containment radius, close to tidal radius?
   HBTReal RHalfComoving;
   
   HBTReal R200CritComoving;
@@ -56,7 +56,7 @@ public:
   //kinetic properties
   HBTReal SpecificSelfPotentialEnergy;
   HBTReal SpecificSelfKineticEnergy;
-  HBTReal SpecificAngularMomentum;
+  HBTxyz SpecificAngularMomentum;
   HBTReal SpinPeebles;
   HBTReal SpinBullock;
   

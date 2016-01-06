@@ -119,13 +119,17 @@ inline HBTReal position_modulus(HBTReal x, HBTReal boxsize)
 	y=x/boxsize;
 	return (y-floor(y))*boxsize;
 }
-inline HBTReal distance(const HBTReal x[3], const HBTReal y[3])
+inline HBTReal Distance2(const HBTReal x[3], const HBTReal y[3])
 {
 	HBTReal dx[3];
 	dx[0]=x[0]-y[0];
 	dx[1]=x[1]-y[1];
 	dx[2]=x[2]-y[2];
-	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
+	return dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2];
+}
+inline HBTReal Distance(const HBTReal x[3], const HBTReal y[3])
+{
+	return sqrt(Distance2(x,y));
 }
 #define NEAREST(x) (((x)>HBTConfig.BoxHalf)?((x)-HBTConfig.BoxSize):(((x)<-HBTConfig.BoxHalf)?((x)+HBTConfig.BoxSize):(x)))
 inline HBTReal PeriodicDistance(const HBTReal x[3], const HBTReal y[3])

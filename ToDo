@@ -1,3 +1,5 @@
+unify the reference frame for specificProperties...
+
 special treatment for major merger: do not update central (no central).
 
 Add Virial/Vmax: test bound vs all: how much does the virial mass/radius differ? is the density profile still NFW? is it correct with the mass/concentration parameters?

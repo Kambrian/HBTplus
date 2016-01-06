@@ -23,7 +23,7 @@ void Subhalo_t::UpdateTrack(const ParticleSnapshot_t &part_snap)
 HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const ParticleSnapshot_t &snapshot)
 {
   HBTReal dx=PeriodicDistance(halo.ComovingPosition, ComovingPosition);
-  HBTReal dv=distance(halo.PhysicalVelocity, PhysicalVelocity);
+  HBTReal dv=Distance(halo.PhysicalVelocity, PhysicalVelocity);
   HBTReal d=dv+snapshot.Hz*snapshot.ScaleFactor*dx;
   return (d>0?d:-d);
 }
