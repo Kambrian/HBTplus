@@ -64,7 +64,7 @@ void SubhaloSnapshot_t::AverageCoordinates()
 void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 {
   /* to calculate the following density-profile related properties
-   *  currently only support const particle masses.
+   *  currently only support const particle masses. TODO: extend to variable particle mass.
    * 
   HBTReal RmaxComoving;
   HBTReal VmaxPhysical;
@@ -81,7 +81,21 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
   HBTReal M200Mean;
   HBTReal MVir;
    */
-  HBTReal PartMass=part_snap.GetMass(0);
+  if(Nbound<=1)
+  {
+	RmaxComoving=0.;
+	VmaxPhysical=0.;
+	R2SigmaComoving=0.;
+	RHalfComoving=0.;
+	R200CritComoving=0.;
+	R200MeanComoving=0.;
+	RVirComoving=0.;
+	M200Crit=0.;
+	M200Mean=0.;
+	MVir=0.;
+	return;
+  }
+  HBTReal PartMass=part_snap.GetMass(Particles[0]);
   HBTReal VelocityUnit=sqrt(PhysicalConst::G*PartMass/part_snap.ScaleFactor);
   
   const HBTxyz &cen=part_snap.GetComovingPosition(Particles[0]); //most-bound particle as center.
@@ -121,5 +135,54 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 	  sqrt(fabs(SpecificSelfPotentialEnergy+SpecificSelfKineticEnergy))/PhysicalConst::G/Nbound/PartMass;
 	SpinBullock[i]=SpecificAngularMomentum[i]/sqrt(2.*PhysicalConst::G*PartMass*R2SigmaComoving);
   }
+#endif
+}
+
+void Subhalo_t::CalculateShape(const ParticleSnapshot_t& part_snap)
+{
+#ifdef HAS_GSL
+  if(Nbound<=1)
+  {
+	for(int i=0;i<3;i++)
+	  for(int j=0;j<3;j++)
+	  {
+		InertialEigenVector[i][j]=0.;
+		InertialEigenVectorWeighted[i][j]=0.;
+	  }
+  }
+  const HBTxyz &cen=part_snap.GetComovingPosition(Particles[0]); //most-bound particle as center.
+  
+  double Ixx=0,Iyy=0, Izz=0, Ixy=0, Ixz=0, Iyz=0;
+  double Ixxw=0,Iyyw=0, Izzw=0, Ixyw=0, Ixzw=0, Iyzw=0;
+  for(HBTInt i=0;i<Nbound;i++)
+  {
+// 	  HBTReal PartMass=part_snap.GetMass(Particles[i]);//TODO: variable particle mass support.
+	  const HBTxyz & pos=part_snap.GetComovingPosition(Particles[i]);
+	  HBTReal dx=pos[0]-cen[0];
+	  HBTReal dy=pos[1]-cen[1];
+	  HBTReal dz=pos[2]-cen[2];
+	  if(HBTConfig.PeriodicBoundaryOn)
+	  {
+		dx=NEAREST(dx);
+		dy=NEAREST(dy);
+		dz=NEAREST(dz);
+	  }
+	  Ixx+=dx*dx;
+	  Iyy+=dy*dy;
+	  Izz+=dz*dz;
+	  Ixy+=dx*dy;
+	  Ixz+=dx*dz;
+	  Iyz+=dy*dz;
+	  
+	  HBTReal dr2=dx*dx+dy*dy+dz*dz;
+	  Ixxw+=dx*dx/dr2;
+	  Iyyw+=dy*dy/dr2;
+	  Izzw+=dz*dz/dr2;
+	  Ixyw+=dx*dy/dr2;
+	  Ixzw+=dx*dz/dr2;
+	  Iyzw+=dy*dz/dr2;
+  }
+  EigenAxis(Ixx, Ixy, Ixz, Iyy, Iyz, Izz, InertialEigenVector);
+  EigenAxis(Ixxw, Ixyw, Ixzw, Iyyw, Iyzw, Izzw, InertialEigenVectorWeighted);
 #endif
 }

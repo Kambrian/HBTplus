@@ -5,6 +5,9 @@ new implementation of HBT in C++ . This is the OpenMP version for share memory m
 - a `c++` compiler with `c++11` support (e.g., `gcc 4.6.3` above)
 - [HDF5](https://www.hdfgroup.org/) C library (1.8.0 and above)
 
+### Optional dependence
+- GNU Scientific Library (GSL). Only needed if you want to output the shapes and orientations of subhaloes.
+
 Core part done. More post-processing to be added.
 
 ## Compile

@@ -29,3 +29,7 @@ fix non-POD issue with HDF save.
 -------------------
 Future: 
 shared_ptr
+
+support variable particle mass
+
+extend to gas and stars

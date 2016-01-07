@@ -46,6 +46,7 @@ public:
   HBTReal R2SigmaComoving; //95.5% containment radius, close to tidal radius?
   HBTReal RHalfComoving;
   
+  //SO properties using subhalo particles alone
   HBTReal R200CritComoving;
   HBTReal R200MeanComoving;
   HBTReal RVirComoving;
@@ -55,7 +56,7 @@ public:
   
   //kinetic properties
   HBTReal SpecificSelfPotentialEnergy;
-  HBTReal SpecificSelfKineticEnergy;
+  HBTReal SpecificSelfKineticEnergy;//<0.5*v^2>
   HBTxyz SpecificAngularMomentum;//<Rphysical x Vphysical>
 #ifdef ENABLE_EXPERIMENTAL_PROPERTIES
   HBTxyz SpinPeebles;
@@ -63,8 +64,10 @@ public:
 #endif
   
   //shapes
+#ifdef HAS_GSL
   HBTxyz InertialEigenVector[3];
   HBTxyz InertialEigenVectorWeighted[3];
+#endif
   
   HBTxyz ComovingAveragePosition;
   HBTxyz PhysicalAverageVelocity;
@@ -107,6 +110,7 @@ public:
 	return 0==Rank;
   }
   void CalculateProfileProperties(const ParticleSnapshot_t &part_snap);
+  void CalculateShape(const ParticleSnapshot_t &part_snap);
 };
 
 typedef vector <Subhalo_t> SubhaloList_t;

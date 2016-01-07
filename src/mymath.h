@@ -146,4 +146,9 @@ inline HBTReal PeriodicDistance(const HBTReal x[3], const HBTReal y[3])
 	}
 	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
 }
+
+#ifdef HAS_GSL
+extern void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, double Izz, HBTxyz Axis[3]);
+#endif
+
 #endif

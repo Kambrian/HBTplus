@@ -19,6 +19,7 @@ void Subhalo_t::UpdateTrack(const ParticleSnapshot_t &part_snap)
   }
   
   CalculateProfileProperties(part_snap);
+  CalculateShape(part_snap);
 }
 HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const ParticleSnapshot_t &snapshot)
 {
