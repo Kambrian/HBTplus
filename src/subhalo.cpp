@@ -81,7 +81,8 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
   HBTReal M200Mean;
   HBTReal MVir;
    */
-  HBTReal VelocityUnit=sqrt(PhysicalConst::G*part_snap.GetMass(0)/part_snap.ScaleFactor);
+  HBTReal PartMass=part_snap.GetMass(0);
+  HBTReal VelocityUnit=sqrt(PhysicalConst::G*PartMass/part_snap.ScaleFactor);
   
   const HBTxyz &cen=part_snap.GetComovingPosition(Particles[0]); //most-bound particle as center.
   
@@ -111,4 +112,14 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 	SnapshotIndexOfLastMaxVmax=part_snap.GetSnapshotIndex();
 	LastMaxVmaxPhysical=VmaxPhysical;
   }
+
+#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
+  /*the spin parameters are kind of ambiguous. do not provide*/
+  for(int i=0;i<3;i++)
+  {
+	SpinPeebles[i]=SpecificAngularMomentum[i]*
+	  sqrt(fabs(SpecificSelfPotentialEnergy+SpecificSelfKineticEnergy))/PhysicalConst::G/Nbound/PartMass;
+	SpinBullock[i]=SpecificAngularMomentum[i]/sqrt(2.*PhysicalConst::G*PartMass*R2SigmaComoving);
+  }
+#endif
 }

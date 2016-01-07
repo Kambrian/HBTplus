@@ -185,7 +185,8 @@ public:
 	  {
 		dx[j]=x[j]-refPos[j];
 		if(HBTConfig.PeriodicBoundaryOn) dx[j]=NEAREST(dx[j]);
-		dv[j]=v[j]-refVel[j]+Hz*ScaleFactor*dx[j];
+		dx[j]*=ScaleFactor; //physical
+		dv[j]=v[j]-refVel[j]+Hz*dx[j];
 		K+=dv[j]*dv[j];
 	  }
 	  AM[0]+=dx[1]*dv[2]-dx[2]*dv[1];
@@ -197,7 +198,7 @@ public:
 	SpecificPotentialEnergy=E-K;
 	SpecificKineticEnergy=K;
 	for(int j=0;j<3;j++) 
-	  SpecificAngularMomentum[j]=AM[j]/NumPart;	
+	  SpecificAngularMomentum[j]=AM[j]/NumPart;	//physical
   }
 };
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)

@@ -56,9 +56,11 @@ public:
   //kinetic properties
   HBTReal SpecificSelfPotentialEnergy;
   HBTReal SpecificSelfKineticEnergy;
-  HBTxyz SpecificAngularMomentum;
-  HBTReal SpinPeebles;
-  HBTReal SpinBullock;
+  HBTxyz SpecificAngularMomentum;//<Rphysical x Vphysical>
+#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
+  HBTxyz SpinPeebles;
+  HBTxyz SpinBullock;
+#endif
   
   //shapes
   HBTxyz InertialEigenVector[3];

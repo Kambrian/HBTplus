@@ -3,6 +3,7 @@ HDFLIB=-lhdf5_hl -lhdf5
 
 CXX=g++
 CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 
+CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 <!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
 LDLIBS+=$(HDFLIB) $(OMPFLAG)
 <!-- LINK.o=$(LINK.cpp) -->
