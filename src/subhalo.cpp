@@ -140,15 +140,19 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 
 void Subhalo_t::CalculateShape(const ParticleSnapshot_t& part_snap)
 {
-#ifdef HAS_GSL
   if(Nbound<=1)
   {
+	#ifdef HAS_GSL
 	for(int i=0;i<3;i++)
 	  for(int j=0;j<3;j++)
 	  {
 		InertialEigenVector[i][j]=0.;
 		InertialEigenVectorWeighted[i][j]=0.;
 	  }
+	#else
+	for(auto && I: InertialTensor) I=0.;
+	for(auto && I: InertialTensorWeighted) I=0.;
+	#endif
   }
   const HBTxyz &cen=part_snap.GetComovingPosition(Particles[0]); //most-bound particle as center.
   
@@ -182,7 +186,11 @@ void Subhalo_t::CalculateShape(const ParticleSnapshot_t& part_snap)
 	  Ixzw+=dx*dz/dr2;
 	  Iyzw+=dy*dz/dr2;
   }
+#ifdef HAS_GSL  
   EigenAxis(Ixx, Ixy, Ixz, Iyy, Iyz, Izz, InertialEigenVector);
   EigenAxis(Ixxw, Ixyw, Ixzw, Iyyw, Iyzw, Izzw, InertialEigenVectorWeighted);
+#else
+  InertialTensor[0]=Ixx; InertialTensor[1]=Ixy; InertialTensor[2]=Ixz; InertialTensor[3]=Iyy; InertialTensor[4]=Iyz; InertialTensor[5]=Izz;
+  InertialTensorWeighted[0]=Ixxw; InertialTensorWeighted[1]=Ixyw; InertialTensorWeighted[2]=Ixz; InertialTensorWeighted[3]=Iyy; InertialTensorWeighted[4]=Iyz; InertialTensorWeighted[5]=Izz;
 #endif
 }

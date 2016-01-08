@@ -67,6 +67,9 @@ public:
 #ifdef HAS_GSL
   HBTxyz InertialEigenVector[3];
   HBTxyz InertialEigenVectorWeighted[3];
+#else
+  HBTReal InertialTensor[6]; //{Ixx, Ixy, Ixz, Iyy, Iyz, Izz}
+  HBTReal InertialTensorWeighted[6];
 #endif
   
   HBTxyz ComovingAveragePosition;
