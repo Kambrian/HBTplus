@@ -205,7 +205,6 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
   if(1==Particles.size()) return;
   
-  HBTInt OldMostBoundParticle=Particles[0];
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
@@ -229,11 +228,11 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
 		{
 		  Nbound=1;
+		  Nlast=1;
 		  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
-		  Particles[0]=OldMostBoundParticle;
-		  Particles.resize(1);//what if this is a central?? downgrade to sat later.
-		  copyHBTxyz(ComovingMostBoundPosition, snapshot.GetComovingPosition(OldMostBoundParticle));
-		  copyHBTxyz(PhysicalMostBoundVelocity, snapshot.GetPhysicalVelocity(OldMostBoundParticle));
+		  //old particle list retained.
+		  copyHBTxyz(ComovingMostBoundPosition, snapshot.GetComovingPosition(Particles[0]));
+		  copyHBTxyz(PhysicalMostBoundVelocity, snapshot.GetPhysicalVelocity(Particles[0]));
 		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
 		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
 		  break;
@@ -251,7 +250,6 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 			Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
 			if(Nlast>Particles.size()) Nlast=Particles.size();
 			for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
-			Particles.resize(Nlast);
 			//update properties
 			ESnap.AveragePosition(ComovingAveragePosition, Nbound);
 			copyHBTxyz(PhysicalMostBoundVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
@@ -259,7 +257,8 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  }
 		}
 	}
-  ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingMostBoundPosition, PhysicalAverageVelocity);
+	Particles.resize(Nlast);
+	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingMostBoundPosition, PhysicalAverageVelocity);
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
