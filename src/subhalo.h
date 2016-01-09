@@ -73,12 +73,12 @@ public:
 #endif
   
   HBTxyz ComovingAveragePosition;
-  HBTxyz PhysicalAverageVelocity;
-  HBTxyz ComovingMostBoundPosition;
+  HBTxyz PhysicalAverageVelocity;//default vel of sub
+  HBTxyz ComovingMostBoundPosition;//default pos of sub
   HBTxyz PhysicalMostBoundVelocity;
   
-  HBTxyz ComovingPosition;
-  HBTxyz PhysicalVelocity;
+//   HBTxyz ComovingPosition;
+//   HBTxyz PhysicalVelocity;
   
   ParticleList_t Particles;
   
@@ -205,11 +205,11 @@ public:
   }
   const HBTxyz & GetComovingPosition(const HBTInt index) const
   {
-	return Subhalos[index].ComovingPosition;
+	return Subhalos[index].ComovingMostBoundPosition;
   }
   const HBTxyz & GetPhysicalVelocity(const HBTInt index) const
   {
-	return Subhalos[index].PhysicalVelocity;
+	return Subhalos[index].PhysicalAverageVelocity;
   }
   HBTReal GetMass(const HBTInt index) const
   {

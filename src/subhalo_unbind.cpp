@@ -223,41 +223,43 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  for(HBTInt i=0;i<Nlast;i++)
 	  {
 		HBTInt pid=Elist[i].pid;
-		Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingPosition, PhysicalVelocity, snapshot.GetParticleMass(pid));
+		Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingMostBoundPosition, PhysicalAverageVelocity, snapshot.GetParticleMass(pid));
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
-		if(Nbound<HBTConfig.MinNumPartOfSub)
+		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
 		{
-		  Nbound=0;
-		  Elist[0].pid=OldMostBoundParticle;
-		  copyHBTxyz(ComovingPosition, snapshot.GetComovingPosition(OldMostBoundParticle));
-		  copyHBTxyz(PhysicalVelocity, snapshot.GetPhysicalVelocity(OldMostBoundParticle));
+		  Nbound=1;
+		  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
+		  Particles[0]=OldMostBoundParticle;
+		  Particles.resize(1);//what if this is a central?? downgrade to sat later.
+		  copyHBTxyz(ComovingMostBoundPosition, snapshot.GetComovingPosition(OldMostBoundParticle));
+		  copyHBTxyz(PhysicalMostBoundVelocity, snapshot.GetPhysicalVelocity(OldMostBoundParticle));
+		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
+		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
+		  break;
 		}
 		else
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
 		  PopMostBoundParticle(Elist.data(), Nbound);
-		  ESnap.AveragePosition(ComovingPosition, GetCoreSize(Nbound));
-		  ESnap.AverageVelocity(PhysicalVelocity, Nbound);
+		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
+		  copyHBTxyz(ComovingMostBoundPosition, snapshot.GetComovingPosition(Elist[0].pid));
+		  if(Nbound>Nlast*HBTConfig.BoundMassPrecision)//converge
+		  {
+			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
+			//update particle list
+			Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
+			if(Nlast>Particles.size()) Nlast=Particles.size();
+			for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
+			Particles.resize(Nlast);
+			//update properties
+			ESnap.AveragePosition(ComovingAveragePosition, Nbound);
+			copyHBTxyz(PhysicalMostBoundVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
+			break;
+		  }
 		}
-		if(0==Nbound||Nbound>Nlast*HBTConfig.BoundMassPrecision)  break;
 	}
-	if(Nbound)
-	{
-	  sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
-	  Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
-	  if(Nlast>Particles.size()) Nlast=Particles.size();
-	  for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
-	}
-	else
-	{
-	  Nbound=1;
-	  Nlast=1;//what if this is a central?? any fixes?
-	  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
-	}
-  Particles.resize(Nlast);
-  ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingPosition, PhysicalVelocity);
-  //TODO: consistent reference frame in subhalo property calculation?
+  ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingMostBoundPosition, PhysicalAverageVelocity);
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 

@@ -17,8 +17,10 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(Nbound, H5T_HBTInt);
   InsertMember(HostHaloId, H5T_HBTInt);
   InsertMember(Rank, H5T_HBTInt);
-  InsertMember(ComovingPosition, H5T_HBTxyz);
-  InsertMember(PhysicalVelocity, H5T_HBTxyz);
+  InsertMember(ComovingMostBoundPosition, H5T_HBTxyz);
+  InsertMember(PhysicalMostBoundVelocity, H5T_HBTxyz);
+  InsertMember(ComovingAveragePosition, H5T_HBTxyz);
+  InsertMember(PhysicalAverageVelocity, H5T_HBTxyz);
   InsertMember(LastMaxMass, H5T_HBTInt);
   InsertMember(SnapshotIndexOfLastMaxMass, H5T_HBTInt);
   InsertMember(SnapshotIndexOfLastIsolation, H5T_HBTInt);

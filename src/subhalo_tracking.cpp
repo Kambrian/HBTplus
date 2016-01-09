@@ -23,8 +23,8 @@ void Subhalo_t::UpdateTrack(const ParticleSnapshot_t &part_snap)
 }
 HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const ParticleSnapshot_t &snapshot)
 {
-  HBTReal dx=PeriodicDistance(halo.ComovingPosition, ComovingPosition);
-  HBTReal dv=Distance(halo.PhysicalVelocity, PhysicalVelocity);
+  HBTReal dx=PeriodicDistance(halo.ComovingAveragePosition, ComovingMostBoundPosition);
+  HBTReal dv=Distance(halo.PhysicalAverageVelocity, PhysicalAverageVelocity);
   HBTReal d=dv+snapshot.Hz*snapshot.ScaleFactor*dx;
   return (d>0?d:-d);
 }
@@ -265,8 +265,8 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 		subid=Npro++;
 	  }
 	  Subhalos[subid].HostHaloId=hostid;
-	  copyHBTxyz(Subhalos[subid].ComovingPosition, halo_snap.Halos[hostid].ComovingPosition); 
-	  copyHBTxyz(Subhalos[subid].PhysicalVelocity, halo_snap.Halos[hostid].PhysicalVelocity);
+	  copyHBTxyz(Subhalos[subid].ComovingMostBoundPosition, halo_snap.Halos[hostid].ComovingAveragePosition); 
+	  copyHBTxyz(Subhalos[subid].PhysicalAverageVelocity, halo_snap.Halos[hostid].PhysicalAverageVelocity);
 	  Subhalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
 	  
 	  Subhalos[subid].SnapshotIndexOfBirth=SnapshotIndex;
