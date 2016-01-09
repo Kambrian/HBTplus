@@ -205,13 +205,13 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
 	  Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
 	  if(Nlast>Particles.size()) Nlast=Particles.size();
-	  for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
 	}
 	else
 	{
 	  Nbound=1;
 	  Nlast=1;//what if this is a central?? any fixes?
 	}
+  for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
   Particles.resize(Nlast);
   //todo: output angular momentum and total energy as well, for calculation of spin.
 }
