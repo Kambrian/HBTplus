@@ -20,7 +20,7 @@ depend:
 	makedepend --$(CXXFLAGS)-- -Y $(SRC)
 	
 synccosma: clean
-	rsync -avzL $(shell pwd)/ jvbq85@cosma-a:data/HBT2/omp
+	rsync -avzL $(shell pwd)/ jvbq85@cosma-b:data/HBT2/omp
 	
 synccosmalocal: clean
 	rsync -avzL -e "ssh -p 4800" $(shell pwd)/ jvbq85@localhost:data/HBT2/omp

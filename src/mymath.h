@@ -148,7 +148,7 @@ inline HBTReal PeriodicDistance(const HBTReal x[3], const HBTReal y[3])
 }
 
 #ifdef HAS_GSL
-extern void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, double Izz, HBTxyz Axis[3]);
+extern void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, double Izz, float Axis[3][3]);
 #endif
 
 #endif

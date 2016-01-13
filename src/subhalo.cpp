@@ -95,6 +95,13 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 	M200Crit=0.;
 	M200Mean=0.;
 	MVir=0.;
+	#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
+	for(int i=0;i<3;i++)
+	{
+	  SpinPeebles[i]=0.;
+	  SpinBullock[i]=0.;
+	}
+	#endif
 	return;
   }
   HBTReal PartMass=part_snap.GetMass(Particles[0]);
@@ -151,16 +158,15 @@ void Subhalo_t::CalculateShape(const ParticleSnapshot_t& part_snap)
 		InertialEigenVector[i][j]=0.;
 		InertialEigenVectorWeighted[i][j]=0.;
 	  }
-	#else
+	#endif
 	for(auto && I: InertialTensor) I=0.;
 	for(auto && I: InertialTensorWeighted) I=0.;
-	#endif
   }
   const HBTxyz &cen=part_snap.GetComovingPosition(Particles[0]); //most-bound particle as center.
   
   double Ixx=0,Iyy=0, Izz=0, Ixy=0, Ixz=0, Iyz=0;
   double Ixxw=0,Iyyw=0, Izzw=0, Ixyw=0, Ixzw=0, Iyzw=0;
-  for(HBTInt i=0;i<Nbound;i++)
+  for(HBTInt i=1;i<Nbound;i++)
   {
 // 	  HBTReal PartMass=part_snap.GetMass(Particles[i]);//TODO: variable particle mass support.
 	  const HBTxyz & pos=part_snap.GetComovingPosition(Particles[i]);
@@ -173,26 +179,28 @@ void Subhalo_t::CalculateShape(const ParticleSnapshot_t& part_snap)
 		dy=NEAREST(dy);
 		dz=NEAREST(dz);
 	  }
-	  Ixx+=dx*dx;
-	  Iyy+=dy*dy;
-	  Izz+=dz*dz;
+	  HBTReal dx2=dx*dx;
+	  HBTReal dy2=dy*dy;
+	  HBTReal dz2=dz*dz;
+	  Ixx+=dx2;
+	  Iyy+=dy2;
+	  Izz+=dz2;
 	  Ixy+=dx*dy;
 	  Ixz+=dx*dz;
 	  Iyz+=dy*dz;
 	  
-	  HBTReal dr2=dx*dx+dy*dy+dz*dz;
-	  Ixxw+=dx*dx/dr2;
-	  Iyyw+=dy*dy/dr2;
-	  Izzw+=dz*dz/dr2;
+	  HBTReal dr2=dx2+dy2+dz2;
+	  Ixxw+=dx2/dr2;
+	  Iyyw+=dy2/dr2;
+	  Izzw+=dz2/dr2;
 	  Ixyw+=dx*dy/dr2;
 	  Ixzw+=dx*dz/dr2;
 	  Iyzw+=dy*dz/dr2;
   }
+  InertialTensor[0]=Ixx; InertialTensor[1]=Ixy; InertialTensor[2]=Ixz; InertialTensor[3]=Iyy; InertialTensor[4]=Iyz; InertialTensor[5]=Izz;
+  InertialTensorWeighted[0]=Ixxw; InertialTensorWeighted[1]=Ixyw; InertialTensorWeighted[2]=Ixzw; InertialTensorWeighted[3]=Iyyw; InertialTensorWeighted[4]=Iyzw; InertialTensorWeighted[5]=Izzw;
 #ifdef HAS_GSL  
   EigenAxis(Ixx, Ixy, Ixz, Iyy, Iyz, Izz, InertialEigenVector);
   EigenAxis(Ixxw, Ixyw, Ixzw, Iyyw, Iyzw, Izzw, InertialEigenVectorWeighted);
-#else
-  InertialTensor[0]=Ixx; InertialTensor[1]=Ixy; InertialTensor[2]=Ixz; InertialTensor[3]=Iyy; InertialTensor[4]=Iyz; InertialTensor[5]=Izz;
-  InertialTensorWeighted[0]=Ixxw; InertialTensorWeighted[1]=Ixyw; InertialTensorWeighted[2]=Ixz; InertialTensorWeighted[3]=Iyy; InertialTensorWeighted[4]=Iyz; InertialTensorWeighted[5]=Izz;
 #endif
 }

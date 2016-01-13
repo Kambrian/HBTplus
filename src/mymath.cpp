@@ -176,9 +176,9 @@ HBTReal psort(HBTInt k, HBTInt numel, HBTReal arr[])
 #ifdef HAS_GSL
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_eigen.h>
-void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, double Izz, HBTxyz Axis[3])
+void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, double Izz, float Axis[3][3])
 /*find the eigenvector and eigenvalue of the symmetric matrix
- *return Axis[]: 3 eigenvectors, normalized such that the norm of each eigenvector gives its eigenvalue.
+ *return Axis[3][3]: 3 eigenvectors (Axis[i] being vector-i), normalized such that the norm of each eigenvector gives its eigenvalue.
  * the eigenvalues are sorted in descending order
  */
 {

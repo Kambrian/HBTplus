@@ -31,46 +31,45 @@ public:
   HBTInt HostHaloId;
   HBTInt Rank;
   HBTInt LastMaxMass;
-  HBTInt SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
-  HBTInt SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
+  int SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
+  int SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
   
-  HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
-  HBTInt SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved; only set if currentsnapshot>=SnapshotIndexOfDeath.
+  int SnapshotIndexOfBirth;//when the subhalo first becomes resolved
+  int SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved; only set if currentsnapshot>=SnapshotIndexOfDeath.
   
   //profile properties
-  HBTReal RmaxComoving;
-  HBTReal VmaxPhysical;
-  HBTReal LastMaxVmaxPhysical;
-  HBTInt SnapshotIndexOfLastMaxVmax; //the snapshot when it has the maximum Vmax, only considering past snapshots.
+  float RmaxComoving;
+  float VmaxPhysical;
+  float LastMaxVmaxPhysical;
+  int SnapshotIndexOfLastMaxVmax; //the snapshot when it has the maximum Vmax, only considering past snapshots.
   
-  HBTReal R2SigmaComoving; //95.5% containment radius, close to tidal radius?
-  HBTReal RHalfComoving;
+  float R2SigmaComoving; //95.5% containment radius, close to tidal radius?
+  float RHalfComoving;
   
   //SO properties using subhalo particles alone
-  HBTReal R200CritComoving;
-  HBTReal R200MeanComoving;
-  HBTReal RVirComoving;
-  HBTReal M200Crit;
-  HBTReal M200Mean;
-  HBTReal MVir;
+  float R200CritComoving;
+  float R200MeanComoving;
+  float RVirComoving;
+  float M200Crit;
+  float M200Mean;
+  float MVir;
   
   //kinetic properties
-  HBTReal SpecificSelfPotentialEnergy;
-  HBTReal SpecificSelfKineticEnergy;//<0.5*v^2>
-  HBTxyz SpecificAngularMomentum;//<Rphysical x Vphysical>
+  float SpecificSelfPotentialEnergy;
+  float SpecificSelfKineticEnergy;//<0.5*v^2>
+  float SpecificAngularMomentum[3];//<Rphysical x Vphysical>
 #ifdef ENABLE_EXPERIMENTAL_PROPERTIES
-  HBTxyz SpinPeebles;
-  HBTxyz SpinBullock;
+  float SpinPeebles[3];
+  float SpinBullock[3];
 #endif
   
   //shapes
 #ifdef HAS_GSL
-  HBTxyz InertialEigenVector[3];
-  HBTxyz InertialEigenVectorWeighted[3];
-#else
-  HBTReal InertialTensor[6]; //{Ixx, Ixy, Ixz, Iyy, Iyz, Izz}
-  HBTReal InertialTensorWeighted[6];
+  float InertialEigenVector[3][3];//three float[3] vectors.
+  float InertialEigenVectorWeighted[3][3];
 #endif
+  float InertialTensor[6]; //{Ixx, Ixy, Ixz, Iyy, Iyz, Izz}
+  float InertialTensorWeighted[6];
   
   HBTxyz ComovingAveragePosition;
   HBTxyz PhysicalAverageVelocity;//default vel of sub
