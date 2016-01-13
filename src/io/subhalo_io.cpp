@@ -26,7 +26,7 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(RmaxComoving, H5T_NATIVE_FLOAT);
   InsertMember(VmaxPhysical, H5T_NATIVE_FLOAT);
   InsertMember(LastMaxVmaxPhysical, H5T_NATIVE_FLOAT);
-  InsertMember(SnapshotIndexOfLastMaxMass, H5T_NATIVE_INT);
+  InsertMember(SnapshotIndexOfLastMaxVmax, H5T_NATIVE_INT);
   InsertMember(R2SigmaComoving, H5T_NATIVE_FLOAT);
   InsertMember(RHalfComoving, H5T_NATIVE_FLOAT);
   InsertMember(R200CritComoving, H5T_NATIVE_FLOAT);
