@@ -21,6 +21,7 @@ namespace PhysicalConst
 class Parameter_t
 {
 public:
+  //remember to update SetParameterValue() and DumpParameters() accordingly if you change any parameter definition.
   /*compulsory parameters*/
   string SnapshotPath;
   string HaloPath;
@@ -94,11 +95,11 @@ public:
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
   void CheckUnsetParameters();
+  void DumpParameters();
 };
 
 extern Parameter_t HBTConfig;
 extern void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_start, int &snapshot_end);
-extern void MarkHBTVersion();
 inline void trim_leading_garbage(string &s, const string &garbage_list)
 {
   int pos= s.find_first_not_of(garbage_list);//look for any good staff
@@ -113,7 +114,4 @@ inline void trim_trailing_garbage(string &s, const string &garbage_list)
   if(string::npos!=pos)  
 	s.erase(pos);
 }
-
-
-
 #endif
