@@ -24,9 +24,7 @@ Below are a few macros to further customize the behaviour of HBT. These flags ca
 - `-DENABLE_EXPERIMENTAL_PROPERTIES`: output the peebles and bullock spin parameters. These parameters are vaguely defined due to the ambiguity/lack of standard in the mass, radius, and energy of a subhalo. Use them with caution. If possible, use the `SpecificAngularMomentum` instead of the spin parameters.
 
 - `-DALLOW_BINARY_SYSTEM`: give special treatment to binary systems-- those resulting from major mergers so that there is not a well-defined central subhalo. With this macro defined, HBT will not define a central subhalo for these systems, but treat all the subhaloes as satellite subhaloes. The mass ratio of the merger to define such binary systems is specified by the parameter `BinaryMassRatioLimit`. If you do not understand what I am talking about here, you probably do not need to care about it. This macro is enabled if you
-
-    make HBTmajormerger
-    
+       make HBTmajormerger
 instead of `make HBT`.
 
 
