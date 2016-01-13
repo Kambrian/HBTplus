@@ -6,7 +6,8 @@ new implementation of HBT in C++ . This is the OpenMP version for share memory m
 - [HDF5](https://www.hdfgroup.org/) C library (1.8.0 and above)
 
 ### Optional dependence
-- GNU Scientific Library (GSL). Only needed if you want to output the shapes and orientations of subhaloes.
+- GNU Scientific Library [(GSL)](http://www.gnu.org/software/gsl/). 
+Only needed if you want to output the shapes and orientations of subhaloes. To enable or disable GSL support, uncomment or comment out the GSL block in Makefile.inc (especially the `-DHAS_GSL` line). When enabled, HBT will do eigenvalue decomposition of the inertial tensor of each subhalo, and output the eigenvalue and eigenvectors describing the shape and direction of the subhalo. Without GSL, only the inertial tensors will be output.
 
 ## Compile
 To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte float), do
@@ -18,11 +19,17 @@ To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte fl
     make HBTdouble
     
 ### Special Compiler Flags
-- `-DHAS_GSL` : compile with GSL enabled. this will allow HBT to do eigenvalue decomposition of the inertial tensor of each subhalo, and output the eigenvalue and eigenvectors describing the shape and direction of the subhalo. Without GSL, only the inertial tensors will be output.
+Below are a few macros to further customize the behaviour of HBT. These flags can be switched on or off in Makefile.in and Makefile. Check the `CXXFLAGS` lines for these macros.
+  
 - `-DENABLE_EXPERIMENTAL_PROPERTIES`: output the peebles and bullock spin parameters. These parameters are vaguely defined due to the ambiguity/lack of standard in the mass, radius, and energy of a subhalo. Use them with caution. If possible, use the `SpecificAngularMomentum` instead of the spin parameters.
-- `-DALLOW_BINARY_SYSTEM`: give special treatment to binary systems-- those resulting from major mergers so that there is not a well-defined central subhalo. With this macro defined, HBT will not define a central subhalo for these systems, but treat all the subhaloes as satellite subhaloes. The mass ratio of the merger to define such binary systems is specified by the parameter `BinaryMassRatioLimit`.
 
-These flags can be switched on or off in Makefile.in and Makefile.
+- `-DALLOW_BINARY_SYSTEM`: give special treatment to binary systems-- those resulting from major mergers so that there is not a well-defined central subhalo. With this macro defined, HBT will not define a central subhalo for these systems, but treat all the subhaloes as satellite subhaloes. The mass ratio of the merger to define such binary systems is specified by the parameter `BinaryMassRatioLimit`. If you do not understand what I am talking about here, you probably do not need to care about it. This macro is enabled if you
+
+    make HBTmajormerger
+    
+instead of `make HBT`.
+
+
  
 ## Run
  
