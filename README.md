@@ -33,3 +33,6 @@ Check `configs/Example.conf` for a sample parameter file.
 If `snapshotend` is omitted, only process `snapshotstart`. If `snapshotstart` is also omitted, will run from `MinSnapshotIndex` (default=0) to `MaxSnapshotIndex` (specified in config file).
 
 To submit to a batch queue, check `HBTjob.bsub`
+
+## Reference
+For now, please cite the original [HBT paper](http://adsabs.harvard.edu/abs/2012MNRAS.427.2437H) if you use HBT in your work. We will soon have another paper coming out describing the new implementation here.
