@@ -7,7 +7,7 @@ new implementation of HBT in C++ . This is the OpenMP version for share memory m
 
 ### Optional dependence
 - GNU Scientific Library [(GSL)](http://www.gnu.org/software/gsl/). 
-Only needed if you want to output the shapes and orientations of subhaloes. To enable or disable GSL support, uncomment or comment out the GSL block in Makefile.inc (especially the `-DHAS_GSL` line). When enabled, HBT will do eigenvalue decomposition of the inertial tensor of each subhalo, and output the eigenvalue and eigenvectors describing the shape and direction of the subhalo. Without GSL, only the inertial tensors will be output.
+Only needed if you want to output the shapes and orientations of subhaloes. To enable or disable GSL support, uncomment or comment out the GSL block in `Makefile.inc` (especially the `-DHAS_GSL` line). When enabled, HBT will do eigenvalue decomposition of the inertial tensor of each subhalo, and output the eigenvalue and eigenvectors describing the shape and direction of the subhalo. Without GSL, only the inertial tensors will be output.
 
 ## Compile
 To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte float), do
@@ -19,7 +19,7 @@ To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte fl
     make HBTdouble
     
 ### Special Compiler Flags
-Below are a few macros to further customize the behaviour of HBT. These flags can be switched on or off in Makefile.in and Makefile. Check the `CXXFLAGS` lines for these macros.
+Below are a few macros to further customize the behaviour of HBT. These flags can be switched on or off in `Makefile.inc` and `Makefile`. Check the `CXXFLAGS` lines for these macros.
   
 - `-DENABLE_EXPERIMENTAL_PROPERTIES`: output the peebles and bullock spin parameters. These parameters are vaguely defined due to the ambiguity/lack of standard in the mass, radius, and energy of a subhalo. Use them with caution. If possible, use the `SpecificAngularMomentum` instead of the spin parameters.
 
