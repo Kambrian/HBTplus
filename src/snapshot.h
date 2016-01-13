@@ -142,7 +142,7 @@ class ParticleSnapshot_t: public Snapshot_t
   IndexTable_t<ParticleId_t, ParticleIndex_t> *ParticleHash;
 //   unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
   
-  void LoadFile(int ifile);
+//   void LoadFile(int ifile);
   void LoadId();
   void LoadPosition();
   void LoadVelocity();
@@ -187,6 +187,8 @@ public:
   void SetLoadFlags(bool load_id, bool load_pos, bool load_vel, bool load_mass);
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
+  void SphericalOverdensitySize(HBTReal &Mvir, HBTReal &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted) const;
+  void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
 };
 inline HBTInt ParticleSnapshot_t::size() const
 {

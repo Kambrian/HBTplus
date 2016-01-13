@@ -1,10 +1,17 @@
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5
 
+###comment out the following lines if you do not have GSL
+GSLINC=
+GSLINC+=-DHAS_GSL 
+GSLLIB=-lgsl -lgslcblas
+###comment up to here to disable GSL.
+
 CXX=g++
-CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 
+CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 
+CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 <!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
-LDLIBS+=$(HDFLIB) $(OMPFLAG)
+LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPFLAG)
 <!-- LINK.o=$(LINK.cpp) -->
 
 ifeq ($(CXX), g++)

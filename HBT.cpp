@@ -19,7 +19,7 @@ int main(int argc, char **argv)
   int snapshot_start, snapshot_end;
   ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
   mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
-  MarkHBTVersion();
+  HBTConfig.DumpParameters();
 	
   SubhaloSnapshot_t subsnap;
   

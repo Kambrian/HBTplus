@@ -13,8 +13,8 @@ class Halo_t
 public:
   typedef vector <HBTInt> ParticleList_t;
   ParticleList_t Particles;
-  HBTxyz ComovingPosition;
-  HBTxyz PhysicalVelocity;
+  HBTxyz ComovingAveragePosition;
+  HBTxyz PhysicalAverageVelocity;
 };
 
 class HaloSnapshot_t: public Snapshot_t
@@ -42,11 +42,11 @@ public:
   }
   const HBTxyz & GetComovingPosition(const HBTInt index) const
   {
-	return Halos[index].ComovingPosition;
+	return Halos[index].ComovingAveragePosition;
   }
   const HBTxyz & GetPhysicalVelocity(const HBTInt index) const
   {
-	return Halos[index].PhysicalVelocity;
+	return Halos[index].PhysicalAverageVelocity;
   }
   HBTReal GetMass(const HBTInt index) const
   {

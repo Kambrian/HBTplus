@@ -114,3 +114,58 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Part
 	for(j=0;j<3;j++)
 	  CoV[j]=sv[j]/msum;
 }
+void ParticleSnapshot_t::SphericalOverdensitySize(HBTReal& Mvir, HBTReal& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted) const
+/*
+ * find SphericalOverdensitySize from a given list of sorted particle distances.
+ * all distances comoving.
+ * 
+ * currently only support constant particle mass.
+ */
+{
+  HBTReal tol=1e-5;
+  HBTInt i,ndiv, np=RSorted.size();
+  HBTReal rvir,rdiv;
+  HBTReal ParticleMass=GetParticleMass(0);//TODO: generalize to variable mass
+  
+  ndiv=np;//guess mass
+  rdiv=RSorted[ndiv-1];
+  rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//guess radius
+  while(true)
+  {
+	if(rdiv>rvir)//reduce mass guess
+	{
+	  for(i=ndiv-1;i>=0;i--)
+	  {
+		if(RSorted[i]<rvir) break;
+	  }
+	  ndiv=i+1;
+	}
+	else if(rdiv<rvir) //increase mass guess
+	{
+	  for(i=ndiv;i<np;i++)
+	  {
+		if(RSorted[i]>=rvir) break;
+	  }
+	  ndiv=i;
+	}
+	
+	rdiv=rvir;
+	rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//recalibrate radius
+	
+	if(0==ndiv||np==ndiv||fabs((rvir-rdiv)/rvir)<tol) break; //converged
+  }
+  
+  Rvir=rvir;
+  Mvir=ndiv*ParticleMass;
+}
+
+void ParticleSnapshot_t::HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const
+{
+	HBTReal Hratio,x,OmegaZ;
+	Hratio=Hz/PhysicalConst::H0;
+	OmegaZ=Header.Omega0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
+	x=OmegaZ-1;
+	virialF_tophat=18.0*3.1416*3.1416+82.0*x-39.0*x*x;//<Rho_vir>/Rho_cri
+	virialF_c200=200.;
+	virialF_b200=200.*OmegaZ;//virialF w.r.t contemporary critical density 
+}
