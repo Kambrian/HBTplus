@@ -106,7 +106,7 @@ void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 }
 void SubhaloSnapshot_t::ParticleIndexToId()
 {
-#pragma omp for
+#pragma omp parallel for
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 	Subhalo_t::ParticleList_t & Particles=Subhalos[subid].Particles;
@@ -114,7 +114,6 @@ void SubhaloSnapshot_t::ParticleIndexToId()
 	for(HBTInt pid=0;pid<nP;pid++)
 	  Particles[pid]=SnapshotPointer->GetId(Particles[pid]);
   }
-#pragma omp single
   SnapshotPointer=nullptr;
 }
 */
@@ -178,13 +177,19 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
   const HBTxyz &cen=Particles[0].ComovingPosition; //most-bound particle as center.
   
   vector <HBTReal> r(Nbound), v(Nbound);
+  #pragma omp parallel if(Nbound>100)
+  {
+  #pragma omp for
   for(HBTInt i=0;i<Nbound;i++)
 	r[i]=PeriodicDistance(cen, Particles[i].ComovingPosition);
+  #pragma omp single
   sort(r.begin(), r.end());
+  #pragma omp for
   for(HBTInt i=0;i<Nbound;i++)
   {
 	  if(r[i]<HBTConfig.SofteningHalo) r[i]=HBTConfig.SofteningHalo; //resolution
 	  v[i]=sqrt((HBTReal)(i+1)/r[i]);
+  }
   }
   HBTInt imax=max_element(v.begin(), v.end())-v.begin();
   RmaxComoving=r[imax];
@@ -234,6 +239,7 @@ void Subhalo_t::CalculateShape()
   
   double Ixx=0,Iyy=0, Izz=0, Ixy=0, Ixz=0, Iyz=0;
   double Ixxw=0,Iyyw=0, Izzw=0, Ixyw=0, Ixzw=0, Iyzw=0;
+  #pragma omp paralle for reduction(+:Ixx,Iyy,Izz,Ixy,Ixz,Iyz,Ixxw,Iyyw,Izzw,Ixyw,Ixzw,Iyzw) if(Nbound>100)
   for(HBTInt i=1;i<Nbound;i++)
   {
 // 	  HBTReal PartMass=part_snap.GetMass(Particles[i]);//TODO: variable particle mass support.

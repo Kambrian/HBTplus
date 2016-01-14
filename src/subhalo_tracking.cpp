@@ -17,9 +17,6 @@ void Subhalo_t::UpdateTrack(const Snapshot_t &epoch)
 	SnapshotIndexOfLastMaxMass=epoch.GetSnapshotIndex();
 	LastMaxMass=Nbound;
   }
-  
-  CalculateProfileProperties(epoch);
-  CalculateShape();
 }
 HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &epoch)
 {
@@ -491,5 +488,11 @@ void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &h
 	else
 	  Subhalos[i].HostHaloId=halo_snap.Halos[HostId].HaloId;//restore global haloid
   }
+  }
+  #pragma omp parallel for if(ParallelizeHaloes)
+  for(HBTInt i=0;i<Subhalos.size();i++)
+  {
+	Subhalos[i].CalculateProfileProperties(*this);
+	Subhalos[i].CalculateShape();
   }
 }
