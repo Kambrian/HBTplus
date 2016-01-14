@@ -36,5 +36,8 @@ If `snapshotend` is omitted, only process `snapshotstart`. If `snapshotstart` is
 
 To submit to a batch queue, check `HBTjob.bsub`
 
+## Output
+The outputs are in HDF5 format, which can be viewed with [HDFView](https://www.hdfgroup.org/products/java/hdfview/index.html) or any other HDF tools. In python, you can use [h5py](https://pypi.python.org/pypi/h5py) to read them directly.
+
 ## Reference
 For now, please cite the original [HBT paper](http://adsabs.harvard.edu/abs/2012MNRAS.427.2437H) if you use HBT in your work. We will soon have another paper coming out describing the new implementation here.
