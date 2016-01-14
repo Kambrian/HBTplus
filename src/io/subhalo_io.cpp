@@ -132,6 +132,11 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
   ReadDataset(file, "SnapshotId", H5T_HBTInt, &snapshot_id);
   assert(snapshot_id==SnapshotId);
   
+  ReadDataset(file, "OmegaM0", H5T_HBTReal, &OmegaM0);
+  ReadDataset(file, "OmegaLambda0", H5T_HBTReal, &OmegaLambda0);
+  ReadDataset(file, "HubbleParam", H5T_HBTReal, &Hz);
+  ReadDataset(file, "ScaleFactor", H5T_HBTReal, &ScaleFactor);
+  
   hsize_t dims[1];
   dset=H5Dopen2(file, "Subhalos", H5P_DEFAULT);
   GetDatasetDims(dset, dims);
@@ -230,6 +235,8 @@ void SubhaloSnapshot_t::Save()
 
   hsize_t ndim=1, dim_atom[]={1};
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5T_NATIVE_INT);
+  writeHDFmatrix(file, &OmegaM0, "OmegaM0", ndim, dim_atom, H5T_HBTReal);
+  writeHDFmatrix(file, &OmegaLambda0, "OmegaLambda0", ndim, dim_atom, H5T_HBTReal);
   writeHDFmatrix(file, &Hz, "HubbleParam", ndim, dim_atom, H5T_HBTReal);
   writeHDFmatrix(file, &ScaleFactor, "ScaleFactor", ndim, dim_atom, H5T_HBTReal);
 //   writeHDFmatrix(file, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);

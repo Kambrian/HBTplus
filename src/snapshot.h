@@ -28,16 +28,18 @@ struct SnapshotHeader_t
   int      flag_cooling;
   int      num_files;
   double   BoxSize;
-  double   Omega0;
-  double   OmegaLambda;
+  double   OmegaM0;
+  double   OmegaLambda0;
   double   HubbleParam; 
   char     fill[SNAPSHOT_HEADER_SIZE- NUMBER_OF_PARTICLE_TYPES*4- NUMBER_OF_PARTICLE_TYPES*8- 2*8- 2*4- NUMBER_OF_PARTICLE_TYPES*4- 2*4 - 4*8];  /* fills to 256 Bytes */
 };
 class Snapshot_t: public SnapshotNumber_t
 {
 public:
-  double Hz; //current Hubble param in internal units
-  double ScaleFactor;
+  HBTReal OmegaM0;
+  HBTReal OmegaLambda0;
+  HBTReal Hz; //current Hubble param in internal units
+  HBTReal ScaleFactor;
   Snapshot_t(): Hz(0.), ScaleFactor(0.), SnapshotNumber_t()
   {
   }
@@ -45,15 +47,19 @@ public:
   {
 	SetEpoch(sn);
   }
-  void SetEpoch(double scalefactor, double Omega0, double OmegaLambda)
+  void SetEpoch(double scalefactor, double omega0, double omegaLambda0)
   {
+	OmegaM0=omega0;
+	OmegaLambda0=omegaLambda0;
 	ScaleFactor=scalefactor;
-	Hz=PhysicalConst::H0 * sqrt(Omega0 / (ScaleFactor * ScaleFactor * ScaleFactor) 
-  + (1 - Omega0 - OmegaLambda) / (ScaleFactor * ScaleFactor)
-  + OmegaLambda);//Hubble param for the current catalogue;
+	Hz=PhysicalConst::H0 * sqrt(OmegaM0 / (ScaleFactor * ScaleFactor * ScaleFactor) 
+  + (1 - OmegaM0 - OmegaLambda0) / (ScaleFactor * ScaleFactor)
+  + OmegaLambda0);//Hubble param for the current catalogue;
   }
   void SetEpoch(const Snapshot_t & snap)
   {
+	OmegaM0=snap.OmegaM0;
+	OmegaLambda0=snap.OmegaLambda0;
 	ScaleFactor=snap.ScaleFactor;
 	Hz=snap.Hz;
   }
@@ -65,6 +71,8 @@ public:
   virtual const HBTxyz & GetComovingPosition(const HBTInt index) const=0;
   virtual const HBTxyz & GetPhysicalVelocity(const HBTInt index) const=0;
   virtual HBTReal GetMass(const HBTInt index) const=0;
+  void SphericalOverdensitySize(HBTReal &Mvir, HBTReal &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
+  void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
 };
 class SnapshotView_t: public Snapshot_t
 {
@@ -187,8 +195,6 @@ public:
   void SetLoadFlags(bool load_id, bool load_pos, bool load_vel, bool load_mass);
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
-  void SphericalOverdensitySize(HBTReal &Mvir, HBTReal &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted) const;
-  void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
 };
 inline HBTInt ParticleSnapshot_t::size() const
 {

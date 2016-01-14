@@ -114,7 +114,7 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Part
 	for(j=0;j<3;j++)
 	  CoV[j]=sv[j]/msum;
 }
-void ParticleSnapshot_t::SphericalOverdensitySize(HBTReal& Mvir, HBTReal& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted) const
+void Snapshot_t::SphericalOverdensitySize(HBTReal& Mvir, HBTReal& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
 /*
  * find SphericalOverdensitySize from a given list of sorted particle distances.
  * all distances comoving.
@@ -125,7 +125,6 @@ void ParticleSnapshot_t::SphericalOverdensitySize(HBTReal& Mvir, HBTReal& Rvir, 
   HBTReal tol=1e-5;
   HBTInt i,ndiv, np=RSorted.size();
   HBTReal rvir,rdiv;
-  HBTReal ParticleMass=GetParticleMass(0);//TODO: generalize to variable mass
   
   ndiv=np;//guess mass
   rdiv=RSorted[ndiv-1];
@@ -159,11 +158,11 @@ void ParticleSnapshot_t::SphericalOverdensitySize(HBTReal& Mvir, HBTReal& Rvir, 
   Mvir=ndiv*ParticleMass;
 }
 
-void ParticleSnapshot_t::HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const
+void Snapshot_t::HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const
 {
 	HBTReal Hratio,x,OmegaZ;
 	Hratio=Hz/PhysicalConst::H0;
-	OmegaZ=Header.Omega0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
+	OmegaZ=OmegaM0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
 	x=OmegaZ-1;
 	virialF_tophat=18.0*3.1416*3.1416+82.0*x-39.0*x*x;//<Rho_vir>/Rho_cri
 	virialF_c200=200.;

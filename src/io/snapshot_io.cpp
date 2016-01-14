@@ -75,8 +75,8 @@ bool ParticleSnapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
   myfread(&header.flag_cooling,sizeof(int),1,fp);
   myfread(&header.num_files,sizeof(int),1,fp);
   myfread(&header.BoxSize,sizeof(double),1,fp);
-  myfread(&header.Omega0,sizeof(double),1,fp);
-  myfread(&header.OmegaLambda,sizeof(double),1,fp);
+  myfread(&header.OmegaM0,sizeof(double),1,fp);
+  myfread(&header.OmegaLambda0,sizeof(double),1,fp);
   myfread(&header.HubbleParam,sizeof(double),1,fp);
   fseek(fp,headersize+sizeof(int),SEEK_SET);
   myfread(&dummy2,sizeof(dummy2),1,fp);
@@ -147,7 +147,7 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
   
   fclose(fp);
   
-  SetEpoch(Header.ScaleFactor, Header.Omega0, Header.OmegaLambda);
+  SetEpoch(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
   
   //npartTotal is not reliable
   NumberOfParticles=0;

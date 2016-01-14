@@ -126,9 +126,9 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
   
   HBTReal virialF_tophat, virialF_b200, virialF_c200;
   part_snap.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
-  part_snap.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, r);
-  part_snap.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, r);
-  part_snap.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, r);
+  part_snap.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, r, PartMass);
+  part_snap.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, r, PartMass);
+  part_snap.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, r, PartMass);
   
   if(VmaxPhysical>=LastMaxVmaxPhysical)
   {
