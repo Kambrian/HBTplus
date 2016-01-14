@@ -22,6 +22,7 @@ namespace PhysicalConst
 class Parameter_t
 {/*!remember to register members in BroadCast() and SetParameterValue() functions if you change them!*/
 public:
+  //remember to update SetParameterValue() and DumpParameters() accordingly if you change any parameter definition.
   /*compulsory parameters*/
   string SnapshotPath;
   string HaloPath;
@@ -104,11 +105,11 @@ public:
 	world.SyncAtom(snapshot_start, MPI_INT, root);
 	world.SyncAtom(snapshot_end, MPI_INT, root);
   }
+  void DumpParameters();
 };
 
 extern Parameter_t HBTConfig;
 extern void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_start, int &snapshot_end);
-extern void MarkHBTVersion();
 inline void trim_leading_garbage(string &s, const string &garbage_list)
 {
   int pos= s.find_first_not_of(garbage_list);//look for any good staff

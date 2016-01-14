@@ -25,10 +25,10 @@ int main(int argc, char **argv)
   {
 	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
 	mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
-	MarkHBTVersion();
+	HBTConfig.DumpParameters();
   }
   HBTConfig.BroadCast(world, 0, snapshot_start, snapshot_end);
-  	
+
   SubhaloSnapshot_t subsnap;
   
   subsnap.Load(world, snapshot_start-1, true);

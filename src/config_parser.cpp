@@ -15,7 +15,7 @@ void Parameter_t::SetParameterValue(const string &line)
   string name;
   ss>>name;
 //   transform(name.begin(),name.end(),name.begin(),::tolower);
-#define TrySetPar(var,i) if(name==#var){ ss>>var; IsSet[i]=true; cout<<#var<<" = "<<var<<endl;}
+#define TrySetPar(var,i) if(name==#var){ ss>>var; IsSet[i]=true;}
   TrySetPar(SnapshotPath,0)
   else TrySetPar(HaloPath,1)
   else TrySetPar(SubhaloPath,2)
@@ -24,7 +24,7 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(BoxSize,5)
   else TrySetPar(SofteningHalo,6)
 #undef TrySetPar		
-#define TrySetPar(var) if(name==#var){ ss>>var; cout<<#var<<" = "<<var<<endl;}	
+#define TrySetPar(var) if(name==#var) ss>>var;
   else TrySetPar(MinSnapshotIndex)
   else TrySetPar(MinNumPartOfSub)
   else TrySetPar(GroupFileVariant)
@@ -67,6 +67,7 @@ void Parameter_t::SetParameterValue(const string &line)
 	throw runtime_error(msg.str());
   }
 }
+
 void Parameter_t::ParseConfigFile(const char * param_file)
 {
   ifstream ifs;
@@ -143,15 +144,6 @@ void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_st
   cout<<"Running "<<argv[0]<<" from snapshot "<<snapshot_start<<" to "<<snapshot_end<<" using configuration file "<<argv[1]<<endl;
 }
 
-void MarkHBTVersion()
-{
-#ifndef HBT_VERSION
-	cout<<"Warning: HBT_VERSION unknown.\n";
-#define HBT_VERSION "unknown"
-#endif
-	ofstream version_file(HBTConfig.SubhaloPath+"/VER"+HBT_VERSION, fstream::trunc);
-}
-
 void Parameter_t::BroadCast(MpiWorker_t &world, int root)
 /*sync parameters and physical consts across*/
 {
@@ -212,4 +204,63 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   #undef _SyncBool 
   #undef _SyncVecBool 
   #undef _SyncReal 
+}
+void Parameter_t::DumpParameters()
+{
+#ifndef HBT_VERSION
+	cout<<"Warning: HBT_VERSION unknown.\n";
+#define HBT_VERSION "unknown"
+#endif
+  string filename=SubhaloPath+"/VER"+HBT_VERSION+".param";
+  ofstream version_file(filename, ios::out|ios::trunc);
+  if(!version_file.is_open())
+  {
+	cerr<<"Error opening "<<filename<<" for parameter dump."<<endl;
+	exit(1);
+  }
+#define DumpPar(var) version_file<<#var<<"  "<<var<<endl;
+  DumpPar(SnapshotPath)
+  DumpPar(HaloPath)
+  DumpPar(SubhaloPath)
+  DumpPar(SnapshotFileBase)
+  DumpPar(MaxSnapshotIndex)
+  DumpPar(BoxSize)
+  DumpPar(SofteningHalo)
+  
+  /*optional*/
+  DumpPar(MinSnapshotIndex)
+  DumpPar(MinNumPartOfSub)
+  DumpPar(GroupFileVariant)
+  if(GroupParticleIdMask)
+	version_file<<"GroupParticleIdMask "<<hex<<GroupParticleIdMask<<dec<<endl;
+  DumpPar(MassInMsunh)
+  DumpPar(LengthInMpch)
+  DumpPar(VelInKmS)
+  DumpPar(PeriodicBoundaryOn)
+  DumpPar(SnapshotHasIdBlock)
+  DumpPar(ParticleIdRankStyle)
+  DumpPar(ParticleIdNeedHash)
+  DumpPar(SnapshotIdUnsigned)
+  if(SnapshotIdList.size())
+  {
+  version_file<<"SnapshotIdList";
+  for(auto && i: SnapshotIdList)
+	version_file<<" "<<i;
+  version_file<<endl;
+  }
+  
+  DumpPar(MajorProgenitorMassRatio) 
+#ifdef ALLOW_BINARY_SYSTEM
+  DumpPar(BinaryMassRatioLimit)
+#endif
+  DumpPar(BoundMassPrecision)
+  DumpPar(SourceSubRelaxFactor)
+  DumpPar(SubCoreSizeFactor) 
+  DumpPar(SubCoreSizeMin)
+  
+  DumpPar(TreeAllocFactor)
+  DumpPar(TreeNodeOpenAngle)
+  DumpPar(TreeMinNumOfCells)
+#undef DumpPar  
+  version_file.close();
 }

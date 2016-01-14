@@ -16,8 +16,8 @@ public:
   typedef vector <Particle_t> ParticleList_t;
   ParticleList_t Particles;
   HBTInt HaloId;
-  HBTxyz ComovingPosition;
-  HBTxyz PhysicalVelocity;
+  HBTxyz ComovingAveragePosition;
+  HBTxyz PhysicalAverageVelocity;
   /* deprecated; use move assignment instead; 
    * shall not define destructor in order for default move to be implemented by the compiler.
   void MoveTo(Halo_t & dest, bool MoveParticle=true)
@@ -68,11 +68,11 @@ public:
   }
   const HBTxyz & GetComovingPosition(HBTInt index) const
   {
-	return Halos[index].ComovingPosition;
+	return Halos[index].ComovingAveragePosition;
   }
   const HBTxyz & GetPhysicalVelocity(HBTInt index) const
   {
-	return Halos[index].PhysicalVelocity;
+	return Halos[index].PhysicalAverageVelocity;
   }
   HBTReal GetMass(HBTInt index) const
   {

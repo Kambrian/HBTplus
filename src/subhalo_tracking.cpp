@@ -7,22 +7,25 @@
 #include "snapshot_number.h"
 #include "subhalo.h"
 
-void Subhalo_t::UpdateTrack(HBTInt snapshot_index)
+void Subhalo_t::UpdateTrack(const Snapshot_t &epoch)
 {
   if(TrackId==SpecialConst::NullTrackId) return;
   
-  if(0==Rank) SnapshotIndexOfLastIsolation=snapshot_index;
+  if(0==Rank) SnapshotIndexOfLastIsolation=epoch.GetSnapshotIndex();
   if(Nbound>=LastMaxMass) 
   {
-	SnapshotIndexOfLastMaxMass=snapshot_index;
+	SnapshotIndexOfLastMaxMass=epoch.GetSnapshotIndex();
 	LastMaxMass=Nbound;
   }
+  
+  CalculateProfileProperties(epoch);
+  CalculateShape();
 }
-HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &snapshot)
+HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &epoch)
 {
-  HBTReal dx=PeriodicDistance(halo.ComovingPosition, ComovingPosition);
-  HBTReal dv=distance(halo.PhysicalVelocity, PhysicalVelocity);
-  HBTReal d=dv+snapshot.Hz*snapshot.ScaleFactor*dx;
+  HBTReal dx=PeriodicDistance(halo.ComovingAveragePosition, ComovingMostBoundPosition);
+  HBTReal dv=Distance(halo.PhysicalAverageVelocity, PhysicalAverageVelocity);
+  HBTReal d=dv+epoch.Hz*epoch.ScaleFactor*dx;
   return (d>0?d:-d);
 }
 void MemberShipTable_t::ResizeAllMembers(size_t n)
@@ -412,8 +415,8 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 		subid=Npro++;
 	  }
 	  Subhalos[subid].HostHaloId=hostid;
-	  copyHBTxyz(Subhalos[subid].ComovingPosition, halo_snap.Halos[hostid].ComovingPosition); 
-	  copyHBTxyz(Subhalos[subid].PhysicalVelocity, halo_snap.Halos[hostid].PhysicalVelocity);
+	  copyHBTxyz(Subhalos[subid].ComovingMostBoundPosition, halo_snap.Halos[hostid].ComovingAveragePosition); 
+	  copyHBTxyz(Subhalos[subid].PhysicalAverageVelocity, halo_snap.Halos[hostid].PhysicalAverageVelocity);
 	  Subhalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
 	  
 	  Subhalos[subid].SnapshotIndexOfBirth=SnapshotIndex;
@@ -481,7 +484,7 @@ void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &h
   #pragma omp for
   for(HBTInt i=0;i<Subhalos.size();i++)
   {
-	Subhalos[i].UpdateTrack(SnapshotIndex);
+	Subhalos[i].UpdateTrack(*this);
 	HBTInt HostId=Subhalos[i].HostHaloId;
 	if(HostId<0)
 	  Subhalos[i].HostHaloId=-1;

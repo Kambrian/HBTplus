@@ -41,8 +41,8 @@ struct GroupV4Header_t
   double redshift;
   double HubbleParam;
   double BoxSize;
-  double Omega0;
-  double OmegaLambda;
+  double OmegaM0;
+  double OmegaLambda0;
   int flag_doubleprecision;//long? no, but padding may exist
 };
 
@@ -266,7 +266,6 @@ void GroupFileReader_t::ReadV2V3(int read_level, HBTInt start_particle, HBTInt e
 	vector <PIDtype_t> PIDs(Nread);
 	fseek(fd, sizeof(PIDtype_t)*start_particle, SEEK_CUR);
 	myfread(PIDs.data(), sizeof(PIDtype_t), Nread, fd);
-	#define ID_MASK 0x00000003FFFFFFFF //only the least significant 34bits are the actual ids
 	PIDtype_t Mask=HBTConfig.GroupParticleIdMask;
 	if(Mask) 
 	#pragma omp parallel for

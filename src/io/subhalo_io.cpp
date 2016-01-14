@@ -12,20 +12,56 @@
 void SubhaloSnapshot_t::BuildHDFDataType()
 {
   H5T_SubhaloInMem=H5Tcreate(H5T_COMPOUND, sizeof (Subhalo_t));
-  hsize_t dims=3;
-  hid_t H5T_HBTxyz=H5Tarray_create2(H5T_HBTReal, 1, &dims);
+  hsize_t dims[2]={3,3};
+  hid_t H5T_HBTxyz=H5Tarray_create2(H5T_HBTReal, 1, dims);
+  hid_t H5T_FloatVec3=H5Tarray_create2(H5T_NATIVE_FLOAT, 1, dims);
   #define InsertMember(x,t) H5Tinsert(H5T_SubhaloInMem, #x, HOFFSET(Subhalo_t, x), t)//;cout<<#x<<": "<<HOFFSET(Subhalo_t, x)<<endl
   InsertMember(TrackId, H5T_HBTInt);
   InsertMember(Nbound, H5T_HBTInt);
   InsertMember(HostHaloId, H5T_HBTInt);
   InsertMember(Rank, H5T_HBTInt);
-  InsertMember(ComovingPosition, H5T_HBTxyz);
-  InsertMember(PhysicalVelocity, H5T_HBTxyz);
-  InsertMember(LastMaxMass, H5T_HBTInt);
-  InsertMember(SnapshotIndexOfLastMaxMass, H5T_HBTInt);
-  InsertMember(SnapshotIndexOfLastIsolation, H5T_HBTInt);
-  InsertMember(SnapshotIndexOfBirth, H5T_HBTInt);
-  InsertMember(SnapshotIndexOfDeath, H5T_HBTInt);
+  InsertMember(LastMaxMass, H5T_HBTInt);  
+  InsertMember(SnapshotIndexOfLastMaxMass, H5T_NATIVE_INT);
+  InsertMember(SnapshotIndexOfLastIsolation, H5T_NATIVE_INT);
+  InsertMember(SnapshotIndexOfBirth, H5T_NATIVE_INT);
+  InsertMember(SnapshotIndexOfDeath, H5T_NATIVE_INT);
+  InsertMember(RmaxComoving, H5T_NATIVE_FLOAT);
+  InsertMember(VmaxPhysical, H5T_NATIVE_FLOAT);
+  InsertMember(LastMaxVmaxPhysical, H5T_NATIVE_FLOAT);
+  InsertMember(SnapshotIndexOfLastMaxVmax, H5T_NATIVE_INT);
+  InsertMember(R2SigmaComoving, H5T_NATIVE_FLOAT);
+  InsertMember(RHalfComoving, H5T_NATIVE_FLOAT);
+  InsertMember(R200CritComoving, H5T_NATIVE_FLOAT);
+  InsertMember(R200MeanComoving, H5T_NATIVE_FLOAT);
+  InsertMember(RVirComoving, H5T_NATIVE_FLOAT);
+  InsertMember(M200Crit, H5T_NATIVE_FLOAT);
+  InsertMember(M200Mean, H5T_NATIVE_FLOAT);
+  InsertMember(MVir, H5T_NATIVE_FLOAT);
+  InsertMember(SpecificSelfPotentialEnergy, H5T_NATIVE_FLOAT);
+  InsertMember(SpecificSelfKineticEnergy, H5T_NATIVE_FLOAT);
+  InsertMember(SpecificAngularMomentum, H5T_FloatVec3);
+#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
+  InsertMember(SpinPeebles, H5T_FloatVec3);
+  InsertMember(SpinBullock, H5T_FloatVec3);
+#endif
+#ifdef HAS_GSL
+  dims[0]=3;
+  dims[1]=3;
+  hid_t H5T_FloatVec33=H5Tarray_create2(H5T_NATIVE_FLOAT, 2, dims);
+  InsertMember(InertialEigenVector, H5T_FloatVec33);
+  InsertMember(InertialEigenVectorWeighted, H5T_FloatVec33);
+  H5Tclose(H5T_FloatVec33);
+#endif
+  dims[0]=6;
+  hid_t H5T_FloatVec6=H5Tarray_create2(H5T_NATIVE_FLOAT, 1, dims);
+  InsertMember(InertialTensor,H5T_FloatVec6);
+  InsertMember(InertialTensorWeighted, H5T_FloatVec6);
+  H5Tclose(H5T_FloatVec6);
+
+  InsertMember(ComovingMostBoundPosition, H5T_HBTxyz);
+  InsertMember(PhysicalMostBoundVelocity, H5T_HBTxyz);
+  InsertMember(ComovingAveragePosition, H5T_HBTxyz);
+  InsertMember(PhysicalAverageVelocity, H5T_HBTxyz);
   #undef InsertMember	
   H5T_SubhaloInDisk=H5Tcopy(H5T_SubhaloInMem);
   H5Tpack(H5T_SubhaloInDisk); //clear fields not added.
@@ -42,6 +78,7 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   H5T_ParticleInDisk.copy(H5T_ParticleInMem);
   H5T_ParticleInDisk.pack(); //clear fields not added.  
 */
+  H5Tclose(H5T_FloatVec3);
   H5Tclose(H5T_HBTxyz);
 }
 void SubhaloSnapshot_t::GetSubFileName(string &filename, int iFile)
@@ -100,6 +137,11 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
   ReadDataset(file, "SnapshotId", H5T_HBTInt, &snapshot_id);
   assert(snapshot_id==SnapshotId);
   
+  ReadDataset(file, "OmegaM0", H5T_HBTReal, &OmegaM0);
+  ReadDataset(file, "OmegaLambda0", H5T_HBTReal, &OmegaLambda0);
+  ReadDataset(file, "HubbleParam", H5T_HBTReal, &Hz);
+  ReadDataset(file, "ScaleFactor", H5T_HBTReal, &ScaleFactor);
+  
   int NumberOfFiles;
   ReadDataset(file, "NumberOfFiles", H5T_HBTInt, &NumberOfFiles);
   if(NumberOfFiles!=world.size())
@@ -107,6 +149,9 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
 	cerr<<"Error: can only read subhalo files with the same number of processes as saved\n";
 	exit(1);
   }
+  
+//   ReadDataset(file, "NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);
+//   ReadDataset(file, "NumberOfFakeHalos", H5T_HBTInt, &MemberTable.NFake);
   
   hsize_t dims[1];
   dset=H5Dopen2(file, "Subhalos", H5P_DEFAULT);
@@ -190,6 +235,8 @@ void SubhaloSnapshot_t::Save(MpiWorker_t &world)
   int nfiles=world.size();
   writeHDFmatrix(file, &nfiles, "NumberOfFiles", ndim, dim_atom, H5T_NATIVE_INT);
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5T_NATIVE_INT);
+  writeHDFmatrix(file, &OmegaM0, "OmegaM0", ndim, dim_atom, H5T_HBTReal);
+  writeHDFmatrix(file, &OmegaLambda0, "OmegaLambda0", ndim, dim_atom, H5T_HBTReal);
   writeHDFmatrix(file, &Hz, "HubbleParam", ndim, dim_atom, H5T_HBTReal);
   writeHDFmatrix(file, &ScaleFactor, "ScaleFactor", ndim, dim_atom, H5T_HBTReal);
   writeHDFmatrix(file, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);

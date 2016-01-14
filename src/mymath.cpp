@@ -210,3 +210,34 @@ void AssignTasks(int worker_id, int nworkers, int ntasks, int &task_begin, int &
   task_end=ntask_this+task_begin;
   assert(task_end<=ntasks);
 }
+
+#ifdef HAS_GSL
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_eigen.h>
+void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, double Izz, float Axis[3][3])
+/*find the eigenvector and eigenvalue of the symmetric matrix
+ *return Axis[3][3]: 3 eigenvectors (Axis[i] being vector-i), normalized such that the norm of each eigenvector gives its eigenvalue.
+ * the eigenvalues are sorted in descending order
+ */
+{
+  array <double, 9> matrix_data={Ixx, Ixy, Ixz, Ixy, Iyy, Iyz, Ixz, Iyz, Izz};
+  gsl_matrix_view matrix= gsl_matrix_view_array (matrix_data.data(), 3, 3);
+  gsl_vector * eigen_values = gsl_vector_alloc (3);
+  gsl_matrix * eigen_vecs= gsl_matrix_alloc(3,3);
+  
+  gsl_eigen_symmv_workspace * workspace= gsl_eigen_symmv_alloc (3);;
+  gsl_eigen_symmv(&matrix.matrix, eigen_values, eigen_vecs, workspace);
+  gsl_eigen_symmv_free (workspace);
+  
+  gsl_eigen_symmv_sort(eigen_values, eigen_vecs, GSL_EIGEN_SORT_VAL_DESC);
+  for(int i=0;i<3;i++)
+  {
+	HBTReal lambda=gsl_vector_get(eigen_values, i);
+	gsl_vector_view vec=gsl_matrix_column(eigen_vecs, i);
+	for(int j=0;j<3;j++)
+	  Axis[i][j]=lambda*gsl_vector_get(&vec.vector, j);
+  }
+  gsl_vector_free (eigen_values);
+  gsl_matrix_free (eigen_vecs);
+}
+#endif

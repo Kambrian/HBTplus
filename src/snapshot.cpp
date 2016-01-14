@@ -38,8 +38,8 @@ void SnapshotHeader_t::create_MPI_type(MPI_Datatype& dtype)
   RegisterAttr(flag_cooling, MPI_INT, 1)
   RegisterAttr(num_files, MPI_INT, 1)
   RegisterAttr(BoxSize, MPI_DOUBLE, 1)
-  RegisterAttr(Omega0, MPI_DOUBLE, 1)
-  RegisterAttr(OmegaLambda, MPI_DOUBLE, 1)
+  RegisterAttr(OmegaM0, MPI_DOUBLE, 1)
+  RegisterAttr(OmegaLambda0, MPI_DOUBLE, 1)
   RegisterAttr(HubbleParam, MPI_DOUBLE, 1)
   #undef RegisterAttr
   assert(i==NumAttr);
@@ -284,4 +284,60 @@ void AverageVelocity(HBTxyz& CoV, const Particle_t Particles[], HBTInt NumPart)
 	
 	for(j=0;j<3;j++)
 	  CoV[j]=sv[j]/msum;
+}
+
+//TODO: attach these functions to snapshot, not particlesnapshot
+void Snapshot_t::SphericalOverdensitySize(HBTReal& Mvir, HBTReal& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
+/*
+ * find SphericalOverdensitySize from a given list of sorted particle distances.
+ * all distances comoving.
+ * 
+ * currently only support constant particle mass.
+ */
+{
+  HBTReal tol=1e-5;
+  HBTInt i,ndiv, np=RSorted.size();
+  HBTReal rvir,rdiv;
+  
+  ndiv=np;//guess mass
+  rdiv=RSorted[ndiv-1];
+  rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//guess radius
+  while(true)
+  {
+	if(rdiv>rvir)//reduce mass guess
+	{
+	  for(i=ndiv-1;i>=0;i--)
+	  {
+		if(RSorted[i]<rvir) break;
+	  }
+	  ndiv=i+1;
+	}
+	else if(rdiv<rvir) //increase mass guess
+	{
+	  for(i=ndiv;i<np;i++)
+	  {
+		if(RSorted[i]>=rvir) break;
+	  }
+	  ndiv=i;
+	}
+	
+	rdiv=rvir;
+	rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//recalibrate radius
+	
+	if(0==ndiv||np==ndiv||fabs((rvir-rdiv)/rvir)<tol) break; //converged
+  }
+  
+  Rvir=rvir;
+  Mvir=ndiv*ParticleMass;
+}
+
+void Snapshot_t::HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const
+{
+	HBTReal Hratio,x,OmegaZ;
+	Hratio=Hz/PhysicalConst::H0;
+	OmegaZ=OmegaM0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
+	x=OmegaZ-1;
+	virialF_tophat=18.0*3.1416*3.1416+82.0*x-39.0*x*x;//<Rho_vir>/Rho_cri
+	virialF_c200=200.;
+	virialF_b200=200.*OmegaZ;//virialF w.r.t contemporary critical density 
 }

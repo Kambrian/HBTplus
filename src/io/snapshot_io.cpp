@@ -74,8 +74,8 @@ bool ParticleSnapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
   myfread(&header.flag_cooling,sizeof(int),1,fp);
   myfread(&header.num_files,sizeof(int),1,fp);
   myfread(&header.BoxSize,sizeof(double),1,fp);
-  myfread(&header.Omega0,sizeof(double),1,fp);
-  myfread(&header.OmegaLambda,sizeof(double),1,fp);
+  myfread(&header.OmegaM0,sizeof(double),1,fp);
+  myfread(&header.OmegaLambda0,sizeof(double),1,fp);
   myfread(&header.HubbleParam,sizeof(double),1,fp);
   fseek(fp,headersize+sizeof(int),SEEK_SET);
   myfread(&dummy2,sizeof(dummy2),1,fp);
@@ -140,7 +140,7 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
   
   fclose(fp);
   
-  SetEpoch(Header.ScaleFactor, Header.Omega0, Header.OmegaLambda);
+  SetEpoch(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
   
   //npartTotal is not reliable
   NumberOfParticles=0;
@@ -165,8 +165,10 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
   SnapshotHeader_t().create_MPI_type(MPI_SnapshotHeader_t);
   MPI_Bcast(&Header,1, MPI_SnapshotHeader_t, 0, world.Communicator);
   MPI_Type_free(&MPI_SnapshotHeader_t);
-  world.SyncAtom(Hz, MPI_DOUBLE, 0);
-  world.SyncAtom(ScaleFactor, MPI_DOUBLE, 0);
+  world.SyncAtom(OmegaM0, MPI_HBT_REAL, 0);
+  world.SyncAtom(OmegaLambda0, MPI_HBT_REAL, 0);
+  world.SyncAtom(Hz, MPI_HBT_REAL, 0);
+  world.SyncAtom(ScaleFactor, MPI_HBT_REAL, 0);
   world.SyncAtomBool(NeedByteSwap, 0);
   world.SyncAtom(IntTypeSize, MPI_INT, 0);
   world.SyncAtom(RealTypeSize, MPI_INT, 0);

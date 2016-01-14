@@ -145,7 +145,7 @@ void HaloSnapshot_t::AverageCoordinates()
 #pragma omp for
   for(HBTInt i=0;i<Halos.size();i++)
   {
-	AveragePosition(Halos[i].ComovingPosition, Halos[i].Particles.data(), Halos[i].Particles.size());
-	AverageVelocity(Halos[i].PhysicalVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
+	AveragePosition(Halos[i].ComovingAveragePosition, Halos[i].Particles.data(), Halos[i].Particles.size());
+	AverageVelocity(Halos[i].PhysicalAverageVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
   }
 }

@@ -1,13 +1,20 @@
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5 
 
+###comment out the following lines if you do not have GSL
+GSLINC=
+GSLINC+=-DHAS_GSL 
+GSLLIB=-lgsl -lgslcblas
+###comment up to here to disable GSL.
+
 <!--CC=mpicc-->
 <!-- CXX=g++ -->
 CXX=mpicxx
-CXXFLAGS+=-std=c++0x $(HDFINC) $(OMPFLAG) -O3 -Wno-deprecated -g  
+CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g  
+CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 <!-- CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs -->
 <!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
-LDLIBS+=$(HDFLIB) $(OMPFLAG) $(BOOSTLIB)
+LDLIBS+=$(HDFLIB) $(OMPFLAG) $(GSLLIB) $(BOOSTLIB)
 <!-- LINK.o=$(LINK.cpp) -->
 
 ifeq ($(CXX), mpic++)

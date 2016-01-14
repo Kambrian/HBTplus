@@ -131,13 +131,29 @@ inline HBTReal position_modulus(HBTReal x, HBTReal boxsize)
 	y=x/boxsize;
 	return (y-floor(y))*boxsize;
 }
-inline HBTReal distance(const HBTxyz &x, const HBTxyz &y)
+inline HBTReal Distance2(const HBTReal x[3], const HBTReal y[3])
 {
 	HBTxyz dx;
 	dx[0]=x[0]-y[0];
 	dx[1]=x[1]-y[1];
 	dx[2]=x[2]-y[2];
-	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
+	return dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2];
+}
+inline HBTReal Distance(const HBTReal x[3], const HBTReal y[3])
+{
+	return sqrt(Distance2(x,y));
+}
+inline HBTReal Distance(const HBTxyz &x, const HBTxyz &y)
+{
+  return Distance(x.data(), y.data());
+}
+inline HBTReal Distance(const HBTxyz &x, const HBTReal y[3])
+{
+  return Distance(x.data(), y);
+}
+inline HBTReal Distance(const HBTReal x[3], const HBTxyz &y)
+{
+  return Distance(x, y.data());
 }
 #define NEAREST(x) (((x)>HBTConfig.BoxHalf)?((x)-HBTConfig.BoxSize):(((x)<-HBTConfig.BoxHalf)?((x)+HBTConfig.BoxSize):(x)))
 inline HBTReal PeriodicDistance(const HBTxyz &x, const HBTxyz &y)
@@ -215,4 +231,9 @@ public:
 extern int LargestRootFactor(int N, int dim);
 extern vector <int> ClosestFactors(int N, int dim);
 extern void AssignTasks(int worker_id, int nworkers, int ntasks, int &task_begin, int &task_end);
+
+#ifdef HAS_GSL
+extern void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, double Izz, float Axis[3][3]);
+#endif
+
 #endif

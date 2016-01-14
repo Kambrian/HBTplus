@@ -1,3 +1,4 @@
+//TODO: unify the reference frame for specificProperties...
 #include <iostream>
 #include <new>
 #include <algorithm>
@@ -163,12 +164,52 @@ public:
 		CoM[j]=sx[j];
 	  }
   }
+  void AverageKinematics(float &SpecificPotentialEnergy, float &SpecificKineticEnergy, float SpecificAngularMomentum[3], HBTInt NumPart, const HBTxyz & refPos, const HBTxyz &refVel)
+  /*obtain specific potential, kinetic energy, and angular momentum for the first NumPart particles
+   * currently only support fixed particle mass
+   * 
+   * TODO: extend to variable mass?
+   * Note there is a slight inconsistency in the energy since they were calculated from the previous unbinding loop, but the refVel has been updated.
+   */
+  {
+	if(NumPart<=1)
+	{
+	  SpecificPotentialEnergy=0.;
+	  SpecificKineticEnergy=0.;
+	  SpecificAngularMomentum[0]=SpecificAngularMomentum[1]=SpecificAngularMomentum[2]=0.;
+	  return;
+	}
+	double E=0., K=0., AM[3]={0.};
+	for(HBTInt i=0;i<NumPart;i++)
+	{
+	  E+=Elist[i].E;
+	  const HBTxyz & x=GetComovingPosition(i);
+	  const HBTxyz & v=GetPhysicalVelocity(i);
+	  double dx[3], dv[3];
+	  for(int j=0;j<3;j++)
+	  {
+		dx[j]=x[j]-refPos[j];
+		if(HBTConfig.PeriodicBoundaryOn) dx[j]=NEAREST(dx[j]);
+		dx[j]*=ScaleFactor; //physical
+		dv[j]=v[j]-refVel[j]+Hz*dx[j];
+		K+=dv[j]*dv[j];
+	  }
+	  AM[0]+=dx[1]*dv[2]-dx[2]*dv[1];
+	  AM[1]+=dx[0]*dv[2]-dx[2]*dv[0];
+	  AM[2]+=dx[0]*dv[1]-dx[1]*dv[0];
+	}
+	E/=NumPart;
+	K*=0.5/NumPart;
+	SpecificPotentialEnergy=E-K;
+	SpecificKineticEnergy=K;
+	for(int j=0;j<3;j++) 
+	  SpecificAngularMomentum[j]=AM[j]/NumPart;	//physical
+  }
 };
 void Subhalo_t::Unbind(const Snapshot_t &epoch)
 {//the reference frame (pos and vel) should already be initialized before unbinding.
   if(1==Particles.size()) return;
   
-  const HBTInt OldMostBoundParticle=0;
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
@@ -186,45 +227,49 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 	  for(HBTInt i=0;i<Nlast;i++)
 	  {
 		HBTInt pid=Elist[i].pid;
-		Elist[i].E=tree.BindingEnergy(Particles[pid].ComovingPosition, Particles[pid].PhysicalVelocity, ComovingPosition, PhysicalVelocity, Particles[pid].Mass);
+		Elist[i].E=tree.BindingEnergy(Particles[pid].ComovingPosition, Particles[pid].PhysicalVelocity, ComovingMostBoundPosition, PhysicalAverageVelocity, Particles[pid].Mass);
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
-		if(Nbound<HBTConfig.MinNumPartOfSub)
+		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
 		{
-		  Nbound=0;
-		  Elist[0].pid=OldMostBoundParticle;
-		  copyHBTxyz(ComovingPosition, Particles[Elist[0].pid].ComovingPosition);
-		  copyHBTxyz(PhysicalVelocity, Particles[Elist[0].pid].PhysicalVelocity);
+		  Nbound=1;
+		  Nlast=1;
+		  Particles.resize(1);//old particle list retained, only need to shrink
+		  SnapshotIndexOfDeath=epoch.GetSnapshotIndex();
+		  copyHBTxyz(ComovingMostBoundPosition, Particles[0].ComovingPosition);
+		  copyHBTxyz(PhysicalMostBoundVelocity, Particles[0].PhysicalVelocity);
+		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
+		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
+		  break;
 		}
 		else
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
 		  PopMostBoundParticle(Elist.data(), Nbound);
-		  HBTInt coresize=GetCoreSize(Nbound);
-		  ESnap.AveragePosition(ComovingPosition, coresize);
-		  ESnap.AverageVelocity(PhysicalVelocity, Nbound);
+		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
+		  copyHBTxyz(ComovingMostBoundPosition, Particles[Elist[0].pid].ComovingPosition);
+		  if(Nbound>Nlast*HBTConfig.BoundMassPrecision)//converge
+		  {
+			//update properties
+			ESnap.AveragePosition(ComovingAveragePosition, Nbound);
+			copyHBTxyz(PhysicalMostBoundVelocity, Particles[Elist[0].pid].PhysicalVelocity);
+			//update particle list
+			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
+			Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
+			if(Nlast>Particles.size()) Nlast=Particles.size();
+			//todo: optimize this with in-place permutation, to avoid mem alloc and copying.
+			ParticleList_t p(Nlast);
+			for(HBTInt i=0;i<Nlast;i++)
+			{
+			  p[i]=Particles[Elist[i].pid];
+			  Elist[i].pid=i;//update particle index in Elist as well.
+			}
+			Particles.swap(p);
+			break;
+		  }
 		}
-		if(0==Nbound||Nbound>Nlast*HBTConfig.BoundMassPrecision)  break;
 	}
-	if(Nbound)
-	{
-	  sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
-	  Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
-	  if(Nlast>Particles.size()) Nlast=Particles.size();
-	  //todo: optimize this with in-place permutation, to avoid mem alloc and copying.
-	  ParticleList_t p(Nlast);
-	  for(HBTInt i=0;i<Nlast;i++) 
-		p[i]=Particles[Elist[i].pid];
-	  Particles.swap(p);
-	}
-	else
-	{
-	  Nbound=1;
-	  Nlast=1;//what if this is a central?? any fixes?
-	  Particles.resize(Nlast);//keep old particle order, just shrink.
-	  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
-	}
-  //todo: output angular momentum and total energy as well, for calculation of spin.
+	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingMostBoundPosition, PhysicalAverageVelocity);
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 

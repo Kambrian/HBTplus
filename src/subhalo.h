@@ -31,43 +31,53 @@ public:
   HBTInt HostHaloId;
   HBTInt Rank;
   HBTInt LastMaxMass;
-  HBTInt SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
-  HBTInt SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
+  int SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
+  int SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
   
-  HBTInt SnapshotIndexOfBirth;//when the subhalo first becomes resolved
-  HBTInt SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved; only set if currentsnapshot>=SnapshotIndexOfDeath.
+  int SnapshotIndexOfBirth;//when the subhalo first becomes resolved
+  int SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved; only set if currentsnapshot>=SnapshotIndexOfDeath.
   
-  HBTReal RmaxComoving;
-  HBTReal VmaxPhysical;
-  HBTReal LastMaxVmax;
-  HBTInt SnapshotIndexOfLastMaxVmax; //the snapshot when it has the maximum Vmax, only considering past snapshots.
+  //profile properties
+  float RmaxComoving;
+  float VmaxPhysical;
+  float LastMaxVmaxPhysical;
+  int SnapshotIndexOfLastMaxVmax; //the snapshot when it has the maximum Vmax, only considering past snapshots.
   
-  HBTReal RPoissonComoving;
-  HBTReal RHalfComoving;
+  float R2SigmaComoving; //95.5% containment radius, close to tidal radius?
+  float RHalfComoving;
   
-  HBTReal R200CritComoving;
-  HBTReal R200MeanComoving;
-  HBTReal RVirComoving;
-  HBTReal M200Crit;
-  HBTReal M200Mean;
-  HBTReal MVir;
+  //SO properties using subhalo particles alone
+  float R200CritComoving;
+  float R200MeanComoving;
+  float RVirComoving;
+  float M200Crit;
+  float M200Mean;
+  float MVir;
   
-  HBTReal SpecificSelfPotentialEnergy;
-  HBTReal SpecificSelfKineticEnergy;
-  HBTReal SpecificAngularMomentum;
-  HBTReal SpinPeebles;
-  HBTReal SpinBullock;
+  //kinetic properties
+  float SpecificSelfPotentialEnergy;
+  float SpecificSelfKineticEnergy;//<0.5*v^2>
+  float SpecificAngularMomentum[3];//<Rphysical x Vphysical>
+#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
+  float SpinPeebles[3];
+  float SpinBullock[3];
+#endif
   
-  HBTxyz InertialEigenVector[3];
-  HBTxyz InertialEigenVectorWeighted[3];
+  //shapes
+#ifdef HAS_GSL
+  float InertialEigenVector[3][3];//three float[3] vectors.
+  float InertialEigenVectorWeighted[3][3];
+#endif
+  float InertialTensor[6]; //{Ixx, Ixy, Ixz, Iyy, Iyz, Izz}
+  float InertialTensorWeighted[6];
   
   HBTxyz ComovingAveragePosition;
-  HBTxyz PhysicalAverageVelocity;
-  HBTxyz ComovingMostBoundPosition;
+  HBTxyz PhysicalAverageVelocity;//default vel of sub
+  HBTxyz ComovingMostBoundPosition;//default pos of sub
   HBTxyz PhysicalMostBoundVelocity;
   
-  HBTxyz ComovingPosition;
-  HBTxyz PhysicalVelocity;
+//   HBTxyz ComovingPosition;
+//   HBTxyz PhysicalVelocity;
   
   ParticleList_t Particles;
   
@@ -97,12 +107,14 @@ public:
 	  dest.Particles.swap(Particles);
   }*/
   void Unbind(const Snapshot_t &epoch);
-  HBTReal KineticDistance(const Halo_t & halo, const Snapshot_t & partsnap);
-  void UpdateTrack(HBTInt snapshot_index);
+  HBTReal KineticDistance(const Halo_t & halo, const Snapshot_t & epoch);
+  void UpdateTrack(const Snapshot_t &epoch);
   bool IsCentral()
   {
 	return 0==Rank;
   }
+  void CalculateProfileProperties(const Snapshot_t &epoch);
+  void CalculateShape();
 };
 
 typedef vector <Subhalo_t> SubhaloList_t;
@@ -198,11 +210,11 @@ public:
   }
   const HBTxyz & GetComovingPosition(HBTInt index) const
   {
-	return Subhalos[index].ComovingPosition;
+	return Subhalos[index].ComovingMostBoundPosition;
   }
   const HBTxyz & GetPhysicalVelocity(HBTInt index) const
   {
-	return Subhalos[index].PhysicalVelocity;
+	return Subhalos[index].PhysicalAverageVelocity;
   }
   HBTReal GetMass(HBTInt index) const
   {
