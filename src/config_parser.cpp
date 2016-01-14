@@ -36,7 +36,6 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(ParticleIdRankStyle)
   else TrySetPar(ParticleIdNeedHash)
   else TrySetPar(SnapshotIdUnsigned)
-  else TrySetPar(TrimNonHostParticles)
   else TrySetPar(MajorProgenitorMassRatio)
 #ifdef ALLOW_BINARY_SYSTEM
   else TrySetPar(BinaryMassRatioLimit)
@@ -180,7 +179,6 @@ void Parameter_t::DumpParameters()
   version_file<<endl;
   }
   
-  DumpPar(TrimNonHostParticles) 
   DumpPar(MajorProgenitorMassRatio) 
 #ifdef ALLOW_BINARY_SYSTEM
   DumpPar(BinaryMassRatioLimit)

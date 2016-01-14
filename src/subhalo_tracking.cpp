@@ -184,12 +184,12 @@ void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
   }
 #pragma omp single
   vector <HBTInt>().swap(ParticleToHost);//free the memory.
-#pragma omp single nowait
+/*#pragma omp single nowait
   if(HBTConfig.TrimNonHostParticles)
   {
 	cout<<"Error: TrimNonHostParticles not implemented yet...\n";
 	exit(1);
-  }
+  } */
   MemberTable.Build(halo_snap.Halos.size(), Subhalos);
 //   MemberTable.AssignRanks(Subhalos); //not needed here
 }

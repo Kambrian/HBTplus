@@ -46,7 +46,6 @@ public:
   bool SnapshotIdUnsigned;
   vector <int> SnapshotIdList;
   
-  bool TrimNonHostParticles; //whether to trim particles outside the host halo when finding hosts
   HBTReal MajorProgenitorMassRatio; 
 #ifdef ALLOW_BINARY_SYSTEM
   HBTReal BinaryMassRatioLimit;//the lower limit of the mass ratio of the two most-massive subhaloes (<=1), above which the system is marked as a binary system with no central subhalo (no Rank=0 sub). 
@@ -79,7 +78,6 @@ public:
 	ParticleIdRankStyle=false;
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
-	TrimNonHostParticles=false;
 	MajorProgenitorMassRatio=0.67;
 #ifdef ALLOW_BINARY_SYSTEM
 	BinaryMassRatioLimit=1.; //default: no binary system will be marked.
