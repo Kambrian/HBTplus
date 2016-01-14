@@ -17,9 +17,6 @@ void Subhalo_t::UpdateTrack(const ParticleSnapshot_t &part_snap)
 	SnapshotIndexOfLastMaxMass=part_snap.GetSnapshotIndex();
 	LastMaxMass=Nbound;
   }
-  
-  CalculateProfileProperties(part_snap);
-  CalculateShape(part_snap);
 }
 HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const ParticleSnapshot_t &snapshot)
 {
@@ -316,11 +313,19 @@ void SubhaloSnapshot_t::RegisterNewTracks()
 void SubhaloSnapshot_t::UpdateTracks()
 {
   /*renew ranks after unbinding*/
-#pragma omp single
   RegisterNewTracks();
+#pragma omp parallel
+  {
   MemberTable.SortMemberLists(Subhalos);//reorder
   MemberTable.AssignRanks(Subhalos);
 #pragma omp for
   for(HBTInt i=0;i<Subhalos.size();i++)
 	Subhalos[i].UpdateTrack(*SnapshotPointer);
+  }
+#pragma omp parallel for if(ParallelizeHaloes)
+  for(HBTInt i=0;i<Subhalos.size();i++)
+  {
+	Subhalos[i].CalculateProfileProperties(*SnapshotPointer);
+	Subhalos[i].CalculateShape(*SnapshotPointer);
+  }
 }

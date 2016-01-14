@@ -52,11 +52,8 @@ int main(int argc, char **argv)
 	subsnap.RefineParticles();
 	timer.Tick();
 	
-	#pragma omp parallel
-	{
 	subsnap.UpdateTracks();
 	subsnap.ParticleIndexToId();
-	}
 	timer.Tick();
 	
 	subsnap.Save();

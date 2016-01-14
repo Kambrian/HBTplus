@@ -87,9 +87,10 @@ public:
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfLastMaxMass=SpecialConst::NullSnapshotId;
 	LastMaxMass=0;
-	
-	SnapshotIndexOfBirth=-1;
-	SnapshotIndexOfDeath=-1;
+	LastMaxVmaxPhysical=0.;
+	SnapshotIndexOfLastMaxVmax=SpecialConst::NullSnapshotId;
+	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
+	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
   }
   /*void MoveTo(Subhalo_t & dest)
   {//override dest with this, leaving this unspecified.
