@@ -5,6 +5,10 @@ Run on major merger and satellite infall
 Reorganize SubSnap output: sort subhalos to move disrupted ones to the end; add number_of_live_subs; add live_sub_properties block; add TrackIdToIndex block.
 
 Add Doc: user's manual.
+
+Add hosthalo virial properties using all particles
+
+Add support for other simulation/group format
 --------
 remove id=-1 from pidhash: do not allow this. just exit, or throw exception
 
