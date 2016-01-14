@@ -8,7 +8,9 @@ Reorganize SubSnap output: sort subhalos to move disrupted ones to the end; add 
 
 Add Doc: user's manual.
 
-Add Virial/Vmax: test bound vs all: how much does the virial mass/radius differ? is the density profile still NFW? is it correct with the mass/concentration parameters?
+Add hosthalo virial properties using all particles: test bound vs all: how much does the virial mass/radius differ? is the density profile still NFW? is it correct with the mass/concentration parameters?
+
+Add support for other simulation/group format
 
 Run on major merger and satellite infall; make movie comparison.
 --------
