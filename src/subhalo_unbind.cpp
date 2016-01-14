@@ -159,7 +159,7 @@ public:
 		CoM[j]=sx[j];
 	}
   }
-  void AverageKinematics(HBTReal &SpecificPotentialEnergy, HBTReal &SpecificKineticEnergy, HBTxyz &SpecificAngularMomentum, HBTInt NumPart, const HBTxyz & refPos, const HBTxyz &refVel)
+  void AverageKinematics(float &SpecificPotentialEnergy, float &SpecificKineticEnergy, float SpecificAngularMomentum[3], HBTInt NumPart, const HBTxyz & refPos, const HBTxyz &refVel)
   /*obtain specific potential, kinetic energy, and angular momentum for the first NumPart particles
    * currently only support fixed particle mass
    * 
