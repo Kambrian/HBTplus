@@ -286,12 +286,18 @@ NumberOfParticles=0;
 	Nload+=Nids;
 	fclose(fd);
   }
-  
+ 		
   if(Nload!=NumberOfParticles)
   {
 	cerr<<"error:Number of  group particles loaded not match: "<<Nload<<','<<NumberOfParticles<<endl;
 	exit(1);
   }
+  
+  PIDtype_t Mask=HBTConfig.GroupParticleIdMask;
+  if(Mask)
+  #pragma omp parallel for
+  for(HBTInt i=0;i<NumberOfParticles;i++)
+	PIDs[i]&=Mask;
   
   TotNumberOfParticles=NumberOfParticles;
   Halos.resize(NumberOfHaloes);
