@@ -13,6 +13,8 @@ Add hosthalo virial properties using all particles: test bound vs all: how much 
 Add support for other simulation/group format
 
 Run on major merger and satellite infall; make movie comparison.
+
+Combine SubSnaps
 --------
 remove id=-1 from pidhash: do not allow this. just exit, or throw exception
 
