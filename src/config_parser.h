@@ -9,7 +9,7 @@
 #include <vector>
 #include "datatypes.h"
 
-#define HBT_VERSION "1.4.0"
+#define HBT_VERSION "1.5.0"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
