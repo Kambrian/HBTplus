@@ -104,7 +104,7 @@ public:
   /*mass weighted average velocity*/
   {
 	HBTInt i,j;
-	double sv[3],msum;
+	double svx,svy,svz,msum;
 	
 	if(0==NumPart) return;
 	if(1==NumPart) 
@@ -113,25 +113,28 @@ public:
 	  return;
 	}
 	
-	sv[0]=sv[1]=sv[2]=0.;
+	svx=svy=svz=0.;
 	msum=0.;
-	
+	#pragma omp paralle for reduction(+:msum, svx, svy, svz) if(NumPart>100)
 	for(i=0;i<NumPart;i++)
 	{
 	  HBTReal m=GetMass(i);
+	  const HBTxyz &v=GetPhysicalVelocity(i);
 	  msum+=m;
-	  for(j=0;j<3;j++)
-		sv[j]+=GetPhysicalVelocity(i)[j]*m;
+	  svx+=v[0]*m;
+	  svy+=v[1]*m;
+	  svz+=v[2]*m;
 	}
 	
-	for(j=0;j<3;j++)
-	  CoV[j]=sv[j]/msum;
+	CoV[0]=svx/msum;
+	CoV[1]=svy/msum;
+	CoV[2]=svz/msum;
   }
   void AveragePosition(HBTxyz& CoM, HBTInt NumPart)
   /*mass weighted average position*/
   {
 	HBTInt i,j;
-	double sx[3],origin[3],msum;
+	double sx,sy,sz,origin[3],msum;
 	
 	if(0==NumPart) return;
 	if(1==NumPart) 
@@ -140,32 +143,45 @@ public:
 	  return;
 	}
 	
-	sx[0]=sx[1]=sx[2]=0.;
-	msum=0.;
 	if(HBTConfig.PeriodicBoundaryOn)
 	  for(j=0;j<3;j++)
 		origin[j]=GetComovingPosition(0)[j];
-	  
+	
+	sx=sy=sz=0.;
+	msum=0.;
+	#pragma omp paralle for reduction(+:msum, sx, sy, sz) if(NumPart>100)
 	  for(i=0;i<NumPart;i++)
 	  {
 		HBTReal m=GetMass(i);
+		const HBTxyz &x=GetComovingPosition(i);
 		msum+=m;
-		for(j=0;j<3;j++)
-		  if(HBTConfig.PeriodicBoundaryOn)
-			sx[j]+=NEAREST(GetComovingPosition(i)[j]-origin[j])*m;
-		  else
-			sx[j]+=GetComovingPosition(i)[j]*m;
+		if(HBTConfig.PeriodicBoundaryOn)
+		{
+		  sx+=NEAREST(x[0]-origin[0])*m;
+		  sy+=NEAREST(x[1]-origin[1])*m;
+		  sz+=NEAREST(x[2]-origin[2])*m;
+		}
+		else
+		{
+		  sx+=x[0]*m;
+		  sy+=x[1]*m;
+		  sz+=x[2]*m;
+		}
 	  }
-	  
-	  for(j=0;j<3;j++)
+	  sx/=msum; sy/=msum; sz/=msum;
+	  if(HBTConfig.PeriodicBoundaryOn)
 	  {
-		sx[j]/=msum;
-		if(HBTConfig.PeriodicBoundaryOn) sx[j]+=origin[j];
-		CoM[j]=sx[j];
+		sx+=origin[0];
+		sy+=origin[1];
+		sz+=origin[2];
 	  }
+	  CoM[0]=sx;
+	  CoM[1]=sy;
+	  CoM[2]=sz;
   }
   void AverageKinematics(float &SpecificPotentialEnergy, float &SpecificKineticEnergy, float SpecificAngularMomentum[3], HBTInt NumPart, const HBTxyz & refPos, const HBTxyz &refVel)
   /*obtain specific potential, kinetic energy, and angular momentum for the first NumPart particles
+   * all quantities are physical
    * currently only support fixed particle mass
    * 
    * TODO: extend to variable mass?
@@ -179,7 +195,8 @@ public:
 	  SpecificAngularMomentum[0]=SpecificAngularMomentum[1]=SpecificAngularMomentum[2]=0.;
 	  return;
 	}
-	double E=0., K=0., AM[3]={0.};
+	double E=0., K=0., AMx=0., AMy=0., AMz=0.;
+	#pragma omp parallel for reduction(+:E, K, AMx, AMy, AMz) if(NumPart>100)
 	for(HBTInt i=0;i<NumPart;i++)
 	{
 	  E+=Elist[i].E;
@@ -194,16 +211,17 @@ public:
 		dv[j]=v[j]-refVel[j]+Hz*dx[j];
 		K+=dv[j]*dv[j];
 	  }
-	  AM[0]+=dx[1]*dv[2]-dx[2]*dv[1];
-	  AM[1]+=dx[0]*dv[2]-dx[2]*dv[0];
-	  AM[2]+=dx[0]*dv[1]-dx[1]*dv[0];
+	  AMx+=dx[1]*dv[2]-dx[2]*dv[1];
+	  AMy+=dx[0]*dv[2]-dx[2]*dv[0];
+	  AMz+=dx[0]*dv[1]-dx[1]*dv[0];
 	}
 	E/=NumPart;
 	K*=0.5/NumPart;
 	SpecificPotentialEnergy=E-K;
 	SpecificKineticEnergy=K;
-	for(int j=0;j<3;j++) 
-	  SpecificAngularMomentum[j]=AM[j]/NumPart;	//physical
+	SpecificAngularMomentum[0]=AMx/NumPart;
+	SpecificAngularMomentum[1]=AMy/NumPart;
+	SpecificAngularMomentum[2]=AMz/NumPart;
   }
 };
 void Subhalo_t::Unbind(const Snapshot_t &epoch)
