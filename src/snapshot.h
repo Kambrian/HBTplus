@@ -90,7 +90,7 @@ public:
   virtual const HBTxyz & GetComovingPosition(HBTInt index) const=0;
   virtual const HBTxyz & GetPhysicalVelocity(HBTInt index) const=0;
   virtual HBTReal GetMass(HBTInt index) const=0;
-  void SphericalOverdensitySize(HBTReal &Mvir, HBTReal &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
+  void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
   void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
 };
 class SnapshotView_t: public Snapshot_t
