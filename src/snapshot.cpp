@@ -114,7 +114,7 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Part
 	for(j=0;j<3;j++)
 	  CoV[j]=sv[j]/msum;
 }
-void Snapshot_t::SphericalOverdensitySize(HBTReal& Mvir, HBTReal& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
+void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
 /*
  * find SphericalOverdensitySize from a given list of sorted particle distances.
  * all distances comoving.
