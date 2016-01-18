@@ -57,16 +57,32 @@ void MemberShipTable_t::BindMemberLists()
 	Mem_SubGroups[i].ReBind(0);
   }
 }
-void MemberShipTable_t::CountMembers(const SubhaloList_t& Subhalos)
+void MemberShipTable_t::CountMembers(const SubhaloList_t& Subhalos, bool include_orphans)
 {//todo: parallelize this..
-  for(HBTInt subid=0;subid<Subhalos.size();subid++)
-	SubGroups[Subhalos[subid].HostHaloId].IncrementBind();
-}
-void MemberShipTable_t::FillMemberLists(const SubhaloList_t& Subhalos)
-{//fill with local subhaloid
-  for(HBTInt subid=0;subid<Subhalos.size();subid++)
+  if(include_orphans)
   {
-	SubGroups[Subhalos[subid].HostHaloId].PushBack(subid);
+	for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	  SubGroups[Subhalos[subid].HostHaloId].IncrementBind();
+  }
+  else
+  {
+	for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	  if(Subhalos[subid].Nbound>1)
+		SubGroups[Subhalos[subid].HostHaloId].IncrementBind();
+  }
+}
+void MemberShipTable_t::FillMemberLists(const SubhaloList_t& Subhalos, bool include_orphans)
+{//fill with local subhaloid
+  if(include_orphans)
+  {
+	for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	  SubGroups[Subhalos[subid].HostHaloId].PushBack(subid);
+  }
+  else
+  {
+	for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	  if(Subhalos[subid].Nbound>1)
+		SubGroups[Subhalos[subid].HostHaloId].PushBack(subid);
   }
 }
 struct CompareMass_t
@@ -124,7 +140,7 @@ void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
 #endif
   }
 }
-void MemberShipTable_t::CountBirth()
+void MemberShipTable_t::CountEmptyGroups()
 {
 static HBTInt nbirth;
 #pragma omp single
@@ -144,17 +160,17 @@ inline bool SubhaloSnapshot_t::CompareHostAndMass(const HBTInt& subid_a, const H
   
   return (a.HostHaloId<b.HostHaloId); //(a.HostHaloId!=SpecialConst::NullHaloId)&&
 }*/
-void MemberShipTable_t::Build(const HBTInt nhalos, const SubhaloList_t & Subhalos)
+void MemberShipTable_t::Build(const HBTInt nhalos, const SubhaloList_t & Subhalos, bool include_orphans)
 {
   #pragma omp single
   {
   Init(nhalos, Subhalos.size());
-  CountMembers(Subhalos);
+  CountMembers(Subhalos, include_orphans);
   BindMemberLists();
-  FillMemberLists(Subhalos);
+  FillMemberLists(Subhalos, include_orphans);
   }
   SortMemberLists(Subhalos);
-  CountBirth();
+  CountEmptyGroups();
 //   std::sort(AllMembers.begin(), AllMembers.end(), CompareHostAndMass);
 }
 
@@ -337,8 +353,8 @@ void SubhaloSnapshot_t::AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_sna
   Subhalos.swap(LocalSubhalos);
   halo_snap.ClearParticleHash();
     
-  MemberTable.Build(halo_snap.Halos.size(), Subhalos);
-  //   MemberTable.AssignRanks(Subhalos); //not needed here
+  MemberTable.Build(halo_snap.Halos.size(), Subhalos, false);//build without orphans first.
+//   MemberTable.AssignRanks(Subhalos); //not needed here
 }
 
 void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
@@ -441,33 +457,32 @@ void SubhaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
 }
 
 void SubhaloSnapshot_t::RegisterNewTracks(MpiWorker_t &world)
-/*assign trackId to new bound ones, remove unbound ones, and record membership*/
+/*assign trackId to new bound ones, remove unbound ones, and rebuild membership*/
 {
-  HBTInt NTot=Subhalos.size();
-  HBTInt Nsub=NTot-MemberTable.NBirth;
-  MemberTable.ResizeAllMembers(NTot);
-  for(HBTInt i=Nsub;i<NTot;i++)
+  HBTInt NumSubMax=Subhalos.size(), NumSubOld=NumSubMax-MemberTable.NBirth;
+  HBTInt NumSubNew=NumSubOld;
+  MemberTable.ResizeAllMembers(NumSubMax);
+  for(HBTInt i=NumSubNew;i<NumSubMax;i++)
   {
 	if(Subhalos[i].Nbound>1)
 	{
-	  if(i!=Nsub)
-		Subhalos[Nsub]=move(Subhalos[i]);
-	  MemberTable.AllMembers[Nsub]=Nsub; //the MemberTable stores local subid, not TrackId.
-	  MemberTable.SubGroups[Subhalos[Nsub].HostHaloId].Bind(1, &MemberTable.AllMembers[Nsub]);
-	  Nsub++;
+	  if(i!=NumSubNew)
+		Subhalos[NumSubNew]=move(Subhalos[i]);
+	  NumSubNew++;
 	}
   }
-  MemberTable.NFake=NTot-Nsub;
-  MemberTable.NBirth-=MemberTable.NFake;
-  Subhalos.resize(Nsub);
-//   MemberTable.ResizeAllMembers(Nsub); //not necessary
+  MemberTable.Build(MemberTable.SubGroups.size(), Subhalos, true);//rebuild membership with new subs and also include orphans this time.
+  MemberTable.NFake=NumSubMax-NumSubNew;
+  MemberTable.NBirth=NumSubNew-NumSubOld;
+  Subhalos.resize(NumSubNew);
+//   MemberTable.ResizeAllMembers(NumSubNew); //not necessary
   
   //now assign a global TrackId
-  HBTInt TrackIdOffset, NBirth=MemberTable.NBirth, Nsub_last=Nsub-NBirth, GlobalNumberOfSubs;
-  MPI_Allreduce(&Nsub_last, &GlobalNumberOfSubs, 1, MPI_HBT_INT, MPI_SUM, world.Communicator); 
+  HBTInt TrackIdOffset, NBirth=MemberTable.NBirth, GlobalNumberOfSubs;
+  MPI_Allreduce(&NumSubOld, &GlobalNumberOfSubs, 1, MPI_HBT_INT, MPI_SUM, world.Communicator); 
   MPI_Scan(&NBirth, &TrackIdOffset, 1, MPI_HBT_INT, MPI_SUM, world.Communicator); 
   TrackIdOffset=TrackIdOffset+GlobalNumberOfSubs-NBirth;
-  for(HBTInt i=Nsub_last;i<Nsub;i++)
+  for(HBTInt i=NumSubOld;i<NumSubNew;i++)
 	Subhalos[i].TrackId=TrackIdOffset++;
 }
 void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap)
