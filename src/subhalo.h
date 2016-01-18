@@ -133,15 +133,14 @@ private:
   void SortSatellites(const SubhaloList_t & Subhalos);
   void CountEmptyGroups();
   /*avoid operating on the Mem_* below; use the public VectorViews whenever possible; only operate the Mem_* variables when adjusting memory*/
-  vector <MemberList_t> Mem_SubGroups; //list of subhaloes inside each host halo, with the storage of each subgroup mapped to a location in Mem_AllMembers 
-  vector <HBTInt> Mem_AllMembers; //the storage for all the MemberList_t
+  vector <MemberList_t> Mem_SubGroups; //list of subhaloes inside each host halo, with the storage of each subgroup mapped to a location in AllMembers 
 public:
-  VectorView_t <HBTInt> AllMembers; //the complete list of all the subhaloes in SubGroups.
+  vector <HBTInt> AllMembers; //the complete list of all the subhaloes in SubGroups. do not resize this vector manually. resize only with ResizeAllMembers() function.
   VectorView_t <MemberList_t> SubGroups; //list of subhaloes inside each host halo. contain one more group than halo catalogue, to hold field subhaloes. It is properly offseted so that SubGroup[hostid=-1] gives field subhaloes, and hostid>=0 for the normal groups.
   HBTInt NBirth; //newly born halos, excluding fake halos
   HBTInt NFake; //Fake (unbound) halos with no progenitors
   
-  MemberShipTable_t(): Mem_SubGroups(), Mem_AllMembers(), AllMembers(), SubGroups(), NBirth(0), NFake(0)
+  MemberShipTable_t(): Mem_SubGroups(), AllMembers(), SubGroups(), NBirth(0), NFake(0)
   {
   }
   HBTInt GetNumberOfFieldSubs()

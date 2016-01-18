@@ -27,11 +27,11 @@ HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const ParticleSnapshot_t 
 }
 void MemberShipTable_t::ResizeAllMembers(size_t n)
 {
-  Mem_AllMembers.resize(n);
-  size_t offset=Mem_AllMembers.data()-AllMembers.data();
+  auto olddata=AllMembers.data();
+  AllMembers.resize(n);
+  size_t offset=AllMembers.data()-olddata;
   if(offset)
   {
-	AllMembers.Bind(n, AllMembers.data()+offset);
 	for(HBTInt i=0;i<Mem_SubGroups.size();i++)
 	  Mem_SubGroups[i].Bind(Mem_SubGroups[i].data()+offset);
   }
@@ -42,17 +42,16 @@ void MemberShipTable_t::Init(const HBTInt nhalos, const HBTInt nsubhalos, const 
   Mem_SubGroups.resize(nhalos+1);
   SubGroups.Bind(nhalos, Mem_SubGroups.data()+1);
 
-  Mem_AllMembers.clear();
-  Mem_AllMembers.reserve(nsubhalos*alloc_factor); //allocate more for seed haloes.
-  Mem_AllMembers.resize(nsubhalos);
-  AllMembers.Bind(nsubhalos, Mem_AllMembers.data());
+  AllMembers.clear();
+  AllMembers.reserve(nsubhalos*alloc_factor); //allocate more for seed haloes.
+  AllMembers.resize(nsubhalos);
 }
 void MemberShipTable_t::BindMemberLists()
 {
   HBTInt offset=0;
   for(HBTInt i=0;i<Mem_SubGroups.size();i++)
   {
-	Mem_SubGroups[i].Bind(Mem_SubGroups[i].size(), &(Mem_AllMembers[offset]));
+	Mem_SubGroups[i].Bind(Mem_SubGroups[i].size(), &(AllMembers[offset]));
 	offset+=Mem_SubGroups[i].size();
 	Mem_SubGroups[i].ReBind(0);
   }
