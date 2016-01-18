@@ -128,10 +128,10 @@ public:
   typedef VectorView_t <HBTInt> MemberList_t;  //list of members in a group
 private:
   void BindMemberLists();
-  void FillMemberLists(const SubhaloList_t & Subhalos);
-  void CountMembers(const SubhaloList_t & Subhalos);
+  void FillMemberLists(const SubhaloList_t & Subhalos, bool include_orphans);
+  void CountMembers(const SubhaloList_t & Subhalos, bool include_orphans);
   void SortSatellites(const SubhaloList_t & Subhalos);
-  void CountBirth();
+  void CountEmptyGroups();
   /*avoid operating on the Mem_* below; use the public VectorViews whenever possible; only operate the Mem_* variables when adjusting memory*/
   vector <MemberList_t> Mem_SubGroups; //list of subhaloes inside each host halo, with the storage of each subgroup mapped to a location in Mem_AllMembers 
   vector <HBTInt> Mem_AllMembers; //the storage for all the MemberList_t
@@ -150,7 +150,7 @@ public:
   }
   void Init(const HBTInt nhalos, const HBTInt nsubhalos, const float alloc_factor=1.2);
   void ResizeAllMembers(size_t n);
-  void Build(const HBTInt nhalos, const SubhaloList_t & Subhalos);
+  void Build(const HBTInt nhalos, const SubhaloList_t & Subhalos, bool include_orphans);
   void SortMemberLists(const SubhaloList_t & Subhalos);
   void AssignRanks(SubhaloList_t &Subhalos);
   void SubIdToTrackId(const SubhaloList_t &Subhalos);
