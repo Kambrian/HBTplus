@@ -9,6 +9,8 @@ Add Doc: user's manual.
 Add hosthalo virial properties using all particles
 
 Add support for other simulation/group format
+
+Mask particles to decide most-bound
 --------
 remove id=-1 from pidhash: do not allow this. just exit, or throw exception
 
