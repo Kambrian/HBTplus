@@ -278,7 +278,7 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 		subid=Npro++;
 	  }
 	  Subhalos[subid].HostHaloId=hostid;
-	  copyHBTxyz(Subhalos[subid].ComovingMostBoundPosition, halo_snap.Halos[hostid].ComovingAveragePosition); 
+	  copyHBTxyz(Subhalos[subid].ComovingAveragePosition, halo_snap.Halos[hostid].ComovingAveragePosition); 
 	  copyHBTxyz(Subhalos[subid].PhysicalAverageVelocity, halo_snap.Halos[hostid].PhysicalAverageVelocity);
 	  Subhalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
 	  
