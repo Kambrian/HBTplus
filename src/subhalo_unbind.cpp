@@ -240,7 +240,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  for(HBTInt i=0;i<Nlast;i++)
 	  {
 		HBTInt pid=Elist[i].pid;
-		Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingMostBoundPosition, PhysicalAverageVelocity, snapshot.GetParticleMass(pid));
+		Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingAveragePosition, PhysicalAverageVelocity, snapshot.GetParticleMass(pid));
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
 		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
@@ -248,9 +248,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  Nbound=1;
 		  Nlast=1;
 		  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
-		  //old particle list retained.
-		  copyHBTxyz(ComovingMostBoundPosition, snapshot.GetComovingPosition(Particles[0]));
-		  copyHBTxyz(PhysicalMostBoundVelocity, snapshot.GetPhysicalVelocity(Particles[0]));
+		  //old particle list retained. old mostbound coordinates also retained.
 		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
 		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
 		  break;
@@ -258,9 +256,8 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		else
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
-		  PopMostBoundParticle(Elist.data(), Nbound);
 		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
-		  copyHBTxyz(ComovingMostBoundPosition, snapshot.GetComovingPosition(Elist[0].pid));
+		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
 		  if(Nbound>Nlast*HBTConfig.BoundMassPrecision)//converge
 		  {
 			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
@@ -268,15 +265,15 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 			Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
 			if(Nlast>Particles.size()) Nlast=Particles.size();
 			for(HBTInt i=0;i<Nlast;i++) Particles[i]=Elist[i].pid;
-			//update properties
-			ESnap.AveragePosition(ComovingAveragePosition, Nbound);
+			//update mostbound coordinate
+			copyHBTxyz(ComovingMostBoundPosition, snapshot.GetComovingPosition(Elist[0].pid));
 			copyHBTxyz(PhysicalMostBoundVelocity, snapshot.GetPhysicalVelocity(Elist[0].pid));
 			break;
 		  }
 		}
 	}
 	Particles.resize(Nlast);
-	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingMostBoundPosition, PhysicalAverageVelocity);
+	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingAveragePosition, PhysicalAverageVelocity);//only use CoM frame when unbinding and calculating Kinematics
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
