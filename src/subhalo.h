@@ -169,6 +169,7 @@ private:
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void BuildHDFDataType();
   void BuildMPIDataType();
+  void PurgeMostBoundParticles();
 public:
   SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;

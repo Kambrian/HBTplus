@@ -1,6 +1,7 @@
 #include <iostream>
 #include <new>
 #include <algorithm>
+#include <unordered_set>
 #include <omp.h>
 
 #include "datatypes.h"
@@ -20,7 +21,7 @@ void Subhalo_t::UpdateTrack(const Snapshot_t &epoch)
 }
 HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &epoch)
 {
-  HBTReal dx=PeriodicDistance(halo.ComovingAveragePosition, ComovingMostBoundPosition);
+  HBTReal dx=PeriodicDistance(halo.ComovingAveragePosition, ComovingAveragePosition);
   HBTReal dv=Distance(halo.PhysicalAverageVelocity, PhysicalAverageVelocity);
   HBTReal d=dv+epoch.Hz*epoch.ScaleFactor*dx;
   return (d>0?d:-d);
@@ -484,6 +485,48 @@ void SubhaloSnapshot_t::RegisterNewTracks(MpiWorker_t &world)
   for(HBTInt i=NumSubOld;i<NumSubNew;i++)
 	Subhalos[i].TrackId=TrackIdOffset++;
 }
+void SubhaloSnapshot_t::PurgeMostBoundParticles()
+/* fix the possible issue that the most-bound particle of a subhalo might belong to a sub-sub.
+ * this is achieved by masking particles from smaller subs and promote the remaining most-bound particle in each subhalo.
+ * orphan galaxies are not considered.
+ * the shift in center position does not affect the total angular momentum.
+ */
+{
+  #pragma omp for
+  for(HBTInt i=-1;i<MemberTable.SubGroups.size();i++)
+  {
+	auto &Group=MemberTable.SubGroups[i];
+	unordered_set <HBTInt> ExclusionList;
+	{
+	HBTInt np=0;
+	for(auto &&subid: Group)
+	  if(Subhalos[subid].Nbound>1) np+=Subhalos[subid].Nbound;
+	ExclusionList.reserve(np);
+	}
+	for(auto it=Group.end()-1;it>=Group.begin();it--)
+	{
+	  auto & subhalo=Subhalos[*it];
+	  if(subhalo.Nbound>1)
+	  {
+		for(auto & p: subhalo.Particles)
+		{
+		  if(ExclusionList.find(p.Id)==ExclusionList.end())
+		  {
+			if(&p!=&subhalo.Particles[0])
+			{
+			  copyHBTxyz(subhalo.ComovingMostBoundPosition, p.ComovingPosition);
+			  copyHBTxyz(subhalo.PhysicalMostBoundVelocity, p.PhysicalVelocity);
+			  swap(subhalo.Particles[0], p);
+			  break;
+			}
+		  }
+		}
+		for(auto && p: subhalo.Particles)
+		  ExclusionList.insert(p.Id);//alternative: only filter most-bounds
+	  }
+	}
+  }
+}
 void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap)
 {
   /*renew ranks after unbinding*/
@@ -492,6 +535,7 @@ void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &h
   {
   MemberTable.SortMemberLists(Subhalos);//reorder, so the central might change if necessary
   MemberTable.AssignRanks(Subhalos);
+  PurgeMostBoundParticles();
   #pragma omp for
   for(HBTInt i=0;i<Subhalos.size();i++)
   {

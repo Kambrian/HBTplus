@@ -17,6 +17,8 @@ Run on major merger and satellite infall; make movie comparison.
 Combine SubSnaps
 
 Mask particles to decide most-bound
+
+separate particles from subhaloes in output. also output each property individually?
 --------
 remove id=-1 from pidhash: do not allow this. just exit, or throw exception
 
