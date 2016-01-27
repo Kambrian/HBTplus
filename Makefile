@@ -2,7 +2,7 @@ SRC_COMM=$(wildcard src/*.cpp) $(wildcard src/io/*.cpp)
 OBJS_COMM=$(SRC_COMM:%.cpp=%.o)
 
 SRC=$(wildcard *.cpp)
-EXE_HBT=HBT HBTdouble  HBT_majormerger_test HBTmajormerger
+EXE_HBT=HBT HBTdouble  HBT_majormerger_test 
 EXE=$(EXE_HBT)
 
 default: HBT
@@ -11,8 +11,7 @@ include Makefile.inc
 $(EXE): $(OBJS_COMM)
 
 HBTdouble: CXXFLAGS+=-DHBT_REAL8 -DHBT_INT8 
-HBTmajormerger: CXXFLAGS+=-DALLOW_BINARY_SYSTEM
-HBT_majormerger_test: CXXFLAGS+=-DMAJOR_MERGER_PATCH -DALLOW_BINARY_SYSTEM
+HBT_majormerger_test: CXXFLAGS+=-DMAJOR_MERGER_PATCH #-DALLOW_BINARY_SYSTEM
 $(EXE_HBT): HBT.o
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 

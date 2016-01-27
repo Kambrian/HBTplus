@@ -24,8 +24,6 @@ Below are a few macros to further customize the behaviour of HBT. These flags ca
   
 - `-DENABLE_EXPERIMENTAL_PROPERTIES`: output the peebles and bullock spin parameters. These parameters are vaguely defined due to the ambiguity/lack of standard in the mass, radius, and energy of a subhalo. Use them with caution. If possible, use the `SpecificAngularMomentum` instead of the spin parameters.
 
-- `-DALLOW_BINARY_SYSTEM`: give special treatment to binary systems-- those resulting from major mergers so that there is not a well-defined central subhalo. With this macro defined, HBT will not define a central subhalo for these systems, but treat all the subhaloes as satellite subhaloes. The mass ratio of the merger to define such binary systems is specified by the parameter `BinaryMassRatioLimit`. If you do not understand what I am talking about here, you probably do not need to care about it. This macro is enabled if you `make HBTmajormerger` instead of `make HBT`.
-
  
 ## Run
 
@@ -46,6 +44,8 @@ The outputs are in HDF5 format, which can be viewed with [HDFView](https://www.h
 - SrcSnap_*.hdf5: source subhalo catalogues, only used for restarting HBT from an intermediate snapshot. Can be safely removed once the run has finished.
 
 Besides, the VER*.param records the version number of HBT used, as well as the parameter values used.
+
+Each subhalo is labelled by a unique `TrackId`, which is fixed throughout its evolution history. So doing merger tree with HBT is straightforward: the progenitor/descendent of a subhalo at another snapshot is simply the subhalo labelled by the same `TrackId` at that time. The host halo of each subhalo is given by `HostId`, which is the index of the host halo in the order stored in the corresponding (FoF) halo catalogue. To facilitate fast retrieval of all the subhaloes in each host halo, the `/Membership/GroupedTrackIds` dataset in the file stores the list of subhaloes in each group (Note this is only available for the OpenMP version of HBT2). `Nbound` gives the number of bound particles in the subhalo. `Nbound=1` means the subhalo has been disrupted, so that only the most-bound particle is still tracked. The other properties should be self-explainatory.
 
 ## Reference
 For now, please cite the original [HBT paper](http://adsabs.harvard.edu/abs/2012MNRAS.427.2437H) if you use HBT in your work. We will soon have another paper coming out describing the new implementation here.
