@@ -85,6 +85,12 @@ bool ParticleSnapshot_t::ReadFileHeader(FILE *fp, SnapshotHeader_t &header)
 	exit(1);
   } 
   
+  #ifdef MAJOR_MERGER_PATCH
+  /*work around for the buggy non-conforming major-merger snapshot*/ 
+  header.num_files=1;
+  header.BoxSize=250.;
+  #endif  
+  
   return NeedByteSwap;
 }
 HBTInt ParticleSnapshot_t::ReadNumberOfDMParticles(int ifile)
