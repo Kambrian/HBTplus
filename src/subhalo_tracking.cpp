@@ -503,9 +503,9 @@ void SubhaloSnapshot_t::PurgeMostBoundParticles()
 	  if(Subhalos[subid].Nbound>1) np+=Subhalos[subid].Nbound;
 	ExclusionList.reserve(np);
 	}
-	for(auto it=Group.end()-1;it>=Group.begin();it--)
+	for(HBTInt j=Group.size()-1;j>=0;j--)
 	{
-	  auto & subhalo=Subhalos[*it];
+	  auto & subhalo=Subhalos[Group[j]];
 	  if(subhalo.Nbound>1)
 	  {
 		for(auto & p: subhalo.Particles)
