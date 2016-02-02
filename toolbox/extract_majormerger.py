@@ -7,15 +7,19 @@ isnap=int(sys.argv[2])
 
 rootdir='/gpfs/data/jvbq85/HBT/data/majormerger/dynamic/subcat%s/'%icat
 def getData(isnap):
-  f=h5py.File(rootdir+'SubSnap_%03d.hdf5'%isnap,'r')
+  f=h5py.File(rootdir+'SubSnap_%03d.0.hdf5'%isnap,'r')
   s=f['Subhalos'][...]
+  f.close()
+  f=h5py.File(rootdir+'SubSnap_%03d.1.hdf5'%isnap,'r')
+  s1=f['Subhalos'][...]
+  f.close()
+  s=np.hstack([s,s1])
   s.sort(order='TrackId')
   m=s['Nbound']
   vmax=s['VmaxPhysical']
   x=s['ComovingMostBoundPosition']
   d=s[0]['ComovingMostBoundPosition']-s[1]['ComovingMostBoundPosition']
   d=np.sum(d**2)**0.5
-  f.close()
   out=[]
   out.append(m[0])
   out.extend(x[0])

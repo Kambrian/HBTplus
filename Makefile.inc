@@ -17,8 +17,8 @@ CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 LDLIBS+=$(HDFLIB) $(OMPFLAG) $(GSLLIB) $(BOOSTLIB)
 <!-- LINK.o=$(LINK.cpp) -->
 
-ifeq ($(CXX), mpic++)
-BASECXX=$(shell mpic++ -show|cut -c1-3)
+ifneq (,$(filter $(CXX),mpic++ mpicxx))
+BASECXX=$(shell $(CXX) -show|cut -c1-3)
 else
 BASECXX=$(CXX)
 endif
