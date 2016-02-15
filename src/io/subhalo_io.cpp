@@ -126,10 +126,31 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
 	  cout<<"Skipping empty snapshot "<<snapshot_index<<"\n";
 	return;
   }
-  
-  int iFile=world.rank();
-  
   SetSnapshotIndex(snapshot_index);
+  
+  int NumberOfFiles;
+  if(world.rank()==0)
+  {
+  string filename;
+  GetSubFileName(filename, 0);
+  hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  
+  ReadDataset(file, "NumberOfFiles", H5T_HBTInt, &NumberOfFiles);
+  }
+  MPI_Bcast(&NumberOfFiles, 1, MPI_INT, 0, world.Communicator);
+  
+  Subhalos.clear();
+  int nfiles_skip, nfiles_end;
+  AssignTasks(world.rank(), world.size(), NumberOfFiles, nfiles_skip, nfiles_end);
+  
+  for(int iFile=nfiles_skip;iFile<nfiles_end;iFile++)
+	ReadFile(iFile, load_src);
+
+  cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
+}
+void SubhaloSnapshot_t::ReadFile(int iFile, bool load_src)
+{//Read iFile for current snapshot. 
+  
   string filename;
   GetSubFileName(filename, iFile);
   hid_t dset, file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -142,27 +163,20 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
   ReadDataset(file, "HubbleParam", H5T_HBTReal, &Hz);
   ReadDataset(file, "ScaleFactor", H5T_HBTReal, &ScaleFactor);
   
-  int NumberOfFiles;
-  ReadDataset(file, "NumberOfFiles", H5T_HBTInt, &NumberOfFiles);
-  if(NumberOfFiles!=world.size())
-  {
-	cerr<<"Error: can only read subhalo files with the same number of processes as saved\n";
-	exit(1);
-  }
-  
 //   ReadDataset(file, "NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);
 //   ReadDataset(file, "NumberOfFakeHalos", H5T_HBTInt, &MemberTable.NFake);
   
   hsize_t dims[1];
   dset=H5Dopen2(file, "Subhalos", H5P_DEFAULT);
   GetDatasetDims(dset, dims);
-  HBTInt nsubhalos=dims[0];
-  Subhalos.resize(nsubhalos);
-  if(nsubhalos)	H5Dread(dset, H5T_SubhaloInMem, H5S_ALL, H5S_ALL, H5P_DEFAULT, Subhalos.data());
+  HBTInt nsubhalos=dims[0], nsubhalos_old=Subhalos.size();
+  Subhalos.resize(nsubhalos+nsubhalos_old);
+  if(nsubhalos)	H5Dread(dset, H5T_SubhaloInMem, H5S_ALL, H5S_ALL, H5P_DEFAULT, &Subhalos[nsubhalos_old]);
   H5Dclose(dset);
  
   if(0==nsubhalos) return;
   
+  Subhalo_t * NewSubhalos=&Subhalos[nsubhalos_old];
   vector <hvl_t> vl(dims[0]);
   vl.resize(nsubhalos);
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
@@ -174,10 +188,10 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
 	H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
 	for(HBTInt i=0;i<nsubhalos;i++)
 	{
-	  Subhalos[i].Particles.resize(vl[i].len);
+	  NewSubhalos[i].Particles.resize(vl[i].len);
 	  HBTInt *p=(HBTInt *)(vl[i].p);
 	  for(HBTInt j=0;j<vl[i].len;j++)
-		Subhalos[i].Particles[j].Id=p[j];
+		NewSubhalos[i].Particles[j].Id=p[j];
 	}
 	ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
 	H5Dclose(dset);
@@ -192,10 +206,10 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
 	H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
 	for(HBTInt i=0;i<nsubhalos;i++)
 	{
-	  Subhalos[i].Particles.resize(vl[i].len);
+	  NewSubhalos[i].Particles.resize(vl[i].len);
 	  HBTInt *p=(HBTInt *)(vl[i].p);
 	  for(HBTInt j=0;j<vl[i].len;j++)
-		Subhalos[i].Particles[j].Id=p[j];
+		NewSubhalos[i].Particles[j].Id=p[j];
 	}
 	ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
 	H5Dclose(dset);
@@ -203,7 +217,6 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
   }
   H5Fclose(file);
   H5Tclose(H5T_HBTIntArr);
-  cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
 }
 
 void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsize_t ndim, const hsize_t *dims, hid_t dtype, hid_t dtype_file)

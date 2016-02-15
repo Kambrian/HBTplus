@@ -170,6 +170,7 @@ private:
   void BuildHDFDataType();
   void BuildMPIDataType();
   void PurgeMostBoundParticles();
+  void ReadFile(int iFile, bool load_src);
 public:
   SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;
