@@ -9,7 +9,7 @@ GSLLIB=-lgsl -lgslcblas
 
 <!--CC=mpicc-->
 <!-- CXX=g++ -->
-CXX=mpicxx
+CXX=mpiCC
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g  
 CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 <!-- CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs -->
@@ -17,7 +17,7 @@ CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 LDLIBS+=$(HDFLIB) $(OMPFLAG) $(GSLLIB) $(BOOSTLIB)
 <!-- LINK.o=$(LINK.cpp) -->
 
-ifneq (,$(filter $(CXX),mpic++ mpicxx))
+ifneq (,$(filter $(CXX),mpic++ mpicxx mpiCC))
 BASECXX=$(shell $(CXX) -show|cut -c1-3)
 else
 BASECXX=$(CXX)
