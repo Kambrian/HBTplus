@@ -184,8 +184,8 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
   
   int nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), Header.num_files, nfiles_skip, nfiles_end);
-  
-  NumberOfParticles=accumulate(NumberOfDMParticleInFiles.begin()+nfiles_skip, NumberOfDMParticleInFiles.begin()+nfiles_end, 0);
+  NumberOfParticles=0;
+  NumberOfParticles=accumulate(NumberOfDMParticleInFiles.begin()+nfiles_skip, NumberOfDMParticleInFiles.begin()+nfiles_end, NumberOfParticles);
   Particles.reserve(NumberOfParticles);
   
   for(int iFile=nfiles_skip; iFile<nfiles_end; iFile++)
