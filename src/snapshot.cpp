@@ -119,6 +119,29 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
  * find SphericalOverdensitySize from a given list of sorted particle distances.
  * all distances comoving.
  * 
+ * Brute-force method to scan from most-distant particle.
+ * 
+ * currently only support constant particle mass.
+ */
+{  
+  HBTInt i, np=RSorted.size();
+  HBTReal RhoVirial=VirialFactor*Hz*Hz/2.0/PhysicalConst::G/ParticleMass*ScaleFactor*ScaleFactor*ScaleFactor;
+  for(i=np;i>0;i--)
+  {
+	HBTReal r=RSorted[i-1];
+	if(i>RhoVirial*r*r*r) break;
+  }
+  Mvir=i*ParticleMass;
+  Rvir=pow(i/RhoVirial, 1.0/3);//comoving
+}
+
+void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
+/*
+ * find SphericalOverdensitySize from a given list of sorted particle distances.
+ * all distances comoving.
+ * 
+ * Iterative method to guess the radius.
+ * 
  * currently only support constant particle mass.
  */
 {
