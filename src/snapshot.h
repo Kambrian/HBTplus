@@ -164,7 +164,7 @@ class ParticleSnapshot_t: public Snapshot_t
   void * LoadBlock(int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
 public:
   SnapshotHeader_t Header;
-  ParticleSnapshot_t(): Snapshot_t(), Header(), LoadFlag()
+  ParticleSnapshot_t(): Snapshot_t(), Header(), LoadFlag(), FlatHash(), MappedHash(), ParticleHash()
   {
 	NeedByteSwap=false;
 	IntTypeSize=0;
@@ -174,6 +174,10 @@ public:
 	ComovingPosition=NULL;
 	PhysicalVelocity=NULL;
 	ParticleMass=NULL;
+	if(HBTConfig.ParticleIdNeedHash)
+	  ParticleHash=&MappedHash;
+	else
+	  ParticleHash=&FlatHash;
   }
   ~ParticleSnapshot_t()
   {

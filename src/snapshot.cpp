@@ -34,10 +34,6 @@ void ParticleSnapshot_t::ClearParticleHash()
 
 void ParticleSnapshot_t::FillParticleHash()
 {
-  if(HBTConfig.ParticleIdNeedHash)
-	ParticleHash=&MappedHash;
-  else
-	ParticleHash=&FlatHash;
   cout<<"Filling Hash Table...\n";
   auto begin = chrono::high_resolution_clock::now();
   ParticleHash->Fill(ParticleId, NumberOfParticles);
