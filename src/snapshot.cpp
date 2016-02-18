@@ -96,11 +96,6 @@ public:
 
 void ParticleSnapshot_t::FillParticleHash()
 {
-  if(HBTConfig.ParticleIdNeedHash)
-	ParticleHash=&MappedHash;
-  else
-	ParticleHash=&FlatHash;
-
   ParticleKeyList_t Ids(*this); 
   ParticleHash->Fill(Ids);
 }

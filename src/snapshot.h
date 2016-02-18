@@ -163,11 +163,15 @@ public:
   SnapshotHeader_t Header;
   vector <Particle_t> Particles;
   
-  ParticleSnapshot_t(): Snapshot_t(), Header(), Particles(), NumberOfParticles(0), ParticleHash()
+  ParticleSnapshot_t(): Snapshot_t(), Header(), Particles(), NumberOfParticles(0), ParticleHash(), MappedHash(), FlatHash()
   {
 	NeedByteSwap=false;
 	IntTypeSize=0;
 	RealTypeSize=0;
+	if(HBTConfig.ParticleIdNeedHash)
+	  ParticleHash=&MappedHash;
+	else
+	  ParticleHash=&FlatHash;
   }
   ~ParticleSnapshot_t()
   {
