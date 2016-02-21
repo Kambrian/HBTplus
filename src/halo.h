@@ -94,12 +94,17 @@ inline bool CompareRank(const SizeRank_t &a, const SizeRank_t &b)
 {
   return (a.rank<b.rank);
 }
+inline bool ComparePId(const Particle_t &a, const Particle_t &b)
+{
+  return (a.Id<b.Id);
+}
 template <class Halo_T>
 void DistributeHaloes(MpiWorker_t &world, int root, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, const ParticleSnapshot_t &snap, MPI_Datatype MPI_Halo_Shell_Type)
 /*distribute InHalos from root to around world. 
  *the destination of each halo is the one whose particle snapshot holds the most of this halo's particles. 
  *the distributed haloes are appended to OutHalos on each node.
  * Note InHalos are "moved", so are in a unspecified state upon return.
+ * The particle ordering inside each halo is conserved.
 */
 {
   int thisrank=world.rank();
@@ -151,17 +156,26 @@ void DistributeHaloes(MpiWorker_t &world, int root, vector <Halo_T> & InHalos, v
   
   //fill particles and decide movement
   vector <SizeRank_t> size(HaloBuffers.size()), maxsize(HaloBuffers.size());
+  vector <vector <HBTInt> >PIdBackup;
+  PIdBackup.resize(HaloBuffers.size());
   for(HBTInt haloid=0;haloid<HaloBuffers.size();haloid++)
   {
 	typename Halo_T::ParticleList_t & Particles=HaloBuffers[haloid];
+	auto & PIds=PIdBackup[haloid];
+	PIds.resize(Particles.size());
 	size[haloid].n=0;
 	size[haloid].rank=thisrank;
 	HBTInt &np=size[haloid].n;
 	for(HBTInt i=0;i<Particles.size();i++)
 	{
+	  PIds[i]=Particles[i].Id;//backup original PId
 	  HBTInt index=snap.GetIndex(Particles[i]);
 	  if(index!=SpecialConst::NullParticleId)
-		Particles[np++]=snap.Particles[index];
+	  {
+		Particles[np]=snap.Particles[index];
+		Particles[np].Id=i;//record the original ordering of the particle
+		np++;
+	  }
 	}
 	Particles.resize(np);
   }
@@ -211,7 +225,8 @@ void DistributeHaloes(MpiWorker_t &world, int root, vector <Halo_T> & InHalos, v
 		ReceiveBuffers[rank][haloid]=p;
 		np+=ReceiveSizes[rank][haloid];
 	  }
-	}	
+	}
+	
 	for(int rank=0;rank<world.size();rank++)
 	{
 	  MPI_Type_create_hindexed(NumNewHalos, ReceiveSizes[rank].data(), ReceiveBuffers[rank].data(), MPI_HBT_Particle, &ReceiveTypes[rank]);
@@ -226,6 +241,19 @@ void DistributeHaloes(MpiWorker_t &world, int root, vector <Halo_T> & InHalos, v
 	  MPI_Type_free(&ReceiveTypes[rank]);
 	}
 	MPI_Type_free(&MPI_HBT_Particle);
+
+	//restore particle order and particle id
+	for(HBTInt haloid=0, allhaloid=0;haloid<NumNewHalos;haloid++)
+	{
+	  auto & Particles=NewHalos[haloid].Particles;
+	  sort(Particles.begin(), Particles.end(), ComparePId);//FIXME
+	  while(maxsize[allhaloid].rank!=thisrank) allhaloid++;
+	  auto & PIds=PIdBackup[allhaloid];
+	  // 	assert(PIds.size()==Particles.size());
+	  for(HBTInt i=0;i<Particles.size();i++)
+		Particles[i].Id=PIds[i];
+	  allhaloid++;
+	}
 	
 	//copy other properties
 	vector <Halo_T> TmpHalos;
