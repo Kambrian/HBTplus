@@ -189,9 +189,20 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
   NumberOfParticles=accumulate(NumberOfDMParticleInFiles.begin()+nfiles_skip, NumberOfDMParticleInFiles.begin()+nfiles_end, NumberOfParticles);
   Particles.reserve(NumberOfParticles);
   
-  for(int iFile=nfiles_skip; iFile<nfiles_end; iFile++)
-	ReadFile(iFile);
-    
+  for(int i=0, ireader=0;i<world.size();i++, ireader++)
+  {
+	if(ireader==HBTConfig.MaxConcurrentIO) 
+	{
+	  ireader=0;//reset reader count
+	  MPI_Barrier(world.Communicator);//wait for every thread to arrive.
+	}
+	if(i==world.rank())//read
+	{
+	  for(int iFile=nfiles_skip; iFile<nfiles_end; iFile++)
+		ReadFile(iFile);
+	}
+  }
+      
   if(!HBTConfig.SnapshotHasIdBlock)
   for(HBTInt i=0;i<size();i++)
 	Particles[i].Id=OffsetOfDMParticleInFiles[nfiles_skip]+i;

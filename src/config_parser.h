@@ -34,6 +34,7 @@ public:
   vector <bool> IsSet;
   
   /*optional*/
+  int MaxConcurrentIO;
   int MinSnapshotIndex;
   int MinNumPartOfSub;
   int GroupFileVariant;
@@ -70,6 +71,7 @@ public:
   
   Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries, false),SnapshotIdList()
   {
+	MaxConcurrentIO=10;
 	MinSnapshotIndex=0;
 	MinNumPartOfSub=20;
 	GroupFileVariant=GROUP_FORMAT_GADGET3_INT;

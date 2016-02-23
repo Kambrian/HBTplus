@@ -438,13 +438,24 @@ void HaloSnapshot_t::Load(MpiWorker_t & world, int snapshot_index)
   /* read particles*/
   ParticleIdBuffer_t ParticleBuffer;
   ParticleBuffer.reserve(thistask.npart);
-  for(int iFile=thistask.ifile_begin;iFile<thistask.ifile_end;iFile++)
+  for(int i=0, ireader=0;i<world.size();i++, ireader++)
   {
-	HBTInt start_particle=0, end_particle=-1;
-	if(iFile==thistask.ifile_begin) start_particle=thistask.firstfile_begin_part;
-	if(iFile==thistask.ifile_end-1) end_particle=thistask.lastfile_end_part;
-	Reader.Read(iFile, READ_PARTICLES, start_particle, end_particle);
-	ParticleBuffer.insert(ParticleBuffer.end(), Reader.Particles.begin(), Reader.Particles.end());
+	if(ireader==HBTConfig.MaxConcurrentIO) 
+	{
+	  ireader=0;//reset reader count
+	  MPI_Barrier(world.Communicator);//wait for every thread to arrive.
+	}
+	if(i==world.rank())//read
+	{
+	  for(int iFile=thistask.ifile_begin;iFile<thistask.ifile_end;iFile++)
+	  {
+		HBTInt start_particle=0, end_particle=-1;
+		if(iFile==thistask.ifile_begin) start_particle=thistask.firstfile_begin_part;
+		if(iFile==thistask.ifile_end-1) end_particle=thistask.lastfile_end_part;
+		Reader.Read(iFile, READ_PARTICLES, start_particle, end_particle);
+		ParticleBuffer.insert(ParticleBuffer.end(), Reader.Particles.begin(), Reader.Particles.end());
+	  }
+	}
   }
   
   /* populate haloes*/

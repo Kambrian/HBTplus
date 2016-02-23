@@ -1,7 +1,7 @@
 #!/bin/bash
 # this file is intended to be used with bsub, for job submition
 ##BSUB -L /bin/bash       # script shell language (/bin/tcsh, /bin/ksh etc.) NOTE: this cause problem on SHAO cluster of missing libimf.so
-#BSUB -n 32             # number of cores required
+#BSUB -n 40             # number of cores required
 ##BSUB -M 100000        #max (MB)
 ##BSUB -m "cosma-f"
 ##BSUB -R "rusage[mem=3000]"  #reserve 3gb
@@ -9,7 +9,7 @@
 #BSUB -o HBT.Log.%J    # log file for standard output
 #BSUB -e HBT.Log.%J     # log file for standard error
 ##BSUB -q normal              # target queue for job execution
-#BSUB -q bench1
+#BSUB -q cosma
 #BSUB -P durham             #project to charge time; durham or dp004
 ##BSUB -u hanjiaxin@gmail.com
 ##BSUB -N
@@ -28,6 +28,6 @@ ulimit -s unlimited
 # but seems not always use the maximum available number of cpus allowed by NUM_THREADS
 # so better not allow it to adjust. shit.
 # export KMP_BLOCKTIME=0  # this seems to help a lot, to reuse thread immediately after its job is finished
-export OMP_NUM_THREADS=12
+export OMP_NUM_THREADS=20
 
 mpirun -np $LSB_DJOB_NUMPROC HBTdouble configs/Millennium2.conf $snapstart $snapend

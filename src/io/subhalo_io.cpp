@@ -129,13 +129,15 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
   SetSnapshotIndex(snapshot_index);
   
   int NumberOfFiles;
+  HBTInt TotNumberOfSubs;
   if(world.rank()==0)
   {
   string filename;
   GetSubFileName(filename, 0);
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   
-  ReadDataset(file, "NumberOfFiles", H5T_HBTInt, &NumberOfFiles);
+  ReadDataset(file, "NumberOfFiles", H5T_NATIVE_INT, &NumberOfFiles);
+  ReadDataset(file, "NumberOfSubhalosInAllFiles", H5T_HBTInt, &TotNumberOfSubs);
   }
   MPI_Bcast(&NumberOfFiles, 1, MPI_INT, 0, world.Communicator);
   
@@ -143,10 +145,33 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
   int nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), NumberOfFiles, nfiles_skip, nfiles_end);
   
-  for(int iFile=nfiles_skip;iFile<nfiles_end;iFile++)
-	ReadFile(iFile, load_src);
+  for(int i=0, ireader=0;i<world.size();i++, ireader++)
+  {
+	if(ireader==HBTConfig.MaxConcurrentIO) 
+	{
+	  ireader=0;//reset reader count
+	  MPI_Barrier(world.Communicator);//wait for every thread to arrive.
+	}
+	if(i==world.rank())//read
+	{
+	  for(int iFile=nfiles_skip;iFile<nfiles_end;iFile++)
+		ReadFile(iFile, load_src);
+	}
+  }
 
   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
+  
+  HBTInt NumSubs=Subhalos.size(), NumSubsAll_loaded=0;
+  MPI_Reduce(&NumSubs, &NumSubsAll_loaded, 1, MPI_HBT_INT, MPI_SUM, 0, world.Communicator);
+  if(world.rank()==0)
+  {
+	if(NumSubsAll_loaded!=TotNumberOfSubs)
+	{
+	  ostringstream msg;
+	  msg<<"Error reading SubSnap "<<snapshot_index<<": total number of subhaloes expected="<<TotNumberOfSubs<<", loaded="<<NumSubsAll_loaded<<endl;
+	  throw runtime_error(msg.str().c_str());
+	}
+  }
 }
 void SubhaloSnapshot_t::ReadFile(int iFile, bool load_src)
 {//Read iFile for current snapshot. 
@@ -237,7 +262,23 @@ inline void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsiz
 }
 void SubhaloSnapshot_t::Save(MpiWorker_t &world)
 {
-  int iFile=world.rank();
+  HBTInt NumSubsAll=0, NumSubs=Subhalos.size();
+  MPI_Allreduce(&NumSubs, &NumSubsAll, 1, MPI_HBT_INT, MPI_SUM, world.Communicator);
+  for(int i=0, ireader=0;i<world.size();i++, ireader++)
+  {
+	if(ireader==HBTConfig.MaxConcurrentIO) 
+	{
+	  ireader=0;//reset reader count
+	  MPI_Barrier(world.Communicator);//wait for every thread to arrive.
+	}
+	if(i==world.rank())//read
+	{
+	  WriteFile(world.rank(), world.size(), NumSubsAll);
+	}
+  }
+}
+void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, int NumSubsAll)
+{
   stringstream formater;
   formater<<HBTConfig.SubhaloPath<<"/SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
   string filename(formater.str());
@@ -245,7 +286,6 @@ void SubhaloSnapshot_t::Save(MpiWorker_t &world)
   hid_t file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   hsize_t ndim=1, dim_atom[]={1};
-  int nfiles=world.size();
   writeHDFmatrix(file, &nfiles, "NumberOfFiles", ndim, dim_atom, H5T_NATIVE_INT);
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5T_NATIVE_INT);
   writeHDFmatrix(file, &OmegaM0, "OmegaM0", ndim, dim_atom, H5T_HBTReal);
@@ -254,6 +294,7 @@ void SubhaloSnapshot_t::Save(MpiWorker_t &world)
   writeHDFmatrix(file, &ScaleFactor, "ScaleFactor", ndim, dim_atom, H5T_HBTReal);
   writeHDFmatrix(file, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);
   writeHDFmatrix(file, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
+  writeHDFmatrix(file, &NumSubsAll, "NumberOfSubhalosInAllFiles", ndim, dim_atom, H5T_HBTInt);//for data verification
   
   hsize_t dim_sub[]={Subhalos.size()};
   writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); 

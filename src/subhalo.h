@@ -171,6 +171,7 @@ private:
   void BuildMPIDataType();
   void PurgeMostBoundParticles();
   void ReadFile(int iFile, bool load_src);
+  void WriteFile(int iFile, int nfiles, int NumSubsAll);
 public:
   SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;
