@@ -1,5 +1,7 @@
 rename NumberOfParticles etc in snapshotshots to refer to local counts
 
+keep unique ordering of tracks so that it's reproducible. this can be good when one output is broken and you want to make up.
+
 Better parallelization
 
 check compatibility with other compilers/MPIs

@@ -277,7 +277,7 @@ void SubhaloSnapshot_t::Save(MpiWorker_t &world)
 	}
   }
 }
-void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, int NumSubsAll)
+void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 {
   stringstream formater;
   formater<<HBTConfig.SubhaloPath<<"/SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
