@@ -239,7 +239,7 @@ void Subhalo_t::CalculateShape()
   
   double Ixx=0,Iyy=0, Izz=0, Ixy=0, Ixz=0, Iyz=0;
   double Ixxw=0,Iyyw=0, Izzw=0, Ixyw=0, Ixzw=0, Iyzw=0;
-  #pragma omp paralle for reduction(+:Ixx,Iyy,Izz,Ixy,Ixz,Iyz,Ixxw,Iyyw,Izzw,Ixyw,Ixzw,Iyzw) if(Nbound>100)
+  #pragma omp parallel for reduction(+:Ixx,Iyy,Izz,Ixy,Ixz,Iyz,Ixxw,Iyyw,Izzw,Ixyw,Ixzw,Iyzw) if(Nbound>100)
   for(HBTInt i=1;i<Nbound;i++)
   {
 // 	  HBTReal PartMass=part_snap.GetMass(Particles[i]);//TODO: variable particle mass support.
