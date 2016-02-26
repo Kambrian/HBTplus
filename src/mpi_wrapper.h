@@ -14,8 +14,8 @@ class MpiWorker_t
 public:
   int  NumberOfWorkers, WorkerId, NameLen; 
   char HostName[MPI_MAX_PROCESSOR_NAME];
-  MPI_Comm &Communicator;
-  MpiWorker_t(MPI_Comm comm): Communicator(comm)
+  MPI_Comm Communicator; //do not use reference
+  MpiWorker_t(MPI_Comm comm): Communicator(comm) //the default initializer will copy a handle? doesn't matter.
   {
 	MPI_Comm_size(comm,&NumberOfWorkers);
 	MPI_Comm_rank(comm,&WorkerId);
