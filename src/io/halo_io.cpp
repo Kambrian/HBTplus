@@ -364,6 +364,8 @@ typedef vector <HBTInt> ParticleIdBuffer_t;
 typedef vector <int> CountBuffer_t;
 void AssignHaloTasks(int nworkers, int npart_tot, const CountBuffer_t & HaloOffsets, const CountBuffer_t &FileOffsets, int & npart_begin, FileAssignment_t &task)
 {
+  if(0==npart_tot) return;
+  
   int npart_this=(npart_tot-npart_begin)/nworkers;
   int npart_end=npart_begin+npart_this;
   
@@ -379,7 +381,7 @@ void AssignHaloTasks(int nworkers, int npart_tot, const CountBuffer_t & HaloOffs
   
   task.firstfile_begin_part=npart_begin-FileOffsets[task.ifile_begin];
   task.lastfile_end_part=npart_end-FileOffsets[task.ifile_end-1];
-    
+  
   npart_begin=npart_end;
 }
 void HaloSnapshot_t::Load(MpiWorker_t & world, int snapshot_index)
