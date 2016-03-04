@@ -99,7 +99,7 @@ inline bool ComparePId(const Particle_t &a, const Particle_t &b)
   return (a.Id<b.Id);
 }
 template <class Halo_T>
-void DistributeHaloes(MpiWorker_t &world, int root, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, const ParticleSnapshot_t &snap, MPI_Datatype MPI_Halo_Shell_Type)
+void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHalos, vector <Halo_T> & OutHalos, const ParticleSnapshot_t &snap, MPI_Datatype MPI_Halo_Shell_Type)
 /*distribute InHalos from root to around world. 
  *the destination of each halo is the one whose particle snapshot holds the most of this halo's particles. 
  *the distributed haloes are appended to OutHalos on each node.
@@ -271,5 +271,53 @@ void DistributeHaloes(MpiWorker_t &world, int root, vector <Halo_T> & InHalos, v
 	  CompileOffsets(Counts, Disps);
 	}
 	MPI_Scatterv(TmpHalos.data(), Counts.data(), Disps.data(), MPI_Halo_Shell_Type, &NewHalos[0], NumNewHalos, MPI_Halo_Shell_Type, root, world.Communicator);
+}
+template <class Halo_T>
+void DistributeHaloesSafely(MpiWorker_t &world, int root, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, const ParticleSnapshot_t &snap, MPI_Datatype MPI_Halo_Shell_Type)
+/* break InHalos into small chunks and then DistributeHaloes(), to avoid overflow in MPI message size */
+{
+  const int MaxChunkSize=1024*1024;
+  int flagstop=0;
+  VectorView_t <Halo_T> HaloChunk;
+  if(world.rank()==root)
+  {
+	HBTInt offset=0, chunksize=0;
+	for(HBTInt i=0;i<InHalos.size();i++)
+	{
+	  chunksize+=InHalos[i].Particles.size();
+	  if(chunksize>=MaxChunkSize)
+	  {//send buffer
+		HaloChunk.Bind(i-offset, &InHalos[offset]);
+		if(HaloChunk.size())
+		{
+		  MPI_Bcast(&flagstop, 1, MPI_INT, root, world.Communicator);
+		  DistributeHaloes(world, root, HaloChunk, OutHalos, snap, MPI_Halo_Shell_Type);
+		}
+		//reset buffer
+		offset=i;
+		chunksize=InHalos[i].Particles.size();//the current halo
+	  }
+	}
+	//remaining ones
+	if(InHalos.size()>offset)
+	{
+	  HaloChunk.Bind(InHalos.size()-offset, &InHalos[offset]);
+	  MPI_Bcast(&flagstop, 1, MPI_INT, root, world.Communicator);
+	  DistributeHaloes(world, root, HaloChunk, OutHalos, snap, MPI_Halo_Shell_Type);
+	}
+	flagstop=1;
+	MPI_Bcast(&flagstop, 1, MPI_INT, root, world.Communicator);
+  }
+  else
+  {
+	while(true)
+	{
+	  MPI_Bcast(&flagstop, 1, MPI_INT, root, world.Communicator);
+	  if(flagstop) 
+		break;
+	  else
+	    DistributeHaloes(world, root, HaloChunk, OutHalos, snap, MPI_Halo_Shell_Type);
+	}
+  }
 }
 #endif

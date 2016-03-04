@@ -87,7 +87,7 @@ void SubhaloSnapshot_t::UpdateParticles(MpiWorker_t& world, const ParticleSnapsh
   SetEpoch(snapshot);
   SubhaloList_t LocalSubhalos;
   for(int rank=0;rank<world.size();rank++)//one by one through the nodes
-	DistributeHaloes(world, rank, Subhalos, LocalSubhalos, snapshot, MPI_HBT_SubhaloShell_t);
+	DistributeHaloesSafely(world, rank, Subhalos, LocalSubhalos, snapshot, MPI_HBT_SubhaloShell_t);
   Subhalos.swap(LocalSubhalos);
 }
 /*

@@ -204,7 +204,7 @@ void FindLocalHosts(const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &p
   Subhalos.resize(nsub);
 }
 
-void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap, vector <Subhalo_t> &Subhalos, vector <Subhalo_t> &LocalSubhalos, MPI_Datatype MPI_Subhalo_Shell_Type)
+void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap, VectorView_t <Subhalo_t> &Subhalos, vector <Subhalo_t> &LocalSubhalos, MPI_Datatype MPI_Subhalo_Shell_Type)
 /*scatter Subhalos from process root to LocalSubhalos in every other process
  Note Subalos are "moved", so are in a unspecified state upon return.*/
 {
@@ -338,6 +338,53 @@ void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_sna
 	}
 	MPI_Scatterv(TmpHalos.data(), Counts.data(), Disps.data(), MPI_Subhalo_Shell_Type, &NewSubhalos[0], NumNewSubs, MPI_Subhalo_Shell_Type, root, world.Communicator);
 }
+void FindOtherHostsSafely(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap, vector <Subhalo_t> &Subhalos, vector <Subhalo_t> &LocalSubhalos, MPI_Datatype MPI_Subhalo_Shell_Type)
+/*break Subhalos into small chunks and then FindOtherHosts() for them, to avoid overflow in MPI message size*/
+{
+  const int MaxChunkSize=1024*1024;
+  int flagstop=0;
+  VectorView_t <Subhalo_t> HaloChunk;
+  if(world.rank()==root)
+  {
+	HBTInt offset=0, chunksize=0;
+	for(HBTInt i=0;i<Subhalos.size();i++)
+	{
+	  chunksize+=Subhalos[i].Particles.size();
+	  if(chunksize>=MaxChunkSize)
+	  {//send buffer
+		HaloChunk.Bind(i-offset, &Subhalos[offset]);
+		if(HaloChunk.size())
+		{
+		  MPI_Bcast(&flagstop, 1, MPI_INT, root, world.Communicator);
+		  FindOtherHosts(world, root, halo_snap, part_snap, HaloChunk, LocalSubhalos, MPI_Subhalo_Shell_Type);
+		}
+		//reset buffer
+		offset=i;
+		chunksize=Subhalos[i].Particles.size();//the current halo
+	  }
+	}
+	//remaining ones
+	if(Subhalos.size()>offset)
+	{
+	  HaloChunk.Bind(Subhalos.size()-offset, &Subhalos[offset]);
+	  MPI_Bcast(&flagstop, 1, MPI_INT, root, world.Communicator);
+	  FindOtherHosts(world, root, halo_snap, part_snap, HaloChunk, LocalSubhalos, MPI_Subhalo_Shell_Type);
+	}
+	flagstop=1;
+	MPI_Bcast(&flagstop, 1, MPI_INT, root, world.Communicator);
+  }
+  else
+  {
+	while(true)
+	{
+	  MPI_Bcast(&flagstop, 1, MPI_INT, root, world.Communicator);
+	  if(flagstop) 
+		break;
+	  else
+	    FindOtherHosts(world, root, halo_snap, part_snap, HaloChunk, LocalSubhalos, MPI_Subhalo_Shell_Type);
+	}
+  }
+}
 void SubhaloSnapshot_t::AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap)
 /* find host haloes for subhaloes, and build MemberTable. Each subhalo is moved to the processor of its host halo, with its HostHaloId set to the local haloid of the host*/
 {
@@ -349,7 +396,7 @@ void SubhaloSnapshot_t::AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_sna
   halo_snap.FillParticleHash();
   FindLocalHosts(halo_snap, part_snap, Subhalos, LocalSubhalos);
   for(int rank=0;rank<world.size();rank++)
-	FindOtherHosts(world, rank, halo_snap, part_snap, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t);
+	FindOtherHostsSafely(world, rank, halo_snap, part_snap, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t);
   Subhalos.swap(LocalSubhalos);
   halo_snap.ClearParticleHash();
     
