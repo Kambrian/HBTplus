@@ -14,8 +14,6 @@
 #include "../mymath.h"
 #include "../halo.h"
 
-
-
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
 
@@ -247,6 +245,7 @@ void GroupFileReader_t::ReadV2V3(int read_level, HBTInt start_particle, HBTInt e
 	  fclose(fd);
 	  return;
 	}
+	fclose(fd);
  
   if(FileCounts>1)
 	  sprintf(filename, filename_format.c_str(), "ids", iFile);
@@ -361,13 +360,13 @@ struct FileAssignment_t
 };
 
 typedef vector <HBTInt> ParticleIdBuffer_t;
-typedef vector <int> CountBuffer_t;
-void AssignHaloTasks(int nworkers, int npart_tot, const CountBuffer_t & HaloOffsets, const CountBuffer_t &FileOffsets, int & npart_begin, FileAssignment_t &task)
+typedef vector <HBTInt> CountBuffer_t;
+void AssignHaloTasks(int nworkers, HBTInt npart_tot, const CountBuffer_t & HaloOffsets, const CountBuffer_t &FileOffsets, HBTInt & npart_begin, FileAssignment_t &task)
 {
   if(0==npart_tot) return;
   
-  int npart_this=(npart_tot-npart_begin)/nworkers;
-  int npart_end=npart_begin+npart_this;
+  HBTInt npart_this=(npart_tot-npart_begin)/nworkers;
+  HBTInt npart_end=npart_begin+npart_this;
   
   task.haloid_begin=lower_bound(HaloOffsets.begin(), HaloOffsets.end()-1, npart_begin)-HaloOffsets.begin();
   HBTInt endhalo=lower_bound(HaloOffsets.begin(), HaloOffsets.end()-1, npart_end)-HaloOffsets.begin();
@@ -417,7 +416,8 @@ void HaloSnapshot_t::Load(MpiWorker_t & world, int snapshot_index)
 	assert(CompileOffsets(HaloLenBuffer, HaloOffsetBuffer)==Nparticles);//the offsets in the group file may not always be correct. recompile.
 	HaloOffsetBuffer.push_back(Nparticles);//end offset
 	alltasks.resize(world.size());
-	int nworkers=world.size(), npart_begin=0; 
+	int nworkers=world.size();
+	HBTInt npart_begin=0; 
 	for(int rank=0;rank<world.size();rank++)
 	  AssignHaloTasks(nworkers--, Nparticles, HaloOffsetBuffer, FileOffset, npart_begin, alltasks[rank]);
   }
@@ -428,13 +428,13 @@ void HaloSnapshot_t::Load(MpiWorker_t & world, int snapshot_index)
   if(world.rank()==0)
   {
 	for(int rank=1;rank<world.size();rank++)
-	  MPI_Send(HaloLenBuffer.data()+alltasks[rank].haloid_begin, alltasks[rank].nhalo, MPI_INT, rank, 0, world.Communicator);
+	  MPI_Send(HaloLenBuffer.data()+alltasks[rank].haloid_begin, alltasks[rank].nhalo, MPI_HBT_INT, rank, 0, world.Communicator);
 	HaloLenBuffer.resize(thistask.nhalo);
   }
   else
   {
 	HaloLenBuffer.resize(thistask.nhalo);
-	MPI_Recv(HaloLenBuffer.data(), HaloLenBuffer.size(), MPI_INT, 0, 0, world.Communicator, MPI_STATUS_IGNORE);
+	MPI_Recv(HaloLenBuffer.data(), HaloLenBuffer.size(), MPI_HBT_INT, 0, 0, world.Communicator, MPI_STATUS_IGNORE);
   }
   
   /* read particles*/
@@ -500,25 +500,27 @@ void HaloSnapshot_t::Clear()
 
 int main(int argc, char **argv)
 {
-  mpi::environment env;
-  MpiWorker_t world;
-  
+  MPI_Init(&argc, &argv);
+  MpiWorker_t world(MPI_COMM_WORLD);
+   
   int snapshot_start, snapshot_end;
   if(0==world.rank())
 	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
   HBTConfig.BroadCast(world, 0, snapshot_start, snapshot_end);
-  
+
   HaloSnapshot_t halo;
-  ParticleSnapshot_t snap;
-  snap.Load(world, snapshot_start);
-  cout<<"snapshot loaded\n";
+//   ParticleSnapshot_t snap;
+//   snap.Load(world, snapshot_start);
+//   cout<<"snapshot loaded\n";
   halo.Load(world, snapshot_start);
-  halo.UpdateParticles(world, snap);
+//   halo.UpdateParticles(world, snap);
   if(halo.Halos.size()>1)
   {
 	auto & h=halo.Halos[1];
 	cout<<" Halo 1 from thread "<<world.rank()<<":"<<"id="<<h.HaloId<<","<<h.Particles.size()<<", "<<h.Particles[5]<<endl;
   }
+  
+  MPI_Finalize();
   return 0;
 }
 #endif

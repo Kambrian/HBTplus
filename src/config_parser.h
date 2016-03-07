@@ -10,7 +10,7 @@
 #include "datatypes.h"
 #include "mpi_wrapper.h"
 
-#define HBT_VERSION "1.6.4.MPI"
+#define HBT_VERSION "1.6.5.MPI"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
