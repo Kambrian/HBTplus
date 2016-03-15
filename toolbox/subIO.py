@@ -4,11 +4,32 @@ import h5py
 import sys
 from numpy.lib.recfunctions import append_fields
 
+def PeriodicDistance(x,y, BoxSize, axis=-1):
+  d=x-y
+  d[d>BoxSize/2]=d[d>BoxSize/2]-BoxSize
+  d[d<-BoxSize/2]=d[d<-BoxSize/2]+BoxSize
+  return np.sqrt(np.sum(d**2, axis=axis))
+
+def distance(x,y, axis=1):
+  return np.sqrt(np.sum((x-y)**2, axis=axis))
+
+def GetFileName(isnap, rootdir, ifile, singlefile=False):
+  if singlefile:
+	return rootdir+'/SubSnap_%03d.hdf5'%isnap
+  else:
+	return rootdir+'/SubSnap_%03d.%d.hdf5'%(isnap,ifile)
+  
 def LoadSubhalos(isnap, rootdir):
-  nfiles=h5py.File(rootdir+'SubSnap_%03d.%d.hdf5'%(isnap,0), 'r')['NumberOfFiles'][...]
+  singlefile=False
+  try:
+	nfiles=h5py.File(GetFileName(isnap, rootdir, 0, False),'r')['NumberOfFiles'][...]
+  except:
+	singlefile=True
+	nfiles=1
+	
   subhalos=[]
   for i in xrange(nfiles):
-	subfile=h5py.File(rootdir+'SubSnap_%03d.%d.hdf5'%(isnap,i), 'r')
+	subfile=h5py.File(GetFileName(isnap, rootdir, i, singlefile), 'r')
 	subhalos.append(subfile['Subhalos'][...])
 	subfile.close()
   subhalos=np.hstack(subhalos)
@@ -22,9 +43,9 @@ def GetSub(trackId, isnap, rootdir):
 def GetTrack(trackId, rootdir, MaxSnap):
   track=[];
   snaps=[]
-  snapbirth=getSub(trackId, MaxSnap, rootdir)['SnapshotIndexOfBirth']
+  snapbirth=GetSub(trackId, MaxSnap, rootdir)['SnapshotIndexOfBirth']
   for isnap in range(snapbirth, MaxSnap+1):
-	  s=getSub(trackId, isnap)
+	  s=GetSub(trackId, isnap, rootdir)
 	  track.append(s)
 	  snaps.append(isnap)
-  return append_fields(np.array(track), 'Snapshot', np.array(snaps)).data
+  return append_fields(np.array(track), 'Snapshot', np.array(snaps), usemask=False)
