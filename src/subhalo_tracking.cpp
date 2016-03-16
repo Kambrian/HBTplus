@@ -508,7 +508,6 @@ void SubhaloSnapshot_t::RegisterNewTracks(MpiWorker_t &world)
 {
   HBTInt NumSubMax=Subhalos.size(), NumSubOld=NumSubMax-MemberTable.NBirth;
   HBTInt NumSubNew=NumSubOld;
-  MemberTable.ResizeAllMembers(NumSubMax);
   for(HBTInt i=NumSubNew;i<NumSubMax;i++)
   {
 	if(Subhalos[i].Nbound>1)
@@ -518,11 +517,10 @@ void SubhaloSnapshot_t::RegisterNewTracks(MpiWorker_t &world)
 	  NumSubNew++;
 	}
   }
+  Subhalos.resize(NumSubNew);
   MemberTable.Build(MemberTable.SubGroups.size(), Subhalos, true);//rebuild membership with new subs and also include orphans this time.
   MemberTable.NFake=NumSubMax-NumSubNew;
   MemberTable.NBirth=NumSubNew-NumSubOld;
-  Subhalos.resize(NumSubNew);
-//   MemberTable.ResizeAllMembers(NumSubNew); //not necessary
   
   //now assign a global TrackId
   HBTInt TrackIdOffset, NBirth=MemberTable.NBirth, GlobalNumberOfSubs;
