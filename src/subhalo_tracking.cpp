@@ -308,7 +308,6 @@ void SubhaloSnapshot_t::RegisterNewTracks()
 {
   HBTInt NumSub=Subhalos.size(), NumTrackOld=NumSub-MemberTable.NBirth;
   HBTInt TrackId=NumTrackOld;
-  MemberTable.ResizeAllMembers(NumSub);
   for(HBTInt i=TrackId;i<NumSub;i++)
   {
 	if(Subhalos[i].Nbound>1)
@@ -319,10 +318,10 @@ void SubhaloSnapshot_t::RegisterNewTracks()
 	  TrackId++;
 	}
   }
+  Subhalos.resize(TrackId);//erase unbound ones
   MemberTable.Build(MemberTable.SubGroups.size(), Subhalos, true);//rebuild membership with new subs and also include orphans this time.
   MemberTable.NFake=NumSub-TrackId;
   MemberTable.NBirth=TrackId-NumTrackOld;
-  Subhalos.resize(TrackId);
 }
 void SubhaloSnapshot_t::PurgeMostBoundParticles()
 /* fix the possible issue that the most-bound particle of a subhalo might belong to a sub-sub.
