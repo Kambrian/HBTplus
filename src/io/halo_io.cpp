@@ -326,7 +326,8 @@ NumberOfParticles=0;
 // 	if(typeid(HBTInt)==typeid(PIDtype_t))//consider optimizing by using memcpy
   }
   
-  NumPartOfLargestHalo=*max_element(Len.begin(), Len.end());
+  NumPartOfLargestHalo=0;
+  if(Len.size()) NumPartOfLargestHalo=*max_element(Len.begin(), Len.end());
   
   for(int i=1;i<NumberOfHaloes;i++)
   {

@@ -303,7 +303,7 @@ void ParticleSnapshot_t::LoadPosition()
   else
   {
 	ComovingPosition=static_cast<HBTxyz *>(::operator new(sizeof(HBTxyz)*NumberOfParticles));
-	if(sizeof(HBTReal)==RealTypeSize)
+	if(sizeof(float)==RealTypeSize)
 	  AssignBlock(reinterpret_cast<HBTReal *>(ComovingPosition), static_cast<float *>(buf), NumberOfParticles*3);
 	else
 	  AssignBlock(reinterpret_cast<HBTReal *>(ComovingPosition), static_cast<double *>(buf), NumberOfParticles*3);
@@ -327,7 +327,7 @@ void ParticleSnapshot_t::LoadVelocity()
   else
   {
 	PhysicalVelocity=static_cast<HBTxyz *>(::operator new(sizeof(HBTxyz)*NumberOfParticles));
-	if(sizeof(HBTReal)==RealTypeSize)
+	if(sizeof(float)==RealTypeSize)
 	  AssignBlock(reinterpret_cast<HBTReal *>(PhysicalVelocity), static_cast<float *>(buf), NumberOfParticles*3);
 	else
 	  AssignBlock(reinterpret_cast<HBTReal *>(PhysicalVelocity), static_cast<double *>(buf), NumberOfParticles*3);
@@ -349,7 +349,7 @@ void ParticleSnapshot_t::LoadMass()
   else
   {
 	ParticleMass=static_cast<HBTReal *>(::operator new(sizeof(HBTReal)*NumberOfParticles));
-	if(sizeof(HBTReal)==RealTypeSize)
+	if(sizeof(float)==RealTypeSize)
 	  AssignBlock(ParticleMass, static_cast<float *>(buf), NumberOfParticles);
 	else
 	  AssignBlock(ParticleMass, static_cast<double *>(buf), NumberOfParticles);
