@@ -49,3 +49,11 @@ def GetTrack(trackId, rootdir, MaxSnap):
 	  track.append(s)
 	  snaps.append(isnap)
   return append_fields(np.array(track), 'Snapshot', np.array(snaps), usemask=False)
+
+def GetScaleFactor(isnap, rootdir):
+  try:
+	a=h5py.File(GetFileName(isnap, rootdir, 0, False),'r')['ScaleFactor'][0]
+  except:
+	a=h5py.File(GetFileName(isnap, rootdir, 0, True),'r')['ScaleFactor'][0]
+
+  return a

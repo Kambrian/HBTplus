@@ -108,6 +108,19 @@ void HaloSnapshot_t::GetFileNameFormat(string &format, int &FileCounts, bool &Is
 	return;
   }
   
+  sprintf(basefmt, "%s/snapdir_%03d/group_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId,SnapshotId);
+  sprintf(fmt, "%s.%%d", basefmt);
+  sprintf(filename, fmt, "tab", ifile);
+  if(file_exist(filename))
+  {
+	sprintf(pattern, basefmt, "tab");
+	strcat(pattern, ".*");
+	FileCounts=count_pattern_files(pattern);
+	NeedByteSwap=GetGroupFileByteOrder(filename, FileCounts, HBTConfig.GroupFileVariant);
+	format=fmt;
+	return;
+  }
+  
   sprintf(fmt, "%s/subhalo_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId);
   sprintf(filename, fmt, "tab");
   if(file_exist(filename))
