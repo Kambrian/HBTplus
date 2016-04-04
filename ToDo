@@ -1,3 +1,6 @@
+1)optimize unbinding: work on potential modification from unbound particles; consider do mass accretion rather than unbinding for centrals; use spherical potential for unbinding.
+2)debug distributehaloes
+
 rename NumberOfParticles etc in snapshotshots to refer to local counts
 
 keep unique ordering of tracks so that it's reproducible. this can be good when one output is broken and you want to make up.
