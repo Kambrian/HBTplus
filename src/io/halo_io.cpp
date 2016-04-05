@@ -179,7 +179,8 @@ void HaloSnapshot_t::LoadGroupV2V3()
 {
   FILE *fd;
   char filename[1024];
-  vector <int> Len, Offset;
+  vector <int> Len;
+  vector <HBTInt> Offset;
   int Ngroups, TotNgroups, Nids, NFiles;
   HBTInt NumberOfParticles,NumberOfHaloes;
   long long TotNids;
@@ -235,7 +236,8 @@ NumberOfParticles=0;
 	}
 	
 	myfread(Len.data()+Nload, sizeof(int), Ngroups, fd);
-	myfread(Offset.data()+Nload, sizeof(int), Ngroups, fd);
+	fseek(fd, sizeof(int)*Ngroups, SEEK_CUR);//skip offset
+// 	myfread(Offset.data()+Nload, sizeof(int), Ngroups, fd);
 	if(feof(fd))
 	{
 	  fprintf(stderr,"error:End-of-File in %s\n",filename);
