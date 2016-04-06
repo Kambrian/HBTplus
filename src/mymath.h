@@ -56,16 +56,23 @@ public:
   {
 	return tickers.size();
   }
-  double GetSeconds(int i_start)
+  double GetSeconds(int itick)
+  /*get the time spent from the previous tick to the current tick*/
   {
-	if(i_start+1<Size())
-	  return chrono::duration_cast<chrono::duration<double> >(tickers[i_start+1]-tickers[i_start]).count();
-	else
-	  return 0;
+	return GetSeconds(itick, itick-1);
   }
-  double GetSeconds(int i_start, int i_end)
+  double GetSeconds(int itick, int itick0)
+  /*get the time spent from itick0 to itick*/
   {
-	return chrono::duration_cast<chrono::duration<double> >(tickers[i_end]-tickers[i_start]).count();
+	double tsign=1.;
+	if(itick<itick0)
+	{
+	  tsign=-1.;
+	  swap(itick, itick0);
+	}
+	if(itick>Size()) itick=Size();
+	if(itick0<0) itick0=0;
+	return tsign*chrono::duration_cast<chrono::duration<double> >(tickers[itick]-tickers[itick0]).count();
   }
 };
 
