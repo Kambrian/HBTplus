@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 	
 	timer.Tick();
 	time_log<<isnap;
-	for(int i=0;i<timer.Size()-1;i++)
+	for(int i=1;i<timer.Size();i++)
 	  time_log<<"\t"<<timer.GetSeconds(i);
 	time_log<<endl;
 	timer.Reset();
