@@ -104,7 +104,7 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 	return;
   }
   HBTReal PartMass=part_snap.GetMass(Particles[0]);
-  HBTReal VelocityUnit=sqrt(PhysicalConst::G*PartMass/part_snap.ScaleFactor);
+  HBTReal VelocityUnit=PhysicalConst::G*PartMass/part_snap.ScaleFactor;
   
   const HBTxyz &cen=part_snap.GetComovingPosition(Particles[0]); //most-bound particle as center.
   
@@ -120,12 +120,12 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
   for(HBTInt i=0;i<Nbound;i++)
   {
 	  if(r[i]<HBTConfig.SofteningHalo) r[i]=HBTConfig.SofteningHalo; //resolution
-	  v[i]=sqrt((HBTReal)(i+1)/r[i]);
+	  v[i]=(HBTReal)(i+1)/r[i];//v**2
   }
   }
   HBTInt imax=max_element(v.begin(), v.end())-v.begin();
   RmaxComoving=r[imax];
-  VmaxPhysical=v[imax]*VelocityUnit;
+  VmaxPhysical=sqrt(v[imax]*VelocityUnit);
   RHalfComoving=r[Nbound/2];
   R2SigmaComoving=r[(HBTInt)(Nbound*0.955)];
   
