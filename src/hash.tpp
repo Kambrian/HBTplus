@@ -37,9 +37,10 @@ void MappedIndexTable_t<Key_t, Index_t>::Clear()
 template <class Key_t, class Index_t>
 inline int CompKeyWithPair(const void *a, const void *b)//used to sort Id in ascending order; 
 {
-  Key_t diff=(* static_cast<const Key_t *>(a))- static_cast<const IndexedKey_t<Key_t, Index_t> *> (b)->Key;
-  if(diff>0) return 1;
-  if(diff<0) return -1;
+  Key_t va=* static_cast<const Key_t *>(a);
+  Key_t vb=static_cast<const IndexedKey_t<Key_t, Index_t> *> (b)->Key;
+  if(va>vb) return 1;
+  if(va<vb) return -1;
   return 0;
 };
 template <class Key_t, class Index_t>
