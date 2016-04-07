@@ -16,6 +16,7 @@ CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 <!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
 LDLIBS+=$(HDFLIB) $(OMPFLAG) $(GSLLIB) $(BOOSTLIB)
 <!-- LINK.o=$(LINK.cpp) -->
+LDFLAGS+=-g
 
 ifneq (,$(filter $(CXX),mpic++ mpicxx mpiCC))
 BASECXX=$(shell $(CXX) -show|cut -c1-3)
@@ -45,3 +46,6 @@ clean_curdir:
 
 %clean: %
 	$(MAKE) -C $< clean
+
+depend_curdir:
+	makedepend --$(CXXFLAGS)-- -Y $(SRC)

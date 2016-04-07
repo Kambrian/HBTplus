@@ -8,6 +8,3 @@ $(TEST): HDFLIB=
 
 include ../Makefile.inc
 	
-depend:
-	makedepend --$(CXXFLAGS)-- -Y $(SRC)
-	
