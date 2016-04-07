@@ -13,6 +13,7 @@
 #include <vector>
 #include <algorithm>
 #include <assert.h>
+#include <mpi.h>
 
 #include "datatypes.h"
 #include "config_parser.h"
@@ -47,6 +48,12 @@ public:
   void Tick()
   {
 	tickers.push_back(chrono::high_resolution_clock::now());
+  }
+  void Tick(MPI_Comm comm)
+  //synchronized tick. wait for all processes to tick together.
+  {
+	MPI_Barrier(comm);
+	Tick();
   }
   void Reset()
   {
