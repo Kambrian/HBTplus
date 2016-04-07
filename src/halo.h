@@ -98,6 +98,16 @@ inline bool ComparePId(const Particle_t &a, const Particle_t &b)
 {
   return (a.Id<b.Id);
 }
+static void SortParticles(vector <Particle_t> &P)
+{
+  for(HBTInt i=0;i<P.size();i++)
+  {
+	auto &p=P[i];
+	auto &j=p.Id;
+	while(i!=j)
+	  swap(p, P[j]);
+  }
+}
 template <class Halo_T>
 void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHalos, vector <Halo_T> & OutHalos, const ParticleSnapshot_t &snap, MPI_Datatype MPI_Halo_Shell_Type)
 /*distribute InHalos from root to around world. 
@@ -139,7 +149,7 @@ void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHa
 	  HaloBuffers[i].resize(HaloSizes[i]);
   }
   
-  //broadcast particles
+  //broadcast particles.
   vector <MPI_Aint> HaloAddress(nhalo);
   for(HBTInt i=0;i<nhalo;i++)
   {
@@ -150,14 +160,15 @@ void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHa
   MPI_Datatype HaloType;
   MPI_Type_create_hindexed(nhalo, HaloSizes.data(), HaloAddress.data(), MPI_HBT_Particle, &HaloType);
   MPI_Type_commit(&HaloType);
-  MPI_Bcast(MPI_BOTTOM, 1, HaloType, root, world.Communicator);
+  MPI_Bcast(MPI_BOTTOM, 1, HaloType, root, world.Communicator);//hotspot 10%
   MPI_Type_free(&HaloType);
   }
   
-  //fill particles and decide movement
+  //fill particles and decide movement. bottleneck. >60%
   vector <SizeRank_t> size(HaloBuffers.size()), maxsize(HaloBuffers.size());
   vector <vector <HBTInt> >PIdBackup;
   PIdBackup.resize(HaloBuffers.size());
+#pragma omp parallel for schedule(dynamic)
   for(HBTInt haloid=0;haloid<HaloBuffers.size();haloid++)
   {
 	typename Halo_T::ParticleList_t & Particles=HaloBuffers[haloid];
@@ -169,7 +180,7 @@ void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHa
 	for(HBTInt i=0;i<Particles.size();i++)
 	{
 	  PIds[i]=Particles[i].Id;//backup original PId
-	  HBTInt index=snap.GetIndex(Particles[i]);
+	  HBTInt index=snap.GetIndex(PIds[i]);
 	  if(index!=SpecialConst::NullParticleId)
 	  {
 		Particles[np]=snap.Particles[index];
@@ -179,8 +190,7 @@ void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHa
 	}
 	Particles.resize(np);
   }
-
-	MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTRankPair, MPI_MAXLOC, world.Communicator);
+  MPI_Allreduce(size.data(), maxsize.data(), size.size(), MPI_HBTRankPair, MPI_MAXLOC, world.Communicator);
 	
 	vector <vector <MPI_Aint> > SendBuffers(world.size()), ReceiveBuffers(world.size());
 	vector <vector<int> > SendSizes(world.size()), ReceiveSizes(world.size());
@@ -202,7 +212,6 @@ void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHa
 	  MPI_Type_create_hindexed(SendSizes[rank].size(), SendSizes[rank].data(), SendBuffers[rank].data(), MPI_HBT_Particle, &SendTypes[rank]);
 	  MPI_Type_commit(&SendTypes[rank]);
 	}
-
 	VectorAllToAll(world, SendSizes, ReceiveSizes, MPI_INT);
 	
 	HBTInt NumNewHalos=ReceiveSizes[0].size();
@@ -226,15 +235,14 @@ void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHa
 		np+=ReceiveSizes[rank][haloid];
 	  }
 	}
-	
+
 	for(int rank=0;rank<world.size();rank++)
 	{
 	  MPI_Type_create_hindexed(NumNewHalos, ReceiveSizes[rank].data(), ReceiveBuffers[rank].data(), MPI_HBT_Particle, &ReceiveTypes[rank]);
 	  MPI_Type_commit(&ReceiveTypes[rank]);
 	}
-	
 	vector <int> Counts(world.size(),1), Disps(world.size(),0);
-	MPI_Alltoallw(MPI_BOTTOM, Counts.data(), Disps.data(), SendTypes.data(), MPI_BOTTOM, Counts.data(), Disps.data(), ReceiveTypes.data(), world.Communicator);
+	MPI_Alltoallw(MPI_BOTTOM, Counts.data(), Disps.data(), SendTypes.data(), MPI_BOTTOM, Counts.data(), Disps.data(), ReceiveTypes.data(), world.Communicator); // 10% hotspot
 	for(int rank=0;rank<world.size();rank++)
 	{
 	  MPI_Type_free(&SendTypes[rank]);
@@ -246,7 +254,8 @@ void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHa
 	for(HBTInt haloid=0, allhaloid=0;haloid<NumNewHalos;haloid++)
 	{
 	  auto & Particles=NewHalos[haloid].Particles;
-	  sort(Particles.begin(), Particles.end(), ComparePId);//FIXME
+	  SortParticles(Particles);
+// 	  sort(Particles.begin(), Particles.end(), ComparePId);
 	  while(maxsize[allhaloid].rank!=thisrank) allhaloid++;
 	  auto & PIds=PIdBackup[allhaloid];
 	  // 	assert(PIds.size()==Particles.size());
@@ -254,7 +263,7 @@ void DistributeHaloes(MpiWorker_t &world, int root, VectorView_t <Halo_T> & InHa
 		Particles[i].Id=PIds[i];
 	  allhaloid++;
 	}
-	
+
 	//copy other properties
 	vector <Halo_T> TmpHalos;
 	if(world.rank()==root)
