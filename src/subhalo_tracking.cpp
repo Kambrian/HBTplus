@@ -575,7 +575,7 @@ void SubhaloSnapshot_t::PurgeMostBoundParticles()
 void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap)
 {
   /*renew ranks after unbinding*/
-  RegisterNewTracks(world);
+  RegisterNewTracks(world);//performance bottleneck here. no. just poor synchronization.
   #pragma omp parallel
   {
   MemberTable.SortMemberLists(Subhalos);//reorder, so the central might change if necessary
