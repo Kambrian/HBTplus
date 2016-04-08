@@ -14,6 +14,7 @@ CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 #CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs
 #CXXFLAGS+=-xHost #to get it runnable on cosma-e 
 LDLIBS+=$(HDFLIB) $(OMPFLAG) $(GSLLIB) $(BOOSTLIB)
+LDFLAGS+=-g
 #LINK.o=$(LINK.cpp)
 
 ifneq (,$(filter $(CXX),mpic++ mpicxx mpiCC))
@@ -44,3 +45,6 @@ clean_curdir:
 
 %clean: %
 	$(MAKE) -C $< clean
+
+depend_curdir:
+	makedepend --$(CXXFLAGS)-- -Y $(SRC)
