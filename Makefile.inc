@@ -10,9 +10,9 @@ GSLLIB=-lgsl -lgslcblas
 CXX=g++
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 
 CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
-<!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
+# CXXFLAGS+=-xHost #to get it runnable on cosma-e
 LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPFLAG)
-<!-- LINK.o=$(LINK.cpp) -->
+# LINK.o=$(LINK.cpp) 
 
 ifeq ($(CXX), g++)
 OMPFLAG=-fopenmp
