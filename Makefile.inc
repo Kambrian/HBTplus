@@ -12,6 +12,8 @@ CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3
 CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 # CXXFLAGS+=-xHost #to get it runnable on cosma-e
 LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPFLAG)
+#CXXFLAGS+=-g
+#LDFLAGS+=-g
 # LINK.o=$(LINK.cpp) 
 
 ifeq ($(CXX), g++)
@@ -36,3 +38,6 @@ clean_curdir:
 
 %clean: %
 	$(MAKE) -C $< clean
+
+depend_curdir:
+	makedepend --$(CXXFLAGS)-- -Y $(SRC)
