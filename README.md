@@ -29,7 +29,19 @@ Below are a few macros to further customize the behaviour of HBT. These flags ca
 
     mpirun -np 2 HBT configs/Example.conf [snapshotstart] [snapshotend]
 
-will run it with 2 mpi processes. Set `OMP_NUM_THREADS` to adjust the number of openmp threads on each node.
+will run it with 2 mpi processes. Note this is hybrid MPI/OpenMP code. Each MPI process will spawn OMP_NUM_THREADS openmp threads. To avoid exceeding system resources, you need to make sure
+
+    np*OMP_NUM_THREADS<=N_cpus
+
+where np is the number of mpi processes, and N_cpus is the total number of cpus available (across all allocated nodes). Use the environment variable `OMP_NUM_THREADS` to adjust the number of openmp threads on each node. For example, 
+
+    export OMP_NUM_THREADS=8 
+    
+in `bash` or
+    
+    setenv OMP_NUM_THREADS 8
+    
+in `csh` will set the number of OpenMP threads to 8 for each MPI process. It is generally recommended to use one single MPI process on each computation node and set `OMP_NUM_THREADS` to the number of cpus on each node.
 
 Check `configs/Example.conf` for a sample parameter file.
 

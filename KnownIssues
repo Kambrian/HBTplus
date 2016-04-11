@@ -1,3 +1,10 @@
 - There could be significant performance degradation on an overloaded system. (OpenMP version)
 
   This is probably caused by the compiler (g++) failing to optimize the code well in case of system overload. Have to rely on resource allocation from a batch job scheduler (e.g., LSF). Or make sure the cpus are not overloaded if you are running on an interactive machine. 
+  
+- intel compiler 14.0.0 bug: "stl_vector.h(904): internal error: bad pointer emplace_back(_Args&&... __args);"
+
+  This is a bug in intel compiler 14.0.0 (https://software.intel.com/en-us/forums/intel-c-compiler/topic/472385). You can either upgrade your compiler, or use g++ instead. To use `g++`, change `CXX` in `Makefile.inc` to
+
+	CXX=mpicxx -cxx=g++
+  

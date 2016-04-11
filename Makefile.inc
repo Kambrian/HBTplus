@@ -7,16 +7,15 @@ GSLINC+=-DHAS_GSL
 GSLLIB=-lgsl -lgslcblas
 ###comment up to here to disable GSL.
 
-<!--CC=mpicc-->
-<!-- CXX=g++ -->
+#CC=mpicc
 CXX=mpiCC
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g  
 CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
-<!-- CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs -->
-<!-- CXXFLAGS+=-xHost #to get it runnable on cosma-e -->
+#CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs
+#CXXFLAGS+=-xHost #to get it runnable on cosma-e 
 LDLIBS+=$(HDFLIB) $(OMPFLAG) $(GSLLIB) $(BOOSTLIB)
-<!-- LINK.o=$(LINK.cpp) -->
 LDFLAGS+=-g
+#LINK.o=$(LINK.cpp)
 
 ifneq (,$(filter $(CXX),mpic++ mpicxx mpiCC))
 BASECXX=$(shell $(CXX) -show|cut -c1-3)
