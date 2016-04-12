@@ -27,7 +27,7 @@ Below are a few macros to further customize the behaviour of HBT. These flags ca
  
 ## Run
 
-    mpirun -np 2 HBT configs/Example.conf [snapshotstart] [snapshotend]
+    mpirun -np 2 ./HBT configs/Example.conf [snapshotstart] [snapshotend]
 
 will run it with 2 mpi processes. Note this is hybrid MPI/OpenMP code. Each MPI process will spawn OMP_NUM_THREADS openmp threads. To avoid exceeding system resources, you need to make sure
 
@@ -57,7 +57,11 @@ The outputs are in HDF5 format, which can be viewed with [HDFView](https://www.h
 
 Besides, the VER*.param records the version number of HBT used, as well as the parameter values used.
 
-Each subhalo is labelled by a unique `TrackId`, which is fixed throughout its evolution history. So doing merger tree with HBT is straightforward: the progenitor/descendent of a subhalo at another snapshot is simply the subhalo labelled by the same `TrackId` at that time. The host halo of each subhalo is given by `HostId`, which is the index of the host halo in the order stored in the corresponding (FoF) halo catalogue. To facilitate fast retrieval of all the subhaloes in each host halo, the `/Membership/GroupedTrackIds` dataset in the file stores the list of subhaloes in each group (Note this is only available for the OpenMP version of HBT2). `Nbound` gives the number of bound particles in the subhalo. `Nbound=1` means the subhalo has been disrupted, so that only the most-bound particle is still tracked. The other properties should be self-explainatory.
+Each subhalo is labelled by a unique `TrackId`, which is fixed throughout its evolution history. So doing merger tree with HBT is straightforward: the progenitor/descendent of a subhalo at another snapshot is simply the subhalo labelled by the same `TrackId` at that time. The host halo of each subhalo is given by `HostId`, which is the index of the host halo in the order stored in the corresponding (FoF) halo catalogue. To facilitate fast retrieval of all the subhaloes in each host halo, the `/Membership/GroupedTrackIds` dataset in the file stores the list of subhaloes in each group (Note this is only available for the OpenMP version of HBT2). `Nbound` gives the number of bound particles in the subhalo. 
+
+Once a subhalo is stripped to below `MinNumPartOfSub` specified in the parameter file, HBT continues to track its most bound particle. This single-particle descendents then have `Nbound=1`, and represent the "orphan" galaxy population in the framework of semi-analytical models. These orphans are also listed as subhaloes.
+
+The other properties should be self-explainatory.
 
 ## Reference
 For now, please cite the original [HBT paper](http://adsabs.harvard.edu/abs/2012MNRAS.427.2437H) if you use HBT in your work. We will soon have another paper coming out describing the new implementation here.
