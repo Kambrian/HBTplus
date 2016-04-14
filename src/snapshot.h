@@ -25,9 +25,26 @@ public:
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
   HBTReal Mass;
+  Particle_t()=default;
+  Particle_t(HBTInt id): Id(id)
+  {
+  }
   void create_MPI_type(MPI_Datatype &MPI_HBTParticle_t);
 };
 extern ostream& operator << (ostream& o, Particle_t &p);
+class RemoteParticle_t: public Particle_t
+{
+public:
+  int ProcessorId;
+  HBTInt Order;
+  
+//   using Particle_t::Particle_t;
+  using Particle_t::operator=;//inherit assignment operator
+  RemoteParticle_t()=default;
+  RemoteParticle_t(HBTInt id, int processorId, HBTInt order): Particle_t(id), ProcessorId(processorId), Order(order)
+  {
+  }
+};
 
 class SnapshotHeader_t
 {
@@ -194,6 +211,10 @@ public:
   
   void AveragePosition(HBTxyz & CoM, const HBTInt Particles[], HBTInt NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const HBTInt Particles[], HBTInt NumPart) const;
+  
+  void MpiGetParticles(MpiWorker_t &world, vector <RemoteParticle_t> &particles) const;
+  template <class Halo_T>
+  void ExchangeHalos(MpiWorker_t &world, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, MPI_Datatype MPI_Halo_Shell_Type) const;
 };
 inline HBTInt ParticleSnapshot_t::size() const
 {
@@ -226,6 +247,8 @@ inline HBTReal ParticleSnapshot_t::GetMass(HBTInt index) const
   else*/
 	return Particles[index].Mass;
 }
+
+#include "halo_exchange.tpp"
 
 extern void AveragePosition(HBTxyz& CoM, const Particle_t Particles[], HBTInt NumPart);
 extern void AverageVelocity(HBTxyz& CoV, const Particle_t Particles[], HBTInt NumPart);

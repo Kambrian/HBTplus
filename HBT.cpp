@@ -50,6 +50,7 @@ int main(int argc, char **argv)
 	halosnap.Load(world, isnap);
 	
 	timer.Tick(world.Communicator);
+	cout<<"updating halo particles...\n";
 	halosnap.UpdateParticles(world, partsnap);
 	timer.Tick(world.Communicator);
 	if(world.rank()==0) cout<<"updateing subsnap particles...\n";

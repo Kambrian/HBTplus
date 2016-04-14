@@ -8,11 +8,134 @@ using namespace std;
 #include <cstdlib>
 #include <cstdio>
 #include <chrono>
+#include <boost/concept_check.hpp>
 
 #include "snapshot.h"
 #include "mymath.h"
 #include <mpi.h>
 
+void create_Mpi_RemoteParticleType(MPI_Datatype& dtype, bool IdOnly)
+{
+  /*to create the struct data type for communication*/	
+  RemoteParticle_t p;
+  #define NumAttr 10
+  MPI_Datatype oldtypes[NumAttr];
+  int blockcounts[NumAttr];
+  MPI_Aint   offsets[NumAttr], origin,extent;
+  
+  MPI_Get_address(&p,&origin);
+  MPI_Get_address((&p)+1,&extent);//to get the extent of s
+  extent-=origin;
+  
+  int i=0;
+  #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
+  RegisterAttr(Id, MPI_HBT_INT, 1)
+  if(!IdOnly)
+  {
+  RegisterAttr(ComovingPosition, MPI_HBT_REAL, 3)
+  RegisterAttr(PhysicalVelocity, MPI_HBT_REAL, 3)
+  RegisterAttr(Mass, MPI_HBT_REAL, 1)
+  }
+  RegisterAttr(ProcessorId, MPI_INT, 1)
+  RegisterAttr(Order, MPI_HBT_INT, 1)
+  #undef RegisterAttr
+  assert(i<=NumAttr);
+  
+  MPI_Type_create_struct(i,blockcounts,offsets,oldtypes, &dtype);
+  MPI_Type_create_resized(dtype,(MPI_Aint)0, extent, &dtype);
+  MPI_Type_commit(&dtype);
+  #undef NumAttr
+}
+inline bool CompParticleOrder(const RemoteParticle_t &a, const RemoteParticle_t &b)
+{
+  return a.Order<b.Order;
+}
+static void SortRemoteParticles(vector <RemoteParticle_t> &P)
+{
+  for(HBTInt i=0;i<P.size();i++)
+  {
+	auto &p=P[i];
+	auto &j=p.Order;
+	while(i!=j)
+	  swap(p, P[j]);
+  }
+}
+void ParticleSnapshot_t::MpiGetParticles(MpiWorker_t& world, vector< RemoteParticle_t > &particles) const
+{
+  MPI_Datatype MPI_RemoteParticle_t, MPI_RemoteParticleId_t;
+  create_Mpi_RemoteParticleType(MPI_RemoteParticle_t, false);
+  create_Mpi_RemoteParticleType(MPI_RemoteParticleId_t, true);
+  
+  const int TagQuery=1, TagReturn=2;
+  MPI_Request req1, req2;
+  vector <MPI_Request> ReqReturn;
+  ReqReturn.reserve(particles.size());
+  for(HBTInt i=0;i<particles.size();i++)
+  {
+	auto &p=particles[i];
+// 	p.ProcessorId=world.rank();
+// 	p.Order=i;
+	HBTInt ind=GetIndex(p);
+	if(ind!=SpecialConst::NullParticleId)
+	{
+	  p=Particles[ind];
+	}
+	else
+	{
+	  MPI_Isend(&p, 1, MPI_RemoteParticleId_t, world.next(), TagQuery, world.Communicator, &req1);
+	  MPI_Irecv(&p, 1, MPI_RemoteParticle_t, MPI_ANY_SOURCE, TagReturn, world.Communicator, &req2);
+	  ReqReturn.push_back(req2);
+	}
+  }
+  vector <RemoteParticle_t> p_end(world.size());
+  for(auto it=p_end.begin();it!=p_end.end();it++) 
+  {
+	it->ProcessorId=it-p_end.begin();
+	it->Id=-1;
+  }
+  MPI_Isend(&p_end[world.rank()], 1, MPI_RemoteParticleId_t, world.next(), TagQuery, world.Communicator, &req1);//terminal particle, signalling end of traffic
+  cout<<"others on "<<world.rank()<<endl<<flush;
+  for(int iloop=1;iloop<world.size();iloop++)
+  {
+	while(true)
+	{
+	  RemoteParticle_t p;
+	  MPI_Recv(&p, 1, MPI_RemoteParticleId_t, world.prev(), TagQuery, world.Communicator, MPI_STATUS_IGNORE);
+	  int root=p.ProcessorId;
+	  if(p.Id==-1) //terminal particle
+	  {
+		if(world.next()!=root)//pass it on, and then stop current loop
+		  MPI_Isend(&p_end[root], 1, MPI_RemoteParticleId_t, world.next(), TagQuery, world.Communicator, &req1);//note p is temporary; pass p_end[root] instead
+		break;
+	  }
+	  
+	  HBTInt ind=GetIndex(p);
+	  if(ind!=SpecialConst::NullParticleId)
+	  {
+		p=Particles[ind];
+		p.ProcessorId=world.rank();
+		MPI_Send(&p, 1, MPI_RemoteParticle_t, root, TagReturn, world.Communicator);
+	  }
+	  else//not found
+	  {
+		if(world.next()!=root)//pass it on
+		  MPI_Isend(&p, 1, MPI_RemoteParticleId_t, world.next(), TagQuery, world.Communicator, &req1);
+		else
+		{
+		  p.ProcessorId=-1;//not found on any processor
+		  MPI_Send(&p, 1, MPI_RemoteParticle_t, root, TagReturn, world.Communicator);
+		}
+	  }
+	}
+  }
+  cout<<"waiting on "<<world.rank()<<"...\n"<<flush;
+  MPI_Waitall(ReqReturn.size(), ReqReturn.data(), MPI_STATUSES_IGNORE);
+  SortRemoteParticles(particles);
+//   sort(particles.begin(), particles.end(), CompParticleOrder);
+  
+  MPI_Type_free(&MPI_RemoteParticleId_t);
+  MPI_Type_free(&MPI_RemoteParticle_t);
+}
 void SnapshotHeader_t::create_MPI_type(MPI_Datatype& dtype)
 {
   /*to create the struct data type for communication*/	

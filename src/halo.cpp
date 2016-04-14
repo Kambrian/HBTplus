@@ -50,8 +50,7 @@ void HaloSnapshot_t::UpdateParticles(MpiWorker_t &world, const ParticleSnapshot_
 {
   SetEpoch(snap);
   HaloList_t LocalHalos;
-  for(int rank=0;rank<world.size();rank++)//one by one through the nodes
-	DistributeHaloesSafely(world, rank, Halos, LocalHalos, snap, MPI_HBT_HaloId_t);
+  snap.ExchangeHalos(world, Halos, LocalHalos, MPI_HBT_HaloId_t);
   Halos.swap(LocalHalos);
   
   TotNumberOfParticles=0;

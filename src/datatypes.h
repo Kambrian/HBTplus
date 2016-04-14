@@ -94,6 +94,7 @@ class VectorView_t
 /* similar to vector, but never actively manage memory; only bind to existing memory*/
 {
 public:
+  typedef T * iterator;
   HBTInt N;
   T * Data; //this is only copied. never allocated by itself.
   VectorView_t(): N(0), Data(nullptr)

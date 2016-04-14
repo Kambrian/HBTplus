@@ -12,7 +12,8 @@
 class MpiWorker_t
 { 
 public:
-  int  NumberOfWorkers, WorkerId, NameLen; 
+  int  NumberOfWorkers, WorkerId, NameLen;
+  int NextWorkerId, PrevWorkerId;//for ring communication
   char HostName[MPI_MAX_PROCESSOR_NAME];
   MPI_Comm Communicator; //do not use reference
   MpiWorker_t(MPI_Comm comm): Communicator(comm) //the default initializer will copy a handle? doesn't matter.
@@ -20,6 +21,10 @@ public:
 	MPI_Comm_size(comm,&NumberOfWorkers);
 	MPI_Comm_rank(comm,&WorkerId);
 	MPI_Get_processor_name(HostName, &NameLen);
+	NextWorkerId=WorkerId+1;
+	if(NextWorkerId==NumberOfWorkers) NextWorkerId=0;
+	PrevWorkerId=WorkerId-1;
+	if(PrevWorkerId<0) PrevWorkerId=NumberOfWorkers-1;
   }
   int size()
   {
@@ -28,6 +33,18 @@ public:
   int rank()
   {
 	return WorkerId;
+  }
+  int next()
+  {
+	return NextWorkerId;
+  }
+  int prev()
+  {
+	return PrevWorkerId;
+  }
+  int GetNextRank(int target_rank)
+  {
+	return (target_rank+1)%size();
   }
   template <class T>
   void SyncContainer(T &x, MPI_Datatype dtype, int root_worker);
