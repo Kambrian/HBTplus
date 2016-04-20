@@ -208,7 +208,6 @@ void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_sna
 /*scatter Subhalos from process root to LocalSubhalos in every other process
  Note Subalos are "moved", so are in a unspecified state upon return.*/
 {
-  using namespace HaloExchange;
   int thisrank=world.rank();
   vector <HBTInt> TrackParticleIds;
   HBTInt NumSubhalos;

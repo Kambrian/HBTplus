@@ -8,7 +8,7 @@ using namespace std;
 #include <cstdlib>
 #include <cstdio>
 #include <chrono>
-#include <boost/concept_check.hpp>
+// #include <boost/concept_check.hpp>
 
 #include "snapshot.h"
 #include "mymath.h"
@@ -46,10 +46,15 @@ void create_Mpi_RemoteParticleType(MPI_Datatype& dtype, bool IdOnly)
   MPI_Type_commit(&dtype);
   #undef NumAttr
 }
+inline bool CompParticleProcessorId(const RemoteParticle_t &a, const RemoteParticle_t &b)
+{
+  return a.ProcessorId<b.ProcessorId;
+}
 inline bool CompParticleOrder(const RemoteParticle_t &a, const RemoteParticle_t &b)
 {
   return a.Order<b.Order;
 }
+
 static void SortRemoteParticles(vector <RemoteParticle_t> &P)
 {
   for(HBTInt i=0;i<P.size();i++)
@@ -60,82 +65,126 @@ static void SortRemoteParticles(vector <RemoteParticle_t> &P)
 	  swap(p, P[j]);
   }
 }
-void ParticleSnapshot_t::MpiGetParticles(MpiWorker_t& world, vector< RemoteParticle_t > &particles) const
+
+void ParticleExchanger_t::Exchange()
 {
-  MPI_Datatype MPI_RemoteParticle_t, MPI_RemoteParticleId_t;
-  create_Mpi_RemoteParticleType(MPI_RemoteParticle_t, false);
-  create_Mpi_RemoteParticleType(MPI_RemoteParticleId_t, true);
+  WatchNextRank();
   
-  const int TagQuery=1, TagReturn=2;
-  MPI_Request req1, req2;
-  vector <MPI_Request> ReqReturn;
-  ReqReturn.reserve(particles.size());
-  for(HBTInt i=0;i<particles.size();i++)
+  while(true)
   {
-	auto &p=particles[i];
-// 	p.ProcessorId=world.rank();
-// 	p.Order=i;
-	HBTInt ind=GetIndex(p);
-	if(ind!=SpecialConst::NullParticleId)
+	ProcessParticles();
+	if(AllDone()) break;
+	ReceiveParticles();
+  }
+ 
+ //send remaining particles
+  while(IsNotEmpty())
+	SendParticles();
+  
+  RestoreParticles();
+}
+
+void ParticleExchanger_t::ReceiveParticles()
+{
+  int buffersize;
+  MPI_Recv(&buffersize, 1, MPI_INT, PrevRank, TagQuery, world.Communicator, MPI_STATUS_IGNORE);
+  vector <RemoteParticle_t> recvbuffer;
+  MPI_Recv(&recvbuffer, buffersize, MPI_RemoteParticleId_t, PrevRank, TagQuery, world.Communicator, MPI_STATUS_IGNORE);
+  ParticlesToProcess.assign(recvbuffer.begin(), recvbuffer.end());
+}
+
+void ParticleExchanger_t::SendParticles()
+{
+  int flagready=0;
+  MPI_Test(&ReqChannel, &flagready, MPI_STATUS_IGNORE);
+  if(flagready)
+  {
+	vector <RemoteParticle_t> sendbuffer(maxbuffersize);
+	int buffersize=min((HBTInt)maxbuffersize, (HBTInt)ParticlesToSend.size());
+// 	if(buffersize)
 	{
-	  p=Particles[ind];
+	  for(int i=0;i<buffersize;i++)
+	  {
+		sendbuffer[i]=ParticlesToSend.back();
+		ParticlesToSend.pop_back();
+	  }
+	  MPI_Send(&buffersize, 1, MPI_INT, NextRank, TagQuery, world.Communicator);
+	  MPI_Send(sendbuffer.data(), buffersize, MPI_RemoteParticleId_t, NextRank, TagQuery, world.Communicator);
+	  WatchNextRank();
+	}
+  }
+}
+
+void ParticleExchanger_t::ProcessParticles()
+{//assumes all particles can be found on at least one processor
+  for(auto it=ParticlesToProcess.begin();it!=ParticlesToProcess.end();)
+  {
+	auto &p=*it;
+	if(p.Id==EndParticleId)//end particle
+	{
+	  iloop++;
+	  if(AllDone()) break;
+	  ParticlesToSend.push_back(p);
+	  it=ParticlesToProcess.erase(it);
 	}
 	else
 	{
-	  MPI_Isend(&p, 1, MPI_RemoteParticleId_t, world.next(), TagQuery, world.Communicator, &req1);
-	  MPI_Irecv(&p, 1, MPI_RemoteParticle_t, MPI_ANY_SOURCE, TagReturn, world.Communicator, &req2);
-	  ReqReturn.push_back(req2);
-	}
-  }
-  vector <RemoteParticle_t> p_end(world.size());
-  for(auto it=p_end.begin();it!=p_end.end();it++) 
-  {
-	it->ProcessorId=it-p_end.begin();
-	it->Id=-1;
-  }
-  MPI_Isend(&p_end[world.rank()], 1, MPI_RemoteParticleId_t, world.next(), TagQuery, world.Communicator, &req1);//terminal particle, signalling end of traffic
-  cout<<"others on "<<world.rank()<<endl<<flush;
-  for(int iloop=1;iloop<world.size();iloop++)
-  {
-	while(true)
-	{
-	  RemoteParticle_t p;
-	  MPI_Recv(&p, 1, MPI_RemoteParticleId_t, world.prev(), TagQuery, world.Communicator, MPI_STATUS_IGNORE);
-	  int root=p.ProcessorId;
-	  if(p.Id==-1) //terminal particle
-	  {
-		if(world.next()!=root)//pass it on, and then stop current loop
-		  MPI_Isend(&p_end[root], 1, MPI_RemoteParticleId_t, world.next(), TagQuery, world.Communicator, &req1);//note p is temporary; pass p_end[root] instead
-		break;
-	  }
-	  
-	  HBTInt ind=GetIndex(p);
+	  HBTInt ind=snap.GetIndex(p);
 	  if(ind!=SpecialConst::NullParticleId)
 	  {
-		p=Particles[ind];
-		p.ProcessorId=world.rank();
-		MPI_Send(&p, 1, MPI_RemoteParticle_t, root, TagReturn, world.Communicator);
+		p=snap.Particles[ind];
+		++it;
 	  }
-	  else//not found
+	  else
 	  {
-		if(world.next()!=root)//pass it on
-		  MPI_Isend(&p, 1, MPI_RemoteParticleId_t, world.next(), TagQuery, world.Communicator, &req1);
-		else
-		{
-		  p.ProcessorId=-1;//not found on any processor
-		  MPI_Send(&p, 1, MPI_RemoteParticle_t, root, TagReturn, world.Communicator);
-		}
+		ParticlesToSend.push_back(p);
+		it=ParticlesToProcess.erase(it);
 	  }
 	}
+	SendParticles();
   }
-  cout<<"waiting on "<<world.rank()<<"...\n"<<flush;
-  MPI_Waitall(ReqReturn.size(), ReqReturn.data(), MPI_STATUSES_IGNORE);
-  SortRemoteParticles(particles);
-//   sort(particles.begin(), particles.end(), CompParticleOrder);
-  
-  MPI_Type_free(&MPI_RemoteParticleId_t);
-  MPI_Type_free(&MPI_RemoteParticle_t);
+//   while(ParticlesToProcess.size())
+//   {
+// 	LocalParticles.push_back(ParticlesToProcess.front());
+// 	ParticlesToProcess.pop_front();
+//   }
+  LocalParticles.insert(LocalParticles.end(), ParticlesToProcess.begin(), ParticlesToProcess.end());
+  ParticlesToProcess.clear();
+  int thischannel_open=1;
+  MPI_Rsend(&thischannel_open, 1, MPI_INT, PrevRank, TagChannel, world.Communicator);
+//   SendParticles();
 }
+void ParticleExchanger_t::RestoreParticles()
+{//move LocalParticles to particles on the original processor
+  typedef vector <RemoteParticle_t>::iterator InputIterator_t;
+  typedef vector <RemoteParticle_t>::iterator OutputIterator_t;
+  sort(LocalParticles.begin(), LocalParticles.end(), CompParticleProcessorId);  //not necessary, should be in order already.
+  vector <HBTInt> SendSizes(world.size(),0), SendDisps(world.size()), RecvSizes(world.size()), RecvDisps(world.size());
+  for(auto &&p: LocalParticles)
+	SendSizes[p.ProcessorId]++;
+  CompileOffsets(SendSizes, SendDisps);
+  MPI_Alltoall(SendSizes.data(), 1, MPI_HBT_INT, RecvSizes.data(), 1, MPI_HBT_INT, world.Communicator);
+  HBTInt nrecv=CompileOffsets(RecvSizes, RecvDisps);
+  vector <RemoteParticle_t> particles(nrecv);
+  vector <InputIterator_t > SendBegin(world.size());
+  vector <OutputIterator_t> RecvBegin(world.size());
+  for(int i=0;i<world.size();i++)
+  {
+	SendBegin[i]=LocalParticles.begin()+SendDisps[i];
+	RecvBegin[i]=particles.begin()+RecvDisps[i];
+  }
+  MyAllToAll<RemoteParticle_t, InputIterator_t, OutputIterator_t>(world, SendBegin, SendSizes, RecvBegin, MPI_RemoteParticle_t);
+  for(int i=0;i<world.size();i++)
+	RecvBegin[i]=particles.begin()+RecvDisps[i];
+  for(HBTInt rank=0;rank<world.size();rank++)
+  {
+	for(int i=0;i<RecvSizes[rank];i++)
+	  RecvBegin[rank][i].ProcessorId=rank;
+  }
+  SortRemoteParticles(particles);
+  LocalParticles.swap(particles);
+}
+
 void SnapshotHeader_t::create_MPI_type(MPI_Datatype& dtype)
 {
   /*to create the struct data type for communication*/	
