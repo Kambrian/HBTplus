@@ -8,6 +8,7 @@
 #include <climits>
 
 #include "datatypes.h"
+#include "mymath.h"
 
 class MpiWorker_t
 { 
@@ -42,9 +43,9 @@ public:
   {
 	return PrevWorkerId;
   }
-  int GetNextRank(int target_rank)
+  int RankAdd(int diff)
   {
-	return (target_rank+1)%size();
+	return (WorkerId+diff)%NumberOfWorkers;
   }
   template <class T>
   void SyncContainer(T &x, MPI_Datatype dtype, int root_worker);
@@ -111,6 +112,67 @@ void VectorAllToAll(MpiWorker_t &world, vector < vector<T> > &SendVecs, vector <
 	MPI_Type_free(&ReceiveTypes[i]);
   }
   
+}
+
+template <class Particle_T, class InParticleIterator_T, class OutParticleIterator_T>
+void MyAllToAll(MpiWorker_t &world, vector <InParticleIterator_T> &InParticleIterator, vector <HBTInt> &InParticleCount, vector <OutParticleIterator_T> &OutParticleIterator, MPI_Datatype &MPI_Particle_T)
+/*break the task into smaller pieces to avoid message size overflow*/
+{
+  //determine loops
+	const int chunksize=1024*1024;
+	HBTInt InParticleSum=accumulate(InParticleCount.begin(), InParticleCount.end(), (HBTInt)0);
+	HBTInt Nloop=ceil(1.*InParticleSum/chunksize);
+	MPI_Allreduce(MPI_IN_PLACE, &Nloop, 1, MPI_HBT_INT, MPI_MAX, world.Communicator);
+	//prepare loop size
+	vector <int> SendParticleCounts(world.size()), RecvParticleCounts(world.size()), SendParticleDisps(world.size()), RecvParticleDisps(world.size());
+	vector <HBTInt> SendParticleRemainder(world.size());
+	for(int rank=0;rank<world.size();rank++)
+	{
+	  SendParticleCounts[rank]=InParticleCount[rank]/Nloop+1;//distribute remainder to first few loops
+	  SendParticleRemainder[rank]=InParticleCount[rank]%Nloop;
+	}
+	cout<<"transmitting.."<<Nloop<<" loops: ";
+	//transmit
+	vector <Particle_T> SendBuffer(chunksize+world.size()), RecvBuffer(chunksize+world.size());
+	for(HBTInt iloop=0;iloop<Nloop;iloop++)
+	{
+	  cout<<iloop<<" ";
+	  //header
+	  for(int rank=0;rank<world.size();rank++)
+	  {
+		if(iloop==SendParticleRemainder[rank])//switch sendcount from n+1 to n
+		  SendParticleCounts[rank]--;
+	  }
+	  MPI_Alltoall(SendParticleCounts.data(), 1, MPI_INT, RecvParticleCounts.data(), 1, MPI_INT, world.Communicator);
+	  CompileOffsets(SendParticleCounts, SendParticleDisps);
+	  CompileOffsets(RecvParticleCounts, RecvParticleDisps);
+	  //pack
+	  for(int rank=0;rank<world.size();rank++)
+	  {
+		auto buff_begin=SendBuffer.begin()+SendParticleDisps[rank];
+		auto buff_end=buff_begin+SendParticleCounts[rank];
+		auto &it_part=InParticleIterator[rank];
+		for(auto it_buff=buff_begin;it_buff!=buff_end;++it_buff)
+		{
+		  *it_buff=move(*it_part);
+		  ++it_part;
+		}
+	  }
+	  //send
+	  MPI_Alltoallv(SendBuffer.data(), SendParticleCounts.data(), SendParticleDisps.data(), MPI_Particle_T, RecvBuffer.data(), RecvParticleCounts.data(), RecvParticleDisps.data(), MPI_Particle_T, world.Communicator);
+	  //unpack
+	  for(int rank=0;rank<world.size();rank++)
+	  {
+		auto buff_begin=RecvBuffer.begin()+RecvParticleDisps[rank];
+		auto buff_end=buff_begin+RecvParticleCounts[rank];
+		auto &it_part=OutParticleIterator[rank];
+		for(auto it_buff=buff_begin;it_buff!=buff_end;++it_buff)//unpack
+		{
+		  *it_part=move(*it_buff);
+		  ++it_part;
+		}
+	  }
+	}
 }
 
 #endif
