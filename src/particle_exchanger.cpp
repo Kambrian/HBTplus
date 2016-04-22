@@ -57,11 +57,15 @@ void ParticleExchanger_t::Exchange()
 {
   //assumes all particles can be found on at least one processor
   auto it=ParticlesToProcess.begin();
+  
+  OpenChannel();
   while(true)
   {
 	bool alldone=ProcessParticle(it);
 	if(alldone) break;
   }
+  CloseChannel();
+ 
   LocalParticles.assign(ParticlesToProcess.begin(), ParticlesToProcess.end());
   ParticlesToProcess.clear();
   
@@ -70,48 +74,40 @@ void ParticleExchanger_t::Exchange()
   while(ParticlesToSend.size())
 	SendParticles();
   
-  WaitChannel();
-  
   RestoreParticles();
 }
 
 void ParticleExchanger_t::ReceiveParticles(bool blocking)
 {
-  int flag_ready=0;
-  MPI_Status stat;
+  int MessageArrived=0;
   if(blocking)
   {
-	MPI_Probe(PrevRank, TagQuery, world.Communicator, &stat);
-	flag_ready=1;
+	MPI_Wait(&ReqRecv, &BufferStat);
+	MessageArrived=1;
   }
   else
-  {
-	MPI_Iprobe(PrevRank, TagQuery, world.Communicator, &flag_ready, &stat);
-// 	if(flag_ready) cout<<"Successful Iprobe!!\n";
-  }
-
-  if(flag_ready)
+	MPI_Test(&ReqRecv, &MessageArrived, &BufferStat);
+  
+  if(MessageArrived)
   {
 	int buffersize;
-	MPI_Get_count(&stat, MPI_RemoteParticleId_t, &buffersize);
-	MPI_Recv(RecvBuffer.data(), buffersize, MPI_RemoteParticleId_t, PrevRank, TagQuery, world.Communicator, MPI_STATUS_IGNORE);
+	MPI_Get_count(&BufferStat, MPI_RemoteParticleId_t, &buffersize);
 	ParticlesToProcess.insert(ParticlesToProcess.end(), RecvBuffer.begin(), RecvBuffer.begin()+buffersize);
+	OpenChannel();
   }
 }
 
 void ParticleExchanger_t::SendParticles()
 {
-	FlushChannel();
 	int buffersize=min((HBTInt)maxbuffersize, (HBTInt)ParticlesToSend.size());
-	if(ChannelIsClean&&buffersize)
+	if(buffersize)
 	{
 	  for(int i=0;i<buffersize;i++)
 	  {
 		SendBuffer[i]=ParticlesToSend.front();
 		ParticlesToSend.pop_front();
 	  }
-	  MPI_Isend(SendBuffer.data(), buffersize, MPI_RemoteParticleId_t, NextRank, TagQuery, world.Communicator, &ReqSend);
-	  ChannelIsClean=0;
+	  MPI_Send(SendBuffer.data(), buffersize, MPI_RemoteParticleId_t, NextRank, TagQuery, world.Communicator);
 	}
 }
 bool ParticleExchanger_t::ProcessParticle(ParticleStack_t::iterator &it)

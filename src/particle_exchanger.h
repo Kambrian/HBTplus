@@ -38,8 +38,8 @@ class ParticleExchanger_t
   const int TagQuery;
   const int maxbuffersize;
   vector <RemoteParticle_t> SendBuffer, RecvBuffer;
-  MPI_Request ReqSend;
-  int ChannelIsClean;
+  MPI_Request ReqRecv;
+  MPI_Status BufferStat;
   MPI_Datatype MPI_RemoteParticleId_t, MPI_RemoteParticle_t;//todo: init and free them
   MpiWorker_t &world;
   const ParticleSnapshot_t &snap;
@@ -49,7 +49,7 @@ class ParticleExchanger_t
   vector <RemoteParticle_t> LocalParticles;
 public:
   template <class HaloParticleIterator_t>
-  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), maxbuffersize(100), ReqSend(MPI_REQUEST_NULL), ChannelIsClean(1), SendBuffer(maxbuffersize), RecvBuffer(maxbuffersize)
+  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), maxbuffersize(100), ReqRecv(MPI_REQUEST_NULL), SendBuffer(maxbuffersize), RecvBuffer(maxbuffersize)
   {
 	nloop=world.size();
 	PrevRank=world.prev();
@@ -76,15 +76,14 @@ public:
   void SendParticles();
   void ReceiveParticles(bool blocking);
   void RestoreParticles();
-  bool FlushChannel()
+  void OpenChannel()
   {
-	if(!ChannelIsClean)
-	  MPI_Test(&ReqSend, &ChannelIsClean, MPI_STATUS_IGNORE);
+	MPI_Irecv(RecvBuffer.data(), maxbuffersize, MPI_RemoteParticleId_t, PrevRank, TagQuery, world.Communicator, &ReqRecv);
   }
-  void WaitChannel()
+  void CloseChannel()
   {
-	if(!ChannelIsClean)
-	  MPI_Wait(&ReqSend, MPI_STATUS_IGNORE);
+	MPI_Cancel(&ReqRecv);
+	MPI_Wait(&ReqRecv, MPI_STATUS_IGNORE);
   }
   bool AllDone()
   {
