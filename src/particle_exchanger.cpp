@@ -94,8 +94,8 @@ void ParticleExchanger_t::ReceiveParticles(bool blocking)
   {
 	int buffersize;
 	MPI_Get_count(&stat, MPI_RemoteParticleId_t, &buffersize);
-	MPI_Recv(recvbuffer.data(), buffersize, MPI_RemoteParticleId_t, PrevRank, TagQuery, world.Communicator, MPI_STATUS_IGNORE);
-	ParticlesToProcess.insert(ParticlesToProcess.end(), recvbuffer.begin(), recvbuffer.begin()+buffersize);
+	MPI_Recv(RecvBuffer.data(), buffersize, MPI_RemoteParticleId_t, PrevRank, TagQuery, world.Communicator, MPI_STATUS_IGNORE);
+	ParticlesToProcess.insert(ParticlesToProcess.end(), RecvBuffer.begin(), RecvBuffer.begin()+buffersize);
   }
 }
 
@@ -107,10 +107,10 @@ void ParticleExchanger_t::SendParticles()
 	{
 	  for(int i=0;i<buffersize;i++)
 	  {
-		sendbuffer[i]=ParticlesToSend.front();
+		SendBuffer[i]=ParticlesToSend.front();
 		ParticlesToSend.pop_front();
 	  }
-	  MPI_Isend(sendbuffer.data(), buffersize, MPI_RemoteParticleId_t, NextRank, TagQuery, world.Communicator, &ReqSend);
+	  MPI_Isend(SendBuffer.data(), buffersize, MPI_RemoteParticleId_t, NextRank, TagQuery, world.Communicator, &ReqSend);
 	  ChannelIsClean=0;
 	}
 }
