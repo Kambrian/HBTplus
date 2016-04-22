@@ -11,6 +11,7 @@
 #include "mpi_wrapper.h"
 #include "mymath.h"
 #include "halo.h"
+#include "particle_exchanger.h"
 
 #include <cstdio>
 #include <cstdlib>
