@@ -123,6 +123,7 @@ void MyAllToAll(MpiWorker_t &world, vector <InParticleIterator_T> &InParticleIte
 	HBTInt InParticleSum=accumulate(InParticleCount.begin(), InParticleCount.end(), (HBTInt)0);
 	HBTInt Nloop=ceil(1.*InParticleSum/chunksize);
 	MPI_Allreduce(MPI_IN_PLACE, &Nloop, 1, MPI_HBT_INT, MPI_MAX, world.Communicator);
+	if(0==Nloop) return;
 	//prepare loop size
 	vector <int> SendParticleCounts(world.size()), RecvParticleCounts(world.size()), SendParticleDisps(world.size()), RecvParticleDisps(world.size());
 	vector <HBTInt> SendParticleRemainder(world.size());
@@ -131,12 +132,12 @@ void MyAllToAll(MpiWorker_t &world, vector <InParticleIterator_T> &InParticleIte
 	  SendParticleCounts[rank]=InParticleCount[rank]/Nloop+1;//distribute remainder to first few loops
 	  SendParticleRemainder[rank]=InParticleCount[rank]%Nloop;
 	}
-	cout<<"transmitting.."<<Nloop<<" loops: ";
+// 	cout<<"transmitting.."<<Nloop<<" loops: ";
 	//transmit
-	vector <Particle_T> SendBuffer(chunksize+world.size()), RecvBuffer(chunksize+world.size());
+	vector <Particle_T> SendBuffer(chunksize+world.size()), RecvBuffer;
 	for(HBTInt iloop=0;iloop<Nloop;iloop++)
 	{
-	  cout<<iloop<<" ";
+// 	  cout<<iloop<<" ";
 	  //header
 	  for(int rank=0;rank<world.size();rank++)
 	  {
@@ -145,7 +146,8 @@ void MyAllToAll(MpiWorker_t &world, vector <InParticleIterator_T> &InParticleIte
 	  }
 	  MPI_Alltoall(SendParticleCounts.data(), 1, MPI_INT, RecvParticleCounts.data(), 1, MPI_INT, world.Communicator);
 	  CompileOffsets(SendParticleCounts, SendParticleDisps);
-	  CompileOffsets(RecvParticleCounts, RecvParticleDisps);
+	  int RecvCountTotal=CompileOffsets(RecvParticleCounts, RecvParticleDisps);
+	  RecvBuffer.resize(RecvCountTotal);
 	  //pack
 	  for(int rank=0;rank<world.size();rank++)
 	  {
