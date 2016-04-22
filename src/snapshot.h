@@ -274,26 +274,28 @@ extern void create_Mpi_RemoteParticleType(MPI_Datatype& dtype, bool IdOnly=false
 class ParticleExchanger_t
 {
   int PrevRank, NextRank;
-  int NextRankOpen;
   int iloop, nloop;
+  int iloop_debug, iloop_sent;
   const HBTInt EndParticleId;
-  const int TagQuery, TagChannel;
+  const int TagQuery;
   const int maxbuffersize;
-  MPI_Request ReqChannel;
+  vector <RemoteParticle_t> sendbuffer, recvbuffer;
+  MPI_Request ReqSend;
+  int ChannelIsClean;
   MPI_Datatype MPI_RemoteParticleId_t, MPI_RemoteParticle_t;//todo: init and free them
   MpiWorker_t &world;
   const ParticleSnapshot_t &snap;
-  list <RemoteParticle_t> ParticlesToProcess;
-  list <RemoteParticle_t> ParticlesToSend;
+  typedef list <RemoteParticle_t> ParticleStack_t;
+  ParticleStack_t ParticlesToProcess;
+  ParticleStack_t ParticlesToSend;
   vector <RemoteParticle_t> LocalParticles;
 public:
   template <class HaloParticleIterator_t>
-  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), TagChannel(2), maxbuffersize(1024), ReqChannel(MPI_REQUEST_NULL)
+  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), maxbuffersize(100), ReqSend(MPI_REQUEST_NULL), ChannelIsClean(1), iloop_debug(1), iloop_sent(0), sendbuffer(maxbuffersize), recvbuffer(maxbuffersize)
   {
 	nloop=world.size();
 	PrevRank=world.prev();
 	NextRank=world.next();
-	NextRankOpen=0;
 	create_Mpi_RemoteParticleType(MPI_RemoteParticle_t);
 	create_Mpi_RemoteParticleType(MPI_RemoteParticleId_t, true);
 	HBTInt order=0;
@@ -306,40 +308,29 @@ public:
 	particle_it.reset();
 	ParticlesToProcess.emplace_back(EndParticleId, world.rank(), -1);
   }
-  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, vector <RemoteParticle_t> particles): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), TagChannel(2), maxbuffersize(1024), ReqChannel(MPI_REQUEST_NULL)
-  {
-	nloop=world.size();
-	PrevRank=world.prev();
-	NextRank=world.next();
-	NextRankOpen=0;
-	create_Mpi_RemoteParticleType(MPI_RemoteParticle_t);
-	create_Mpi_RemoteParticleType(MPI_RemoteParticleId_t, true);
-	for(auto &&p: particles)
-	  ParticlesToProcess.push_back(p);
-	ParticlesToProcess.emplace_back(EndParticleId, world.rank(), -1);
-  }
   ~ParticleExchanger_t()
   {
 	MPI_Type_free(&MPI_RemoteParticleId_t);
 	MPI_Type_free(&MPI_RemoteParticle_t);
   }
+  bool ProcessParticle(ParticleStack_t::iterator &it);
   void Exchange();
-  void ProcessParticles();
   void SendParticles();
-  void ReceiveParticles();
+  void ReceiveParticles(bool blocking);
   void RestoreParticles();
-  void WatchNextRank()
+  bool FlushChannel()
   {
-	NextRankOpen=0;
-	MPI_Irecv(&NextRankOpen, 1, MPI_INT, NextRank, TagChannel, world.Communicator, &req_channel);
+	if(!ChannelIsClean)
+	  MPI_Test(&ReqSend, &ChannelIsClean, MPI_STATUS_IGNORE);
+  }
+  void WaitChannel()
+  {
+	if(!ChannelIsClean)
+	  MPI_Wait(&ReqSend, MPI_STATUS_IGNORE);
   }
   bool AllDone()
   {
 	return iloop>=nloop;
-  }
-  bool IsNotEmpty()
-  {
-	return (ParticlesToSend.size()!=0);
   }
   template <class Halo_T>
   void UnPackHaloParticles(vector <Halo_T> &InHalos, vector <IdRank_t> &TargetRank);
@@ -383,12 +374,14 @@ class HaloParticleIterator_t
   particle_iterator CurrPart;
 public:
   HaloParticleIterator_t()=default;
-  HaloParticleIterator_t(HaloIterator begin, HaloIterator end)
+  HaloParticleIterator_t(const HaloIterator &begin, const HaloIterator &end)
   {
 	init(begin, end);
   }
   void init(HaloIterator begin, HaloIterator end)
   {
+	while((begin!=end)&&(begin->Particles.size()==0))//skip empty ones, though not necessary for current HBT2
+	  ++begin;
 	FirstHalo=begin;
 	EndHalo=end;
 	reset();
@@ -396,7 +389,8 @@ public:
   void reset()
   {
 	CurrHalo=FirstHalo;
-	CurrPart=FirstHalo->Particles.begin();
+	if(CurrHalo!=EndHalo)
+	  CurrPart=FirstHalo->Particles.begin();
   }
   particle_iterator begin()
   {
@@ -404,10 +398,11 @@ public:
   }
   HaloParticleIterator_t<HaloIterator> & operator ++()//left operator
   {
-	CurrPart++;
-	if(CurrPart==CurrHalo->Particles.end())
+	++CurrPart;
+	while(CurrPart==CurrHalo->Particles.end())//increment halo and skip empty haloes
 	{
-	  CurrHalo++;
+	  ++CurrHalo;
+	  if(CurrHalo==EndHalo) break;
 	  CurrPart=CurrHalo->Particles.begin();
 	}
 	return *this;
@@ -433,7 +428,6 @@ void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHa
   typedef typename vector <Halo_T>::iterator HaloIterator_t;
   typedef HaloParticleIterator_t<HaloIterator_t> ParticleIterator_t;
   
-  int thisrank=world.rank();
   cout<<"Query particle..."<<flush;
   vector <IdRank_t>TargetRank;
   {//query particles

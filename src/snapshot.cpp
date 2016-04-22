@@ -68,62 +68,110 @@ static void SortRemoteParticles(vector <RemoteParticle_t> &P)
 
 void ParticleExchanger_t::Exchange()
 {
-  WatchNextRank();
-  
+  //assumes all particles can be found on at least one processor
+  auto it=ParticlesToProcess.begin();
   while(true)
   {
-	ProcessParticles();
-	if(AllDone()) break;
-	ReceiveParticles();
+	bool alldone=ProcessParticle(it);
+	if(alldone) break;
   }
- 
- //send remaining particles
-  while(IsNotEmpty())
+  LocalParticles.assign(ParticlesToProcess.begin(), ParticlesToProcess.end());
+  ParticlesToProcess.clear();
+  
+//   cout<<"remaining...\n";
+  //send remaining particles
+  while(ParticlesToSend.size())
 	SendParticles();
+  
+  WaitChannel();
   
   RestoreParticles();
 }
 
-void ParticleExchanger_t::ReceiveParticles()
+void ParticleExchanger_t::ReceiveParticles(bool blocking)
 {
-  int buffersize;
-  MPI_Recv(&buffersize, 1, MPI_INT, PrevRank, TagQuery, world.Communicator, MPI_STATUS_IGNORE);
-  vector <RemoteParticle_t> recvbuffer;
-  MPI_Recv(&recvbuffer, buffersize, MPI_RemoteParticleId_t, PrevRank, TagQuery, world.Communicator, MPI_STATUS_IGNORE);
-  ParticlesToProcess.assign(recvbuffer.begin(), recvbuffer.end());
+  int flag_ready=0;
+  MPI_Status stat;
+  if(blocking)
+  {
+	MPI_Probe(PrevRank, TagQuery, world.Communicator, &stat);
+	flag_ready=1;
+  }
+  else
+  {
+	MPI_Iprobe(PrevRank, TagQuery, world.Communicator, &flag_ready, &stat);
+// 	if(flag_ready) cout<<"Successful Iprobe!!\n";
+  }
+
+  if(flag_ready)
+  {
+// 	vector <RemoteParticle_t> recvbuffer(maxbuffersize);
+	int buffersize;
+	MPI_Get_count(&stat, MPI_RemoteParticleId_t, &buffersize);
+	MPI_Recv(recvbuffer.data(), buffersize, MPI_RemoteParticleId_t, PrevRank, TagQuery, world.Communicator, MPI_STATUS_IGNORE);
+	for(auto i=0;i<buffersize;i++)
+	{
+	  if(recvbuffer[i].Id==-1) iloop_debug++;
+	  if(iloop_debug==nloop)
+	  {
+		if(i!=(buffersize-1))
+		{
+		  cout<<"bug: received message contains extra particles! "<<buffersize-1-i<<" ; total "<<buffersize<<endl;
+		  for(int j=0;j<buffersize;j++){auto &p=recvbuffer[j]; cout<<"("<<p.Id<<","<<p.Order<<","<<p.ProcessorId<<")"<<endl;}
+		  exit(1);
+		}
+	  }
+	}
+	ParticlesToProcess.insert(ParticlesToProcess.end(), recvbuffer.begin(), recvbuffer.begin()+buffersize);
+  }
 }
 
 void ParticleExchanger_t::SendParticles()
 {
-  int flagready=0;
-  MPI_Test(&ReqChannel, &flagready, MPI_STATUS_IGNORE);
-  if(flagready)
-  {
-	vector <RemoteParticle_t> sendbuffer(maxbuffersize);
+	FlushChannel();
+// 	vector <RemoteParticle_t> sendbuffer(maxbuffersize);
 	int buffersize=min((HBTInt)maxbuffersize, (HBTInt)ParticlesToSend.size());
-// 	if(buffersize)
+	if(ChannelIsClean&&buffersize)
 	{
 	  for(int i=0;i<buffersize;i++)
 	  {
-		sendbuffer[i]=ParticlesToSend.back();
-		ParticlesToSend.pop_back();
+		sendbuffer[i]=ParticlesToSend.front();
+		ParticlesToSend.pop_front();
 	  }
-	  MPI_Send(&buffersize, 1, MPI_INT, NextRank, TagQuery, world.Communicator);
-	  MPI_Send(sendbuffer.data(), buffersize, MPI_RemoteParticleId_t, NextRank, TagQuery, world.Communicator);
-	  WatchNextRank();
+	  for(int i=0;i<buffersize;i++)
+	{
+	  if(sendbuffer[i].Id==-1) iloop_sent++;
+	  if(iloop_sent==nloop-1)
+	  {
+		if(i!=(buffersize-1))
+		{
+		  cout<<"bug: sent message contains extra particles! "<<buffersize-1-i<<" ; total "<<buffersize<<endl;
+		  for(int j=0;j<buffersize;j++){auto &p=sendbuffer[j]; cout<<"("<<p.Id<<","<<p.Order<<","<<p.ProcessorId<<")"<<endl;}
+		  exit(1);
+		}
+	  }
 	}
-  }
+	  MPI_Isend(sendbuffer.data(), buffersize, MPI_RemoteParticleId_t, NextRank, TagQuery, world.Communicator, &ReqSend);
+	  ChannelIsClean=0;
+	}
 }
-
-void ParticleExchanger_t::ProcessParticles()
-{//assumes all particles can be found on at least one processor
-  for(auto it=ParticlesToProcess.begin();it!=ParticlesToProcess.end();)
-  {
+bool ParticleExchanger_t::ProcessParticle(ParticleStack_t::iterator &it)
+{
 	auto &p=*it;
 	if(p.Id==EndParticleId)//end particle
 	{
 	  iloop++;
-	  if(AllDone()) break;
+	  if(AllDone()) 
+	  {
+		it=ParticlesToProcess.erase(it);
+		while(it!=ParticlesToProcess.end())
+		{
+		  cout<<"("<<it->Id<<","<<it->ProcessorId<<","<<it->Order<<": "<<world.rank()<<")";
+		  ++it;
+		}
+		assert(it==ParticlesToProcess.end());//all particles should have been processed by now, unless some particles cannot be located on any processor!
+		return true;
+	  }
 	  ParticlesToSend.push_back(p);
 	  it=ParticlesToProcess.erase(it);
 	}
@@ -141,19 +189,33 @@ void ParticleExchanger_t::ProcessParticles()
 		it=ParticlesToProcess.erase(it);
 	  }
 	}
-	SendParticles();
-  }
-//   while(ParticlesToProcess.size())
-//   {
-// 	LocalParticles.push_back(ParticlesToProcess.front());
-// 	ParticlesToProcess.pop_front();
-//   }
-  LocalParticles.insert(LocalParticles.end(), ParticlesToProcess.begin(), ParticlesToProcess.end());
-  ParticlesToProcess.clear();
-  int thischannel_open=1;
-  MPI_Rsend(&thischannel_open, 1, MPI_INT, PrevRank, TagChannel, world.Communicator);
-//   SendParticles();
+	bool is_starving=(it==ParticlesToProcess.end());
+	if(is_starving)
+	{
+	  SendParticles();
+	  int flag_begin=0;
+	  if(it==ParticlesToProcess.begin())
+		flag_begin=1;
+	  else
+		--it;
+	  
+	  ReceiveParticles(1);//blocking receive
+	  
+	  if(flag_begin)
+		it=ParticlesToProcess.begin();
+	  else
+		++it;//to ensure iterator validity
+	}
+	else
+	{
+	  if(ParticlesToSend.size()>=maxbuffersize)
+		SendParticles();
+	  ReceiveParticles(0);//non-blocking
+	}
+// 	FlushChannel();//alternatively, can flush only inside send
+	return false;
 }
+
 void ParticleExchanger_t::RestoreParticles()
 {//move LocalParticles to particles on the original processor
   typedef vector <RemoteParticle_t>::iterator InputIterator_t;
