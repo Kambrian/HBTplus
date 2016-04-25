@@ -36,20 +36,20 @@ class ParticleExchanger_t
   int iloop, nloop;
   const HBTInt EndParticleId;
   const int TagQuery;
-  const int maxbuffersize;
+  const HBTInt maxbuffersize;
   vector <RemoteParticle_t> SendBuffer, RecvBuffer;
   MPI_Request ReqRecv;
-  MPI_Status BufferStat;
   MPI_Datatype MPI_RemoteParticleId_t, MPI_RemoteParticle_t;//todo: init and free them
   MpiWorker_t &world;
   const ParticleSnapshot_t &snap;
   typedef list <RemoteParticle_t> ParticleStack_t;
   ParticleStack_t ParticlesToProcess;
   ParticleStack_t ParticlesToSend;
+  HBTInt SendStackSize;
   vector <RemoteParticle_t> LocalParticles;
 public:
   template <class HaloParticleIterator_t>
-  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), maxbuffersize(100), ReqRecv(MPI_REQUEST_NULL), SendBuffer(maxbuffersize), RecvBuffer(maxbuffersize)
+  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), maxbuffersize(100), ReqRecv(MPI_REQUEST_NULL), SendBuffer(maxbuffersize), RecvBuffer(maxbuffersize), SendStackSize(0)
   {
 	nloop=world.size();
 	PrevRank=world.prev();

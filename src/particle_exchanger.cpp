@@ -71,7 +71,7 @@ void ParticleExchanger_t::Exchange()
   
 //   cout<<"remaining...\n";
   //send remaining particles
-  while(ParticlesToSend.size())
+  while(SendStackSize)
 	SendParticles();
   
   RestoreParticles();
@@ -80,18 +80,19 @@ void ParticleExchanger_t::Exchange()
 void ParticleExchanger_t::ReceiveParticles(bool blocking)
 {
   int MessageArrived=0;
+  MPI_Status bufferstat;
   if(blocking)
   {
-	MPI_Wait(&ReqRecv, &BufferStat);
+	MPI_Wait(&ReqRecv, &bufferstat);
 	MessageArrived=1;
   }
   else
-	MPI_Test(&ReqRecv, &MessageArrived, &BufferStat);
+	MPI_Test(&ReqRecv, &MessageArrived, &bufferstat);
   
   if(MessageArrived)
   {
 	int buffersize;
-	MPI_Get_count(&BufferStat, MPI_RemoteParticleId_t, &buffersize);
+	MPI_Get_count(&bufferstat, MPI_RemoteParticleId_t, &buffersize);
 	ParticlesToProcess.insert(ParticlesToProcess.end(), RecvBuffer.begin(), RecvBuffer.begin()+buffersize);
 	OpenChannel();
   }
@@ -99,7 +100,7 @@ void ParticleExchanger_t::ReceiveParticles(bool blocking)
 
 void ParticleExchanger_t::SendParticles()
 {
-	int buffersize=min((HBTInt)maxbuffersize, (HBTInt)ParticlesToSend.size());
+	int buffersize=min(maxbuffersize, SendStackSize);
 	if(buffersize)
 	{
 	  for(int i=0;i<buffersize;i++)
@@ -107,6 +108,7 @@ void ParticleExchanger_t::SendParticles()
 		SendBuffer[i]=ParticlesToSend.front();
 		ParticlesToSend.pop_front();
 	  }
+	  SendStackSize-=buffersize;
 	  MPI_Send(SendBuffer.data(), buffersize, MPI_RemoteParticleId_t, NextRank, TagQuery, world.Communicator);
 	}
 }
@@ -123,6 +125,7 @@ bool ParticleExchanger_t::ProcessParticle(ParticleStack_t::iterator &it)
 		return true;
 	  }
 	  ParticlesToSend.push_back(p);
+	  SendStackSize++;
 	  it=ParticlesToProcess.erase(it);
 	}
 	else
@@ -136,6 +139,7 @@ bool ParticleExchanger_t::ProcessParticle(ParticleStack_t::iterator &it)
 	  else
 	  {
 		ParticlesToSend.push_back(p);
+		SendStackSize++;
 		it=ParticlesToProcess.erase(it);
 	  }
 	}
@@ -158,7 +162,7 @@ bool ParticleExchanger_t::ProcessParticle(ParticleStack_t::iterator &it)
 	}
 	else
 	{
-	  if(ParticlesToSend.size()>=maxbuffersize)
+	  if(SendStackSize>=maxbuffersize)
 		SendParticles();
 	  ReceiveParticles(0);//non-blocking
 	}
