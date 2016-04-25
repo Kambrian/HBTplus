@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <cstdlib>
 #include <cstdio>
-#include <unordered_map>
 #include <list>
 #include <forward_list>
 
@@ -49,7 +48,7 @@ class ParticleExchanger_t
   vector <RemoteParticle_t> LocalParticles;
 public:
   template <class HaloParticleIterator_t>
-  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), maxbuffersize(100), ReqRecv(MPI_REQUEST_NULL), SendBuffer(maxbuffersize), RecvBuffer(maxbuffersize), SendStackSize(0)
+  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), maxbuffersize(16), ReqRecv(MPI_REQUEST_NULL), SendBuffer(maxbuffersize), RecvBuffer(maxbuffersize), SendStackSize(0)
   {
 	nloop=world.size();
 	PrevRank=world.prev();
@@ -100,7 +99,7 @@ void ParticleExchanger_t::UnPackHaloParticles(vector <Halo_T> &InHalos, vector <
   for(HBTInt ihalo=0;ihalo<InHalos.size();ihalo++)
   {
 	auto &h=InHalos[ihalo];
-	unordered_map<int, HBTInt> counter;
+	vector <HBTInt> counter(world.size(),0);
 	for(auto &&p: h.Particles)
 	{
 	  auto &rp=*it;
@@ -109,15 +108,9 @@ void ParticleExchanger_t::UnPackHaloParticles(vector <Halo_T> &InHalos, vector <
 		counter[rp.ProcessorId]++;
 	  ++it;
 	}
-	int targetrank=world.rank(), n=0;
-	for(auto &&x: counter)
-	{
-	  if(x.second>n)
-	  {
-		n=x.second;
-		targetrank=x.first;
-	  }
-	}
+	int targetrank=world.rank();
+	auto target=max_element(counter.begin(), counter.end());
+	if(*target) targetrank=target-counter.begin();
 	TargetRank.emplace_back(ihalo, targetrank);
   }
   vector <RemoteParticle_t>().swap(LocalParticles);//clear up
