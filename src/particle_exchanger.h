@@ -11,6 +11,16 @@
 #include "mymath.h"
 #include "mpi_wrapper.h"
 
+struct RemoteParticleId_t
+{
+  HBTInt Id;
+  int ProcessorId;
+  HBTInt Order;
+  RemoteParticleId_t()=default;
+  RemoteParticleId_t(HBTInt id, int processorId, HBTInt order): Id(id), ProcessorId(processorId), Order(order)
+  {
+  }
+};
 class RemoteParticle_t: public Particle_t
 {
 public:
@@ -23,74 +33,117 @@ public:
   RemoteParticle_t(HBTInt id, int processorId, HBTInt order): Particle_t(id), ProcessorId(processorId), Order(order)
   {
   }
-  RemoteParticle_t(Particle_t &p, int processorId, HBTInt order): Particle_t(p), ProcessorId(processorId), Order(order)
+  RemoteParticle_t(const Particle_t &p, int processorId, HBTInt order): Particle_t(p), ProcessorId(processorId), Order(order)
   {
   }
 };
 
-extern void create_Mpi_RemoteParticleType(MPI_Datatype& dtype, bool IdOnly=false);
+template <class Pair_t, class Val_t>
+inline int CompPairWithValue(const Pair_t a, const Val_t b)
+{
+  return (a.Key<b);
+};
+template <class Key_t, class Index_t>
+void MappedIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles) const
+{//TODO: improve with multi-key (batch) binary search? inform later search by previous results; bracket by searching two ends first.
+  
+  auto &null=BaseClass_t::NullIndex;
+  
+  auto it_p=particles.begin();
+  auto it_map=Map.begin();
+  while(true)
+  {
+	if(it_p==particles.end()) return;
+	
+	if(it_map==Map.end()) break;
+	
+	if(it_p->Id<it_map->Key)
+	{
+	  it_p->Id=null;
+	  ++it_p;
+	}
+	else if(it_p->Id==it_map->Key)
+	{
+	  it_p->Id=it_map->Index;
+	  ++it_p;
+	}
+	else
+	  ++it_map;
+  }
+  
+  while(true)
+  {
+	  it_p->Id=null;
+	  ++it_p;
+	  if(it_p==particles.end()) return;
+  }
+  
+//   auto it_map=lower_bound(Map.begin(), Map.end(), it_p->Id, CompPairWithValue<Pair_t, Key_t>);
+}
+
+template <class Key_t, class Index_t>
+void FlatIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles) const
+{
+  for(auto &&p: particles)
+	p.Id=GetIndex(p.Id);
+}
+
+
+extern void create_Mpi_RemoteParticleType(MPI_Datatype& dtype);
+extern void create_Mpi_RemoteParticleIdType(MPI_Datatype& dtype);
 class ParticleExchanger_t
 {
-  int PrevRank, NextRank;
-  int iloop, nloop;
-  const HBTInt EndParticleId;
-  const int TagQuery;
-  const HBTInt maxbuffersize;
-  vector <RemoteParticle_t> SendBuffer, RecvBuffer;
-  MPI_Request ReqRecv;
   MPI_Datatype MPI_RemoteParticleId_t, MPI_RemoteParticle_t;//todo: init and free them
   MpiWorker_t &world;
   const ParticleSnapshot_t &snap;
-  typedef list <RemoteParticle_t> ParticleStack_t;
-  ParticleStack_t ParticlesToProcess;
-  ParticleStack_t ParticlesToSend;
+  typedef vector <RemoteParticleId_t> ParticleStack_t;
+  ParticleStack_t ParticlesToProcess, ParticlesToSend;
   HBTInt SendStackSize;
+  int CurrSendingRank;
   vector <RemoteParticle_t> LocalParticles;
 public:
   template <class HaloParticleIterator_t>
-  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap), iloop(0), EndParticleId(-1), TagQuery(1), maxbuffersize(16), ReqRecv(MPI_REQUEST_NULL), SendBuffer(maxbuffersize), RecvBuffer(maxbuffersize), SendStackSize(0)
-  {
-	nloop=world.size();
-	PrevRank=world.prev();
-	NextRank=world.next();
-	create_Mpi_RemoteParticleType(MPI_RemoteParticle_t);
-	create_Mpi_RemoteParticleType(MPI_RemoteParticleId_t, true);
-	HBTInt order=0;
-	while(!particle_it.is_end())
-	{
-	  ParticlesToProcess.emplace_back(*particle_it, world.rank(), order);
-	  ++particle_it;
-	  ++order;
-	}
-	particle_it.reset();
-	ParticlesToProcess.emplace_back(EndParticleId, world.rank(), -1);
-  }
+  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it);
   ~ParticleExchanger_t()
   {
 	MPI_Type_free(&MPI_RemoteParticleId_t);
 	MPI_Type_free(&MPI_RemoteParticle_t);
   }
-  bool ProcessParticle(ParticleStack_t::iterator &it);
+  void BcastParticles(HBTInt &ParticleCount);
+  bool GatherParticles(HBTInt capacity);
+  void QueryParticles();
   void Exchange();
-  void SendParticles();
-  void ReceiveParticles(bool blocking);
   void RestoreParticles();
-  void OpenChannel()
-  {
-	MPI_Irecv(RecvBuffer.data(), maxbuffersize, MPI_RemoteParticleId_t, PrevRank, TagQuery, world.Communicator, &ReqRecv);
-  }
-  void CloseChannel()
-  {
-	MPI_Cancel(&ReqRecv);
-	MPI_Wait(&ReqRecv, MPI_STATUS_IGNORE);
-  }
-  bool AllDone()
-  {
-	return iloop>=nloop;
-  }
   template <class Halo_T>
   void UnPackHaloParticles(vector <Halo_T> &InHalos, vector <IdRank_t> &TargetRank);
 };
+
+template <class HaloParticleIterator_t>
+ParticleExchanger_t::ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap),  CurrSendingRank(0)
+{
+  create_Mpi_RemoteParticleType(MPI_RemoteParticle_t);
+  create_Mpi_RemoteParticleIdType(MPI_RemoteParticleId_t);
+  {
+	SendStackSize=0;
+	while(!particle_it.is_end())
+	{
+	  ++particle_it;
+	  ++SendStackSize;
+	}
+	particle_it.reset();
+	ParticlesToSend.reserve(SendStackSize);
+  }
+  HBTInt order=0;
+  while(!particle_it.is_end())
+  {
+	ParticlesToSend.emplace_back((*particle_it).Id, world.rank(), order);
+	++particle_it;
+	++order;
+  }
+  SendStackSize=order;
+  particle_it.reset();
+}
+
 template <class Halo_T>
 void ParticleExchanger_t::UnPackHaloParticles(vector <Halo_T> &InHalos, vector <IdRank_t> &TargetRank)
 {
@@ -166,6 +219,12 @@ public:
 	return CurrHalo==EndHalo;
   }
 };
+
+template <class ParticleIdList_t>
+void ParticleSnapshot_t::GetIndices(ParticleIdList_t& particles) const
+{//ParticleIdList_t is a list of particle structs containing at least an Id field
+  return ParticleHash->GetIndices(particles);
+}
 
 template <class Halo_T>
 void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHalos, vector<Halo_T>& OutHalos, MPI_Datatype MPI_Halo_Shell_Type) const

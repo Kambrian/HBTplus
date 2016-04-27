@@ -154,7 +154,6 @@ class ParticleSnapshot_t: public Snapshot_t
   vector <HBTInt> NumberOfDMParticleInFiles;
   vector <HBTInt> OffsetOfDMParticleInFiles;
     
-  HBTInt NumberOfParticles;
   FlatIndexTable_t<HBTInt, HBTInt> FlatHash;
   MappedIndexTable_t<HBTInt, HBTInt> MappedHash;
   IndexTable_t<HBTInt, HBTInt> *ParticleHash;
@@ -168,8 +167,9 @@ class ParticleSnapshot_t: public Snapshot_t
 public:
   SnapshotHeader_t Header;
   vector <Particle_t> Particles;
+  HBTInt NumberOfParticlesOnAllNodes;
   
-  ParticleSnapshot_t(): Snapshot_t(), Header(), Particles(), NumberOfParticles(0), ParticleHash(), MappedHash(), FlatHash()
+  ParticleSnapshot_t(): Snapshot_t(), Header(), Particles(), ParticleHash(), MappedHash(), FlatHash(), NumberOfParticlesOnAllNodes(0)
   {
 	NeedByteSwap=false;
 	IntTypeSize=0;
@@ -191,6 +191,8 @@ public:
   HBTInt GetId(HBTInt index) const;
   HBTInt GetIndex(HBTInt particle_id) const;
   HBTInt GetIndex(Particle_t & particle) const;
+  template <class ParticleIdList_t>
+  void GetIndices(ParticleIdList_t &particles) const;
   const HBTxyz & GetComovingPosition(HBTInt index) const;
   const HBTxyz & GetPhysicalVelocity(HBTInt index) const;
   HBTReal GetMass(HBTInt index) const;

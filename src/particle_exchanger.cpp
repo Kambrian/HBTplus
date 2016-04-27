@@ -1,7 +1,7 @@
 #include "snapshot.h"
 #include "particle_exchanger.h"
 
-void create_Mpi_RemoteParticleType(MPI_Datatype& dtype, bool IdOnly)
+void create_Mpi_RemoteParticleType(MPI_Datatype& dtype)
 {
   /*to create the struct data type for communication*/	
   RemoteParticle_t p;
@@ -17,12 +17,9 @@ void create_Mpi_RemoteParticleType(MPI_Datatype& dtype, bool IdOnly)
   int i=0;
   #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
   RegisterAttr(Id, MPI_HBT_INT, 1)
-  if(!IdOnly)
-  {
   RegisterAttr(ComovingPosition, MPI_HBT_REAL, 3)
   RegisterAttr(PhysicalVelocity, MPI_HBT_REAL, 3)
   RegisterAttr(Mass, MPI_HBT_REAL, 1)
-  }
   RegisterAttr(ProcessorId, MPI_INT, 1)
   RegisterAttr(Order, MPI_HBT_INT, 1)
   #undef RegisterAttr
@@ -33,6 +30,34 @@ void create_Mpi_RemoteParticleType(MPI_Datatype& dtype, bool IdOnly)
   MPI_Type_commit(&dtype);
   #undef NumAttr
 }
+
+void create_Mpi_RemoteParticleIdType(MPI_Datatype& dtype)
+{
+  /*to create the struct data type for communication*/	
+  RemoteParticleId_t p;
+  #define NumAttr 10
+  MPI_Datatype oldtypes[NumAttr];
+  int blockcounts[NumAttr];
+  MPI_Aint   offsets[NumAttr], origin,extent;
+  
+  MPI_Get_address(&p,&origin);
+  MPI_Get_address((&p)+1,&extent);//to get the extent of s
+  extent-=origin;
+  
+  int i=0;
+  #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
+  RegisterAttr(Id, MPI_HBT_INT, 1)
+  RegisterAttr(ProcessorId, MPI_INT, 1)
+  RegisterAttr(Order, MPI_HBT_INT, 1)
+  #undef RegisterAttr
+  assert(i<=NumAttr);
+  
+  MPI_Type_create_struct(i,blockcounts,offsets,oldtypes, &dtype);
+  MPI_Type_create_resized(dtype,(MPI_Aint)0, extent, &dtype);
+  MPI_Type_commit(&dtype);
+  #undef NumAttr
+}
+
 inline bool CompParticleProcessorId(const RemoteParticle_t &a, const RemoteParticle_t &b)
 {
   return a.ProcessorId<b.ProcessorId;
@@ -40,6 +65,10 @@ inline bool CompParticleProcessorId(const RemoteParticle_t &a, const RemoteParti
 inline bool CompParticleOrder(const RemoteParticle_t &a, const RemoteParticle_t &b)
 {
   return a.Order<b.Order;
+}
+inline bool CompParticleId(const RemoteParticleId_t &a, const RemoteParticleId_t &b)
+{
+  return a.Id<b.Id;
 }
 
 static void SortRemoteParticles(vector <RemoteParticle_t> &P)
@@ -53,120 +82,83 @@ static void SortRemoteParticles(vector <RemoteParticle_t> &P)
   }
 }
 
+void ParticleExchanger_t::BcastParticles(HBTInt& ParticleCount)
+{
+  ParticlesToProcess.reserve(ParticleCount);
+  int root=CurrSendingRank;
+  MPI_Bcast(&ParticleCount, 1, MPI_HBT_INT, root, world.Communicator);
+  //determine loops
+  const int chunksize=1024*1024;
+  HBTInt  Nloop=ceil(1.*ParticleCount/chunksize);
+  if(0==Nloop) return;
+  int buffersize=ParticleCount/Nloop+1, nremainder=ParticleCount%Nloop;
+  //transmit
+  vector <RemoteParticleId_t> buffer(buffersize);
+  for(HBTInt iloop=0;iloop<Nloop;iloop++)
+  {
+	if(iloop==nremainder)//switch sendcount from n+1 to n
+	  buffersize--;
+	if(world.rank()==root)//pack
+	{
+	  for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)
+	  {
+		*it_buff=ParticlesToSend.back();
+		ParticlesToSend.pop_back();
+	  }
+	}
+	MPI_Bcast(buffer.data(), buffersize, MPI_RemoteParticleId_t, root, world.Communicator);
+	for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)//unpack
+	  ParticlesToProcess.push_back(*it_buff);
+  }
+  if(world.rank()==root)
+  {
+	SendStackSize-=ParticleCount;
+	if(SendStackSize==0) CurrSendingRank++;
+  }
+  MPI_Bcast(&CurrSendingRank, 1, MPI_HBT_INT, root, world.Communicator);
+}
+
+bool ParticleExchanger_t::GatherParticles(HBTInt capacity)
+{
+  HBTInt nsend;
+  while(capacity)
+  {
+	if(world.rank()==CurrSendingRank)
+	  nsend=min(SendStackSize, capacity);
+	BcastParticles(nsend);
+	capacity-=nsend;
+	if(CurrSendingRank==world.size()) return true;
+  }
+  
+  return false;
+}
+void ParticleExchanger_t::QueryParticles()
+{
+  sort(ParticlesToProcess.begin(), ParticlesToProcess.end(), CompParticleId);
+  
+  snap.GetIndices(ParticlesToProcess);
+  
+  for(auto &&p: ParticlesToProcess)
+  {
+	if(p.Id!=SpecialConst::NullParticleId)
+	  LocalParticles.emplace_back(snap.Particles[p.Id], p.ProcessorId, p.Order);
+  }
+ 
+ ParticlesToProcess.clear();
+}
+
 void ParticleExchanger_t::Exchange()
 {
-  //assumes all particles can be found on at least one processor
-  auto it=ParticlesToProcess.begin();
-  
-  OpenChannel();
+  HBTInt capacity=ceil(1.*snap.NumberOfParticlesOnAllNodes/world.size());
+  LocalParticles.reserve(capacity);
   while(true)
   {
-	bool alldone=ProcessParticle(it);
-	if(alldone) break;
+	bool flag_end=GatherParticles(capacity);
+	QueryParticles();//Walk through, append to LocalParticles, clear ParticlesToProcess
+	if(flag_end) break;
   }
-  CloseChannel();
- 
-  LocalParticles.assign(ParticlesToProcess.begin(), ParticlesToProcess.end());
-  ParticlesToProcess.clear();
-  
-//   cout<<"remaining...\n";
-  //send remaining particles
-  while(SendStackSize)
-	SendParticles();
   
   RestoreParticles();
-}
-
-void ParticleExchanger_t::ReceiveParticles(bool blocking)
-{
-  int MessageArrived=0;
-  MPI_Status bufferstat;
-  if(blocking)
-  {
-	MPI_Wait(&ReqRecv, &bufferstat);
-	MessageArrived=1;
-  }
-  else
-	MPI_Test(&ReqRecv, &MessageArrived, &bufferstat);
-  
-  if(MessageArrived)
-  {
-	int buffersize;
-	MPI_Get_count(&bufferstat, MPI_RemoteParticleId_t, &buffersize);
-	ParticlesToProcess.insert(ParticlesToProcess.end(), RecvBuffer.begin(), RecvBuffer.begin()+buffersize);
-	OpenChannel();
-  }
-}
-
-void ParticleExchanger_t::SendParticles()
-{
-	int buffersize=min(maxbuffersize, SendStackSize);
-	if(buffersize)
-	{
-	  for(int i=0;i<buffersize;i++)
-	  {
-		SendBuffer[i]=ParticlesToSend.front();
-		ParticlesToSend.pop_front();
-	  }
-	  SendStackSize-=buffersize;
-	  MPI_Send(SendBuffer.data(), buffersize, MPI_RemoteParticleId_t, NextRank, TagQuery, world.Communicator);
-	}
-}
-bool ParticleExchanger_t::ProcessParticle(ParticleStack_t::iterator &it)
-{
-	auto &p=*it;
-	if(p.Id==EndParticleId)//end particle
-	{
-	  iloop++;
-	  if(AllDone()) 
-	  {
-		it=ParticlesToProcess.erase(it);
-		assert(it==ParticlesToProcess.end());//all particles should have been processed by now, unless some particles cannot be located on any processor!
-		return true;
-	  }
-	  ParticlesToSend.push_back(p);
-	  SendStackSize++;
-	  it=ParticlesToProcess.erase(it);
-	}
-	else
-	{
-	  HBTInt ind=snap.GetIndex(p);
-	  if(ind!=SpecialConst::NullParticleId)
-	  {
-		p=snap.Particles[ind];
-		++it;
-	  }
-	  else
-	  {
-		ParticlesToSend.push_back(p);
-		SendStackSize++;
-		it=ParticlesToProcess.erase(it);
-	  }
-	}
-	bool is_starving=(it==ParticlesToProcess.end());
-	if(is_starving)
-	{
-	  SendParticles();
-	  int flag_begin=0;
-	  if(it==ParticlesToProcess.begin())
-		flag_begin=1;
-	  else
-		--it;
-	  
-	  ReceiveParticles(1);//blocking receive
-	  
-	  if(flag_begin)
-		it=ParticlesToProcess.begin();
-	  else
-		++it;//to ensure iterator validity
-	}
-	else
-	{
-	  if(SendStackSize>=maxbuffersize)
-		SendParticles();
-	  ReceiveParticles(0);//non-blocking
-	}
-	return false;
 }
 
 void ParticleExchanger_t::RestoreParticles()

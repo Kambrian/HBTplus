@@ -43,6 +43,7 @@ inline int CompKeyWithPair(const void *a, const void *b)//used to sort Id in asc
   if(va<vb) return -1;
   return 0;
 };
+
 template <class Key_t, class Index_t>
 Index_t MappedIndexTable_t<Key_t, Index_t>::GetIndex(const Key_t key) const
 {//maybe implement the exception here? could be slow... test it first.

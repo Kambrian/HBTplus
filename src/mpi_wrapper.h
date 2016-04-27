@@ -177,4 +177,39 @@ void MyAllToAll(MpiWorker_t &world, vector <InParticleIterator_T> &InParticleIte
 	}
 }
 
+template <class Particle_T, class InParticleIterator_T, class OutParticleIterator_T>
+void MyBcast(MpiWorker_t &world, InParticleIterator_T &InParticleIterator, OutParticleIterator_T &OutParticleIterator, HBTInt &ParticleCount, MPI_Datatype &MPI_Particle_T, int root)
+/*break the task into smaller pieces to avoid message size overflow
+ InParticleIterator only significant at root, and should be different from OutParticleIterator.
+ ParticleCount automatically broadcasted from root to every process.
+ */
+{
+  MPI_Bcast(&ParticleCount, 1, MPI_HBT_INT, root, world.Communicator);
+  //determine loops
+  const int chunksize=1024*1024;
+  HBTInt  Nloop=ceil(1.*ParticleCount/chunksize);
+  if(0==Nloop) return;
+  int buffersize=ParticleCount/Nloop+1, nremainder=ParticleCount%Nloop;
+  //transmit
+  vector <Particle_T> buffer(buffersize);
+  for(HBTInt iloop=0;iloop<Nloop;iloop++)
+  {
+	if(iloop==nremainder)//switch sendcount from n+1 to n
+	  buffersize--;
+	if(world.rank()==root)//pack
+	{
+	  for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)
+	  {
+		*it_buff=move(*InParticleIterator);
+		++InParticleIterator;
+	  }
+	}
+	MPI_Bcast(buffer.data(), buffersize, MPI_Particle_T, root, world.Communicator);
+	for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)//unpack
+	{
+	  *OutParticleIterator=move(*it_buff);
+	  ++OutParticleIterator;
+	}
+  }
+}
 #endif

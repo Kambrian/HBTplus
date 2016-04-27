@@ -149,15 +149,15 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
   SetEpoch(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
   
   //npartTotal is not reliable
-  NumberOfParticles=0;
+  HBTInt np_allfiles=0;
   for(int iFile=0;iFile<Header.num_files;iFile++)
   {
 	int n=ReadNumberOfDMParticles( iFile);
 	NumberOfDMParticleInFiles.push_back(n);
-	OffsetOfDMParticleInFiles.push_back(NumberOfParticles);
-	NumberOfParticles+=n;
+	OffsetOfDMParticleInFiles.push_back(np_allfiles);
+	np_allfiles+=n;
   }
-  
+  NumberOfParticlesOnAllNodes=np_allfiles;
 }
 
 void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill_particle_hash)
@@ -166,28 +166,32 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
   SetSnapshotIndex(snapshot_index);
    
   {//load header
-  if(world.rank()==0)
+  const int root=0;
+  if(world.rank()==root)
 	LoadHeader(0);
   MPI_Datatype MPI_SnapshotHeader_t;
   SnapshotHeader_t().create_MPI_type(MPI_SnapshotHeader_t);
-  MPI_Bcast(&Header,1, MPI_SnapshotHeader_t, 0, world.Communicator);
+  MPI_Bcast(&Header,1, MPI_SnapshotHeader_t, root, world.Communicator);
   MPI_Type_free(&MPI_SnapshotHeader_t);
-  world.SyncAtom(OmegaM0, MPI_HBT_REAL, 0);
-  world.SyncAtom(OmegaLambda0, MPI_HBT_REAL, 0);
-  world.SyncAtom(Hz, MPI_HBT_REAL, 0);
-  world.SyncAtom(ScaleFactor, MPI_HBT_REAL, 0);
-  world.SyncAtomBool(NeedByteSwap, 0);
-  world.SyncAtom(IntTypeSize, MPI_INT, 0);
-  world.SyncAtom(RealTypeSize, MPI_INT, 0);
-  world.SyncContainer(NumberOfDMParticleInFiles, MPI_HBT_INT, 0);
-  world.SyncContainer(OffsetOfDMParticleInFiles, MPI_HBT_INT, 0);
+  world.SyncAtom(OmegaM0, MPI_HBT_REAL, root);
+  world.SyncAtom(OmegaLambda0, MPI_HBT_REAL, root);
+  world.SyncAtom(Hz, MPI_HBT_REAL, root);
+  world.SyncAtom(ScaleFactor, MPI_HBT_REAL, root);
+  world.SyncAtomBool(NeedByteSwap, root);
+  world.SyncAtom(IntTypeSize, MPI_INT, root);
+  world.SyncAtom(RealTypeSize, MPI_INT, root);
+  world.SyncContainer(NumberOfDMParticleInFiles, MPI_HBT_INT, root);
+  world.SyncContainer(OffsetOfDMParticleInFiles, MPI_HBT_INT, root);
+  world.SyncAtom(NumberOfParticlesOnAllNodes, MPI_HBT_INT, root);
   }
   
   int nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), Header.num_files, nfiles_skip, nfiles_end);
-  NumberOfParticles=0;
-  NumberOfParticles=accumulate(NumberOfDMParticleInFiles.begin()+nfiles_skip, NumberOfDMParticleInFiles.begin()+nfiles_end, NumberOfParticles);
-  Particles.reserve(NumberOfParticles);
+  {
+  HBTInt np=0;
+  np=accumulate(NumberOfDMParticleInFiles.begin()+nfiles_skip, NumberOfDMParticleInFiles.begin()+nfiles_end, np);
+  Particles.reserve(np);
+  }
   
   for(int i=0, ireader=0;i<world.size();i++, ireader++)
   {
@@ -429,7 +433,7 @@ void ParticleSnapshot_t::Clear()
   #undef RESET 
   ClearParticleHash();//even if you don't do this, the destructor will still clean up the memory.
   //   cout<<NumberOfParticles<<" particles cleared from snapshot "<<SnapshotIndex<<endl;
-  NumberOfParticles=0;
+  NumberOfParticlesOnAllNodes=0;
 }
 
 #ifdef TEST_snapshot_io
