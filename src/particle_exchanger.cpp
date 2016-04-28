@@ -84,31 +84,35 @@ static void SortRemoteParticles(vector <RemoteParticle_t> &P)
 
 void ParticleExchanger_t::BcastParticles(HBTInt& ParticleCount)
 {
-  ParticlesToProcess.reserve(ParticleCount);
   int root=CurrSendingRank;
   MPI_Bcast(&ParticleCount, 1, MPI_HBT_INT, root, world.Communicator);
-  //determine loops
-  const int chunksize=1024*1024;
-  HBTInt  Nloop=ceil(1.*ParticleCount/chunksize);
-  if(0==Nloop) return;
-  int buffersize=ParticleCount/Nloop+1, nremainder=ParticleCount%Nloop;
-  //transmit
-  vector <RemoteParticleId_t> buffer(buffersize);
-  for(HBTInt iloop=0;iloop<Nloop;iloop++)
+  if(ParticleCount)
   {
-	if(iloop==nremainder)//switch sendcount from n+1 to n
-	  buffersize--;
-	if(world.rank()==root)//pack
+	//determine loops
+	const int chunksize=1024*1024;
+	HBTInt  Nloop=ceil(1.*ParticleCount/chunksize);
+	int buffersize=ParticleCount/Nloop+1, nremainder=ParticleCount%Nloop;
+	//transmit
+	vector <RemoteParticleId_t> buffer(buffersize);
+	for(HBTInt iloop=0;iloop<Nloop;iloop++)
 	{
-	  for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)
+	  if(iloop==nremainder)//switch sendcount from n+1 to n
 	  {
-		*it_buff=ParticlesToSend.back();
-		ParticlesToSend.pop_back();
+		buffersize--;
+		buffer.resize(buffersize);
 	  }
+	  if(world.rank()==root)//pack
+	  {
+		for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)
+		{
+		  *it_buff=ParticlesToSend.back();
+		  ParticlesToSend.pop_back();
+		}
+	  }
+	  MPI_Bcast(buffer.data(), buffersize, MPI_RemoteParticleId_t, root, world.Communicator);
+	  for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)//unpack
+		ParticlesToProcess.push_back(*it_buff);
 	}
-	MPI_Bcast(buffer.data(), buffersize, MPI_RemoteParticleId_t, root, world.Communicator);
-	for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)//unpack
-	  ParticlesToProcess.push_back(*it_buff);
   }
   if(world.rank()==root)
   {
@@ -120,6 +124,7 @@ void ParticleExchanger_t::BcastParticles(HBTInt& ParticleCount)
 
 bool ParticleExchanger_t::GatherParticles(HBTInt capacity)
 {
+  ParticlesToProcess.reserve(capacity);
   HBTInt nsend;
   while(capacity)
   {
@@ -135,9 +140,9 @@ bool ParticleExchanger_t::GatherParticles(HBTInt capacity)
 void ParticleExchanger_t::QueryParticles()
 {
   sort(ParticlesToProcess.begin(), ParticlesToProcess.end(), CompParticleId);
-  
+
   snap.GetIndices(ParticlesToProcess);
-  
+
   for(auto &&p: ParticlesToProcess)
   {
 	if(p.Id!=SpecialConst::NullParticleId)
@@ -149,7 +154,7 @@ void ParticleExchanger_t::QueryParticles()
 
 void ParticleExchanger_t::Exchange()
 {
-  HBTInt capacity=ceil(1.*snap.NumberOfParticlesOnAllNodes/world.size());
+  HBTInt capacity=ceil(1.*snap.NumberOfParticlesOnAllNodes/world.size());//decrease this if out of memory; increase this to increase efficiency
   LocalParticles.reserve(capacity);
   while(true)
   {
@@ -157,7 +162,7 @@ void ParticleExchanger_t::Exchange()
 	QueryParticles();//Walk through, append to LocalParticles, clear ParticlesToProcess
 	if(flag_end) break;
   }
-  
+
   RestoreParticles();
 }
 
@@ -174,6 +179,7 @@ void ParticleExchanger_t::RestoreParticles()
   CompileOffsets(SendSizes, SendDisps);
   MPI_Alltoall(SendSizes.data(), 1, MPI_HBT_INT, RecvSizes.data(), 1, MPI_HBT_INT, world.Communicator);
   HBTInt nrecv=CompileOffsets(RecvSizes, RecvDisps);
+  assert(nrecv==SendStackSize0);
   
   vector <RemoteParticle_t> particles(nrecv);
   vector <InputIterator_t > SendBegin(world.size());

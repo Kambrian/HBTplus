@@ -28,11 +28,13 @@ void MappedIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t <Key_t, Index_t> &
 		Map[i].Index=Keys.GetIndex(i);
 	}
 	sort(Map.begin(), Map.end(), CompPair<Key_t, Index_t>);
+  NumQueryCrit=n/log2(n);
 }
 template <class Key_t, class Index_t>
 void MappedIndexTable_t<Key_t, Index_t>::Clear()
 {
   vector <Pair_t>().swap(Map);
+  NumQueryCrit=0;
 }
 template <class Key_t, class Index_t>
 inline int CompKeyWithPair(const void *a, const void *b)//used to sort Id in ascending order; 

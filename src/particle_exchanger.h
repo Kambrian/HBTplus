@@ -46,7 +46,14 @@ inline int CompPairWithValue(const Pair_t a, const Val_t b)
 template <class Key_t, class Index_t>
 void MappedIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles) const
 {//TODO: improve with multi-key (batch) binary search? inform later search by previous results; bracket by searching two ends first.
-  
+ 
+  if(particles.size()<NumQueryCrit)//do individual binary search
+  {
+	for(auto &&p: particles)
+	  p.Id=GetIndex(p.Id);
+	return;
+  }
+  //otherwise do batch sequential search
   auto &null=BaseClass_t::NullIndex;
   
   auto it_p=particles.begin();
@@ -98,7 +105,7 @@ class ParticleExchanger_t
   const ParticleSnapshot_t &snap;
   typedef vector <RemoteParticleId_t> ParticleStack_t;
   ParticleStack_t ParticlesToProcess, ParticlesToSend;
-  HBTInt SendStackSize;
+  HBTInt SendStackSize, SendStackSize0;
   int CurrSendingRank;
   vector <RemoteParticle_t> LocalParticles;
 public:
@@ -141,6 +148,7 @@ ParticleExchanger_t::ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnap
 	++order;
   }
   SendStackSize=order;
+  SendStackSize0=SendStackSize;//backup size for later sanity check
   particle_it.reset();
 }
 
@@ -241,7 +249,6 @@ void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHa
 	Exchanger.UnPackHaloParticles(InHalos, TargetRank);
   }
   
-//   cout<<"sending shells...\n";
   //distribute halo shells
 	vector <int> SendHaloCounts(world.size(),0), RecvHaloCounts(world.size()), SendHaloDisps(world.size()), RecvHaloDisps(world.size());
 	sort(TargetRank.begin(), TargetRank.end(), CompareRank);
@@ -265,7 +272,6 @@ void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHa
 	for(HBTInt i=0;i<NumNewHalos;i++)
 	  NewHalos[i].Particles.resize(OutHaloSizes[i]);
 	
-// 	cout<<"sending particles...";
 	{
 	//distribute halo particles
 	MPI_Datatype MPI_HBT_Particle;

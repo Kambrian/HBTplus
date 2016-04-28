@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 	timer.Tick(world.Communicator);
 	subsnap.AssignHosts(world, halosnap, partsnap);
 	subsnap.PrepareCentrals(halosnap);
-
+/*
 	timer.Tick(world.Communicator);
 	subsnap.RefineParticles();
 	
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 	
 	timer.Tick(world.Communicator);
 	subsnap.Save(world);
-	
+	*/
 	timer.Tick(world.Communicator);
 	if(world.rank()==0)
   {

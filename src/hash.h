@@ -88,11 +88,12 @@ class MappedIndexTable_t: public IndexTable_t <Key_t, Index_t>
 public:  
   typedef IndexedKey_t<Key_t, Index_t> Pair_t;  
 private:
+  HBTInt NumQueryCrit;
   typedef IndexTable_t<Key_t, Index_t> BaseClass_t;
   typedef typename BaseClass_t::ParticleIdList_T ParticleIdList_T;
   vector <Pair_t> Map; 
 public:
-  MappedIndexTable_t(): Map()
+  MappedIndexTable_t(): Map(), NumQueryCrit()
   {
   }
   void Fill(const KeyList_t <Key_t, Index_t> &Keys, Index_t null_index=SpecialConst::NullParticleId);
