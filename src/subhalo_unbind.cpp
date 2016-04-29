@@ -2,6 +2,7 @@
 #include <iostream>
 #include <new>
 #include <algorithm>
+#include <boost/concept_check.hpp>
 #include <omp.h>
 
 #include "datatypes.h"
@@ -219,9 +220,13 @@ public:
 	SpecificAngularMomentum[2]=AMz/NumPart;
   }
 };
+
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
   if(1==Particles.size()) return;
+  HBTxyz OldRefPos, OldRefVel;
+  auto &RefPos=ComovingAveragePosition;
+  auto &RefVel=PhysicalAverageVelocity;
   
   OctTree_t tree;
   tree.Reserve(Particles.size());
@@ -232,15 +237,42 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	for(HBTInt i=0;i<Nbound;i++)
 	  Elist[i].pid=Particles[i];
   EnergySnapshot_t ESnap(Elist.data(), Elist.size(), snapshot);
+  bool CorrectionLoop=false;
 	while(true)
 	{
+	  if(CorrectionLoop)
+	  {
+		#define VecNorm(x) (x[0]*x[0]+x[1]*x[1]+x[2]*x[2])
+		#define VecDot(x,y) (x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
+		HBTxyz RefVelDiff;
+		snapshot.RelativeVelocity(OldRefPos, OldRefVel, RefPos, RefVel, RefVelDiff);
+		HBTReal dK=0.5*VecNorm(RefVelDiff);
+		EnergySnapshot_t ESnapCorrection(&Elist[Nbound], Nlast-Nbound, snapshot); //point to freshly removed particles
+		tree.Build(ESnapCorrection); 
+		#pragma omp parallel for if(Nlast>100)
+		for(HBTInt i=0;i<Nbound;i++)
+		{
+		  HBTInt pid=Elist[i].pid;
+		  auto &x=snapshot.GetComovingPosition(pid);
+		  auto &v=snapshot.GetPhysicalVelocity(pid);
+		  HBTxyz OldVel;
+		  snapshot.RelativeVelocity(x,v,OldRefPos, OldRefVel, OldVel);
+		  Elist[i].E+=VecDot(OldVel, RefVelDiff)+dK-tree.EvaluatePotential(x, 0);;
+		}
+		#undef VecNorm
+		#undef VecDot
+		Nlast=Nbound;
+	  }
+	  else
+	  {
 		Nlast=Nbound;
 		tree.Build(ESnap, Nlast);
-	  #pragma omp parallel for if(Nlast>100)
-	  for(HBTInt i=0;i<Nlast;i++)
-	  {
-		HBTInt pid=Elist[i].pid;
-		Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), ComovingAveragePosition, PhysicalAverageVelocity, snapshot.GetParticleMass(pid));
+		#pragma omp parallel for if(Nlast>100)
+		for(HBTInt i=0;i<Nlast;i++)
+		{
+		  HBTInt pid=Elist[i].pid;
+		  Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), RefPos, RefVel, snapshot.GetParticleMass(pid));
+		}
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
 		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
@@ -256,6 +288,12 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		else
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
+		  if(Nbound>Nlast*0.5)
+		  {
+			CorrectionLoop=true;
+			copyHBTxyz(OldRefPos, RefPos);
+			copyHBTxyz(OldRefVel, RefVel);
+		  }
 		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
 		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
 		  if(Nbound>Nlast*HBTConfig.BoundMassPrecision)//converge
@@ -273,7 +311,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		}
 	}
 	Particles.resize(Nlast);
-	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingAveragePosition, PhysicalAverageVelocity);//only use CoM frame when unbinding and calculating Kinematics
+	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 

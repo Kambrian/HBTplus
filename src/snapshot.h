@@ -74,6 +74,7 @@ public:
   void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
   void SphericalOverdensitySize2(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
   void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
+  void RelativeVelocity(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, HBTxyz& relativeVel) const;
 };
 class SnapshotView_t: public Snapshot_t
 {
@@ -201,6 +202,20 @@ public:
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
 };
+
+inline void Snapshot_t::RelativeVelocity(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, HBTxyz& relativeVel) const
+{
+   HBTxyz dx;
+   HBTxyz &dv=relativeVel;
+  for(int j=0;j<3;j++)
+  {
+	dx[j]=targetPos[j]-refPos[j];
+	if(HBTConfig.PeriodicBoundaryOn)  dx[j]=NEAREST(dx[j]);
+	dv[j]=targetVel[j]-refVel[j];
+	dv[j]+=Hz*ScaleFactor*dx[j];
+  }
+}
+
 inline HBTInt ParticleSnapshot_t::size() const
 {
   return NumberOfParticles;
