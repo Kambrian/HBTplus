@@ -241,7 +241,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	while(true)
 	{
 	  if(CorrectionLoop)
-	  {
+	  {//correct the potential due to removed particles
 		#define VecNorm(x) (x[0]*x[0]+x[1]*x[1]+x[2]*x[2])
 		#define VecDot(x,y) (x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
 		HBTxyz RefVelDiff;
