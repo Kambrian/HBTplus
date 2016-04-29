@@ -45,8 +45,12 @@ inline int CompPairWithValue(const Pair_t a, const Val_t b)
 };
 template <class Key_t, class Index_t>
 void MappedIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles) const
-{//TODO: improve with multi-key (batch) binary search? inform later search by previous results; bracket by searching two ends first.
- 
+{ 
+#define ALWAYS_BATCH_BINARY_SEARCH
+  
+#ifdef ALWAYS_BATCH_BINARY_SEARCH
+  GetIndicesRecursive(particles, 0, particles.size(), Map.begin(), Map.end());//batch-binary-search: is this always faster?
+#else  
   if(particles.size()<NumQueryCrit)//do individual binary search
   {
 	for(auto &&p: particles)
@@ -84,8 +88,42 @@ void MappedIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles)
 	  ++it_p;
 	  if(it_p==particles.end()) return;
   }
+#endif  
+}
+
+template <class Key_t, class Index_t>
+void MappedIndexTable_t<Key_t, Index_t>::GetIndicesRecursive(ParticleIdList_T &particles, HBTInt imin, HBTInt imax, MapIter_t MapBegin,  MapIter_t MapEnd) const
+{
+  //GetIndices of particles in storage range [imin, imax) from map [MapBegin, MapEnd).
+  auto &null=BaseClass_t::NullIndex;
+ 
+  if(MapBegin==MapEnd)
+  {
+	for(HBTInt i=imin;i<imax;i++)
+	  particles[i].Id=null;
+	return;
+  }
   
-//   auto it_map=lower_bound(Map.begin(), Map.end(), it_p->Id, CompPairWithValue<Pair_t, Key_t>);
+  if(imin>=imax) return;
+  
+  HBTInt imid;
+  if(imax-imin==1) 
+	imid=imin;
+  else
+	imid=(imin+imax)/2;
+  Key_t key=particles[imid].Id;
+  MapIter_t MapMid=lower_bound(MapBegin, MapEnd, key, CompPairWithValue<Pair_t, Key_t>);
+  MapIter_t MapEndLeft=MapMid, MapBeginRight=MapMid;
+  if(MapMid==MapEnd||MapMid->Key>key)
+	particles[imid].Id=null;
+  else
+  {
+	particles[imid].Id=MapMid->Index;
+	++MapEndLeft;
+  }
+	
+  GetIndicesRecursive(particles, imin, imid, MapBegin, MapEndLeft);
+  GetIndicesRecursive(particles, imid+1, imax, MapBeginRight, MapEnd);
 }
 
 template <class Key_t, class Index_t>

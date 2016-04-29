@@ -92,6 +92,8 @@ private:
   typedef IndexTable_t<Key_t, Index_t> BaseClass_t;
   typedef typename BaseClass_t::ParticleIdList_T ParticleIdList_T;
   vector <Pair_t> Map; 
+  typedef typename vector <Pair_t>::const_iterator MapIter_t;
+  void GetIndicesRecursive(ParticleIdList_T &particles, HBTInt imin, HBTInt imax, MapIter_t MapBegin,  MapIter_t MapEnd) const;
 public:
   MappedIndexTable_t(): Map(), NumQueryCrit()
   {
