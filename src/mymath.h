@@ -16,7 +16,6 @@
 #include <mpi.h>
 
 #include "datatypes.h"
-#include "config_parser.h"
 
 template <class T>
 size_t CompileOffsets(const vector <T> &Counts, vector <T> &Offsets)
@@ -168,21 +167,6 @@ inline HBTReal Distance(const HBTxyz &x, const HBTReal y[3])
 inline HBTReal Distance(const HBTReal x[3], const HBTxyz &y)
 {
   return Distance(x, y.data());
-}
-#define NEAREST(x) (((x)>HBTConfig.BoxHalf)?((x)-HBTConfig.BoxSize):(((x)<-HBTConfig.BoxHalf)?((x)+HBTConfig.BoxSize):(x)))
-inline HBTReal PeriodicDistance(const HBTxyz &x, const HBTxyz &y)
-{
-	HBTxyz dx;
-	dx[0]=x[0]-y[0];
-	dx[1]=x[1]-y[1];
-	dx[2]=x[2]-y[2];
-	if(HBTConfig.PeriodicBoundaryOn)
-	{
-	  dx[0]=NEAREST(dx[0]);
-	  dx[1]=NEAREST(dx[1]);
-	  dx[2]=NEAREST(dx[2]);
-	}
-	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
 }
 
 template <class T>

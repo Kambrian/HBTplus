@@ -24,9 +24,9 @@ BASECXX=$(CXX)
 endif
   
 ifeq ($(BASECXX), g++)
-OMPFLAG=-fopenmp
+#OMPFLAG=-fopenmp
 else
-OMPFLAG=-openmp
+#OMPFLAG=-openmp
 endif
   
 %.test.o: %.cpp

@@ -7,6 +7,9 @@
 #include <cstdlib>
 #include <cstdio>
 #include <unordered_map>
+#include <list>
+#include <forward_list>
+
 #include "datatypes.h"
 #include "mymath.h"
 #include "config_parser.h"
@@ -16,7 +19,6 @@
 
 #define NUMBER_OF_PARTICLE_TYPES 6
 #define SNAPSHOT_HEADER_SIZE 256
-
 class Particle_t
 {
 public:
@@ -25,6 +27,10 @@ public:
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
   HBTReal Mass;
+  Particle_t()=default;
+  Particle_t(HBTInt id): Id(id)
+  {
+  }
   void create_MPI_type(MPI_Datatype &MPI_HBTParticle_t);
 };
 extern ostream& operator << (ostream& o, Particle_t &p);
@@ -148,7 +154,6 @@ class ParticleSnapshot_t: public Snapshot_t
   vector <HBTInt> NumberOfDMParticleInFiles;
   vector <HBTInt> OffsetOfDMParticleInFiles;
     
-  HBTInt NumberOfParticles;
   FlatIndexTable_t<HBTInt, HBTInt> FlatHash;
   MappedIndexTable_t<HBTInt, HBTInt> MappedHash;
   IndexTable_t<HBTInt, HBTInt> *ParticleHash;
@@ -162,8 +167,9 @@ class ParticleSnapshot_t: public Snapshot_t
 public:
   SnapshotHeader_t Header;
   vector <Particle_t> Particles;
+  HBTInt NumberOfParticlesOnAllNodes;
   
-  ParticleSnapshot_t(): Snapshot_t(), Header(), Particles(), NumberOfParticles(0), ParticleHash(), MappedHash(), FlatHash()
+  ParticleSnapshot_t(): Snapshot_t(), Header(), Particles(), ParticleHash(), MappedHash(), FlatHash(), NumberOfParticlesOnAllNodes(0)
   {
 	NeedByteSwap=false;
 	IntTypeSize=0;
@@ -185,6 +191,8 @@ public:
   HBTInt GetId(HBTInt index) const;
   HBTInt GetIndex(HBTInt particle_id) const;
   HBTInt GetIndex(Particle_t & particle) const;
+  template <class ParticleIdList_t>
+  void GetIndices(ParticleIdList_t &particles) const;
   const HBTxyz & GetComovingPosition(HBTInt index) const;
   const HBTxyz & GetPhysicalVelocity(HBTInt index) const;
   HBTReal GetMass(HBTInt index) const;
@@ -194,6 +202,9 @@ public:
   
   void AveragePosition(HBTxyz & CoM, const HBTInt Particles[], HBTInt NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const HBTInt Particles[], HBTInt NumPart) const;
+  
+  template <class Halo_T>
+  void ExchangeHalos(MpiWorker_t &world, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, MPI_Datatype MPI_Halo_Shell_Type) const;
 };
 inline HBTInt ParticleSnapshot_t::size() const
 {

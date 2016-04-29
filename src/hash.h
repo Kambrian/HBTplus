@@ -7,6 +7,8 @@
 #include <exception>
 #include <string>
 
+class RemoteParticleId_t;
+
 template <class Key_t, class Index_t>
 class KeyList_t
 {
@@ -53,6 +55,8 @@ public:
   virtual void Fill(const KeyList_t<Key_t, Index_t> &Keys, Index_t null_index=SpecialConst::NullParticleId)=0;
   virtual void Clear()=0;
   virtual Index_t GetIndex(const Key_t key) const =0;
+  typedef vector <RemoteParticleId_t> ParticleIdList_T; 
+  virtual void GetIndices(ParticleIdList_T &particles) const =0;
 };
 
 template <class Key_t, class Index_t>
@@ -60,6 +64,7 @@ class FlatIndexTable_t: public IndexTable_t <Key_t, Index_t>
 {
 private:
   typedef IndexTable_t<Key_t, Index_t> BaseClass_t;
+  typedef typename BaseClass_t::ParticleIdList_T ParticleIdList_T;
   Index_t * Index;
   Index_t Offset;
   Key_t KeySpan, KeyMax, KeyMin;
@@ -70,6 +75,7 @@ public:
   void Fill(const KeyList_t <Key_t, Index_t> &Keys, Index_t null_index=SpecialConst::NullParticleId);
   void Clear();
   Index_t GetIndex(const Key_t key) const;
+  void GetIndices(ParticleIdList_T &particles) const;
   ~FlatIndexTable_t()
   {
 	Clear();
@@ -82,15 +88,20 @@ class MappedIndexTable_t: public IndexTable_t <Key_t, Index_t>
 public:  
   typedef IndexedKey_t<Key_t, Index_t> Pair_t;  
 private:
+  HBTInt NumQueryCrit;
   typedef IndexTable_t<Key_t, Index_t> BaseClass_t;
+  typedef typename BaseClass_t::ParticleIdList_T ParticleIdList_T;
   vector <Pair_t> Map; 
+  typedef typename vector <Pair_t>::const_iterator MapIter_t;
+  void GetIndicesRecursive(ParticleIdList_T &particles, HBTInt imin, HBTInt imax, MapIter_t MapBegin,  MapIter_t MapEnd) const;
 public:
-  MappedIndexTable_t(): Map()
+  MappedIndexTable_t(): Map(), NumQueryCrit()
   {
   }
   void Fill(const KeyList_t <Key_t, Index_t> &Keys, Index_t null_index=SpecialConst::NullParticleId);
   void Clear();
   Index_t GetIndex(const Key_t key) const;
+  void GetIndices(ParticleIdList_T &particles) const;
   ~MappedIndexTable_t()
   {
 	Clear();

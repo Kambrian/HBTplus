@@ -89,11 +89,31 @@ namespace SpecialConst
 //   const Particle_t NullParticle(NullParticleId, NullParticleId, NullCoordinate, NullCoordinate);
 };
 
+struct IdRank_t
+{
+  HBTInt Id;
+  int Rank;
+  IdRank_t()=default;
+  IdRank_t(HBTInt id, int rank): Id(id), Rank(rank)
+  {
+  }
+};
+#ifdef HBT_INT8
+#define MPI_HBTRankPair MPI_LONG_INT
+#else
+#define MPI_HBTRankPair MPI_2INT
+#endif
+inline bool CompareRank(const IdRank_t &a, const IdRank_t &b)
+{
+  return (a.Rank<b.Rank);
+}
+
 template <class T>
 class VectorView_t
 /* similar to vector, but never actively manage memory; only bind to existing memory*/
 {
 public:
+  typedef T * iterator;
   HBTInt N;
   T * Data; //this is only copied. never allocated by itself.
   VectorView_t(): N(0), Data(nullptr)

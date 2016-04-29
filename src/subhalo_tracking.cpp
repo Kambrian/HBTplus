@@ -229,14 +229,14 @@ void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_sna
   MPI_Bcast(TrackParticleIds.data(), NumSubhalos, MPI_HBT_INT, root, world.Communicator);
   
   //find hosts
-  vector <SizeRank_t> LocalHostIds(NumSubhalos), GlobalHostIds(NumSubhalos);
+  vector <IdRank_t> LocalHostIds(NumSubhalos), GlobalHostIds(NumSubhalos);
   if(thisrank==root)
   {
 	#pragma omp parallel for if(NumSubhalos>20)
 	for(HBTInt i=0;i<NumSubhalos;i++)
 	{
-	  LocalHostIds[i].n=Subhalos[i].HostHaloId;//already found previously
-	  LocalHostIds[i].rank=thisrank;
+	  LocalHostIds[i].Id=Subhalos[i].HostHaloId;//already found previously
+	  LocalHostIds[i].Rank=thisrank;
 	}
   }
   else
@@ -244,8 +244,8 @@ void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_sna
 	#pragma omp parallel for if(NumSubhalos>20)
 	for(HBTInt i=0;i<NumSubhalos;i++)
 	{
-	  LocalHostIds[i].n=GetLocalHostId(TrackParticleIds[i], halo_snap, part_snap);
-	  LocalHostIds[i].rank=thisrank;
+	  LocalHostIds[i].Id=GetLocalHostId(TrackParticleIds[i], halo_snap, part_snap);
+	  LocalHostIds[i].Rank=thisrank;
 	}
   }
 
@@ -262,7 +262,7 @@ void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_sna
 	vector <vector <MPI_Aint> > SendBuffers(world.size());
 	for(HBTInt subid=0;subid<NumSubhalos;subid++)//packing
 	{
-	  int rank=GlobalHostIds[subid].rank;
+	  int rank=GlobalHostIds[subid].Rank;
 	  auto & Particles=Subhalos[subid].Particles;
 	  MPI_Aint p;
 	  MPI_Address(Particles.data(),&p);
@@ -323,14 +323,14 @@ void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_sna
 	{//reuse GlobalHostIds for sorting
 	  for(HBTInt subid=0;subid<Subhalos.size();subid++)
 	  {
-		Subhalos[subid].HostHaloId=GlobalHostIds[subid].n;
+		Subhalos[subid].HostHaloId=GlobalHostIds[subid].Id;
 // 		assert(GlobalHostIds[subid].n>=-1);
-		GlobalHostIds[subid].n=subid;
+		GlobalHostIds[subid].Id=subid;
 	  }
 	  stable_sort(GlobalHostIds.begin(), GlobalHostIds.end(), CompareRank);
 	  TmpHalos.resize(Subhalos.size());
 	  for(HBTInt subid=0;subid<Subhalos.size();subid++)
-		TmpHalos[subid]=move(Subhalos[GlobalHostIds[subid].n]);
+		TmpHalos[subid]=move(Subhalos[GlobalHostIds[subid].Id]);
 // 		Subhalos[GlobalHostIds[subid].n].MoveTo(TmpHalos[subid], false);
 	  for(int rank=0;rank<world.size();rank++)
 		Counts[rank]=SendSizes[rank].size();
@@ -575,7 +575,7 @@ void SubhaloSnapshot_t::PurgeMostBoundParticles()
 void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap)
 {
   /*renew ranks after unbinding*/
-  RegisterNewTracks(world);
+  RegisterNewTracks(world);//performance bottleneck here. no. just poor synchronization.
   #pragma omp parallel
   {
   MemberTable.SortMemberLists(Subhalos);//reorder, so the central might change if necessary

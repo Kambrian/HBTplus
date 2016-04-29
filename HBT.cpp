@@ -11,6 +11,7 @@ using namespace std;
 #include "src/halo.h"
 #include "src/subhalo.h"
 #include "src/mymath.h"
+#include "src/particle_exchanger.h"
 
 int main(int argc, char **argv)
 {
@@ -42,33 +43,36 @@ int main(int argc, char **argv)
   }
   for(int isnap=snapshot_start;isnap<=snapshot_end;isnap++)
   {
-	timer.Tick();
+	timer.Tick(world.Communicator);
 	ParticleSnapshot_t partsnap;
 	partsnap.Load(world, isnap);
 	subsnap.SetSnapshotIndex(isnap);
 	HaloSnapshot_t halosnap;
 	halosnap.Load(world, isnap);
 	
-	timer.Tick();
+	timer.Tick(world.Communicator);
+// 	cout<<"updating halo particles...\n";
 	halosnap.UpdateParticles(world, partsnap);
+	timer.Tick(world.Communicator);
+// 	if(world.rank()==0) cout<<"updateing subsnap particles...\n";
 	subsnap.UpdateParticles(world, partsnap);
 	
-	timer.Tick();
+	timer.Tick(world.Communicator);
 	subsnap.AssignHosts(world, halosnap, partsnap);
 	subsnap.PrepareCentrals(halosnap);
 
-	timer.Tick();
+	timer.Tick(world.Communicator);
 	subsnap.RefineParticles();
 	
-	timer.Tick();
+	timer.Tick(world.Communicator);
 	subsnap.UpdateTracks(world, halosnap);
 	
 	cout<<" start to save "<<subsnap.Subhalos.size()<<" subs on thread "<<world.rank()<<endl;
 	
-	timer.Tick();
+	timer.Tick(world.Communicator);
 	subsnap.Save(world);
 	
-	timer.Tick();
+	timer.Tick(world.Communicator);
 	if(world.rank()==0)
   {
 	time_log<<isnap;

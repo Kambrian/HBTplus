@@ -6,7 +6,7 @@
 #include "datatypes.h"
 #include "snapshot_number.h"
 #include "subhalo.h"
-#include "gravity_tree.h"
+#include "particle_exchanger.h"
 /*
 void MemberShipTable_t::SubIdToTrackId(const SubhaloList_t& Subhalos)
 {
@@ -86,8 +86,7 @@ void SubhaloSnapshot_t::UpdateParticles(MpiWorker_t& world, const ParticleSnapsh
 {
   SetEpoch(snapshot);
   SubhaloList_t LocalSubhalos;
-  for(int rank=0;rank<world.size();rank++)//one by one through the nodes
-	DistributeHaloesSafely(world, rank, Subhalos, LocalSubhalos, snapshot, MPI_HBT_SubhaloShell_t);
+  snapshot.ExchangeHalos(world, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t);
   Subhalos.swap(LocalSubhalos);
 }
 /*
