@@ -1,5 +1,7 @@
 Add Virial/Vmax: test bound vs all: how much does the virial mass/radius differ? is the density profile still NFW? is it correct with the mass/concentration parameters?
 
+one loop unbinding for main? (note these are only intended to remove fake haloes)
+
 Run on major merger and satellite infall
 
 Reorganize SubSnap output: sort subhalos to move disrupted ones to the end; add number_of_live_subs; add live_sub_properties block; add TrackIdToIndex block.

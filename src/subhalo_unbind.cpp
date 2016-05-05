@@ -72,10 +72,15 @@ public:
   ParticleEnergy_t * Elist;
   HBTInt N;
   const Snapshot_t & Snapshot;
-  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const Snapshot_t & fullsnapshot): Elist(e), N(n), Snapshot(fullsnapshot)
+  HBTReal MassFactor;
+  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const Snapshot_t & fullsnapshot): Elist(e), N(n), Snapshot(fullsnapshot), MassFactor(1.)
   {
 	SetEpoch(fullsnapshot);
   };
+  void SetMassUnit(HBTReal mass_unit)
+  {
+	MassFactor=mass_unit;
+  }
   HBTInt size() const
   {
 	return N;
@@ -86,7 +91,7 @@ public:
   }
   HBTReal GetMass(const HBTInt i) const
   {
-	return Snapshot.GetMass(GetMemberId(i));
+	return Snapshot.GetMass(GetMemberId(i))*MassFactor;
   }
   const HBTxyz & GetPhysicalVelocity(const HBTInt i) const
   {
@@ -223,6 +228,9 @@ public:
 
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
+  HBTInt MaxSampleSize=HBTConfig.MaxSampleSizeOfPotentialEstimate;
+  bool RefineMostboundParticle=(MaxSampleSize>0&&HBTConfig.RefineMostboundParticle);
+  
   if(1==Particles.size()) return;
   HBTxyz OldRefPos, OldRefVel;
   auto &RefPos=ComovingAveragePosition;
@@ -231,6 +239,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
+  random_shuffle(Particles.begin(), Particles.end()); //shuffle for easy resampling later.
   HBTInt Nlast; 
   
   vector <ParticleEnergy_t> Elist(Nbound);
@@ -266,13 +275,25 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  else
 	  {
 		Nlast=Nbound;
-		tree.Build(ESnap, Nlast);
+		HBTInt np_tree=Nlast;
+		if(MaxSampleSize>0&&Nlast>MaxSampleSize)//downsample
+		{
+		  np_tree=MaxSampleSize;
+		  ESnap.SetMassUnit((HBTReal)Nlast/MaxSampleSize);
+		}
+		tree.Build(ESnap, np_tree);
 		#pragma omp parallel for if(Nlast>100)
 		for(HBTInt i=0;i<Nlast;i++)
 		{
 		  HBTInt pid=Elist[i].pid;
-		  Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), RefPos, RefVel, snapshot.GetParticleMass(pid));
+		  HBTReal mass;
+		  if(i<MaxSampleSize)
+			mass=ESnap.GetMass(i); //to correct for self-gravity
+		  else
+			mass=0.;//not sampled in tree, no self gravity to correct
+		  Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), RefPos, RefVel, mass);
 		}
+		ESnap.SetMassUnit(1.);//reset, no necessary
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
 		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
@@ -288,17 +309,34 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		else
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
-		  if(Nbound>Nlast*0.5)
+		  HBTInt Ndiff=Nlast-Nbound;
+		  if(Ndiff<Nbound)
 		  {
-			CorrectionLoop=true;
-			copyHBTxyz(OldRefPos, RefPos);
-			copyHBTxyz(OldRefVel, RefVel);
+			if(MaxSampleSize<=0||Ndiff<MaxSampleSize)
+			{
+			  CorrectionLoop=true;
+			  copyHBTxyz(OldRefPos, RefPos);
+			  copyHBTxyz(OldRefVel, RefVel);
+			}
 		  }
 		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
 		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
 		  if(Nbound>Nlast*HBTConfig.BoundMassPrecision)//converge
 		  {
 			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
+			if(RefineMostboundParticle&&Nbound>MaxSampleSize)//refine most-bound particle, not necessary..
+			{
+			  tree.Build(ESnap, MaxSampleSize);
+			  vector <HBTReal> E(MaxSampleSize);
+			  #pragma omp parallel for if(MaxSampleSize>100)
+			  for(HBTInt i=0;i<MaxSampleSize;i++)
+			  {
+				HBTInt pid=Elist[i].pid;
+				E[i]=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), RefPos, RefVel, snapshot.GetMass(pid));
+			  }
+			  HBTInt imin=min_element(E.begin(), E.end())-E.begin();
+			  swap(Elist[imin], Elist[0]);
+			}
 			//update particle list
 			Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
 			if(Nlast>Particles.size()) Nlast=Particles.size();

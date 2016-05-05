@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import h5py
 
-rootdir='/gpfs/data/jvbq85/HBT/data/MADHALOS/nfw.infall_full/subcat2/'
+rootdir='/gpfs/data/jvbq85/HBT/data/MADHALOS/nfw.infall_full/subcat2_sample1000/'
 def getData(isnap):
   f=h5py.File(rootdir+'SubSnap_%03d.hdf5'%isnap,'r')
   s=f['Subhalos'][...]

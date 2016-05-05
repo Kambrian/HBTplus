@@ -9,7 +9,7 @@
 #include <vector>
 #include "datatypes.h"
 
-#define HBT_VERSION "1.7.1"
+#define HBT_VERSION "1.8.1"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
@@ -45,6 +45,7 @@ public:
   bool ParticleIdRankStyle;//load particleId as id ranks
   bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
+  bool SaveSubParticleProperties;
   vector <int> SnapshotIdList;
   
   HBTReal MajorProgenitorMassRatio; 
@@ -59,6 +60,9 @@ public:
   HBTReal TreeAllocFactor;
   HBTReal TreeNodeOpenAngle;
   HBTInt TreeMinNumOfCells;
+  
+  HBTInt MaxSampleSizeOfPotentialEstimate;
+  bool RefineMostboundParticle; //whether to further improve mostbound particle accuracy in case a MaxSampleSizeOfPotentialEstimate is used. this introduces some overhead if true, but leads to more accuracy mostbound particle
   
   /*derived parameters; do not require user input*/
   HBTReal TreeNodeOpenAngleSquare;
@@ -80,6 +84,7 @@ public:
 	ParticleIdRankStyle=false;
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
+	SaveSubParticleProperties=true;
 	MajorProgenitorMassRatio=0.67;
 #ifdef ALLOW_BINARY_SYSTEM
 	BinaryMassRatioLimit=1.; //default: no binary system will be marked.
@@ -91,6 +96,8 @@ public:
 	TreeAllocFactor=1.; /* a value of 2 should be more than sufficient*/
 	TreeNodeOpenAngle=0.45;
 	TreeMinNumOfCells=500;
+	MaxSampleSizeOfPotentialEstimate=1000;//set to 0 to disable sampling
+	RefineMostboundParticle=false;
   }
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
