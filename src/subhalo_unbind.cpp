@@ -72,10 +72,15 @@ public:
   ParticleEnergy_t * Elist;
   HBTInt N;
   const Snapshot_t & Snapshot;
-  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const Snapshot_t & fullsnapshot): Elist(e), N(n), Snapshot(fullsnapshot)
+  HBTReal MassFactor;
+  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const Snapshot_t & fullsnapshot): Elist(e), N(n), Snapshot(fullsnapshot), MassFactor(1.)
   {
 	SetEpoch(fullsnapshot);
   };
+  void SetMassUnit(HBTReal mass_unit)
+  {
+	MassFactor=mass_unit;
+  }
   HBTInt size() const
   {
 	return N;
@@ -86,7 +91,7 @@ public:
   }
   HBTReal GetMass(const HBTInt i) const
   {
-	return Snapshot.GetMass(GetMemberId(i));
+	return Snapshot.GetMass(GetMemberId(i))*MassFactor;
   }
   const HBTxyz & GetPhysicalVelocity(const HBTInt i) const
   {
@@ -220,9 +225,42 @@ public:
 	SpecificAngularMomentum[2]=AMz/NumPart;
   }
 };
+inline void RefineBindingEnergyOrder(EnergySnapshot_t &ESnap, HBTInt Size, OctTree_t &tree, HBTxyz &RefPos, HBTxyz &RefVel)
+{//reorder the first Size particles according to their self-binding energy
+  auto &Elist=ESnap.Elist;
+  auto &snapshot=ESnap.Snapshot;
+  tree.Build(ESnap, Size);
+  vector <ParticleEnergy_t> Einner(Size);
+  #pragma omp parallel if(Size>100)
+  {
+	#pragma omp for
+	for(HBTInt i=0;i<Size;i++)
+	{
+	  HBTInt pid=Elist[i].pid;
+	  Einner[i].pid=i;
+	  Einner[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), RefPos, RefVel, snapshot.GetMass(pid));
+	}
+	#pragma omp single
+	sort(Einner.begin(), Einner.end(), CompEnergy);
+	#pragma omp for
+	for(HBTInt i=0;i<Size;i++)
+	{
+	  Einner[i]=Elist[Einner[i].pid];
+	}
+	#pragma omp for
+	for(HBTInt i=0;i<Size;i++)
+	{
+	  Elist[i]=Einner[i];
+	}
+  }
+}
 
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
+  HBTInt MaxSampleSize=HBTConfig.MaxSampleSizeOfPotentialEstimate;
+  bool RefineMostboundParticle=(MaxSampleSize>0&&HBTConfig.RefineMostboundParticle);
+  HBTReal BoundMassPrecision=HBTConfig.BoundMassPrecision;
+  
   if(1==Particles.size()) return;
   HBTxyz OldRefPos, OldRefVel;
   auto &RefPos=ComovingAveragePosition;
@@ -231,6 +269,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
+  random_shuffle(Particles.begin(), Particles.end()); //shuffle for easy resampling later.
   HBTInt Nlast; 
   
   vector <ParticleEnergy_t> Elist(Nbound);
@@ -266,13 +305,25 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  else
 	  {
 		Nlast=Nbound;
-		tree.Build(ESnap, Nlast);
+		HBTInt np_tree=Nlast;
+		if(MaxSampleSize>0&&Nlast>MaxSampleSize)//downsample
+		{
+		  np_tree=MaxSampleSize;
+		  ESnap.SetMassUnit((HBTReal)Nlast/MaxSampleSize);
+		}
+		tree.Build(ESnap, np_tree);
 		#pragma omp parallel for if(Nlast>100)
 		for(HBTInt i=0;i<Nlast;i++)
 		{
 		  HBTInt pid=Elist[i].pid;
-		  Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), RefPos, RefVel, snapshot.GetParticleMass(pid));
+		  HBTReal mass;
+		  if(i<MaxSampleSize)
+			mass=ESnap.GetMass(i); //to correct for self-gravity
+		  else
+			mass=0.;//not sampled in tree, no self gravity to correct
+		  Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), RefPos, RefVel, mass);
 		}
+		ESnap.SetMassUnit(1.);//reset, no necessary
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
 		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
@@ -288,17 +339,23 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		else
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
-		  if(Nbound>Nlast*0.5)
+		  HBTInt Ndiff=Nlast-Nbound;
+		  if(Ndiff<Nbound)
 		  {
-			CorrectionLoop=true;
-			copyHBTxyz(OldRefPos, RefPos);
-			copyHBTxyz(OldRefVel, RefVel);
+			if(MaxSampleSize<=0||Ndiff<MaxSampleSize)
+			{
+			  CorrectionLoop=true;
+			  copyHBTxyz(OldRefPos, RefPos);
+			  copyHBTxyz(OldRefVel, RefVel);
+			}
 		  }
 		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
 		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
 		  if(Nbound>Nlast*HBTConfig.BoundMassPrecision)//converge
 		  {
 			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
+			if(RefineMostboundParticle&&Nbound>MaxSampleSize)//refine most-bound particle, not necessary usually..
+			  RefineBindingEnergyOrder(ESnap, MaxSampleSize, tree, RefPos, RefVel);
 			//update particle list
 			Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
 			if(Nlast>Particles.size()) Nlast=Particles.size();

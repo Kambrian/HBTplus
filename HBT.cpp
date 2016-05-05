@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 	timer.Tick();
 	
 	subsnap.UpdateTracks();
-	subsnap.ParticleIndexToId();
+// 	subsnap.ParticleIndexToId();//moved inside Save().
 	timer.Tick();
 	
 	subsnap.Save();

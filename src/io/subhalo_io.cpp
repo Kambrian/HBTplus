@@ -267,6 +267,46 @@ void SubhaloSnapshot_t::Save()
   H5Gclose(datagrp);
   
   //now write the particle list for each subhalo
+  if(HBTConfig.SaveSubParticleProperties)
+  {
+	struct Particle_t
+	{
+	  HBTxyz ComovingPosition;
+	  HBTxyz PhysicalVelocity;
+	};
+	hid_t H5T_Particle=H5Tcreate(H5T_COMPOUND, sizeof (Particle_t));
+	hsize_t dim_xyz=3;
+	hid_t H5T_HBTxyz=H5Tarray_create2(H5T_HBTReal, 1, &dim_xyz);
+	#define InsertMember(x,t) H5Tinsert(H5T_Particle, #x, HOFFSET(Particle_t, x), t)
+	InsertMember(ComovingPosition, H5T_HBTxyz);
+	InsertMember(PhysicalVelocity, H5T_HBTxyz);
+	#undef InsertMember
+	H5Tclose(H5T_HBTxyz);
+  
+	hid_t particlegrp=H5Gcreate2(file, "/ParticleProperties", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	vector <Particle_t> SubParticles;
+	for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	{
+	  auto &IdList=Subhalos[subid].Particles;
+	  HBTInt np=Subhalos[subid].Nbound;
+	  SubParticles.resize(np);
+	  for(HBTInt i=0;i<np;i++)
+	  {
+		auto &p=SubParticles[i];
+		auto &ind=IdList[i];
+		copyHBTxyz(p.ComovingPosition, SnapshotPointer->GetComovingPosition(ind));
+		copyHBTxyz(p.PhysicalVelocity, SnapshotPointer->GetPhysicalVelocity(ind));
+	  }
+	  stringstream subname;
+	  subname<<"Sub"<<subid;
+	  hsize_t dim_particle=np;
+	  writeHDFmatrix(particlegrp, SubParticles.data(), subname.str().c_str(), 1, &dim_particle, H5T_Particle);
+	}
+	H5Gclose(particlegrp);
+	H5Tclose(H5T_Particle);
+  }
+  
+  ParticleIndexToId();
   vl.resize(Subhalos.size());
   for(HBTInt i=0;i<vl.size();i++)
   {

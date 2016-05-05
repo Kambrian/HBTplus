@@ -42,6 +42,7 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(ParticleIdRankStyle)
   else TrySetPar(ParticleIdNeedHash)
   else TrySetPar(SnapshotIdUnsigned)
+  else TrySetPar(SaveSubParticleProperties)
   else TrySetPar(MajorProgenitorMassRatio)
 #ifdef ALLOW_BINARY_SYSTEM
   else TrySetPar(BinaryMassRatioLimit)
@@ -53,6 +54,8 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(TreeAllocFactor)
   else TrySetPar(TreeNodeOpenAngle)
   else TrySetPar(TreeMinNumOfCells)
+  else TrySetPar(MaxSampleSizeOfPotentialEstimate)
+  else TrySetPar(RefineMostboundParticle)
 #undef TrySetPar
   else if("SnapshotIdList"==name)
   {
@@ -179,6 +182,7 @@ void Parameter_t::DumpParameters()
   DumpPar(ParticleIdRankStyle)
   DumpPar(ParticleIdNeedHash)
   DumpPar(SnapshotIdUnsigned)
+  DumpPar(SaveSubParticleProperties)
   if(SnapshotIdList.size())
   {
   version_file<<"SnapshotIdList";
@@ -199,6 +203,9 @@ void Parameter_t::DumpParameters()
   DumpPar(TreeAllocFactor)
   DumpPar(TreeNodeOpenAngle)
   DumpPar(TreeMinNumOfCells)
+  
+  DumpPar(MaxSampleSizeOfPotentialEstimate)
+  DumpPar(RefineMostboundParticle)
 #undef DumpPar  
   version_file.close();
 }

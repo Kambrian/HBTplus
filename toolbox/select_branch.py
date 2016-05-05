@@ -3,8 +3,13 @@ import matplotlib.pyplot as plt
 import h5py
 import sys
 
-MaxSnap=127
-rootdir='/gpfs/data/jvbq85/HBT/data/AqA5/subcat2a/'
+#MaxSnap=127
+#rootdir='/gpfs/data/jvbq85/HBT/data/AqA5/subcat2a/'
+MaxSnap=120
+basedir='/cosma/home/jvbq85/data/HBT/data/MADHALOS/nfw.infall_full/subcat2_sample'
+rootdir0=basedir+'0/'
+rootdir1=basedir+'1000/'
+rootdir=rootdir0
 
 def NFWFunc(x):
   return np.log(1+x)-x/(1+x)
@@ -73,10 +78,13 @@ def getHostTrackId(trackId):
 f=h5py.File(rootdir+'SubSnap_%03d.hdf5'%MaxSnap,'r')
 s=f['Subhalos'][...]
 s.sort(order='TrackId')
-selectionfunc=(s['SnapshotIndexOfDeath']-s['SnapshotIndexOfLastMaxMass']>50)&(s['HostHaloId']==0)
-trackId=find(selectionfunc)[1]
-
-sat,Host,host,snaps=getTrackPair(trackId)
+#selectionfunc=(s['SnapshotIndexOfDeath']-s['SnapshotIndexOfLastMaxMass']>50)&(s['HostHaloId']==0)
+#trackId=find(selectionfunc)[1]
+trackId=1
+sat=getTrack(1)
+Host=getTrack(0)
+snaps=np.array([range(121), np.ones(121)*100, np.ones(121)]).T
+#sat,Host,host,snaps=getTrackPair(trackId)
 #Host=getTrack(host[-1]['TrackId'])
 
 def plotPair(XProxy='ComovingMostBoundPosition'):
@@ -116,6 +124,7 @@ def plotOrbit(XProxy='ComovingMostBoundPosition', VProxy='PhysicalAverageVelocit
   t=snaps[:,0]
   plt.subplot(221)
   plt.plot(t, r/rhost,'-o')
+  plt.ylim([1e-3, 1e2])
   plt.yscale('log')
   plt.plot([snapend, snapend], plt.ylim(),'k--')
   plt.ylabel('Separation')
@@ -172,3 +181,9 @@ plotOrbit('ComovingAveragePosition', 'PhysicalAverageVelocity')
 
 plotOrbit('ComovingMostBoundPosition', 'PhysicalMostBoundVelocity')
 
+rootdir=rootdir1
+sat=getTrack(1)
+Host=getTrack(0)
+plotOrbit('ComovingAveragePosition', 'PhysicalAverageVelocity')
+
+plotOrbit('ComovingMostBoundPosition', 'PhysicalMostBoundVelocity')
