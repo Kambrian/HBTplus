@@ -211,11 +211,9 @@ void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 /* to select central subhalo according to KineticDistance, and move each central to the beginning of each list in MemberTable*/
 {
   //initialize the ranks
-#ifdef ALLOW_BINARY_SYSTEM
 #pragma omp for
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
-	Subhalos[subid].Rank=0;
-#endif
+	Subhalos[subid].Rank=1;
 #pragma omp for
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   {
@@ -224,10 +222,7 @@ void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 	{
 #ifdef ALLOW_BINARY_SYSTEM
 	  if(Subhalos[List[1]].Nbound>Subhalos[List[0]].Nbound*HBTConfig.BinaryMassRatioLimit)
-	  {
-		Subhalos[List[0]].Rank=1;//mark as a binary system. do not FeedCentral.
 		continue;
-	  }
 #endif	  
 	  int n_major;
 	  HBTInt MassLimit=Subhalos[List[0]].Nbound*HBTConfig.MajorProgenitorMassRatio;
@@ -249,6 +244,7 @@ void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 		if(icenter)  swap(List[0], List[icenter]);
 	  }
 	}
+	if(List.size()) Subhalos[List[0]].Rank=0;
   }
 }
 
@@ -283,6 +279,7 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	  Subhalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
 	  
 	  Subhalos[subid].SnapshotIndexOfBirth=SnapshotIndex;
+	  Subhalos[subid].Rank=-1;//new birth
 	}
 	else
 	{

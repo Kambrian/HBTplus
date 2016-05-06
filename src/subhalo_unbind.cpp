@@ -258,8 +258,8 @@ inline void RefineBindingEnergyOrder(EnergySnapshot_t &ESnap, HBTInt Size, OctTr
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 {//the reference frame should already be initialized before unbinding.
   HBTInt MaxSampleSize=HBTConfig.MaxSampleSizeOfPotentialEstimate;
-  bool RefineMostboundParticle=(MaxSampleSize>0&&HBTConfig.RefineMostboundParticle);
-  HBTReal BoundMassPrecision=HBTConfig.BoundMassPrecision;
+  bool RefineMostboundParticle=((Rank==0||MaxSampleSize>0)&&HBTConfig.RefineMostboundParticle);
+  HBTReal BoundMassPrecision=(Rank==0?0.:HBTConfig.BoundMassPrecision); //only iterate for satellites and new birth(with rank=-1)
   
   if(1==Particles.size()) return;
   HBTxyz OldRefPos, OldRefVel;
@@ -351,7 +351,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  }
 		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
 		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
-		  if(Nbound>Nlast*HBTConfig.BoundMassPrecision)//converge
+		  if(Nbound>Nlast*BoundMassPrecision)//converge
 		  {
 			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
 			if(RefineMostboundParticle&&Nbound>MaxSampleSize)//refine most-bound particle, not necessary usually..
