@@ -17,18 +17,16 @@ inline bool CompPair(const IndexedKey_t<Key_t, Index_t> & a, const IndexedKey_t<
   return (a.Key<b.Key);
 };
 template <class Key_t, class Index_t>
-void MappedIndexTable_t<Key_t, Index_t>::Fill(const Key_t* keys, const Index_t n)
+void MappedIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t <Key_t, Index_t> &Keys, Index_t null_index)
 {
+  BaseClass_t::NullIndex=null_index;
+  Index_t n=Keys.size();
 	Map.resize(n);
 	#pragma omp parallel for
 	for(Index_t i=0;i<n;i++)
 	{
-		#ifdef PID_ORDERED
-		Map[i].Key=i+1;
-		#else
-		Map[i].Key=keys[i];
-		#endif
-		Map[i].Index=i;
+		Map[i].Key=Keys.GetKey(i);
+		Map[i].Index=Keys.GetIndex(i);
 	}
 	sort(Map.begin(), Map.end(), CompPair<Key_t, Index_t>);
 }
@@ -54,18 +52,21 @@ Index_t MappedIndexTable_t<Key_t, Index_t>::GetIndex(const Key_t key) const
   if(NULL==p) return BaseClass_t::NullIndex;  //no match
   return p->Index;  
 }
-
 template <class Key_t, class Index_t>
-void FlatIndexTable_t<Key_t, Index_t>::Fill(const Key_t* keys, const Index_t n)
+void FlatIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t<Key_t, Index_t> &Keys, Index_t null_index)
 {
-	#ifndef PID_ORDERED
-	KeyMax=keys[0];KeyMin=keys[0];
+  BaseClass_t::NullIndex=null_index;
+  Clear();
+  Index_t n=Keys.size();
+  if(0==n) return;
+  
+	KeyMax=Keys.GetKey(0);KeyMin=Keys.GetKey(0);
 	for(Index_t i=1;i<n;i++)
 	{
-		if(keys[i]>KeyMax)
-			KeyMax=keys[i];
-		else if(keys[i]<KeyMin)	
-			KeyMin=keys[i];
+		if(Keys.GetKey(i)>KeyMax)
+			KeyMax=Keys.GetKey(i);
+		else if(Keys.GetKey(i)<KeyMin)	
+			KeyMin=Keys.GetKey(i);
 	}
 	KeySpan=KeyMax-KeyMin+1;
 	Index=new Index_t[KeySpan];
@@ -81,11 +82,8 @@ void FlatIndexTable_t<Key_t, Index_t>::Fill(const Key_t* keys, const Index_t n)
 	/*====make ID index for query====*/
 	#pragma omp for
 	for(Index_t i=0;i<n;i++)
-	  Index[keys[i]]=i;		
+	  Index[Keys.GetKey(i)]=Keys.GetIndex(i);		
 	}
-	#else
-	KeySpan=n;
-	#endif
 }
 template <class Key_t, class Index_t>
 void FlatIndexTable_t<Key_t, Index_t>::Clear()
@@ -93,19 +91,13 @@ void FlatIndexTable_t<Key_t, Index_t>::Clear()
 	if(KeySpan)
 	{
 		KeySpan=0;
-		#ifndef PID_ORDERED
 		Index+=Offset;
 		delete [] Index;
-		#endif
 	}
 }
 template <class Key_t, class Index_t>
 Index_t FlatIndexTable_t<Key_t, Index_t>::GetIndex(const Key_t key) const
 {
-	#ifdef PID_ORDERED
-	return key-1; //change from ID [1,N] to Index [0,N-1]
-	#else
-	if(key<KeyMin||key>KeyMax) return BaseClass_t::NullIndex;//no match
+	if(KeySpan==0||key<KeyMin||key>KeyMax) return BaseClass_t::NullIndex;//no match
 	return Index[key];
-	#endif	
 }

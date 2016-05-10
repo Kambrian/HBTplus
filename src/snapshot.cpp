@@ -12,35 +12,33 @@ using namespace std;
 #include "snapshot.h"
 #include "mymath.h"
 
-/*
-void ParticleSnapshot_t::FillParticleHash()
+class ParticleKeyList_t: public KeyList_t <HBTInt, HBTInt>
 {
-  cout<<"Filling Hash Table...\n";
-  auto begin = chrono::high_resolution_clock::now();
-  ParticleHash.rehash(NumberOfParticles);
-  ParticleHash.reserve(NumberOfParticles);
-  for(HBTInt i=0;i<NumberOfParticles;i++)
-	ParticleHash[ParticleId[i]]=i;
-  auto end = chrono::high_resolution_clock::now();
-  auto elapsed = chrono::duration_cast<std::chrono::milliseconds>(end - begin);
-  cout << "inserts: " << elapsed.count() << endl;
-//   cout<<ParticleHash.bucket_count()<<" buckets used; load factor "<<ParticleHash.load_factor()<<endl;
-}
-void ParticleSnapshot_t::ClearParticleHash()
-{
-  ParticleHash.clear();
-}
-*/
+  typedef HBTInt Index_t;
+  typedef HBTInt Key_t;
+  const ParticleSnapshot_t &Snap;
+public:
+  ParticleKeyList_t(ParticleSnapshot_t &snap): Snap(snap) {};
+  Index_t size() const
+  {
+        return Snap.size();
+  }
+  Key_t GetKey(Index_t i) const
+  {
+        return Snap.GetMemberId(i);
+  }
+  Index_t GetIndex(Index_t i) const
+  {
+        return i;
+  }
+};
 
 void ParticleSnapshot_t::FillParticleHash()
 {
-  cout<<"Filling Hash Table...\n";
-  auto begin = chrono::high_resolution_clock::now();
-  ParticleHash->Fill(ParticleId, NumberOfParticles);
-  auto end = chrono::high_resolution_clock::now();
-  auto elapsed = chrono::duration_cast<chrono::duration<double>>(end - begin);
-  cout << "HashTableFilled in: " << elapsed.count() <<"seconds"<< endl;
+  ParticleKeyList_t Ids(*this);
+  ParticleHash->Fill(Ids);
 }
+
 void ParticleSnapshot_t::ClearParticleHash()
 {
   ParticleHash->Clear();

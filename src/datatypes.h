@@ -73,13 +73,6 @@ namespace SpecialConst
 //   const Particle_t NullParticle(NullParticleId, NullParticleId, NullCoordinate, NullCoordinate);
 };
 
-struct Particle_t
-{
-  HBTInt ParticleId;
-  HBTInt ParticleIndex;
-  HBTxyz ComovingPosition;
-  HBTxyz PhysicalVelocity;
-};
 template <class T>
 class VectorView_t
 /* similar to vector, but never actively manage memory; only bind to existing memory*/
@@ -141,5 +134,17 @@ public:
 	return Data[N-1];
   }
 };
+
+typedef enum
+{
+  TypeGas=0,
+  TypeDM,
+  TypeDisk,
+  TypeBulge	,
+  TypeStar,
+  TypeBndry,
+  TypeMax
+} ParticleType_t;
+
 #define DATATYPES_INCLUDED
 #endif

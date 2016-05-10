@@ -13,25 +13,35 @@
 #include "snapshot_number.h"
 #include "hash.h"
 
-#define NUMBER_OF_PARTICLE_TYPES 6
+#define TypeMax 6
 #define SNAPSHOT_HEADER_SIZE 256
+
+struct Particle_t
+{
+  HBTInt Id;
+  HBTxyz ComovingPosition;
+  HBTxyz PhysicalVelocity;
+  HBTReal Mass;
+  HBTReal InternalEnergy;
+  ParticleType_t Type;
+};
 
 struct SnapshotHeader_t
 {
-  int      npart[NUMBER_OF_PARTICLE_TYPES];
-  double   mass[NUMBER_OF_PARTICLE_TYPES];
+  int      npart[TypeMax];
+  double   mass[TypeMax];
   double   ScaleFactor;
   double   redshift;
   int      flag_sfr;
   int      flag_feedback;
-  unsigned npartTotal[NUMBER_OF_PARTICLE_TYPES];  //differ from standard. to be able to hold large integers
+  unsigned npartTotal[TypeMax];  //differ from standard. to be able to hold large integers
   int      flag_cooling;
   int      num_files;
   double   BoxSize;
   double   OmegaM0;
   double   OmegaLambda0;
   double   HubbleParam; 
-  char     fill[SNAPSHOT_HEADER_SIZE- NUMBER_OF_PARTICLE_TYPES*4- NUMBER_OF_PARTICLE_TYPES*8- 2*8- 2*4- NUMBER_OF_PARTICLE_TYPES*4- 2*4 - 4*8];  /* fills to 256 Bytes */
+  char     fill[SNAPSHOT_HEADER_SIZE- TypeMax*4- TypeMax*8- 2*8- 2*4- TypeMax*4- 2*4 - 4*8];  /* fills to 256 Bytes */
 };
 class Snapshot_t: public SnapshotNumber_t
 {
@@ -76,6 +86,7 @@ public:
   void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
   void RelativeVelocity(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, HBTxyz& relativeVel) const;
 };
+
 class SnapshotView_t: public Snapshot_t
 {
 public:
@@ -129,52 +140,29 @@ class ParticleSnapshot_t: public Snapshot_t
   bool NeedByteSwap;
   int IntTypeSize;
   int RealTypeSize;
-  vector <ParticleIndex_t> NumberOfDMParticleInFiles;
-  vector <ParticleIndex_t> OffsetOfDMParticleInFiles;
-  struct LoadFlag_t
-  {
-	bool Id;
-	bool Pos;
-	bool Vel;
-	bool Mass;
-	LoadFlag_t(): Id(true), Pos(true), Vel(true), Mass(true)
-	{
-	}
-  } LoadFlag;
+  vector <ParticleIndex_t> NumberOfParticleInFiles;
+  vector <ParticleIndex_t> OffsetOfParticleInFiles;
   
   ParticleIndex_t NumberOfParticles;
-  ParticleId_t * ParticleId; //better hide this from the user!!!!! 
-  HBTxyz * ComovingPosition;
-  HBTxyz * PhysicalVelocity;
-  HBTReal * ParticleMass;
+  vector <Particle_t> Particles;
   FlatIndexTable_t<ParticleId_t, ParticleIndex_t> FlatHash;
   MappedIndexTable_t<ParticleId_t, ParticleIndex_t> MappedHash;
   IndexTable_t<ParticleId_t, ParticleIndex_t> *ParticleHash;
-//   unordered_map <ParticleId_t, ParticleIndex_t> ParticleHash;//TODO: optimize this;also use intel concurrent_unordered_map
   
-//   void LoadFile(int ifile);
-  void LoadId();
-  void LoadPosition();
-  void LoadVelocity();
-  void LoadMass();
+  size_t SkipBlock(FILE *fp);
+  void ReadFile(int ifile);
   void LoadHeader(int ifile=0);
   bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
-  ParticleIndex_t ReadNumberOfDMParticles(int ifile);
-  size_t SkipBlock(FILE *fp);
-  size_t ReadBlock(FILE *fp, void *block, const size_t n_read, const size_t n_skip_before=0, const size_t n_skip_after=0);
-  void * LoadBlock(int block_id, size_t element_size, int dimension=1, bool is_massblock=false);
+  ParticleIndex_t ReadNumberOfParticles(int ifile);
 public:
   SnapshotHeader_t Header;
-  ParticleSnapshot_t(): Snapshot_t(), Header(), LoadFlag(), FlatHash(), MappedHash(), ParticleHash()
+  ParticleSnapshot_t(): Snapshot_t(), Header(), FlatHash(), MappedHash(), ParticleHash(), Particles()
   {
 	NeedByteSwap=false;
 	IntTypeSize=0;
 	RealTypeSize=0;
 	NumberOfParticles=0;
-	ParticleId=NULL;
-	ComovingPosition=NULL;
-	PhysicalVelocity=NULL;
-	ParticleMass=NULL;
+	
 	if(HBTConfig.ParticleIdNeedHash)
 	  ParticleHash=&MappedHash;
 	else
@@ -197,6 +185,8 @@ public:
   const HBTxyz &GetPhysicalVelocity(const ParticleIndex_t index) const;
   HBTReal GetParticleMass(const ParticleIndex_t index) const;
   HBTReal GetMass(const ParticleIndex_t index) const;
+  HBTReal GetInternalEnergy(ParticleIndex_t index) const;
+  ParticleType_t GetParticleType(ParticleIndex_t index) const;
   void Load(int snapshot_index, bool fill_particle_hash=true);
   void SetLoadFlags(bool load_id, bool load_pos, bool load_vel, bool load_mass);
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
@@ -222,7 +212,7 @@ inline HBTInt ParticleSnapshot_t::size() const
 }
 inline HBTInt ParticleSnapshot_t::GetMemberId(const HBTInt index) const
 {
-  return ParticleId[index];
+  return Particles[index].Id;
 }
 inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetParticleIndex(const ParticleId_t particle_id) const
 {
@@ -235,25 +225,30 @@ inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetNumberOfPartic
 }
 inline ParticleSnapshot_t::ParticleId_t ParticleSnapshot_t::GetParticleId(const ParticleIndex_t index) const
 {
-  return ParticleId[index];
+  return Particles[index].Id;
 }
 inline const HBTxyz& ParticleSnapshot_t::GetComovingPosition(const ParticleIndex_t index) const
 {
-  return ComovingPosition[index];
+  return Particles[index].ComovingPosition;
 }
 inline const HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(const ParticleIndex_t index) const
 {
-  return PhysicalVelocity[index];
+  return Particles[index].PhysicalVelocity;
 }
 inline HBTReal ParticleSnapshot_t::GetParticleMass(const ParticleIndex_t index) const
 {
-  if(Header.mass[1])
-	return Header.mass[1];
-  else
-	return ParticleMass[index];
+	return Particles[index].Mass;
 }
 inline HBTReal ParticleSnapshot_t::GetMass(const HBTInt index) const
 {
   return GetParticleMass(index);
+}
+inline HBTReal ParticleSnapshot_t::GetInternalEnergy(HBTInt index) const
+{
+  return Particles[index].InternalEnergy;
+}
+inline ParticleType_t ParticleSnapshot_t::GetParticleType(HBTInt index) const
+{
+  return Particles[index].Type;
 }
 #endif

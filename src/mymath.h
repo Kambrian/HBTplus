@@ -12,6 +12,7 @@
 #include <array>
 #include <vector>
 #include <iterator>
+#include <assert.h>
 
 #include "datatypes.h"
 #include "config_parser.h"
@@ -25,6 +26,19 @@ size_t CompileOffsets(const vector <T> &Counts, vector <T2> &Offsets)
   {
         Offsets[i]=offset;
         offset+=Counts[i];
+  }
+  return offset;
+}
+
+template <class CountIterator_t, class OffsetIterator_t>
+size_t CompileOffsets(CountIterator_t CountBegin, CountIterator_t CountEnd, OffsetIterator_t OffsetBegin)
+{
+  size_t offset=0;
+  auto it_off=OffsetBegin;
+  for(auto it=CountBegin;it!=CountEnd;++it)
+  {
+	*it_off++=offset;
+	offset+=*it;
   }
   return offset;
 }
@@ -157,5 +171,62 @@ inline HBTReal PeriodicDistance(const HBTReal x[3], const HBTReal y[3])
 #ifdef HAS_GSL
 extern void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, double Izz, float Axis[3][3]);
 #endif
+
+template <class T>
+class FortranBlock
+{
+  const size_t N;
+  T *Data;
+  typedef T Txyz[3];
+public:
+  FortranBlock(FILE *fp, const size_t n_read, const size_t n_skip, bool NeedByteSwap=false):N(n_read)
+/*read n_read members from the current block of fp. 
+ * skip n_skip elements before reading. 
+ * T specify the input datatype. if T and U has the same size, read directly into outbuffer; otherwise the elements are converted from type U to type T in a temporary buffer and then copied to outbuffer.
+ */
+  {
+  #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
+  #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
+	  int blocksize,blocksize2;
+	  ReadBlockSize(blocksize);
+	  size_t block_member_size=sizeof(T);
+	  Data=new T[n_read];
+	  fseek(fp, n_skip*block_member_size, SEEK_CUR);
+	  myfread(Data, block_member_size, n_read, fp);
+	  fseek(fp, blocksize-(n_skip+n_read)*block_member_size, SEEK_CUR);
+	  ReadBlockSize(blocksize2);
+	  assert(blocksize==blocksize2);
+  #undef ReadBlockSize
+  #undef myfread
+  }
+  ~FortranBlock()
+  {
+	delete [] Data;
+  }
+  T * const data()
+  {
+	return Data;
+  }
+  T & operator [](const size_t index) const
+  {
+	return Data[index];
+  }
+  HBTInt size() const
+  {
+	return N;
+  }
+  T * begin()
+  {
+	return Data;
+  }
+  T* end()
+  {
+	return Data+N;
+  }
+  Txyz * data_reshape()
+  {
+	return (Txyz *)Data;
+  }
+};
 
 #endif
