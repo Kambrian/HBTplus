@@ -163,6 +163,7 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
 
 void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
 { 
+  Clear();
   SetSnapshotIndex(snapshot_index);
   
   LoadHeader();
