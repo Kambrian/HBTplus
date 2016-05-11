@@ -6,6 +6,13 @@
 #include "../datatypes.h"
 #include "../snapshot_number.h"
 #include "../subhalo.h"
+#include "../hdf_wrapper.h"
+
+SubhaloSnapshot_t::~SubhaloSnapshot_t()
+{
+  H5Tclose(H5T_SubhaloInDisk);
+  H5Tclose(H5T_SubhaloInMem);
+}
 
 void SubhaloSnapshot_t::BuildHDFDataType()
 {
@@ -89,31 +96,6 @@ void SubhaloSnapshot_t::GetSrcFileName(string &filename)
   stringstream formater;
   formater<<HBTConfig.SubhaloPath<<"/SrcSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
   filename=formater.str();
-}
-inline int GetDatasetDims(hid_t dset, hsize_t dims[])
-{
-  hid_t dspace=H5Dget_space(dset);
-  int ndim=H5Sget_simple_extent_dims(dspace, dims, NULL);
-  H5Sclose(dspace);
-  return ndim;
-}
-inline herr_t ReclaimVlenData(hid_t dset, hid_t dtype, void * buf)
-{
-  herr_t status;
-  hid_t dspace=H5Dget_space(dset);
-  status=H5Dvlen_reclaim(dtype, dspace, H5P_DEFAULT, buf);
-  status=H5Sclose(dspace);
-  return status;
-}
-inline herr_t ReadDataset(hid_t file, const char *name, hid_t dtype, void *buf)
-/* read named dataset from file into buf.
- * dtype specifies the datatype of buf; it does not need to be the same as the storage type in file*/
-{
-  herr_t status;
-  hid_t dset=H5Dopen2(file, name, H5P_DEFAULT);
-  status=H5Dread(dset, dtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
-  status=H5Dclose(dset);
-  return status;
 }
 void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
 {
@@ -209,22 +191,6 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
 }
 
-void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsize_t ndim, const hsize_t *dims, hid_t dtype, hid_t dtype_file)
-{
-  hid_t dataspace = H5Screate_simple (ndim, dims, NULL);
-  hid_t dataset= H5Dcreate2(file, name, dtype_file, dataspace, H5P_DEFAULT, H5P_DEFAULT,
-                H5P_DEFAULT);
-  if(!(NULL==buf||0==dims[0]))
-  {
-	herr_t status = H5Dwrite (dataset, dtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
-  }
-  H5Sclose(dataspace);
-  H5Dclose(dataset);
-}
-inline void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsize_t ndim, const hsize_t *dims, hid_t dtype)
-{
-  writeHDFmatrix(file, buf, name, ndim, dims, dtype, dtype);
-}
 void SubhaloSnapshot_t::Save()
 {
   stringstream formater;

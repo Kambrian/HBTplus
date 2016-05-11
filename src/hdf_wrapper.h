@@ -1,0 +1,51 @@
+#ifndef HDF_WRAPPER_INCLUDED
+#define HDF_WRAPPER_INCLUDED
+
+#include "hdf5.h"
+#include "hdf5_hl.h"	
+// #include "H5Cpp.h"
+
+#ifdef HBT_REAL8
+#define H5T_HBTReal H5T_NATIVE_DOUBLE
+#else
+#define H5T_HBTReal H5T_NATIVE_FLOAT
+#endif
+#ifdef HBT_INT8
+#define H5T_HBTInt H5T_NATIVE_LONG
+#else 
+#define H5T_HBTInt H5T_NATIVE_INT
+#endif
+
+extern void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsize_t ndim, const hsize_t *dims, hid_t dtype, hid_t dtype_file);
+
+inline int GetDatasetDims(hid_t dset, hsize_t dims[])
+{
+  hid_t dspace=H5Dget_space(dset);
+  int ndim=H5Sget_simple_extent_dims(dspace, dims, NULL);
+  H5Sclose(dspace);
+  return ndim;
+}
+inline herr_t ReclaimVlenData(hid_t dset, hid_t dtype, void * buf)
+{
+  herr_t status;
+  hid_t dspace=H5Dget_space(dset);
+  status=H5Dvlen_reclaim(dtype, dspace, H5P_DEFAULT, buf);
+  status=H5Sclose(dspace);
+  return status;
+}
+inline herr_t ReadDataset(hid_t file, const char *name, hid_t dtype, void *buf)
+/* read named dataset from file into buf.
+ * dtype specifies the datatype of buf; it does not need to be the same as the storage type in file*/
+{
+  herr_t status;
+  hid_t dset=H5Dopen2(file, name, H5P_DEFAULT);
+  status=H5Dread(dset, dtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
+  status=H5Dclose(dset);
+  return status;
+}
+
+inline void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsize_t ndim, const hsize_t *dims, hid_t dtype)
+{
+  writeHDFmatrix(file, buf, name, ndim, dims, dtype, dtype);
+}
+#endif

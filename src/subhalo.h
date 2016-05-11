@@ -4,23 +4,11 @@
 #include <iostream>
 #include <new>
 #include <vector>
-#include "hdf5.h"
-#include "hdf5_hl.h"	
-// #include "H5Cpp.h"
-#ifdef HBT_REAL8
-#define H5T_HBTReal H5T_NATIVE_DOUBLE
-#else
-#define H5T_HBTReal H5T_NATIVE_FLOAT
-#endif
-#ifdef HBT_INT8
-#define H5T_HBTInt H5T_NATIVE_LONG
-#else 
-#define H5T_HBTInt H5T_NATIVE_INT
-#endif
 
 #include "datatypes.h"
 #include "snapshot_number.h"
 #include "halo.h"
+#include "hdf_wrapper.h"
 
 class Subhalo_t
 {
@@ -178,11 +166,7 @@ public:
   void GetSrcFileName(string &filename);
   void Load(int snapshot_index, bool load_src=false);
   void Save();
-  ~SubhaloSnapshot_t()
-  {
-	H5Tclose(H5T_SubhaloInDisk);
-	H5Tclose(H5T_SubhaloInMem);
-  }
+  ~SubhaloSnapshot_t();
   void Clear()
   {
 	//TODO
