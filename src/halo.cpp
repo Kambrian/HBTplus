@@ -19,7 +19,7 @@ void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
   chrono::high_resolution_clock::time_point time_begin, time_end;
 #pragma omp master
   {
-  SetEpoch(snapshot);
+  Cosmology=snapshot.Cosmology;
   ParticleSnapshot=&snapshot;
   time_begin = chrono::high_resolution_clock::now();
   }

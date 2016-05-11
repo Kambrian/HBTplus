@@ -24,7 +24,7 @@ void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 {//also bind to snapshot
 #pragma omp single
   {
-	SetEpoch(snapshot);
+	Cosmology=snapshot.Cosmology;
 	SnapshotPointer=&snapshot;
   }
 #pragma omp for
@@ -104,7 +104,7 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 	return;
   }
   HBTReal PartMass=part_snap.GetMass(Particles[0]);
-  HBTReal VelocityUnit=PhysicalConst::G*PartMass/part_snap.ScaleFactor;
+  HBTReal VelocityUnit=PhysicalConst::G*PartMass/part_snap.Cosmology.ScaleFactor;
   
   const HBTxyz &cen=part_snap.GetComovingPosition(Particles[0]); //most-bound particle as center.
   

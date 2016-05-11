@@ -44,7 +44,14 @@ void ParticleSnapshot_t::ClearParticleHash()
   ParticleHash->Clear();
 }
 
-void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const
+void ParticleSnapshot_t::Clear()
+/*reset to empty*/
+{
+  vector<Particle_t>().swap(Particles);
+  ClearParticleHash();//even if you don't do this, the destructor will still clean up the memory.
+}
+
+void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t PartIndex[], const ParticleIndex_t NumPart) const
 /*mass weighted average position*/
 {
 	ParticleIndex_t i,j;
@@ -53,7 +60,7 @@ void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Part
 	if(0==NumPart) return;
 	if(1==NumPart) 
 	{
-	  copyHBTxyz(CoM, GetComovingPosition(Particles[0]));
+	  copyHBTxyz(CoM, GetComovingPosition(PartIndex[0]));
 	  return;
 	}
 	
@@ -61,17 +68,17 @@ void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Part
 	msum=0.;
 	if(HBTConfig.PeriodicBoundaryOn)
 	  for(j=0;j<3;j++)
-		origin[j]=GetComovingPosition(Particles[0])[j];
+		origin[j]=GetComovingPosition(PartIndex[0])[j];
 	
 	for(i=0;i<NumPart;i++)
 	{
-	  HBTReal m=GetParticleMass(Particles[i]);
+	  HBTReal m=GetParticleMass(PartIndex[i]);
 	  msum+=m;
 	  for(j=0;j<3;j++)
 	  if(HBTConfig.PeriodicBoundaryOn)
-		  sx[j]+=NEAREST(GetComovingPosition(Particles[i])[j]-origin[j])*m;
+		  sx[j]+=NEAREST(GetComovingPosition(PartIndex[i])[j]-origin[j])*m;
 	  else
-		  sx[j]+=GetComovingPosition(Particles[i])[j]*m;
+		  sx[j]+=GetComovingPosition(PartIndex[i])[j]*m;
 	}
 	
 	for(j=0;j<3;j++)
@@ -81,7 +88,7 @@ void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Part
 		CoM[j]=sx[j];
 	}
 }
-void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const
+void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t PartIndex[], const ParticleIndex_t NumPart) const
 /*mass weighted average velocity*/
 {
 	ParticleIndex_t i,j;
@@ -90,7 +97,7 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Part
 	if(0==NumPart) return;
 	if(1==NumPart) 
 	{
-	  copyHBTxyz(CoV, GetPhysicalVelocity(Particles[0]));
+	  copyHBTxyz(CoV, GetPhysicalVelocity(PartIndex[0]));
 	  return;
 	}
 	
@@ -99,15 +106,17 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Part
 	
 	for(i=0;i<NumPart;i++)
 	{
-	  HBTReal m=GetParticleMass(Particles[i]);
+	  HBTReal m=GetParticleMass(PartIndex[i]);
 	  msum+=m;
 	  for(j=0;j<3;j++)
-		sv[j]+=GetPhysicalVelocity(Particles[i])[j]*m;
+		sv[j]+=GetPhysicalVelocity(PartIndex[i])[j]*m;
 	}
 	
 	for(j=0;j<3;j++)
 	  CoV[j]=sv[j]/msum;
 }
+
+//TODO: detach these SO functions from snapshot. pass cosmology as parameter
 void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
 /*
  * find SphericalOverdensitySize from a given list of sorted particle distances.
@@ -119,7 +128,7 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
  */
 {  
   HBTInt i, np=RSorted.size();
-  HBTReal RhoVirial=VirialFactor*Hz*Hz/2.0/PhysicalConst::G/ParticleMass*ScaleFactor*ScaleFactor*ScaleFactor;
+  HBTReal RhoVirial=VirialFactor*Cosmology.Hz*Cosmology.Hz/2.0/PhysicalConst::G/ParticleMass*Cosmology.ScaleFactor*Cosmology.ScaleFactor*Cosmology.ScaleFactor;
   for(i=np;i>0;i--)
   {
 	HBTReal r=RSorted[i-1];
@@ -145,7 +154,7 @@ void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal Vir
   
   ndiv=np;//guess mass
   rdiv=RSorted[ndiv-1];
-  rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//guess radius
+  rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Cosmology.Hz/Cosmology.Hz,1.0/3)/Cosmology.ScaleFactor;//guess radius
   while(true)
   {
 	if(rdiv>rvir)//reduce mass guess
@@ -166,7 +175,7 @@ void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal Vir
 	}
 	
 	rdiv=rvir;
-	rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//recalibrate radius
+	rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Cosmology.Hz/Cosmology.Hz,1.0/3)/Cosmology.ScaleFactor;//recalibrate radius
 	
 	if(0==ndiv||np==ndiv||fabs((rvir-rdiv)/rvir)<tol) break; //converged
   }
@@ -177,11 +186,10 @@ void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal Vir
 
 void Snapshot_t::HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const
 {
-	HBTReal Hratio,x,OmegaZ;
-	Hratio=Hz/PhysicalConst::H0;
-	OmegaZ=OmegaM0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
-	x=OmegaZ-1;
+	HBTReal Hratio,x;
+	Hratio=Cosmology.Hz/PhysicalConst::H0;
+	x=Cosmology.OmegaZ-1;
 	virialF_tophat=18.0*3.1416*3.1416+82.0*x-39.0*x*x;//<Rho_vir>/Rho_cri
 	virialF_c200=200.;
-	virialF_b200=200.*OmegaZ;//virialF w.r.t contemporary critical density 
+	virialF_b200=200.*Cosmology.OmegaZ;//virialF w.r.t contemporary critical density 
 }

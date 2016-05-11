@@ -26,53 +26,35 @@ struct Particle_t
   ParticleType_t Type;
 };
 
-struct SnapshotHeader_t
+struct Cosmology_t
 {
-  int      npart[TypeMax];
-  double   mass[TypeMax];
-  double   ScaleFactor;
-  double   redshift;
-  int      flag_sfr;
-  int      flag_feedback;
-  unsigned npartTotal[TypeMax];  //differ from standard. to be able to hold large integers
-  int      flag_cooling;
-  int      num_files;
-  double   BoxSize;
-  double   OmegaM0;
-  double   OmegaLambda0;
-  double   HubbleParam; 
-  char     fill[SNAPSHOT_HEADER_SIZE- TypeMax*4- TypeMax*8- 2*8- 2*4- TypeMax*4- 2*4 - 4*8];  /* fills to 256 Bytes */
-};
-class Snapshot_t: public SnapshotNumber_t
-{
-public:
   HBTReal OmegaM0;
   HBTReal OmegaLambda0;
-  HBTReal Hz; //current Hubble param in internal units
   HBTReal ScaleFactor;
-  Snapshot_t(): Hz(0.), ScaleFactor(0.), SnapshotNumber_t()
-  {
-  }
-  Snapshot_t(const Snapshot_t & sn)
-  {
-	SetEpoch(sn);
-  }
-  void SetEpoch(double scalefactor, double omega0, double omegaLambda0)
+  
+  //derived parameters:
+  HBTReal Hz; //current Hubble param in internal units
+  HBTReal OmegaZ;
+  
+  void Set(double scalefactor, double omega0, double omegaLambda0)
   {
 	OmegaM0=omega0;
 	OmegaLambda0=omegaLambda0;
 	ScaleFactor=scalefactor;
 	Hz=PhysicalConst::H0 * sqrt(OmegaM0 / (ScaleFactor * ScaleFactor * ScaleFactor) 
-  + (1 - OmegaM0 - OmegaLambda0) / (ScaleFactor * ScaleFactor)
-  + OmegaLambda0);//Hubble param for the current catalogue;
+		+ (1 - OmegaM0 - OmegaLambda0) / (ScaleFactor * ScaleFactor)
+		+ OmegaLambda0);//Hubble param for the current catalogue;
+	
+	HBTReal Hratio=Hz/PhysicalConst::H0;
+	OmegaZ=OmegaM0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
   }
-  void SetEpoch(const Snapshot_t & snap)
-  {
-	OmegaM0=snap.OmegaM0;
-	OmegaLambda0=snap.OmegaLambda0;
-	ScaleFactor=snap.ScaleFactor;
-	Hz=snap.Hz;
-  }
+};
+
+class Snapshot_t: public SnapshotNumber_t
+{
+public:
+  Cosmology_t Cosmology;
+//   Snapshot_t()=default;
   virtual HBTInt size() const=0;
   virtual HBTInt GetMemberId(const HBTInt index) const
   {
@@ -93,17 +75,14 @@ public:
   HBTInt * Ids;
   HBTInt N;
   Snapshot_t & Snapshot;
-  SnapshotView_t(vector <HBTInt> & ids, Snapshot_t & fullsnapshot): Ids(ids.data()), N(ids.size()), Snapshot(fullsnapshot)
+  SnapshotView_t(vector <HBTInt> & ids, Snapshot_t & fullsnapshot): Ids(ids.data()), N(ids.size()), Snapshot(fullsnapshot), Snapshot_t(fullsnapshot)
   {
-	SetEpoch(fullsnapshot);
   };
-  SnapshotView_t(VectorView_t <HBTInt> &ids, Snapshot_t & fullsnapshot): Ids(ids.data()), N(ids.size()), Snapshot(fullsnapshot)
+  SnapshotView_t(VectorView_t <HBTInt> &ids, Snapshot_t & fullsnapshot): Ids(ids.data()), N(ids.size()), Snapshot(fullsnapshot), Snapshot_t(fullsnapshot)
   {
-	SetEpoch(fullsnapshot);
   };
-  SnapshotView_t(HBTInt *ids, HBTInt n, Snapshot_t & fullsnapshot): Ids(ids), N(n), Snapshot(fullsnapshot)
+  SnapshotView_t(HBTInt *ids, HBTInt n, Snapshot_t & fullsnapshot): Ids(ids), N(n), Snapshot(fullsnapshot), Snapshot_t(fullsnapshot)
   {
-	SetEpoch(fullsnapshot);
   };
   HBTInt ReSize(HBTInt n)
   {
@@ -136,33 +115,15 @@ class ParticleSnapshot_t: public Snapshot_t
   typedef HBTInt ParticleIndex_t ;
   typedef HBTInt ParticleId_t;
   typedef vector <ParticleIndex_t> IndexList_t;
-    
-  bool NeedByteSwap;
-  int IntTypeSize;
-  int RealTypeSize;
-  vector <ParticleIndex_t> NumberOfParticleInFiles;
-  vector <ParticleIndex_t> OffsetOfParticleInFiles;
   
-  ParticleIndex_t NumberOfParticles;
   vector <Particle_t> Particles;
   FlatIndexTable_t<ParticleId_t, ParticleIndex_t> FlatHash;
   MappedIndexTable_t<ParticleId_t, ParticleIndex_t> MappedHash;
   IndexTable_t<ParticleId_t, ParticleIndex_t> *ParticleHash;
-  
-  size_t SkipBlock(FILE *fp);
-  void ReadFile(int ifile);
-  void LoadHeader(int ifile=0);
-  bool ReadFileHeader(FILE *fp, SnapshotHeader_t &header);
-  ParticleIndex_t ReadNumberOfParticles(int ifile);
+      
 public:
-  SnapshotHeader_t Header;
-  ParticleSnapshot_t(): Snapshot_t(), Header(), FlatHash(), MappedHash(), ParticleHash(), Particles()
-  {
-	NeedByteSwap=false;
-	IntTypeSize=0;
-	RealTypeSize=0;
-	NumberOfParticles=0;
-	
+  ParticleSnapshot_t(): Snapshot_t(), FlatHash(), MappedHash(), ParticleHash(), Particles()
+  {	
 	if(HBTConfig.ParticleIdNeedHash)
 	  ParticleHash=&MappedHash;
 	else
@@ -177,7 +138,6 @@ public:
   void FillParticleHash();
   void ClearParticleHash();
   ParticleIndex_t GetParticleIndex(const ParticleId_t particle_id) const;
-  void GetFileName(int ifile, string &filename);
   void Clear();
   ParticleIndex_t GetNumberOfParticles() const;
   ParticleId_t GetParticleId(const ParticleIndex_t index) const;
@@ -187,10 +147,10 @@ public:
   HBTReal GetMass(const ParticleIndex_t index) const;
   HBTReal GetInternalEnergy(ParticleIndex_t index) const;
   ParticleType_t GetParticleType(ParticleIndex_t index) const;
-  void Load(int snapshot_index, bool fill_particle_hash=true);
-  void SetLoadFlags(bool load_id, bool load_pos, bool load_vel, bool load_mass);
   void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
+  
+  void Load(int snapshot_index, bool fill_particle_hash=true);
 };
 
 inline void Snapshot_t::RelativeVelocity(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, HBTxyz& relativeVel) const
@@ -202,13 +162,13 @@ inline void Snapshot_t::RelativeVelocity(const HBTxyz& targetPos, const HBTxyz& 
 	dx[j]=targetPos[j]-refPos[j];
 	if(HBTConfig.PeriodicBoundaryOn)  dx[j]=NEAREST(dx[j]);
 	dv[j]=targetVel[j]-refVel[j];
-	dv[j]+=Hz*ScaleFactor*dx[j];
+	dv[j]+=Cosmology.Hz*Cosmology.ScaleFactor*dx[j];
   }
 }
 
 inline HBTInt ParticleSnapshot_t::size() const
 {
-  return NumberOfParticles;
+  return Particles.size();
 }
 inline HBTInt ParticleSnapshot_t::GetMemberId(const HBTInt index) const
 {
@@ -221,7 +181,7 @@ inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetParticleIndex(
 }
 inline ParticleSnapshot_t::ParticleIndex_t ParticleSnapshot_t::GetNumberOfParticles() const
 {
-  return NumberOfParticles;
+  return size();
 }
 inline ParticleSnapshot_t::ParticleId_t ParticleSnapshot_t::GetParticleId(const ParticleIndex_t index) const
 {

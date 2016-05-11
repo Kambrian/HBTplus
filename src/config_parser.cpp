@@ -25,6 +25,8 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(SofteningHalo,6)
 #undef TrySetPar		
 #define TrySetPar(var) if(name==#var) ss>>var;
+  else TrySetPar(SnapshotFormat)
+  else TrySetPar(MaxConcurrentIO)
   else TrySetPar(MinSnapshotIndex)
   else TrySetPar(MinNumPartOfSub)
   else TrySetPar(GroupFileVariant)
@@ -169,6 +171,8 @@ void Parameter_t::DumpParameters()
   DumpPar(SofteningHalo)
   
   /*optional*/
+  DumpPar(SnapshotFormat)
+  DumpPar(MaxConcurrentIO)
   DumpPar(MinSnapshotIndex)
   DumpPar(MinNumPartOfSub)
   DumpPar(GroupFileVariant)

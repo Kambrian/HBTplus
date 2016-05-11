@@ -320,7 +320,7 @@ double OctTree_t::EvaluatePotential(const HBTReal targetPos[3], const HBTReal ta
 	}
     }
     
-  return pot*PhysicalConst::G/Snapshot->ScaleFactor;
+  return pot*PhysicalConst::G/Snapshot->Cosmology.ScaleFactor;
 }
 
 double OctTree_t::BindingEnergy(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, const HBTReal targetMass)
@@ -329,17 +329,9 @@ double OctTree_t::BindingEnergy(const HBTxyz& targetPos, const HBTxyz& targetVel
  * targetMass optional, can be set to exclude self-potential if target is contained in the tree*/
 {
 	  double pot=EvaluatePotential(targetPos, targetMass);
-	  double dv[3],dx[3], E=0.;
-	  for(int j=0;j<3;j++)
-	  {
-		dx[j]=targetPos[j]-refPos[j];
-		if(HBTConfig.PeriodicBoundaryOn)  dx[j]=NEAREST(dx[j]);
-		dv[j]=targetVel[j]-refVel[j];
-		dv[j]+=Snapshot->Hz*Snapshot->ScaleFactor*dx[j];
-		E+=dv[j]*dv[j];
-	  }
-	  E=E*0.5+pot;
-	  return E;
+	  HBTxyz dv;
+	  Snapshot->RelativeVelocity(targetPos, targetVel, refPos, refVel, dv);
+	  return VecNorm(dv)*0.5+pot;
 }
 
 void OctTree_t::Reserve(const size_t max_num_part)

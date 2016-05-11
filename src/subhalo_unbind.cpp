@@ -75,7 +75,7 @@ public:
   HBTReal MassFactor;
   EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const Snapshot_t & fullsnapshot): Elist(e), N(n), Snapshot(fullsnapshot), MassFactor(1.)
   {
-	SetEpoch(fullsnapshot);
+	Cosmology=fullsnapshot.Cosmology;
   };
   void SetMassUnit(HBTReal mass_unit)
   {
@@ -208,8 +208,8 @@ public:
 	  {
 		dx[j]=x[j]-refPos[j];
 		if(HBTConfig.PeriodicBoundaryOn) dx[j]=NEAREST(dx[j]);
-		dx[j]*=ScaleFactor; //physical
-		dv[j]=v[j]-refVel[j]+Hz*dx[j];
+		dx[j]*=Cosmology.ScaleFactor; //physical
+		dv[j]=v[j]-refVel[j]+Cosmology.Hz*dx[j];
 		K+=dv[j]*dv[j];
 	  }
 	  AMx+=dx[1]*dv[2]-dx[2]*dv[1];
@@ -290,8 +290,6 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	{
 	  if(CorrectionLoop)
 	  {//correct the potential due to removed particles
-		#define VecNorm(x) (x[0]*x[0]+x[1]*x[1]+x[2]*x[2])
-		#define VecDot(x,y) (x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
 		HBTxyz RefVelDiff;
 		snapshot.RelativeVelocity(OldRefPos, OldRefVel, RefPos, RefVel, RefVelDiff);
 		HBTReal dK=0.5*VecNorm(RefVelDiff);
@@ -305,10 +303,8 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  auto &v=snapshot.GetPhysicalVelocity(pid);
 		  HBTxyz OldVel;
 		  snapshot.RelativeVelocity(x,v,OldRefPos, OldRefVel, OldVel);
-		  Elist[i].E+=VecDot(OldVel, RefVelDiff)+dK-tree.EvaluatePotential(x, 0);;
+		  Elist[i].E+=VecDot(OldVel, RefVelDiff)+dK-tree.EvaluatePotential(x, 0);
 		}
-		#undef VecNorm
-		#undef VecDot
 		Nlast=Nbound;
 	  }
 	  else
