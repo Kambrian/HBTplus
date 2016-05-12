@@ -7,6 +7,7 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <cmath>
 #include "datatypes.h"
 
 #define HBT_VERSION "1.8.1"
@@ -49,6 +50,7 @@ public:
   bool SnapshotIdUnsigned;
   bool SaveSubParticleProperties;
   vector <int> SnapshotIdList;
+  vector <string> SnapshotNameList;
   
   HBTReal MajorProgenitorMassRatio; 
 #ifdef ALLOW_BINARY_SYSTEM
@@ -72,7 +74,7 @@ public:
   HBTReal TreeNodeResolutionHalf;
   HBTReal BoxHalf; 
   
-  Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries,false),SnapshotIdList()
+  Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries,false),SnapshotIdList(),SnapshotNameList()
   {
 	SnapshotFormat="gadget";
 	MaxConcurrentIO=4;
@@ -103,6 +105,7 @@ public:
 	MaxSampleSizeOfPotentialEstimate=1000;//set to 0 to disable sampling
 	RefineMostboundParticle=false;
   }
+  void ReadSnapshotNameList();
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
   void CheckUnsetParameters();
@@ -124,5 +127,21 @@ inline void trim_trailing_garbage(string &s, const string &garbage_list)
   int pos=s.find_first_of(garbage_list);
   if(string::npos!=pos)  
 	s.erase(pos);
+}
+
+#define NEAREST(x) (((x)>HBTConfig.BoxHalf)?((x)-HBTConfig.BoxSize):(((x)<-HBTConfig.BoxHalf)?((x)+HBTConfig.BoxSize):(x)))
+inline HBTReal PeriodicDistance(const HBTxyz &x, const HBTxyz &y)
+{
+	HBTxyz dx;
+	dx[0]=x[0]-y[0];
+	dx[1]=x[1]-y[1];
+	dx[2]=x[2]-y[2];
+	if(HBTConfig.PeriodicBoundaryOn)
+	{
+	  dx[0]=NEAREST(dx[0]);
+	  dx[1]=NEAREST(dx[1]);
+	  dx[2]=NEAREST(dx[2]);
+	}
+	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
 }
 #endif

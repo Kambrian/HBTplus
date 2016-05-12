@@ -7,14 +7,14 @@
 #include <cstdlib>
 #include <cstdio>
 #include <unordered_map>
+
 #include "datatypes.h"
 #include "mymath.h"
 #include "config_parser.h"
 #include "snapshot_number.h"
 #include "hash.h"
 
-#define TypeMax 6
-#define SNAPSHOT_HEADER_SIZE 256
+// #define TypeMax 6
 
 struct Particle_t
 {

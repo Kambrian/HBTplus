@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstring>
 using namespace std;
+#include <array>
 // #include <memory>
 
 /*datatype for input particle data*/
@@ -59,7 +60,17 @@ typedef int HBTInt;
 #define GROUP_FORMAT_GADGET2_INT 20
 #define GROUP_FORMAT_GADGET2_LONG 21
 
-typedef HBTReal HBTxyz[3];  //3-d pos/vel data
+// typedef HBTReal HBTxyz[3];  //3-d pos/vel data
+/*inline void copyHBTxyz(HBTxyz & dest, const HBTxyz & src)
+{
+  memcpy(dest, src, sizeof(HBTxyz));
+}*/
+typedef array <HBTReal, 3> HBTxyz;
+inline void copyHBTxyz(HBTxyz &dest, const HBTxyz &src)
+{
+  /*copy for std:arr implementation*/
+  dest=src;
+}
 
 namespace SpecialConst
 {

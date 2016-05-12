@@ -13,6 +13,14 @@ using namespace std;
 #include "../mymath.h"
 #include "gadget_io.h"
 
+GadgetReader_t::GadgetReader_t(int snapshot_id, vector< Particle_t >& particles, Cosmology_t& cosmology): SnapshotId(snapshot_id), Particles(particles), Cosmology(cosmology), Header()
+{
+  NeedByteSwap=false;
+  IntTypeSize=0;
+  RealTypeSize=0;
+  Load();
+}
+
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
 #define SkipPositionBlock(fp) SkipFortranBlock(fp, NeedByteSwap)
 #define SkipVelocityBlock(fp) SkipFortranBlock(fp, NeedByteSwap)	 
@@ -210,7 +218,7 @@ FortranBlock <dtype> block(fp, n_read_mass, n_skip, NeedByteSwap);\
 
 #define ReadEnergyBlock(dtype) {\
 FortranBlock <dtype> block(fp, header.npart[0], 0, NeedByteSwap);\
-  for(HBTInt i=0;i<n_read;i++)\
+  for(HBTInt i=0;i<header.npart[0];i++)\
 	NewParticles[i].InternalEnergy=block[i];	\
 }
 

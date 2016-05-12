@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include "config_parser.h"
+#include "mymath.h"
 
 namespace PhysicalConst
 {
@@ -81,7 +82,6 @@ void Parameter_t::ParseConfigFile(const char * param_file)
 	cerr<<"Error opening config file "<<param_file<<endl;
 	exit(1);
   }
-  vector <string> lines;
   string line;
   
   cout<<"Reading configuration file "<<param_file<<endl;
@@ -102,7 +102,36 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   TreeNodeResolution=SofteningHalo*0.1;
   TreeNodeResolutionHalf=TreeNodeResolution/2.;
   TreeNodeOpenAngleSquare=TreeNodeOpenAngle*TreeNodeOpenAngle;
+  
+  ReadSnapshotNameList();
 }
+void Parameter_t::ReadSnapshotNameList()
+{//to specify snapshotnamelist, create a file "snapshotlist.txt" under SubhaloPath, and list the filenames inside, one per line.
+  string snaplist_filename=SubhaloPath+"/snapshotlist.txt";
+  ifstream ifs;
+  ifs.open(snaplist_filename);
+  if(ifs.is_open())
+  {
+	cout<<"Found SnapshotNameList file "<<snaplist_filename<<endl;
+	
+	string line;	
+	while(getline(ifs,line))
+	{
+	  trim_trailing_garbage(line, "#");
+	  istringstream ss(line);
+	  string name;
+	  ss>>name;
+	  if(!name.empty())
+	  {
+		cout<<name<<endl;
+		SnapshotNameList.push_back(name);
+	  }
+	}
+  }
+  if(SnapshotNameList.size())
+	assert(SnapshotNameList.size()==MaxSnapshotIndex+1);
+}
+
 void Parameter_t::CheckUnsetParameters()
 {
   for(int i=0;i<IsSet.size();i++)
@@ -191,6 +220,13 @@ void Parameter_t::DumpParameters()
   {
   version_file<<"SnapshotIdList";
   for(auto && i: SnapshotIdList)
+	version_file<<" "<<i;
+  version_file<<endl;
+  }
+  if(SnapshotNameList.size())
+  {
+  version_file<<"#SnapshotNameList";
+  for(auto && i: SnapshotNameList)
 	version_file<<" "<<i;
   version_file<<endl;
   }

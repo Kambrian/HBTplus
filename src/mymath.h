@@ -123,10 +123,6 @@ inline long int BytesToEOF(FILE *fp)
   
   return (offset_end-offset);
 }
-inline void copyHBTxyz(HBTxyz & dest, const HBTxyz & src)
-{
-  memcpy(dest, src, sizeof(HBTxyz));
-}
 
 template <class T, std::size_t N>
 ostream& operator<<(ostream& o, const array<T, N>& arr)
@@ -144,7 +140,7 @@ inline HBTReal position_modulus(HBTReal x, HBTReal boxsize)
 	y=x/boxsize;
 	return (y-floor(y))*boxsize;
 }
-inline HBTReal Distance2(const HBTReal x[3], const HBTReal y[3])
+inline HBTReal Distance2(const HBTxyz x, const HBTxyz y)
 {
 	HBTReal dx[3];
 	dx[0]=x[0]-y[0];
@@ -152,24 +148,9 @@ inline HBTReal Distance2(const HBTReal x[3], const HBTReal y[3])
 	dx[2]=x[2]-y[2];
 	return dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2];
 }
-inline HBTReal Distance(const HBTReal x[3], const HBTReal y[3])
+inline HBTReal Distance(const HBTxyz x, const HBTxyz y)
 {
 	return sqrt(Distance2(x,y));
-}
-#define NEAREST(x) (((x)>HBTConfig.BoxHalf)?((x)-HBTConfig.BoxSize):(((x)<-HBTConfig.BoxHalf)?((x)+HBTConfig.BoxSize):(x)))
-inline HBTReal PeriodicDistance(const HBTReal x[3], const HBTReal y[3])
-{
-	HBTReal dx[3];
-	dx[0]=x[0]-y[0];
-	dx[1]=x[1]-y[1];
-	dx[2]=x[2]-y[2];
-	if(HBTConfig.PeriodicBoundaryOn)
-	{
-	  dx[0]=NEAREST(dx[0]);
-	  dx[1]=NEAREST(dx[1]);
-	  dx[2]=NEAREST(dx[2]);
-	}
-	return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
 }
 
 #ifdef HAS_GSL

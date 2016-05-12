@@ -12,6 +12,7 @@ using namespace std;
 #include "../snapshot.h"
 #include "../mymath.h"
 #include "gadget_io.h"
+#include "apostle_io.h"
 
 void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
 { 
@@ -22,8 +23,15 @@ void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
 	GadgetReader_t(SnapshotId, Particles, Cosmology);
   }
   
+  if(HBTConfig.SnapshotFormat=="apostle")
+  {
+	ApostleReader_t reader(SnapshotId, Particles, Cosmology);
+	
+  }
+  
   if(HBTConfig.SnapshotFormat=="mysnapshot")
   {//insert your snapshot reader here, and include relevant header in the header if necessary
+	//you need to fill up Particles vector, and set the cosmology
   }
   
   if(fill_particle_hash)

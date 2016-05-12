@@ -43,7 +43,16 @@ inline herr_t ReadDataset(hid_t file, const char *name, hid_t dtype, void *buf)
   status=H5Dclose(dset);
   return status;
 }
-
+inline herr_t ReadAttribute(hid_t loc_id, const char *obj_name, const char *attr_name, hid_t dtype, void *buf)
+/* read named attribute of object into buf. if loc_id fully specifies the object, obj_name="."
+ * dtype specifies the datatype of buf; it does not need to be the same as the storage type in file*/
+{
+  herr_t status;
+  hid_t attr=H5Aopen_by_name(loc_id, obj_name, attr_name, H5P_DEFAULT, H5P_DEFAULT);
+  status=H5Aread(attr, dtype, buf);
+  status=H5Aclose(attr);
+  return status;
+}
 inline void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsize_t ndim, const hsize_t *dims, hid_t dtype)
 {
   writeHDFmatrix(file, buf, name, ndim, dims, dtype, dtype);

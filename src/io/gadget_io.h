@@ -1,6 +1,8 @@
 #ifndef GADGET_IO_INCLUDED
 #define GADGET_IO_INCLUDED
 
+#define SNAPSHOT_HEADER_SIZE 256
+
 struct GadgetHeader_t
 {
   int      npart[TypeMax];
@@ -39,13 +41,7 @@ class GadgetReader_t
   void Load();
     
 public:
-  GadgetReader_t(int snapshot_id, vector <Particle_t> &particles, Cosmology_t & cosmology): SnapshotId(snapshot_id), Particles(particles), Cosmology(cosmology), Header()
-  {
-	NeedByteSwap=false;
-	IntTypeSize=0;
-	RealTypeSize=0;
-	Load();
-  }
+  GadgetReader_t(int snapshot_id, vector <Particle_t> &particles, Cosmology_t & cosmology);
 };
 
 #endif
