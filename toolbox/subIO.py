@@ -13,11 +13,11 @@ def PeriodicDistance(x,y, BoxSize, axis=-1):
 def distance(x,y, axis=1):
   return np.sqrt(np.sum((x-y)**2, axis=axis))
 
-def GetFileName(isnap, rootdir, ifile, singlefile=False):
+def GetFileName(isnap, rootdir, ifile, singlefile=False, filetype='Sub'):
   if singlefile:
-	return rootdir+'/SubSnap_%03d.hdf5'%isnap
+	return rootdir+'/'+filetype+'Snap_%03d.hdf5'%isnap
   else:
-	return rootdir+'/SubSnap_%03d.%d.hdf5'%(isnap,ifile)
+	return rootdir+'/'+filetype+'Snap_%03d.%d.hdf5'%(isnap,ifile)
   
 def LoadSubhalos(isnap, rootdir):
   singlefile=False
@@ -31,6 +31,23 @@ def LoadSubhalos(isnap, rootdir):
   for i in xrange(nfiles):
 	subfile=h5py.File(GetFileName(isnap, rootdir, i, singlefile), 'r')
 	subhalos.append(subfile['Subhalos'][...])
+	subfile.close()
+  subhalos=np.hstack(subhalos)
+  #subhalos.sort(order=['HostHaloId','Nbound'])
+  return subhalos
+
+def LoadParticles(isnap, rootdir, filetype='Sub'):
+  singlefile=False
+  try:
+	nfiles=h5py.File(GetFileName(isnap, rootdir, 0, False, filetype),'r')['NumberOfFiles'][...]
+  except:
+	singlefile=True
+	nfiles=1
+	
+  subhalos=[]
+  for i in xrange(nfiles):
+	subfile=h5py.File(GetFileName(isnap, rootdir, i, singlefile, filetype), 'r')
+	subhalos.append(subfile[filetype+'haloParticles'][...])
 	subfile.close()
   subhalos=np.hstack(subhalos)
   #subhalos.sort(order=['HostHaloId','Nbound'])
