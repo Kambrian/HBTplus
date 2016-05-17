@@ -27,10 +27,10 @@ void Parameter_t::SetParameterValue(const string &line)
 #undef TrySetPar		
 #define TrySetPar(var) if(name==#var) ss>>var;
   else TrySetPar(SnapshotFormat)
+  else TrySetPar(GroupFileFormat)
   else TrySetPar(MaxConcurrentIO)
   else TrySetPar(MinSnapshotIndex)
   else TrySetPar(MinNumPartOfSub)
-  else TrySetPar(GroupFileVariant)
 //   else TrySetPar(GroupParticleIdMask)
   else if(name=="GroupParticleIdMask")
   {
@@ -102,6 +102,9 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   TreeNodeResolution=SofteningHalo*0.1;
   TreeNodeResolutionHalf=TreeNodeResolution/2.;
   TreeNodeOpenAngleSquare=TreeNodeOpenAngle*TreeNodeOpenAngle;
+  
+  if(GroupFileFormat=="apostle_particle_index")
+	GroupLoadedIndex=true;
   
   ReadSnapshotNameList();
 }
@@ -191,6 +194,7 @@ void Parameter_t::DumpParameters()
 	exit(1);
   }
 #define DumpPar(var) version_file<<#var<<"  "<<var<<endl;
+#define DumpComment(var) {version_file<<"#";DumpPar(var);}
   DumpPar(SnapshotPath)
   DumpPar(HaloPath)
   DumpPar(SubhaloPath)
@@ -201,10 +205,10 @@ void Parameter_t::DumpParameters()
   
   /*optional*/
   DumpPar(SnapshotFormat)
+  DumpPar(GroupFileFormat)
   DumpPar(MaxConcurrentIO)
   DumpPar(MinSnapshotIndex)
   DumpPar(MinNumPartOfSub)
-  DumpPar(GroupFileVariant)
   if(GroupParticleIdMask)
 	version_file<<"GroupParticleIdMask "<<hex<<GroupParticleIdMask<<dec<<endl;
   DumpPar(MassInMsunh)
@@ -246,6 +250,9 @@ void Parameter_t::DumpParameters()
   
   DumpPar(MaxSampleSizeOfPotentialEstimate)
   DumpPar(RefineMostboundParticle)
+  
+  DumpComment(GroupLoadedIndex)
 #undef DumpPar  
+#undef DumpComment
   version_file.close();
 }

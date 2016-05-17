@@ -14,6 +14,14 @@
 #include "mymath.h"
 #include "halo.h"
 
+void HaloSnapshot_t::Clear()
+/* call this to reset the HaloSnapshot to empty.
+ This is usually not necessary because the destructor will release the memory automatically*/
+{
+//   Halos.clear(); //this does not actually clear
+  HaloList_t().swap(Halos);//this deeply cleans it
+}
+
 void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 {
   chrono::high_resolution_clock::time_point time_begin, time_end;
@@ -23,6 +31,7 @@ void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
   ParticleSnapshot=&snapshot;
   time_begin = chrono::high_resolution_clock::now();
   }
+  if(HBTConfig.GroupLoadedIndex) return;
 #pragma omp for //maybe try collapse(2)? need to remove intermediate variables to enable this.
   for(HBTInt haloid=0;haloid<Halos.size();haloid++)
   {

@@ -35,10 +35,10 @@ public:
   
   /*optional*/
   string SnapshotFormat;
+  string GroupFileFormat;
   int MaxConcurrentIO;
   int MinSnapshotIndex;
   int MinNumPartOfSub;
-  int GroupFileVariant;
   long GroupParticleIdMask;
   HBTReal MassInMsunh;
   HBTReal LengthInMpch;
@@ -73,14 +73,15 @@ public:
   HBTReal TreeNodeResolution;
   HBTReal TreeNodeResolutionHalf;
   HBTReal BoxHalf; 
+  bool GroupLoadedIndex;
   
   Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries,false),SnapshotIdList(),SnapshotNameList()
   {
 	SnapshotFormat="gadget";
+	GroupFileFormat="gadget3_int";
 	MaxConcurrentIO=4;
 	MinSnapshotIndex=0;
 	MinNumPartOfSub=20;
-	GroupFileVariant=GROUP_FORMAT_GADGET3_INT;
 	GroupParticleIdMask=0;
 	MassInMsunh=1e10;
 	LengthInMpch=1e3;
@@ -104,6 +105,7 @@ public:
 	TreeMinNumOfCells=500;
 	MaxSampleSizeOfPotentialEstimate=1000;//set to 0 to disable sampling
 	RefineMostboundParticle=false;
+	GroupLoadedIndex=false;
   }
   void ReadSnapshotNameList();
   void ParseConfigFile(const char * param_file);

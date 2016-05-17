@@ -20,14 +20,12 @@ public:
 class HaloSnapshot_t: public Snapshot_t
 {  
   typedef vector <Halo_t> HaloList_t;
-  template <class PIDtype_t>
-  void LoadGroupV2V3();
-  void GetFileNameFormat(string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 public:
-  const ParticleSnapshot_t * ParticleSnapshot;
   HaloList_t Halos;
   HBTInt TotNumberOfParticles;
   HBTInt NumPartOfLargestHalo;
+  const ParticleSnapshot_t * ParticleSnapshot;
+  
   HaloSnapshot_t(): Snapshot_t(), Halos(), ParticleSnapshot(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
   }

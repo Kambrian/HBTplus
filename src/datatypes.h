@@ -54,12 +54,6 @@ typedef int HBTInt;
 #define FRSH_SRCCAT -3
 //#define FRSH_MBDCAT -4
 
-#define GROUP_FORMAT_GADGET4 40
-#define GROUP_FORMAT_GADGET3_INT 30
-#define GROUP_FORMAT_GADGET3_LONG 31
-#define GROUP_FORMAT_GADGET2_INT 20
-#define GROUP_FORMAT_GADGET2_LONG 21
-
 // typedef HBTReal HBTxyz[3];  //3-d pos/vel data
 /*inline void copyHBTxyz(HBTxyz & dest, const HBTxyz & src)
 {

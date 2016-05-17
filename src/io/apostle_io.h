@@ -1,6 +1,7 @@
 #ifndef APOSTLE_IO_INCLUDED
 #define APOSTLE_IO_INCLUDED
 #include "../hdf_wrapper.h"
+#include "../halo.h"
 
 struct ApostleHeader_t
 {
@@ -14,26 +15,33 @@ struct ApostleHeader_t
   HBTInt npartTotal[TypeMax]; 
 };
 
+struct ParticleHost_t
+{
+  HBTInt ParticleId;
+  HBTInt HostId;
+};
+
 class ApostleReader_t
 {
-  int SnapshotId;
   string SnapshotName;
-  vector <Particle_t> &Particles;
-  Cosmology_t &Cosmology;
-  
+    
   vector <HBTInt> np_file;
   vector <HBTInt> offset_file;
   ApostleHeader_t Header;
   void ReadHeader(int ifile, ApostleHeader_t &header);
   HBTInt CompileFileOffsets(int nfiles);
-  void LoadSnapshot();
-  void ReadFile(int ifile);
+  void ReadSnapshot(int ifile, Particle_t * ParticlesInFile);
+  void ReadGroupId(int ifile, ParticleHost_t * ParticlesInFile, bool FlagReadParticleId);
   void GetFileName(int ifile, string &filename);
+  void SetSnapshot(int snapshotId);
   
   hid_t CountTable_t, MassTable_t, H5T_HBTxyz;
 public:
-  ApostleReader_t(int snapshotId, vector <Particle_t> &particles, Cosmology_t &cosmology);
+  ApostleReader_t();
+  void LoadSnapshot(int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology);
+  HBTInt LoadGroups(int snapshotId, vector <Halo_t> &Halos);
   ~ApostleReader_t();
 };
 
+extern bool IsApostleGroup(const string &GroupFileFormat);
 #endif

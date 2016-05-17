@@ -42,6 +42,7 @@ int main(int argc, char **argv)
 	{
 	halosnap.ParticleIdToIndex(partsnap);
 	subsnap.ParticleIdToIndex(partsnap);
+	//subsnap.star_formation(); //add star formation code here
 	#pragma omp master
 	timer.Tick();
 	subsnap.AssignHosts(halosnap);

@@ -22,17 +22,21 @@ void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
   {
 	GadgetReader_t(SnapshotId, Particles, Cosmology);
   }
-  
-  if(HBTConfig.SnapshotFormat=="apostle")
+  else if(HBTConfig.SnapshotFormat=="apostle")
   {
-	ApostleReader_t reader(SnapshotId, Particles, Cosmology);
+	ApostleReader_t().LoadSnapshot(SnapshotId, Particles, Cosmology);
+  }
+  else if(HBTConfig.SnapshotFormat=="mysnapshot")
+  {/*insert your snapshot reader here, and include relevant header in the header if necessary
+	you need to fill up Particles vector, and set the cosmology, e.g.,
 	
+	LoadMySnapshot(SnapshotId, Particles, Cosmology);
+	
+	*/
   }
+  else
+	throw(runtime_error("unknown SnapshotFormat "+HBTConfig.SnapshotFormat));
   
-  if(HBTConfig.SnapshotFormat=="mysnapshot")
-  {//insert your snapshot reader here, and include relevant header in the header if necessary
-	//you need to fill up Particles vector, and set the cosmology
-  }
   
   if(fill_particle_hash)
 	FillParticleHash();
