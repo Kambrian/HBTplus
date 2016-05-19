@@ -1,3 +1,6 @@
 - There could be significant performance degradation on an overloaded system. (OpenMP version)
 
   This is probably caused by the compiler (g++) failing to optimize the code well in case of system overload. Have to rely on resource allocation from a batch job scheduler (e.g., LSF). Or make sure the cpus are not overloaded if you are running on an interactive machine. 
+  
+  
+- There could (although very rarely) exist duplicate objects  with mass below 100 particles. These are mostly due to the noise in unbinding (lack of resolution for these low mass objects) in small major merger systems, so that the main halo falls back to the satellite when the unbinding fails; it could also happen in binary-satellite systems, when the main subhalo is stripped before the satellite. For physically robust and clean tree, it is thus recommended to only use objects with more than 100 particles.
