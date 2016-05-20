@@ -51,17 +51,17 @@ void ParticleSnapshot_t::Clear()
   ClearParticleHash();//even if you don't do this, the destructor will still clean up the memory.
 }
 
-void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t PartIndex[], const ParticleIndex_t NumPart) const
+double ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t PartIndex[], const ParticleIndex_t NumPart) const
 /*mass weighted average position*/
 {
 	ParticleIndex_t i,j;
 	double sx[3],origin[3],msum;
 	
-	if(0==NumPart) return;
+	if(0==NumPart) return 0.;
 	if(1==NumPart) 
 	{
 	  copyHBTxyz(CoM, GetComovingPosition(PartIndex[0]));
-	  return;
+	  return GetParticleMass(PartIndex[0]);
 	}
 	
 	sx[0]=sx[1]=sx[2]=0.;
@@ -87,18 +87,19 @@ void ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t Part
 		if(HBTConfig.PeriodicBoundaryOn) sx[j]+=origin[j];
 		CoM[j]=sx[j];
 	}
+	return msum;
 }
-void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t PartIndex[], const ParticleIndex_t NumPart) const
+double ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t PartIndex[], const ParticleIndex_t NumPart) const
 /*mass weighted average velocity*/
 {
 	ParticleIndex_t i,j;
 	double sv[3],msum;
 	
-	if(0==NumPart) return;
+	if(0==NumPart) return 0.;
 	if(1==NumPart) 
 	{
 	  copyHBTxyz(CoV, GetPhysicalVelocity(PartIndex[0]));
-	  return;
+	  return GetParticleMass(PartIndex[0]);
 	}
 	
 	sv[0]=sv[1]=sv[2]=0.;
@@ -114,6 +115,7 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Part
 	
 	for(j=0;j<3;j++)
 	  CoV[j]=sv[j]/msum;
+	return msum;
 }
 
 //TODO: detach these SO functions from snapshot. pass cosmology as parameter
@@ -136,6 +138,26 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
   }
   Mvir=i*ParticleMass;
   Rvir=pow(i/RhoVirial, 1.0/3);//comoving
+}
+
+void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, const vector <double> &MassInR) const
+/*
+ * find SphericalOverdensitySize from a given list of sorted particle distances.
+ * all distances comoving.
+ * 
+ * Brute-force method to scan from most-distant particle.
+ * 
+ */
+{  
+  HBTInt i, np=RSorted.size();
+  HBTReal RhoVirial=VirialFactor*Cosmology.Hz*Cosmology.Hz/2.0/PhysicalConst::G*Cosmology.ScaleFactor*Cosmology.ScaleFactor*Cosmology.ScaleFactor;
+  for(i=np;i>0;i--)
+  {
+	HBTReal r=RSorted[i-1];
+	if(MassInR[i]>RhoVirial*r*r*r) break;
+  }
+  Mvir=MassInR[i];
+  Rvir=pow(MassInR[i]/RhoVirial, 1.0/3);//comoving
 }
 
 void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const

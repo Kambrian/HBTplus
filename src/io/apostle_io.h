@@ -37,10 +37,8 @@ class ApostleReader_t
   
   hid_t CountTable_t, MassTable_t, H5T_HBTxyz;
 public:
-  ApostleReader_t();
   void LoadSnapshot(int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology);
   HBTInt LoadGroups(int snapshotId, vector <Halo_t> &Halos);
-  ~ApostleReader_t();
 };
 
 extern bool IsApostleGroup(const string &GroupFileFormat);

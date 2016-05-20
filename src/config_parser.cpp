@@ -126,7 +126,7 @@ void Parameter_t::ReadSnapshotNameList()
 	  ss>>name;
 	  if(!name.empty())
 	  {
-		cout<<name<<endl;
+// 		cout<<name<<endl;
 		SnapshotNameList.push_back(name);
 	  }
 	}

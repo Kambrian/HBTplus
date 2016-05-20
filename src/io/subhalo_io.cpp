@@ -23,6 +23,17 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   #define InsertMember(x,t) H5Tinsert(H5T_SubhaloInMem, #x, HOFFSET(Subhalo_t, x), t)//;cout<<#x<<": "<<HOFFSET(Subhalo_t, x)<<endl
   InsertMember(TrackId, H5T_HBTInt);
   InsertMember(Nbound, H5T_HBTInt);
+  InsertMember(Mbound, H5T_NATIVE_FLOAT);
+  InsertMember(MostBoundParticleId, H5T_HBTInt);
+  
+  dims[0]=TypeMax;
+  hid_t H5T_HBTIntArray_TypeMax=H5Tarray_create2(H5T_HBTInt, 1, dims);
+  hid_t H5T_FloatArray_TypeMax=H5Tarray_create2(H5T_NATIVE_FLOAT, 1, dims);
+  InsertMember(NboundType, H5T_HBTIntArray_TypeMax);
+  InsertMember(MboundType, H5T_FloatArray_TypeMax);
+  H5Tclose(H5T_HBTIntArray_TypeMax);
+  H5Tclose(H5T_FloatArray_TypeMax);
+  
   InsertMember(HostHaloId, H5T_HBTInt);
   InsertMember(Rank, H5T_HBTInt);
   InsertMember(LastMaxMass, H5T_HBTInt);  
@@ -45,10 +56,8 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(SpecificSelfPotentialEnergy, H5T_NATIVE_FLOAT);
   InsertMember(SpecificSelfKineticEnergy, H5T_NATIVE_FLOAT);
   InsertMember(SpecificAngularMomentum, H5T_FloatVec3);
-#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
   InsertMember(SpinPeebles, H5T_FloatVec3);
   InsertMember(SpinBullock, H5T_FloatVec3);
-#endif
 #ifdef HAS_GSL
   dims[0]=3;
   dims[1]=3;
@@ -210,9 +219,6 @@ void SubhaloSnapshot_t::Save()
 //   writeHDFmatrix(file, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);
 //   writeHDFmatrix(file, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
   
-  hsize_t dim_sub[]={Subhalos.size()};
-  writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); 
-  
   hid_t datagrp=H5Gcreate2(file, "/Membership", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   H5LTset_attribute_string(file,"/Membership","Comment","List of subhaloes in each group.");
   writeHDFmatrix(datagrp, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);
@@ -233,7 +239,7 @@ void SubhaloSnapshot_t::Save()
   writeHDFmatrix(datagrp, vl.data(), "GroupedTrackIds", ndim, dim_grp, H5T_HBTIntArr);
   H5LTset_attribute_string(datagrp,"GroupedTrackIds","Comment","Nhalo+1 groups. The last group contain tracks outside any host halo (i.e., field subhaloes).");
   H5Gclose(datagrp);
-  
+   
   //now write the particle list for each subhalo
   if(HBTConfig.SaveSubParticleProperties)
   {
@@ -241,6 +247,7 @@ void SubhaloSnapshot_t::Save()
 	{
 	  HBTxyz ComovingPosition;
 	  HBTxyz PhysicalVelocity;
+	  HBTReal Mass;
 	};
 	hid_t H5T_Particle=H5Tcreate(H5T_COMPOUND, sizeof (Particle_t));
 	hsize_t dim_xyz=3;
@@ -248,6 +255,7 @@ void SubhaloSnapshot_t::Save()
 	#define InsertMember(x,t) H5Tinsert(H5T_Particle, #x, HOFFSET(Particle_t, x), t)
 	InsertMember(ComovingPosition, H5T_HBTxyz);
 	InsertMember(PhysicalVelocity, H5T_HBTxyz);
+	InsertMember(Mass, H5T_HBTReal);
 	#undef InsertMember
 	H5Tclose(H5T_HBTxyz);
   
@@ -264,6 +272,7 @@ void SubhaloSnapshot_t::Save()
 		auto &ind=IdList[i];
 		copyHBTxyz(p.ComovingPosition, SnapshotPointer->GetComovingPosition(ind));
 		copyHBTxyz(p.PhysicalVelocity, SnapshotPointer->GetPhysicalVelocity(ind));
+		p.Mass=SnapshotPointer->GetMass(ind);
 	  }
 	  stringstream subname;
 	  subname<<"Sub"<<subid;
@@ -274,6 +283,8 @@ void SubhaloSnapshot_t::Save()
 	H5Tclose(H5T_Particle);
   }
   
+  hsize_t dim_sub[]={Subhalos.size()};
+  
   ParticleIndexToId();
   vl.resize(Subhalos.size());
   for(HBTInt i=0;i<vl.size();i++)
@@ -282,6 +293,8 @@ void SubhaloSnapshot_t::Save()
 	vl[i].p=Subhalos[i].Particles.data();
   }
   writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);
+  
+  writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); //write after calling ParticleIndexToId, for MostBoundParticleId
   
   H5Fclose(file);
   

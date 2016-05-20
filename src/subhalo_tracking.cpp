@@ -191,7 +191,7 @@ void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 	//rely on most-bound particle
-	Subhalos[subid].HostHaloId=ParticleToHost[Subhalos[subid].Particles[0]];
+	  Subhalos[subid].HostHaloId=ParticleToHost[Subhalos[subid].MostBoundParticleId];
 	//alternatives: CoreTrack; Split;
   }
 #pragma omp single
@@ -264,6 +264,7 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
   #pragma omp for
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   { 
+	auto &Host=halo_snap.Halos[hostid];
 	MemberShipTable_t::MemberList_t & Members=MemberTable.SubGroups[hostid];
 	if(0==Members.size()) //create a new sub
 	{
@@ -273,9 +274,9 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 		subid=Npro++;
 	  }
 	  Subhalos[subid].HostHaloId=hostid;
-	  copyHBTxyz(Subhalos[subid].ComovingAveragePosition, halo_snap.Halos[hostid].ComovingAveragePosition); 
-	  copyHBTxyz(Subhalos[subid].PhysicalAverageVelocity, halo_snap.Halos[hostid].PhysicalAverageVelocity);
-	  Subhalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
+	  copyHBTxyz(Subhalos[subid].ComovingAveragePosition, Host.ComovingAveragePosition); 
+	  copyHBTxyz(Subhalos[subid].PhysicalAverageVelocity, Host.PhysicalAverageVelocity);
+	  Subhalos[subid].Particles.swap(Host.Particles);
 	  
 	  Subhalos[subid].SnapshotIndexOfBirth=SnapshotIndex;
 	  Subhalos[subid].Rank=-1;//new birth
@@ -285,7 +286,7 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 #ifdef ALLOW_BINARY_SYSTEM	  
 	  if(0==Subhalos[Members[0]].Rank)//only update particles if not a binary system
 #endif		
-		Subhalos[Members[0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles
+		Subhalos[Members[0]].Particles.swap(Host.Particles); //reuse the halo particles
 	}
   }
   #pragma omp single
@@ -350,6 +351,7 @@ void SubhaloSnapshot_t::PurgeMostBoundParticles()
 			{
 			  copyHBTxyz(subhalo.ComovingMostBoundPosition, SnapshotPointer->GetComovingPosition(p));
 			  copyHBTxyz(subhalo.PhysicalMostBoundVelocity, SnapshotPointer->GetPhysicalVelocity(p));
+			  subhalo.MostBoundParticleId=p;
 			  swap(subhalo.Particles[0], p);
 			  break;
 			}
@@ -378,5 +380,6 @@ void SubhaloSnapshot_t::UpdateTracks()
   {
 	Subhalos[i].CalculateProfileProperties(*SnapshotPointer);
 	Subhalos[i].CalculateShape(*SnapshotPointer);
+	Subhalos[i].SortParticleTypes(*SnapshotPointer);
   }
 }

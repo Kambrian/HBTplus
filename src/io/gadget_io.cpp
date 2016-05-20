@@ -119,7 +119,7 @@ void GadgetReader_t::LoadGadgetHeader(int ifile)
   myfopen(fp, filename.c_str(), "r");
   NeedByteSwap=ReadGadgetFileHeader(fp, Header);
   
-  if(Header.BoxSize!=HBTConfig.BoxSize)
+  if((HBTReal)Header.BoxSize!=HBTConfig.BoxSize)
   {
 	cerr<<"BoxSize not match input: read "<<Header.BoxSize<<"; expect "<<HBTConfig.BoxSize<<endl;
 	cerr<<"Maybe the length unit differ? Excpected unit: "<<HBTConfig.LengthInMpch<<" Msol/h\n";

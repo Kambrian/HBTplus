@@ -16,6 +16,10 @@ public:
   typedef vector <HBTInt> ParticleList_t;
   HBTInt TrackId;
   HBTInt Nbound;
+  HBTInt MostBoundParticleId;
+  float Mbound;
+  HBTInt NboundType[TypeMax];
+  float MboundType[TypeMax];
   HBTInt HostHaloId;
   HBTInt Rank;
   HBTInt LastMaxMass;
@@ -46,10 +50,8 @@ public:
   float SpecificSelfPotentialEnergy;
   float SpecificSelfKineticEnergy;//<0.5*v^2>
   float SpecificAngularMomentum[3];//<Rphysical x Vphysical>
-#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
   float SpinPeebles[3];
   float SpinBullock[3];
-#endif
   
   //shapes
 #ifdef HAS_GSL
@@ -69,7 +71,7 @@ public:
   
   ParticleList_t Particles;
   
-  Subhalo_t(): Nbound(0), Rank(0)
+  Subhalo_t(): Nbound(0), Rank(0), Mbound(0), NboundType{0}, MboundType{0.}
   {
 	TrackId=SpecialConst::NullTrackId;
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;
@@ -95,6 +97,10 @@ public:
   }*/
   void Unbind(const ParticleSnapshot_t &part_snap);
   HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
+  float GetMass() const
+  {
+	return Mbound; //accumulate(begin(MboundType), end(MboundType), (HBTReal)0.);
+  }
   void UpdateTrack(const ParticleSnapshot_t &part_snap);
   bool IsCentral()
   {
@@ -102,6 +108,8 @@ public:
   }
   void CalculateProfileProperties(const ParticleSnapshot_t &part_snap);
   void CalculateShape(const ParticleSnapshot_t &part_snap);
+  void SortParticleTypes(const ParticleSnapshot_t &part_snap);
+  void SetHostHalo(const vector <HBTInt> &ParticleToHost);
 };
 
 typedef vector <Subhalo_t> SubhaloList_t;
@@ -197,7 +205,7 @@ public:
   }
   HBTReal GetMass(const HBTInt index) const
   {
-	return Subhalos[index].Particles.size();
+	return Subhalos[index].GetMass();
   }
 };
 inline HBTInt GetCoreSize(HBTInt nbound)

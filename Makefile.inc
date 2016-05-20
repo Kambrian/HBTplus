@@ -7,11 +7,16 @@ GSLINC+=-DHAS_GSL
 GSLLIB=-lgsl -lgslcblas
 ###comment up to here to disable GSL.
 
+###for thermal unbinding:
+#CXXFLAGS+=-DUNBIND_WITH_THERMAL_ENERGY
+###
+
 CXX=g++
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 
-CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
-# CXXFLAGS+=-xHost #to get it runnable on cosma-e
+
 LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPFLAG)
+
+# CXXFLAGS+=-xHost #to get it runnable on cosma-e
 #CXXFLAGS+=-g
 #LDFLAGS+=-g
 # LINK.o=$(LINK.cpp) 

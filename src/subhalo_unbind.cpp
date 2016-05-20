@@ -101,17 +101,17 @@ public:
   {
 	return Snapshot.GetComovingPosition(GetMemberId(i));
   }
-  void AverageVelocity(HBTxyz& CoV, HBTInt NumPart)
+  double AverageVelocity(HBTxyz& CoV, HBTInt NumPart)
   /*mass weighted average velocity*/
   {
 	HBTInt i,j;
 	double svx,svy,svz,msum;
 	
-	if(0==NumPart) return;
+	if(0==NumPart) return 0.;
 	if(1==NumPart) 
 	{
 	  copyHBTxyz(CoV, GetPhysicalVelocity(0));
-	  return;
+	  return GetMass(0);
 	}
 	
 	svx=svy=svz=0.;
@@ -130,18 +130,19 @@ public:
 	CoV[0]=svx/msum;
 	CoV[1]=svy/msum;
 	CoV[2]=svz/msum;
+	return msum;
   }
-  void AveragePosition(HBTxyz& CoM, HBTInt NumPart) const
+  double AveragePosition(HBTxyz& CoM, HBTInt NumPart) const
   /*mass weighted average position*/
   {
 	HBTInt i,j;
 	double sx,sy,sz,origin[3],msum;
 	
-	if(0==NumPart) return;
+	if(0==NumPart) return 0.;
 	if(1==NumPart) 
 	{
 	  copyHBTxyz(CoM, GetComovingPosition(0));
-	  return;
+	  return GetMass(0);
 	}
 	
 	if(HBTConfig.PeriodicBoundaryOn)
@@ -179,28 +180,30 @@ public:
 	  CoM[0]=sx;
 	  CoM[1]=sy;
 	  CoM[2]=sz;
+	  return msum;
   }
   void AverageKinematics(float &SpecificPotentialEnergy, float &SpecificKineticEnergy, float SpecificAngularMomentum[3], HBTInt NumPart, const HBTxyz & refPos, const HBTxyz &refVel)
   /*obtain specific potential, kinetic energy, and angular momentum for the first NumPart particles
    * all quantities are physical
-   * currently only support fixed particle mass
    * 
-   * TODO: extend to variable mass?
    * Note there is a slight inconsistency in the energy since they were calculated from the previous unbinding loop, but the refVel has been updated.
    */
   {
 	if(NumPart<=1)
 	{
+// 	  if(NumPart==1) Mbound=GetMass(0);
+// 	  else Mbound=0.;
 	  SpecificPotentialEnergy=0.;
 	  SpecificKineticEnergy=0.;
 	  SpecificAngularMomentum[0]=SpecificAngularMomentum[1]=SpecificAngularMomentum[2]=0.;
 	  return;
 	}
-	double E=0., K=0., AMx=0., AMy=0., AMz=0.;
-	#pragma omp parallel for reduction(+:E, K, AMx, AMy, AMz) if(NumPart>100)
+	double E=0., K=0., AMx=0., AMy=0., AMz=0., M=0.;
+	#pragma omp parallel for reduction(+:E, K, AMx, AMy, AMz, M) if(NumPart>100)
 	for(HBTInt i=0;i<NumPart;i++)
 	{
-	  E+=Elist[i].E;
+	  HBTReal m=GetMass(i);
+	  E+=Elist[i].E*m;
 	  const HBTxyz & x=GetComovingPosition(i);
 	  const HBTxyz & v=GetPhysicalVelocity(i);
 	  double dx[3], dv[3];
@@ -210,19 +213,21 @@ public:
 		if(HBTConfig.PeriodicBoundaryOn) dx[j]=NEAREST(dx[j]);
 		dx[j]*=Cosmology.ScaleFactor; //physical
 		dv[j]=v[j]-refVel[j]+Cosmology.Hz*dx[j];
-		K+=dv[j]*dv[j];
+		K+=dv[j]*dv[j]*m;
 	  }
-	  AMx+=dx[1]*dv[2]-dx[2]*dv[1];
-	  AMy+=dx[0]*dv[2]-dx[2]*dv[0];
-	  AMz+=dx[0]*dv[1]-dx[1]*dv[0];
+	  AMx+=(dx[1]*dv[2]-dx[2]*dv[1])*m;
+	  AMy+=(dx[0]*dv[2]-dx[2]*dv[0])*m;
+	  AMz+=(dx[0]*dv[1]-dx[1]*dv[0])*m;
+	  M+=m;
 	}
-	E/=NumPart;
-	K*=0.5/NumPart;
+	E/=M;
+	K*=0.5/M;
 	SpecificPotentialEnergy=E-K;
 	SpecificKineticEnergy=K;
-	SpecificAngularMomentum[0]=AMx/NumPart;
-	SpecificAngularMomentum[1]=AMy/NumPart;
-	SpecificAngularMomentum[2]=AMz/NumPart;
+	SpecificAngularMomentum[0]=AMx/M;
+	SpecificAngularMomentum[1]=AMy/M;
+	SpecificAngularMomentum[2]=AMz/M;
+// 	Mbound=M;
   }
 };
 inline void RefineBindingEnergyOrder(EnergySnapshot_t &ESnap, HBTInt Size, OctTree_t &tree, HBTxyz &RefPos, HBTxyz &RefVel)
@@ -239,6 +244,9 @@ inline void RefineBindingEnergyOrder(EnergySnapshot_t &ESnap, HBTInt Size, OctTr
 	  HBTInt pid=Elist[i].pid;
 	  Einner[i].pid=i;
 	  Einner[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), RefPos, RefVel, snapshot.GetMass(pid));
+	  #ifdef UNBIND_WITH_THERMAL_ENERGY
+	  Elist[i].E+=snapshot.GetInternalEnergy(pid);
+	  #endif
 	}
 	#pragma omp single
 	sort(Einner.begin(), Einner.end(), CompEnergy);
@@ -270,7 +278,13 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   }
 #endif  
   
-  if(1==Particles.size()) return;
+  if(Particles.size()==0) return;
+  if(Particles.size()==1) 
+  {
+	Mbound=snapshot.GetMass(Particles[0]);
+	return;
+  }
+
   HBTxyz OldRefPos, OldRefVel;
   auto &RefPos=ComovingAveragePosition;
   auto &RefVel=PhysicalAverageVelocity;
@@ -327,8 +341,11 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  else
 			mass=0.;//not sampled in tree, no self gravity to correct
 		  Elist[i].E=tree.BindingEnergy(snapshot.GetComovingPosition(pid), snapshot.GetPhysicalVelocity(pid), RefPos, RefVel, mass);
+#ifdef UNBIND_WITH_THERMAL_ENERGY
+		  Elist[i].E+=snapshot.GetInternalEnergy(pid);
+#endif
 		}
-		ESnap.SetMassUnit(1.);//reset, no necessary
+		ESnap.SetMassUnit(1.);//reset
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
 		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
@@ -339,6 +356,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  //old particle list retained. old mostbound coordinates also retained.
 		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
 		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
+		  Mbound=snapshot.GetMass(Particles[0]);
 		  break;
 		}
 		else
@@ -354,7 +372,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 			  copyHBTxyz(OldRefVel, RefVel);
 			}
 		  }
-		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
+		  Mbound=ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
 		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
 		  if(Nbound>Nlast*BoundMassPrecision)//converge
 		  {
@@ -374,6 +392,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	}
 	Particles.resize(Nlast);
 	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
+	MostBoundParticleId=Particles[0];
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 

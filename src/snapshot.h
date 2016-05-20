@@ -64,6 +64,7 @@ public:
   virtual const HBTxyz & GetPhysicalVelocity(const HBTInt index) const=0;
   virtual HBTReal GetMass(const HBTInt index) const=0;
   void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
+  void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, const vector <double> &MassInR) const;
   void SphericalOverdensitySize2(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
   void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
   void RelativeVelocity(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, HBTxyz& relativeVel) const;
@@ -147,8 +148,8 @@ public:
   HBTReal GetMass(const ParticleIndex_t index) const;
   HBTReal GetInternalEnergy(ParticleIndex_t index) const;
   ParticleType_t GetParticleType(ParticleIndex_t index) const;
-  void AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
-  void AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
+  double AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
+  double AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
   
   void Load(int snapshot_index, bool fill_particle_hash=true);
 };

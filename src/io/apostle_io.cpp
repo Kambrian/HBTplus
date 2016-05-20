@@ -15,15 +15,6 @@ using namespace std;
 #include "../hdf_wrapper.h"
 #include "apostle_io.h"
 
-ApostleReader_t::ApostleReader_t()
-{
-  hsize_t dims[]={TypeMax};
-  MassTable_t=H5Tarray_create2(H5T_NATIVE_DOUBLE, 1, dims);
-  CountTable_t=H5Tarray_create2(H5T_NATIVE_INT, 1, dims);
-  dims[0]=3;
-  H5T_HBTxyz=H5Tarray_create2(H5T_HBTReal, 1, dims);
-}
-
 void ApostleReader_t::SetSnapshot(int snapshotId)
 {  
   if(HBTConfig.SnapshotNameList.empty())
@@ -34,13 +25,6 @@ void ApostleReader_t::SetSnapshot(int snapshotId)
   }
   else
 	SnapshotName=HBTConfig.SnapshotNameList[snapshotId];
-}
-
-ApostleReader_t::~ApostleReader_t()
-{
-  H5Tclose(MassTable_t);
-  H5Tclose(CountTable_t);
-  H5Tclose(H5T_HBTxyz);
 }
 
 void ApostleReader_t::GetFileName(int ifile, string &filename)
@@ -59,19 +43,19 @@ void ApostleReader_t::ReadHeader(int ifile, ApostleHeader_t &header)
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   ReadAttribute(file, "Header", "NumFilesPerSnapshot", H5T_NATIVE_INT, &Header.NumberOfFiles);
   ReadAttribute(file, "Header", "BoxSize", H5T_NATIVE_DOUBLE, &Header.BoxSize);
-  assert(Header.BoxSize==HBTConfig.BoxSize);
+  assert((HBTReal)Header.BoxSize==HBTConfig.BoxSize);
   ReadAttribute(file, "Header", "Time", H5T_NATIVE_DOUBLE, &Header.ScaleFactor);
   ReadAttribute(file, "Header", "Omega0", H5T_NATIVE_DOUBLE, &Header.OmegaM0);
   ReadAttribute(file, "Header", "OmegaLambda", H5T_NATIVE_DOUBLE, &Header.OmegaLambda0);  
-  ReadAttribute(file, "Header", "MassTable", MassTable_t, Header.mass);
-  ReadAttribute(file, "Header", "NumPart_ThisFile", CountTable_t, Header.npart);
+  ReadAttribute(file, "Header", "MassTable", H5T_NATIVE_DOUBLE, Header.mass);
+//   cout<<Header.mass[0]<<","<<Header.mass[1]<<","<<Header.mass[2]<<endl;
+  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, Header.npart);
   
-  int np[TypeMax], np_high[TypeMax];
-  ReadAttribute(file, "Header", "NumPart_Total", CountTable_t, np);
-  ReadAttribute(file, "Header", "NumPart_Total_HighWord", CountTable_t, np_high);
+  unsigned np[TypeMax], np_high[TypeMax];
+  ReadAttribute(file, "Header", "NumPart_Total", H5T_NATIVE_UINT, np);
+  ReadAttribute(file, "Header", "NumPart_Total_HighWord", H5T_NATIVE_UINT, np_high);
   for(int i=0;i<TypeMax;i++)
-	Header.npartTotal[i]=(((long)np_high[i])<<32)|np[i];
-  
+	Header.npartTotal[i]=(((unsigned long)np_high[i])<<32)|np[i];
   H5Fclose(file);
 }
 
@@ -88,7 +72,7 @@ HBTInt ApostleReader_t::CompileFileOffsets(int nfiles)
 	string filename;
 	GetFileName(ifile, filename);
 	hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-	ReadAttribute(file, "Header", "NumPart_ThisFile", CountTable_t, np_this);
+	ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, np_this);
 	H5Fclose(file);
 	HBTInt np=accumulate(begin(np_this), end(np_this), (HBTInt)0);
 	
@@ -98,6 +82,15 @@ HBTInt ApostleReader_t::CompileFileOffsets(int nfiles)
   return offset;
 }
 
+static void check_id_size(hid_t loc)
+{
+  hid_t dset=H5Dopen2(loc, "ParticleIDs", H5P_DEFAULT);
+  hid_t dtype=H5Dget_type(dset);
+  size_t ParticleIDStorageSize=H5Tget_size(dtype);
+  assert(sizeof(HBTInt)>=ParticleIDStorageSize); //use HBTi8 or HBTdouble if you need long int for id
+  H5Tclose(dtype);
+  H5Dclose(dset);
+}
 void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 {
   string filename;
@@ -105,7 +98,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   vector <int> np_this(TypeMax);
   vector <HBTInt> offset_this(TypeMax);
-  ReadAttribute(file, "Header", "NumPart_ThisFile", CountTable_t, np_this.data());
+  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, np_this.data());
   CompileOffsets(np_this, offset_this);
  
   HBTReal vunit=sqrt(Header.ScaleFactor);
@@ -116,11 +109,15 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	auto ParticlesThisType=ParticlesInFile+offset_this[itype];
 	stringstream grpname;
 	grpname<<"PartType"<<itype;
+	if(!H5Lexists(file, grpname.str().c_str(), H5P_DEFAULT)) continue;
 	hid_t particle_data=H5Gopen2(file, grpname.str().c_str(), H5P_DEFAULT);
+// 	if(particle_data<0) continue; //skip non-existing type
 
+	check_id_size(particle_data);
+	
 	{//read position
 	  vector <HBTxyz> x(np);
-	  ReadDataset(particle_data, "Coordinates", H5T_HBTxyz, x.data());	
+	  ReadDataset(particle_data, "Coordinates", H5T_HBTReal, x.data());	
 	  if(HBTConfig.PeriodicBoundaryOn)
 	  {
 		for(int i=0;i<np;i++)
@@ -133,7 +130,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	
 	{//velocity
 	  vector <HBTxyz> v(np);
-	  ReadDataset(particle_data, "Velocities", H5T_HBTxyz, v.data());
+	  ReadDataset(particle_data, "Velocities", H5T_HBTReal, v.data());
 	  for(int i=0;i<np;i++)
 		for(int j=0;j<3;j++)
 		  ParticlesThisType[i].PhysicalVelocity[j]=v[i][j]*vunit;
@@ -191,7 +188,7 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bo
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   vector <int> np_this(TypeMax);
   vector <HBTInt> offset_this(TypeMax);
-  ReadAttribute(file, "Header", "NumPart_ThisFile", CountTable_t, np_this.data());
+  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, np_this.data());
   CompileOffsets(np_this, offset_this);
   
   for(int itype=0;itype<TypeMax;itype++)
@@ -200,10 +197,12 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bo
 	auto ParticlesThisType=ParticlesInFile+offset_this[itype];
 	stringstream grpname;
 	grpname<<"PartType"<<itype;
+	if(!H5Lexists(file, grpname.str().c_str(), H5P_DEFAULT)) continue;
 	hid_t particle_data=H5Gopen2(file, grpname.str().c_str(), H5P_DEFAULT);
 	
 	if(FlagReadParticleId)
 	{//id
+	  check_id_size(particle_data);
 	  vector <HBTInt> id(np);
 	  ReadDataset(particle_data, "ParticleIDs", H5T_HBTInt, id.data());
 	  for(int i=0;i<np;i++)
@@ -214,7 +213,7 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bo
 	  vector <HBTInt> id(np);
 	  ReadDataset(particle_data, "GroupNumber", H5T_HBTInt, id.data());
 	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].HostId=id[i];
+		ParticlesThisType[i].HostId=(id[i]<0?-id[i]:id[i]);//negative means unbound 
 	}
   }
   
@@ -230,11 +229,14 @@ void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particle
   HBTInt np=CompileFileOffsets(Header.NumberOfFiles);
   Particles.resize(np);
   
-#pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+// #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
 	ReadSnapshot(iFile, Particles.data()+offset_file[iFile]);
 	
   cout<<" ( "<<Header.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
+//   cout<<" Particle[0]: x="<<Particles[0].ComovingPosition<<", v="<<Particles[0].PhysicalVelocity<<", m="<<Particles[0].Mass<<endl;
+//   cout<<" Particle[2]: x="<<Particles[2].ComovingPosition<<", v="<<Particles[2].PhysicalVelocity<<", m="<<Particles[2].Mass<<endl;
+//   cout<<" Particle[end]: x="<<Particles.back().ComovingPosition<<", v="<<Particles.back().PhysicalVelocity<<", m="<<Particles.back().Mass<<endl;
 }
 
 inline bool CompParticleHost(const ParticleHost_t &a, const ParticleHost_t &b)
@@ -251,7 +253,7 @@ HBTInt ApostleReader_t::LoadGroups(int snapshotId, vector< Halo_t >& Halos)
   vector <ParticleHost_t> Particles(NumberOfParticles);
   bool FlagReadId=!HBTConfig.GroupLoadedIndex;
   
-  #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+//   #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
 	ReadGroupId(iFile, Particles.data()+offset_file[iFile], FlagReadId);
   
@@ -298,6 +300,10 @@ HBTInt ApostleReader_t::LoadGroups(int snapshotId, vector< Halo_t >& Halos)
 		p[j]=p_in[j].ParticleId;
 	}
   }
+  cout<<Halos.size()<<" groups loaded";
+  if(Halos.size()) cout<<" : "<<Halos[0].Particles.size();
+  if(Halos.size()>1) cout<<","<<Halos[1].Particles.size()<<"...";
+  cout<<endl;
   
   return NumberOfParticles;
 }
