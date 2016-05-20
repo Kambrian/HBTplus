@@ -392,7 +392,6 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	}
 	Particles.resize(Nlast);
 	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
-	MostBoundParticleId=Particles[0];
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 

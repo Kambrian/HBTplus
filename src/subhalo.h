@@ -16,7 +16,6 @@ public:
   typedef vector <HBTInt> ParticleList_t;
   HBTInt TrackId;
   HBTInt Nbound;
-  HBTInt MostBoundParticleId;
   float Mbound;
   HBTInt NboundType[TypeMax];
   float MboundType[TypeMax];

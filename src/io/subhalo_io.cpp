@@ -24,7 +24,6 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(TrackId, H5T_HBTInt);
   InsertMember(Nbound, H5T_HBTInt);
   InsertMember(Mbound, H5T_NATIVE_FLOAT);
-  InsertMember(MostBoundParticleId, H5T_HBTInt);
   
   dims[0]=TypeMax;
   hid_t H5T_HBTIntArray_TypeMax=H5Tarray_create2(H5T_HBTInt, 1, dims);

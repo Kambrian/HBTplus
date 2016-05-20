@@ -191,7 +191,7 @@ void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 	//rely on most-bound particle
-	  Subhalos[subid].HostHaloId=ParticleToHost[Subhalos[subid].MostBoundParticleId];
+	  Subhalos[subid].HostHaloId=ParticleToHost[Subhalos[subid].Particles[0]];
 	//alternatives: CoreTrack; Split;
   }
 #pragma omp single
@@ -351,7 +351,6 @@ void SubhaloSnapshot_t::PurgeMostBoundParticles()
 			{
 			  copyHBTxyz(subhalo.ComovingMostBoundPosition, SnapshotPointer->GetComovingPosition(p));
 			  copyHBTxyz(subhalo.PhysicalMostBoundVelocity, SnapshotPointer->GetPhysicalVelocity(p));
-			  subhalo.MostBoundParticleId=p;
 			  swap(subhalo.Particles[0], p);
 			  break;
 			}

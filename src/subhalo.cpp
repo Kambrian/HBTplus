@@ -34,7 +34,6 @@ void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
 	  HBTInt nP=Particles.size();
 	  for(HBTInt pid=0;pid<nP;pid++)
 		Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);
-	  Subhalos[subid].MostBoundParticleId=snapshot.GetParticleIndex(Subhalos[subid].MostBoundParticleId);
 	}
 }
 void SubhaloSnapshot_t::ParticleIndexToId()
@@ -46,7 +45,6 @@ void SubhaloSnapshot_t::ParticleIndexToId()
 	HBTInt nP=Particles.size();
 	for(HBTInt pid=0;pid<nP;pid++)
 	  Particles[pid]=SnapshotPointer->GetParticleId(Particles[pid]);
-	Subhalos[subid].MostBoundParticleId=SnapshotPointer->GetParticleId(Subhalos[subid].MostBoundParticleId);
   }
   SnapshotPointer=nullptr;
 }
