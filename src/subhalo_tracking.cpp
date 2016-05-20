@@ -21,10 +21,9 @@ void Subhalo_t::UpdateTrack(const Snapshot_t &epoch)
 }
 HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &epoch)
 {
-  HBTReal dx=PeriodicDistance(halo.ComovingAveragePosition, ComovingAveragePosition);
-  HBTReal dv=Distance(halo.PhysicalAverageVelocity, PhysicalAverageVelocity);
-  HBTReal d=dv+epoch.Hz*epoch.ScaleFactor*dx;
-  return (d>0?d:-d);
+  HBTxyz dv;
+  epoch.RelativeVelocity(ComovingAveragePosition, PhysicalAverageVelocity, halo.ComovingAveragePosition, halo.PhysicalAverageVelocity, dv);
+  return dv[0]*dv[0]+dv[1]*dv[1]+dv[2]*dv[2];
 }
 void MemberShipTable_t::ResizeAllMembers(size_t n)
 {
