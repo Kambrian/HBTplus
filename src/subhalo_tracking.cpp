@@ -379,6 +379,6 @@ void SubhaloSnapshot_t::UpdateTracks()
   {
 	Subhalos[i].CalculateProfileProperties(*SnapshotPointer);
 	Subhalos[i].CalculateShape(*SnapshotPointer);
-	Subhalos[i].SortParticleTypes(*SnapshotPointer);
+	Subhalos[i].CountParticleTypes(*SnapshotPointer);
   }
 }

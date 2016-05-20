@@ -158,6 +158,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	}
 	
 	//internal energy
+#ifdef UNBIND_WITH_THERMAL_ENERGY
 	if(itype==0)
 	{
 	  vector <HBTReal> u(np);
@@ -170,6 +171,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].InternalEnergy=0; //necessary? maybe default initialized?
 	}*/
+#endif
 	
 	{//type
 	  ParticleType_t t=static_cast<ParticleType_t>(itype);

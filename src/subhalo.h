@@ -107,8 +107,8 @@ public:
   }
   void CalculateProfileProperties(const ParticleSnapshot_t &part_snap);
   void CalculateShape(const ParticleSnapshot_t &part_snap);
-  void SortParticleTypes(const ParticleSnapshot_t &part_snap);
-  void SetHostHalo(const vector <HBTInt> &ParticleToHost);
+  void CountParticleTypes(const ParticleSnapshot_t &part_snap);
+//   void SetHostHalo(const vector <HBTInt> &ParticleToHost);
 };
 
 typedef vector <Subhalo_t> SubhaloList_t;

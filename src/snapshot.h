@@ -22,7 +22,9 @@ struct Particle_t
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
   HBTReal Mass;
+#ifdef UNBIND_WITH_THERMAL_ENERGY
   HBTReal InternalEnergy;
+#endif
   ParticleType_t Type;
 };
 
@@ -63,6 +65,10 @@ public:
   virtual const HBTxyz & GetComovingPosition(const HBTInt index) const=0;
   virtual const HBTxyz & GetPhysicalVelocity(const HBTInt index) const=0;
   virtual HBTReal GetMass(const HBTInt index) const=0;
+  virtual HBTReal GetInternalEnergy(HBTInt index) const
+  {
+	return 0.;
+  }
   void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
   void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, const vector <double> &MassInR) const;
   void SphericalOverdensitySize2(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
@@ -206,7 +212,11 @@ inline HBTReal ParticleSnapshot_t::GetMass(const HBTInt index) const
 }
 inline HBTReal ParticleSnapshot_t::GetInternalEnergy(HBTInt index) const
 {
+#ifdef UNBIND_WITH_THERMAL_ENERGY
   return Particles[index].InternalEnergy;
+#else
+  return 0.;
+#endif
 }
 inline ParticleType_t ParticleSnapshot_t::GetParticleType(HBTInt index) const
 {

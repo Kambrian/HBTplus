@@ -229,10 +229,11 @@ struct CompareParticleType_t
 	return snap.GetParticleType(i)<snap.GetParticleType(j);
   }
 };
-void Subhalo_t::SortParticleTypes(const ParticleSnapshot_t& part_snap)
+
+void Subhalo_t::CountParticleTypes(const ParticleSnapshot_t& part_snap)
 {
-  CompareParticleType_t comparator(part_snap);
-  stable_sort(Particles.begin(), Particles.begin()+Nbound, comparator);//only sort the bound part
+//   CompareParticleType_t comparator(part_snap);
+//   stable_sort(Particles.begin(), Particles.begin()+Nbound, comparator);//only sort the bound part
   for(int itype=0;itype<TypeMax;itype++)
   {
 	NboundType[itype]=0;

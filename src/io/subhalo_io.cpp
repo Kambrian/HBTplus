@@ -141,6 +141,7 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
   GetDatasetDims(dset, dims);
   HBTInt nhalos=dims[0]-1;
   vector <hvl_t> vl(dims[0]);
+  
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
   if(nsubhalos)
   {
@@ -226,7 +227,12 @@ void SubhaloSnapshot_t::Save()
   MemberTable.SubIdToTrackId(Subhalos);
   HBTInt Ngroups=MemberTable.SubGroups.size();
   hsize_t dim_grp[]={(hsize_t)Ngroups+1};
+
+#ifdef UNSIGNED_LONG_ID_OUTPUT  
+  hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_NATIVE_ULONG);//this does not affect anything inside the code, but the presentation in the hdf file
+#else
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
+#endif
   vector <hvl_t> vl(Ngroups+1);
   for(HBTInt i=0;i<Ngroups;i++)
   {
@@ -247,6 +253,10 @@ void SubhaloSnapshot_t::Save()
 	  HBTxyz ComovingPosition;
 	  HBTxyz PhysicalVelocity;
 	  HBTReal Mass;
+#ifdef UNBIND_WITH_THERMAL_ENERGY
+	  HBTReal InternalEnergy;
+#endif
+	  int Type;
 	};
 	hid_t H5T_Particle=H5Tcreate(H5T_COMPOUND, sizeof (Particle_t));
 	hsize_t dim_xyz=3;
@@ -255,6 +265,10 @@ void SubhaloSnapshot_t::Save()
 	InsertMember(ComovingPosition, H5T_HBTxyz);
 	InsertMember(PhysicalVelocity, H5T_HBTxyz);
 	InsertMember(Mass, H5T_HBTReal);
+	#ifdef UNBIND_WITH_THERMAL_ENERGY
+	InsertMember(InternalEnergy, H5T_HBTReal);
+	#endif
+	InsertMember(Type, H5T_NATIVE_INT);
 	#undef InsertMember
 	H5Tclose(H5T_HBTxyz);
   
@@ -272,6 +286,10 @@ void SubhaloSnapshot_t::Save()
 		copyHBTxyz(p.ComovingPosition, SnapshotPointer->GetComovingPosition(ind));
 		copyHBTxyz(p.PhysicalVelocity, SnapshotPointer->GetPhysicalVelocity(ind));
 		p.Mass=SnapshotPointer->GetMass(ind);
+		#ifdef UNBIND_WITH_THERMAL_ENERGY
+		p.InternalEnergy=SnapshotPointer->GetInternalEnergy(ind);
+		#endif
+		p.Type=SnapshotPointer->GetParticleType(ind);
 	  }
 	  stringstream subname;
 	  subname<<"Sub"<<subid;

@@ -291,12 +291,14 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
   else
 	ReadMassBlock(double)
 #undef MassDataPresent
-  
+
+#ifdef UNBIND_WITH_THERMAL_ENERGY
   if(RealTypeSize==4)
 	ReadEnergyBlock(float)
   else
 	ReadEnergyBlock(double)
-  
+#endif
+	
   for(int itype=0;itype<TypeMax;++itype)
   {
 	auto p=NewParticles+offset[itype];
