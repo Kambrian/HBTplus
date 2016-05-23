@@ -126,7 +126,7 @@ void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
 	HBTInt rankoffset=0;
 	if(SubGroup.size()>1)
 	{
-	  if(SubGroup[1]>SubGroup[0]*HBTConfig.BinaryMassRatioLimit)
+	  if(Subhalos[SubGroup[1]].Nbound>Subhalos[SubGroup[0]].Nbound*HBTConfig.BinaryMassRatioLimit)
 		rankoffset=1;//binary system, rank start from 1.
 	}
 #endif
