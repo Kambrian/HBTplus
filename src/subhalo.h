@@ -221,7 +221,7 @@ public:
   }
   HBTReal GetMass(HBTInt index) const
   {
-	return Subhalos[index].Particles.size();
+	return Subhalos[index].Nbound;
   }
 };
 
