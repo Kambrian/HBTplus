@@ -35,7 +35,7 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   
   InsertMember(HostHaloId, H5T_HBTInt);
   InsertMember(Rank, H5T_HBTInt);
-  InsertMember(LastMaxMass, H5T_HBTInt);  
+  InsertMember(LastMaxMass, H5T_NATIVE_FLOAT);  
   InsertMember(SnapshotIndexOfLastMaxMass, H5T_NATIVE_INT);
   InsertMember(SnapshotIndexOfLastIsolation, H5T_NATIVE_INT);
   InsertMember(SnapshotIndexOfBirth, H5T_NATIVE_INT);

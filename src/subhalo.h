@@ -21,7 +21,7 @@ public:
   float MboundType[TypeMax];
   HBTInt HostHaloId;
   HBTInt Rank;
-  HBTInt LastMaxMass;
+  float LastMaxMass;
   int SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   int SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
   
@@ -108,6 +108,7 @@ public:
   void CalculateProfileProperties(const ParticleSnapshot_t &part_snap);
   void CalculateShape(const ParticleSnapshot_t &part_snap);
   void CountParticleTypes(const ParticleSnapshot_t &part_snap);
+  void ParticleIdToIndex(const ParticleSnapshot_t &part_snap);
 //   void SetHostHalo(const vector <HBTInt> &ParticleToHost);
 };
 

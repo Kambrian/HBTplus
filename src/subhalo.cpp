@@ -21,7 +21,9 @@ cout<<"Warning: TrackIdToSubId ToBe fully Implemented!\n";
 }
 
 void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
-{//also bind to snapshot
+/*change from id to index for Particles in the subhalo, and remove unfound (e.g., consumed by BHs) particles
+ also update cosmology and bind to snapshot */
+{
 #pragma omp single
   {
 	Cosmology=snapshot.Cosmology;
@@ -29,12 +31,7 @@ void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
   }
 #pragma omp for
 	for(HBTInt subid=0;subid<Subhalos.size();subid++)
-	{
-	  Subhalo_t::ParticleList_t & Particles=Subhalos[subid].Particles;
-	  HBTInt nP=Particles.size();
-	  for(HBTInt pid=0;pid<nP;pid++)
-		Particles[pid]=snapshot.GetParticleIndex(Particles[pid]);
-	}
+	  Subhalos[subid].ParticleIdToIndex(snapshot);
 }
 void SubhaloSnapshot_t::ParticleIndexToId()
 {
@@ -273,4 +270,41 @@ void Subhalo_t::CountParticleTypes(const ParticleSnapshot_t& part_snap)
 	}
   }
 }
+
+HBTInt Subhalo_t::ParticleIdToIndex(const ParticleSnapshot_t& part_snap)
+/*change from id to index for Particles in the subhalo, and remove unfound (e.g., consumed by BHs) particles.
+ * update Nbound, Mbound, NboundType, MboundType and Particle list *
+ return number of removed particles*/
+{
+  HBTInt np_new=0;
+  for(auto & n: NboundType) n=0;
+  for(auto & m: MboundType) m=0.;
+  auto it=Particles.begin(), it_end=Particles.begin()+Nbound;
+  for(;it!=it_end;++it)
+  {
+	auto index=part_snap.GetParticleIndex(*it);
+	if(index!=SpecialConst::NullParticleId)
+	{
+	  Particles[np_new++]=index;
+	  int itype=part_snap.GetParticleType(index);
+	  NboundType[itype]++;
+	  MboundType[itype]+=part_snap.GetParticleMass(index);
+	}
+  }
+  Nbound=accumulate(NboundType.begin(), NboundType.end(), (HBTInt)0);
+  Mbound=accumulate(MboundType.begin(), MboundType.end(), (HBTReal)0.);
+  assert(Nbound==np_new);
+  
+  it_end=Particles.end();
+  for(;it!=it_end;++it)
+  {
+	auto index=part_snap.GetParticleIndex(*it);
+	if(index!=SpecialConst::NullParticleId)
+	  Particles[np_new++]=index;
+  }
+  HBTInt np_old=Particles.size();
+  Particles.resize(np_new);
+  return np_old-np_new;
+}
+
 
