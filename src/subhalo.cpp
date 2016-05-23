@@ -166,6 +166,7 @@ void Subhalo_t::CalculateShape(const ParticleSnapshot_t& part_snap)
 	#endif
 	for(auto && I: InertialTensor) I=0.;
 	for(auto && I: InertialTensorWeighted) I=0.;
+	return;
   }
   const HBTxyz &cen=part_snap.GetComovingPosition(Particles[0]); //most-bound particle as center.
   
