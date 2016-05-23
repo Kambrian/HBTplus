@@ -116,7 +116,7 @@ void ParticleSnapshot_t::LoadHeader(int ifile)
   myfopen(fp, filename.c_str(), "r");
   NeedByteSwap=ReadFileHeader(fp, Header);
   
-  if(Header.BoxSize!=HBTConfig.BoxSize)
+  if((HBTReal)Header.BoxSize!=HBTConfig.BoxSize)
   {
 	cerr<<"BoxSize not match input: read "<<Header.BoxSize<<"; expect "<<HBTConfig.BoxSize<<endl;
 	cerr<<"Maybe the length unit differ? Excpected unit: "<<HBTConfig.LengthInMpch<<" Msol/h\n";
