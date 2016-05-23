@@ -21,8 +21,5 @@ $(EXE_HBT): HBT.o
 depend:
 	makedepend --$(CXXFLAGS)-- -Y $(SRC) $(SRC_COMM)
 	
-synccosma: clean
-	rsync -avzL $(shell pwd)/ jvbq85@cosma-c:data/HBT2/code
-	
-synccosmalocal: clean
-	rsync -avzL -e "ssh -p 4800" $(shell pwd)/ jvbq85@localhost:data/HBT2/code	
+#custom command, not needed by a general user
+-include .Makefile_sync.inc
