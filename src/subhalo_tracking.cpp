@@ -191,8 +191,11 @@ void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 	//rely on most-bound particle
+	auto &Particles=Subhalos[subid].Particles;
+	if(Particles.size())
 	  Subhalos[subid].HostHaloId=ParticleToHost[Subhalos[subid].Particles[0]];
-	//alternatives: CoreTrack; Split;
+	else
+	  Subhalos[subid].HostHaloId=SpecialConst::NullHaloId;
   }
 #pragma omp single
   vector <HBTInt>().swap(ParticleToHost);//free the memory.
@@ -379,6 +382,6 @@ void SubhaloSnapshot_t::UpdateTracks()
   {
 	Subhalos[i].CalculateProfileProperties(*SnapshotPointer);
 	Subhalos[i].CalculateShape(*SnapshotPointer);
-	Subhalos[i].CountParticleTypes(*SnapshotPointer);
+// 	Subhalos[i].CountParticleTypes(*SnapshotPointer);//now integrated inside unbinding
   }
 }

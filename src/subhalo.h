@@ -108,7 +108,7 @@ public:
   void CalculateProfileProperties(const ParticleSnapshot_t &part_snap);
   void CalculateShape(const ParticleSnapshot_t &part_snap);
   void CountParticleTypes(const ParticleSnapshot_t &part_snap);
-  void ParticleIdToIndex(const ParticleSnapshot_t &part_snap);
+  HBTInt ParticleIdToIndex(const ParticleSnapshot_t &part_snap);
 //   void SetHostHalo(const vector <HBTInt> &ParticleToHost);
 };
 

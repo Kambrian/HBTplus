@@ -52,10 +52,13 @@ void SubhaloSnapshot_t::AverageCoordinates()
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
 // 	int coresize=GetCoreSize(Subhalos[subid].Nbound);
-	copyHBTxyz(Subhalos[subid].ComovingMostBoundPosition, SnapshotPointer->GetComovingPosition(Subhalos[subid].Particles[0]));
-	copyHBTxyz(Subhalos[subid].PhysicalMostBoundVelocity, SnapshotPointer->GetPhysicalVelocity(Subhalos[subid].Particles[0]));
-	SnapshotPointer->AveragePosition(Subhalos[subid].ComovingAveragePosition, Subhalos[subid].Particles.data(), Subhalos[subid].Nbound);
-	SnapshotPointer->AverageVelocity(Subhalos[subid].PhysicalAverageVelocity, Subhalos[subid].Particles.data(), Subhalos[subid].Nbound);
+	if(Subhalos[subid].Particles.size())
+	{
+	  copyHBTxyz(Subhalos[subid].ComovingMostBoundPosition, SnapshotPointer->GetComovingPosition(Subhalos[subid].Particles[0]));
+	  copyHBTxyz(Subhalos[subid].PhysicalMostBoundVelocity, SnapshotPointer->GetPhysicalVelocity(Subhalos[subid].Particles[0]));
+	  SnapshotPointer->AveragePosition(Subhalos[subid].ComovingAveragePosition, Subhalos[subid].Particles.data(), Subhalos[subid].Nbound);
+	  SnapshotPointer->AverageVelocity(Subhalos[subid].PhysicalAverageVelocity, Subhalos[subid].Particles.data(), Subhalos[subid].Nbound);
+	}
   }
 }
 
@@ -166,6 +169,7 @@ void Subhalo_t::CalculateShape(const ParticleSnapshot_t& part_snap)
 	#endif
 	for(auto && I: InertialTensor) I=0.;
 	for(auto && I: InertialTensorWeighted) I=0.;
+	return;
   }
   const HBTxyz &cen=ComovingMostBoundPosition; //most-bound particle as center.
   
@@ -291,8 +295,8 @@ HBTInt Subhalo_t::ParticleIdToIndex(const ParticleSnapshot_t& part_snap)
 	  MboundType[itype]+=part_snap.GetParticleMass(index);
 	}
   }
-  Nbound=accumulate(NboundType.begin(), NboundType.end(), (HBTInt)0);
-  Mbound=accumulate(MboundType.begin(), MboundType.end(), (HBTReal)0.);
+  Nbound=accumulate(begin(NboundType), end(NboundType), (HBTInt)0);
+  Mbound=accumulate(begin(MboundType), end(MboundType), (HBTReal)0.);
   assert(Nbound==np_new);
   
   it_end=Particles.end();
@@ -304,6 +308,12 @@ HBTInt Subhalo_t::ParticleIdToIndex(const ParticleSnapshot_t& part_snap)
   }
   HBTInt np_old=Particles.size();
   Particles.resize(np_new);
+  
+  if(np_old>1&&np_new<=1)//consumed to death
+	SnapshotIndexOfDeath=part_snap.GetSnapshotIndex();
+ 
+  if(np_old!=np_new) cout<<np_old-np_new<<" outof "<<np_old<<" particles consumed for track "<<TrackId<<"\n";
+	
   return np_old-np_new;
 }
 

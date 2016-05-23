@@ -40,5 +40,7 @@ Each subhalo is labelled by a unique `TrackId`, which is fixed throughout its ev
 
 Notes on Peebles and Bullock spin parameters: these parameters are vaguely defined due to the ambiguity/lack of standard in the mass, radius, and energy of a subhalo. Use them with caution. If possible, use the `SpecificAngularMomentum` instead of the spin parameters.
 
+For the Hydrodynamical version of HBT, there could be objects with `Nbound=0` and an empty particle list. this means the track is lost due to all its particles consumed by a BH.
+
 ## Reference
 For now, please cite the original [HBT paper](http://adsabs.harvard.edu/abs/2012MNRAS.427.2437H) if you use HBT in your work. We will soon have another paper coming out describing the new implementation here.

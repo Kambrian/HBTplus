@@ -264,7 +264,13 @@ inline void RefineBindingEnergyOrder(EnergySnapshot_t &ESnap, HBTInt Size, OctTr
 }
 
 void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
-{//the reference frame should already be initialized before unbinding.
+/* remove unbound particles.
+ * this will update Nbound, Mbound, NboundType, MboundType, the particle list, and kinematic properties (specific potential, kinetic energy, angular momentum, the most bound and average positions and velocities)
+ * the returned particle list will be ordered by binding energy.
+ * 
+ * the reference frame should already be initialized before unbinding.
+ */
+{
   HBTInt MaxSampleSize=HBTConfig.MaxSampleSizeOfPotentialEstimate;
   bool RefineMostboundParticle=(MaxSampleSize>0&&HBTConfig.RefineMostboundParticle);
   HBTReal BoundMassPrecision=HBTConfig.BoundMassPrecision;
@@ -392,6 +398,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	}
 	Particles.resize(Nlast);
 	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
+	CountParticleTypes(snapshot);
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
