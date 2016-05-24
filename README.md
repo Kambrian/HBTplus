@@ -18,6 +18,20 @@ To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte fl
 
     make HBTdouble
     
+### Customize the compilation
+
+  You can enable some macro definitions to customize the behaviour of the code. These include:
+
+- `HBT_INT8` : use 8 byte integer (i.e., C long int) as default integer type (for particle IDs etc.)
+- `HBT_REAL8`: use 8 byte float (i.e., C double) as default float type (for particle position/velocity)
+- `UNBIND_WITH_THERMAL_ENERGY`: include thermal energy in unbinding. If this is not defined, the code does not read in or use the thermal energy at all.
+
+  Simply add these macro definitions to the CXXFLAGS of your target in the Makefile. For example, adding this line to the Makefile
+  
+	HBT: CXXFLAGS+=-DHBT_INT8 
+
+  will define `HBT_INT8` when you compile `HBT`.
+ 
 ## Run
  
     ./HBT configs/Example.conf [snapshotstart] [snapshotend]
@@ -40,7 +54,7 @@ Each subhalo is labelled by a unique `TrackId`, which is fixed throughout its ev
 
 Notes on Peebles and Bullock spin parameters: these parameters are vaguely defined due to the ambiguity/lack of standard in the mass, radius, and energy of a subhalo. Use them with caution. If possible, use the `SpecificAngularMomentum` instead of the spin parameters.
 
-For the Hydrodynamical version of HBT, there could be objects with `Nbound=0` and an empty particle list. this means the track is lost due to all its particles consumed by a BH.
+For the Hydrodynamical version of HBT, there might be objects with `Nbound=0` and an empty particle list. this means the track is lost due to all its particles consumed by a BH.
 
 ## Reference
 For now, please cite the original [HBT paper](http://adsabs.harvard.edu/abs/2012MNRAS.427.2437H) if you use HBT in your work. We will soon have another paper coming out describing the new implementation here.
