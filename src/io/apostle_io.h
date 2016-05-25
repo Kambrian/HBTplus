@@ -1,3 +1,11 @@
+/* IO for Apostle (EAGLE local group) data.
+ * 
+ * To specify a list of snapshot, list the snapshot directories (one per line) in snapshotlist.txt and place it under your subhalo output directory. 
+ * 
+ * To use this IO, in the config file, set SnapshotFormat to apostle,  and set GroupFileFormat to apostle or apostle_particle_index.
+ * 
+ */
+
 #ifndef APOSTLE_IO_INCLUDED
 #define APOSTLE_IO_INCLUDED
 #include "../hdf_wrapper.h"
