@@ -60,14 +60,14 @@ class HBTReader:
 	    
   def GetFileName(self, isnap, ifile=0, filetype='Sub'):
 	if isnap<0:
-	  isnap=self.MaxSnap+1-isnap
+	  isnap=self.MaxSnap+1+isnap
 	if self.nfiles:
 	  return self.rootdir+'/'+filetype+'Snap_%03d.%d.hdf5'%(isnap, ifile)
 	else:
 	  return self.rootdir+'/'+filetype+'Snap_%03d.hdf5'%(isnap)
   
   def LoadSubhalos(self, isnap=-1, fields=None, subindex=None):
-	'''load subhalos from snapshot isnap (default =-1, means final snapshot)
+	'''load subhalos from snapshot isnap (default =-1, means final snapshot; isnap<0 will count backward from final snapshot)
 	if fields are given, only load the specified fields. otherwise load all fields.
 	if subindex is given, only load the subhalo with that index. all fields of it will be loaded.
 	
