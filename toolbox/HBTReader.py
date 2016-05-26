@@ -146,7 +146,10 @@ class HBTReader:
 	return append_fields(np.array(track), 'Snapshot', np.array(snaps), usemask=False)
 
   def GetScaleFactor(self, isnap):
-	return h5py.File(self.GetFileName(isnap),'r')['ScaleFactor'][0]
+	try:
+	  return h5py.File(self.GetFileName(isnap),'r')['Cosmology/ScaleFactor'][0]
+	except:
+	  return h5py.File(self.GetFileName(isnap),'r')['ScaleFactor'][0]
 
 
 if __name__ == '__main__':
