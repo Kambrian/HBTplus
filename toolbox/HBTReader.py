@@ -50,7 +50,7 @@ class HBTReader:
 
 	self.nfiles=0
 	if len(extension)==3:
-	  self.nfiles=int(extension[1])
+	  self.nfiles=int(extension[1])+1
 	  print self.nfiles, "subfiles per snapshot"
 
 	if 'MinSnapshotIndex' in self.Options:
