@@ -178,6 +178,8 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].Type=t;
 	}
+	
+	H5Gclose(particle_data);
   }
   
   H5Fclose(file);
@@ -217,6 +219,8 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bo
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].HostId=(id[i]<0?-id[i]:id[i]);//negative means unbound 
 	}
+	
+	H5Gclose(particle_data);
   }
   
   H5Fclose(file);
@@ -233,8 +237,11 @@ void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particle
   
 // #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
+  {
 	ReadSnapshot(iFile, Particles.data()+offset_file[iFile]);
-	
+	cout<<iFile<<" ";
+  }
+  cout<<endl;
   cout<<" ( "<<Header.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 //   cout<<" Particle[0]: x="<<Particles[0].ComovingPosition<<", v="<<Particles[0].PhysicalVelocity<<", m="<<Particles[0].Mass<<endl;
 //   cout<<" Particle[2]: x="<<Particles[2].ComovingPosition<<", v="<<Particles[2].PhysicalVelocity<<", m="<<Particles[2].Mass<<endl;
@@ -255,9 +262,14 @@ HBTInt ApostleReader_t::LoadGroups(int snapshotId, vector< Halo_t >& Halos)
   vector <ParticleHost_t> Particles(NumberOfParticles);
   bool FlagReadId=!HBTConfig.GroupLoadedIndex;
   
+  cout<<"reading group files: ";
 //   #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
+  {
 	ReadGroupId(iFile, Particles.data()+offset_file[iFile], FlagReadId);
+	cout<<iFile<<" ";
+  }
+  cout<<endl;
   
   if(!FlagReadId)
   {//fill with index
