@@ -319,7 +319,7 @@ HBTInt ApostleReader_t::LoadGroups(int snapshotId, vector< Halo_t >& Halos)
   if(Halos.size()>1) cout<<","<<Halos[1].Particles.size()<<"...";
   cout<<endl;
   
-  return NumberOfParticles;
+  return imax;
 }
 
 bool IsApostleGroup(const string &GroupFileFormat)
