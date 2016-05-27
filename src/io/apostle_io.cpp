@@ -235,7 +235,7 @@ void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particle
   HBTInt np=CompileFileOffsets(Header.NumberOfFiles);
   Particles.resize(np);
   
-// #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+#pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
   {
 	ReadSnapshot(iFile, Particles.data()+offset_file[iFile]);
@@ -263,7 +263,7 @@ HBTInt ApostleReader_t::LoadGroups(int snapshotId, vector< Halo_t >& Halos)
   bool FlagReadId=!HBTConfig.GroupLoadedIndex;
   
   cout<<"reading group files: ";
-//   #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+  #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
   {
 	ReadGroupId(iFile, Particles.data()+offset_file[iFile], FlagReadId);

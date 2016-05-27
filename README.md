@@ -8,6 +8,7 @@ new implementation of HBT in C++ . This is the OpenMP version for share memory m
 ### Optional dependence
 - GNU Scientific Library [(GSL)](http://www.gnu.org/software/gsl/). 
 Only needed if you want to output the shapes and orientations of subhaloes. To enable or disable GSL support, uncomment or comment out the GSL block in `Makefile.inc` (especially the `-DHAS_GSL` line). When enabled, HBT will do eigenvalue decomposition of the inertial tensor of each subhalo, and output the eigenvalue and eigenvectors describing the shape and direction of the subhalo. Without GSL, only the inertial tensors will be output.
+- If you will be reading EAGLE/APOSTLE hdf5 data in parallel, you also need HDF5 compiled with multi-thread support.
 
 ## Compile
 To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte float), do
