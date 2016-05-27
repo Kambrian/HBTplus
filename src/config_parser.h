@@ -49,6 +49,7 @@ public:
   bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
   bool SaveSubParticleProperties;
+  bool OneLoopCentralUnbinding;
   vector <int> SnapshotIdList;
   vector <string> SnapshotNameList;
   
@@ -92,6 +93,7 @@ public:
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
 	SaveSubParticleProperties=true;
+	OneLoopCentralUnbinding=false;
 	MajorProgenitorMassRatio=0.67;
 #ifdef ALLOW_BINARY_SYSTEM
 	BinaryMassRatioLimit=1.; //default: no binary system will be marked.

@@ -275,14 +275,12 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   bool RefineMostboundParticle=(MaxSampleSize>0&&HBTConfig.RefineMostboundParticle);
   HBTReal BoundMassPrecision=HBTConfig.BoundMassPrecision;
 
-#define SINGLE_LOOP_CENTRAL_UNBINDING  
-#ifdef SINGLE_LOOP_CENTRAL_UNBINDING  
+  if(HBTConfig.OneLoopCentralUnbinding)
   if(Rank==0) 
   {
 	BoundMassPrecision=0.; //disable iteration for centrals (excluding new birth that has rank=-1)
 	RefineMostboundParticle=(MaxSampleSize>0); //always refine for centrals?
   }
-#endif  
   
   if(Particles.size()==0) return;
   if(Particles.size()==1) 
