@@ -43,6 +43,7 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(ParticleIdNeedHash)
   else TrySetPar(SnapshotIdUnsigned)
   else TrySetPar(SaveSubParticleProperties)
+  else TrySetPar(OneLoopCentralUnbinding)
   else TrySetPar(MajorProgenitorMassRatio)
 #ifdef ALLOW_BINARY_SYSTEM
   else TrySetPar(BinaryMassRatioLimit)
@@ -183,6 +184,7 @@ void Parameter_t::DumpParameters()
   DumpPar(ParticleIdNeedHash)
   DumpPar(SnapshotIdUnsigned)
   DumpPar(SaveSubParticleProperties)
+  DumpPar(OneLoopCentralUnbinding)
   if(SnapshotIdList.size())
   {
   version_file<<"SnapshotIdList";
