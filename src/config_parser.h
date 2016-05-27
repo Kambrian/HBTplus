@@ -10,7 +10,7 @@
 #include <cmath>
 #include "datatypes.h"
 
-#define HBT_VERSION "1.8.1"
+#define HBT_VERSION "1.9.1"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
