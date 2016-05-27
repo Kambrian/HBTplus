@@ -195,7 +195,8 @@ void FindLocalHosts(const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &p
 	if(Subhalos[subid].HostHaloId<0)
 	{
 	  if(subid>nsub)
-		Subhalos[nsub++]=move(Subhalos[subid]);//there should be a default move assignement operator.
+		Subhalos[nsub]=move(Subhalos[subid]);//there should be a default move assignement operator.
+	  nsub++;
 	}
 	else
 	  LocalSubhalos.push_back(move(Subhalos[subid]));
