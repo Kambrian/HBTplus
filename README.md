@@ -38,7 +38,7 @@ If `snapshotend` is omitted, only process `snapshotstart`. If `snapshotstart` is
 To submit to a batch queue, check `HBTjob_mpi.bsub`
 
 ## Output
-The outputs are in HDF5 format, which can be viewed with [HDFView](https://www.hdfgroup.org/products/java/hdfview/index.html) or any other HDF tools. In python, you can use [h5py](https://pypi.python.org/pypi/h5py) to read them directly. There are two types of files in the output:
+The outputs are in HDF5 format, which can be viewed with [HDFView](https://www.hdfgroup.org/products/java/hdfview/index.html) or any other HDF tools. In python, you can use [h5py](https://pypi.python.org/pypi/h5py) to read them directly. A python reader module is also provided in `toolbox/HBTReader.py`. There are two types of files in the output:
   
 - SubSnap_*.hdf5: the subhalo catalogues.
 - SrcSnap_*.hdf5: source subhalo catalogues, only used for restarting HBT from an intermediate snapshot. Can be safely removed once the run has finished.
