@@ -239,7 +239,7 @@ void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particle
   for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
   {
 	ReadSnapshot(iFile, Particles.data()+offset_file[iFile]);
-	cout<<iFile<<" ";
+	cout<<iFile<<" "<<flush;
   }
   cout<<endl;
   cout<<" ( "<<Header.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
@@ -267,7 +267,7 @@ HBTInt ApostleReader_t::LoadGroups(int snapshotId, vector< Halo_t >& Halos)
   for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
   {
 	ReadGroupId(iFile, Particles.data()+offset_file[iFile], FlagReadId);
-	cout<<iFile<<" ";
+	cout<<iFile<<" "<<flush;
   }
   cout<<endl;
   

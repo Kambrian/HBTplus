@@ -23,7 +23,7 @@ depend:
 	makedepend --$(CXXFLAGS)-- -Y $(SRC) $(SRC_COMM)
 
 #custom command, not needed by a general user
--include .Makefile_sync.inc
+-include .Makefile_sync_hydro.inc
 
 # DO NOT DELETE
 
