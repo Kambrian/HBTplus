@@ -286,10 +286,20 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	}
 	else
 	{
+	  auto &central=Subhalos[Members[0]];
 #ifdef ALLOW_BINARY_SYSTEM	  
 	  if(0==Subhalos[Members[0]].Rank)//only update particles if not a binary system
-#endif		
-		Subhalos[Members[0]].Particles.swap(Host.Particles); //reuse the halo particles
+#endif
+	  {
+		central.Particles.swap(Host.Particles); //reuse the halo particles
+		auto &mostbndid=Host.Particles[0]; 
+		for(auto & p: central.Particles)
+		if(p==mostbndid)//swap previous mostbound particle to the beginning
+		{
+		  swap(p, central.Particles[0]);
+		  break;
+		}
+	  }
 	}
   }
   #pragma omp single
