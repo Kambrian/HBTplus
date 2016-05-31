@@ -1,3 +1,24 @@
+'''
+class to read the HBT outputs.
+
+To use it, initialize the reader with the parameter file under the subhalo directory, e.g.,
+
+  from HBTReader import HBTReader
+
+  reader=HBTReader('subcat2/VER1.8.2.param')
+
+  snapshotnumber=-1 # or 0~MaxSnap. -1 means last snapshot
+
+  subs=reader.LoadSubhalos(snapshotnumber) #load all
+
+  nbound=reader.LoadSubhalos(snapshotnumber, 'Nbound') #only Nbound
+
+  sub2=reader.LoadSubhalos(snapshotnumber, subindex=2) #only subhalo 2
+
+  track2=reader.GetTrack(2) #track 2
+
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
