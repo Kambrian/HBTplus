@@ -340,7 +340,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		{
 		  HBTInt pid=Elist[i].pid;
 		  HBTReal mass;
-		  if(i<MaxSampleSize)
+		  if(i<np_tree)
 			mass=ESnap.GetMass(i); //to correct for self-gravity
 		  else
 			mass=0.;//not sampled in tree, no self gravity to correct
