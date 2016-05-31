@@ -77,13 +77,15 @@ class HBTReader:
 	offset=0
 	for i in xrange(max(self.nfiles,1)):
 	  with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
+		nsub=subfile['Subhalos'].shape[0]
+		if nsub==0:
+		  continue
 		if subindex is None:
 		  if fields is None:
 			subhalos.append(subfile['Subhalos'][...])
 		  else:
 			subhalos.append(subfile['Subhalos'][fields])
 		else:
-		  nsub=subfile['Subhalos'].shape[0]
 		  if offset+nsub>subindex:
 			subhalos.append(subfile['Subhalos'][subindex-offset])
 			break
@@ -106,7 +108,7 @@ class HBTReader:
 		if subindex is None:
 		  subhalos.append(subfile[filetype+'haloParticles'][...])
 		else:
-		  nsub=subfile['Subhalos'].shape[0]
+		  nsub=subfile[filetype+'haloParticles'].shape[0]
 		  if offset+nsub>subindex:
 			subhalos.append(subfile[filetype+'haloParticles'][subindex-offset])
 			break
