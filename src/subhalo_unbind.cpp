@@ -338,7 +338,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  Nbound=1;
 		  Nlast=1;
 		  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
-		  //old particle list retained. old mostbound coordinates also retained.
+		  //old particle list retained. old mostbound coordinates also retained
 		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
 		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
 		  break;
