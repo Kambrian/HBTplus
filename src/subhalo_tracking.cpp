@@ -205,7 +205,7 @@ void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 	cout<<"Error: TrimNonHostParticles not implemented yet...\n";
 	exit(1);
   } */
-  MemberTable.Build(halo_snap.Halos.size(), Subhalos, false);//build without orphans first.
+  MemberTable.Build(halo_snap.Halos.size(), Subhalos, true);//build without orphans first.
 //   MemberTable.AssignRanks(Subhalos); //not needed here
 }
 
