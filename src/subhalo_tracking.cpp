@@ -467,6 +467,7 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   { 
 	MemberShipTable_t::MemberList_t & Members=MemberTable.SubGroups[hostid];
+	auto &Host=halo_snap.Halos[hostid];
 	if(0==Members.size()) //create a new sub
 	{
 	  HBTInt subid;
@@ -475,18 +476,28 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 		subid=Npro++;
 	  }
 	  Subhalos[subid].HostHaloId=hostid;
-	  copyHBTxyz(Subhalos[subid].ComovingAveragePosition, halo_snap.Halos[hostid].ComovingAveragePosition); 
-	  copyHBTxyz(Subhalos[subid].PhysicalAverageVelocity, halo_snap.Halos[hostid].PhysicalAverageVelocity);
-	  Subhalos[subid].Particles.swap(halo_snap.Halos[hostid].Particles);
+	  copyHBTxyz(Subhalos[subid].ComovingAveragePosition, Host.ComovingAveragePosition); 
+	  copyHBTxyz(Subhalos[subid].PhysicalAverageVelocity, Host.PhysicalAverageVelocity);
+	  Subhalos[subid].Particles.swap(Host.Particles);
 	  
 	  Subhalos[subid].SnapshotIndexOfBirth=SnapshotIndex;
 	}
 	else
 	{
+	  auto &central=Subhalos[Members[0]];
 #ifdef ALLOW_BINARY_SYSTEM	  
-	  if(0==Subhalos[Members[0]].Rank)//only update particles if not a binary system
+	  if(0==central.Rank)//only update particles if not a binary system
 #endif		
-		Subhalos[Members[0]].Particles.swap(halo_snap.Halos[hostid].Particles); //reuse the halo particles
+		central.Particles.swap(Host.Particles); //reuse the halo particles
+		{
+		  auto &mostbndid=Host.Particles[0]; 
+		  for(auto & p: central.Particles)
+		  if(p==mostbndid)//swap previous mostbound particle to the beginning
+		  {
+			swap(p, central.Particles[0]);
+			break;
+		  }
+		}
 	}
   }
 //   #pragma omp single
