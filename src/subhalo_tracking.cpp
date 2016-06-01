@@ -490,9 +490,9 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 #endif		
 		central.Particles.swap(Host.Particles); //reuse the halo particles
 		{
-		  auto &mostbndid=Host.Particles[0]; 
+		  auto mostbndid=Host.Particles[0].Id; 
 		  for(auto & p: central.Particles)
-		  if(p==mostbndid)//swap previous mostbound particle to the beginning
+		  if(p.Id==mostbndid)//swap previous mostbound particle to the beginning
 		  {
 			swap(p, central.Particles[0]);
 			break;
