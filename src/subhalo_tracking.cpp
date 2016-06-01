@@ -400,7 +400,7 @@ void SubhaloSnapshot_t::AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_sna
   Subhalos.swap(LocalSubhalos);
   halo_snap.ClearParticleHash();
     
-  MemberTable.Build(halo_snap.Halos.size(), Subhalos, false);//build without orphans first.
+  MemberTable.Build(halo_snap.Halos.size(), Subhalos, true);
 //   MemberTable.AssignRanks(Subhalos); //not needed here
 }
 
