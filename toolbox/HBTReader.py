@@ -28,8 +28,8 @@ class ConfigReader:
   
   def __getitem__(self, index):
 	return self.Options[index]
-  
-	
+
+
 class HBTReader:
   ''' class to read HBT2 catalogue '''
   
@@ -57,7 +57,10 @@ class HBTReader:
 	  self.MinSnap=int(self.Options['MinSnapshotIndex'])
 	else:
 	  self.MinSnap=0
-	    
+
+  def Snapshots(self):
+	return np.arange(self.MinSnap, self.MaxSnap+1)
+  
   def GetFileName(self, isnap, ifile=0, filetype='Sub'):
 	if isnap<0:
 	  isnap=self.MaxSnap+1+isnap
@@ -66,28 +69,40 @@ class HBTReader:
 	else:
 	  return self.rootdir+'/'+filetype+'Snap_%03d.hdf5'%(isnap)
   
-  def LoadSubhalos(self, isnap=-1, fields=None, subindex=None):
+  def LoadSubhalos(self, isnap=-1, selection=None):
 	'''load subhalos from snapshot isnap (default =-1, means final snapshot; isnap<0 will count backward from final snapshot)
-	if fields are given, only load the specified fields. otherwise load all fields.
-	if subindex is given, only load the subhalo with that index. all fields of it will be loaded.
 	
-	...Note: subindex specifies the order of the subhalo in the file at the current snapshot, i.e., subhalo=AllSubhalo[subindex]. subindex==trackId for single file output, but subindex!=trackId for mpi multiple-file outputs. 
+	`selection` can be a single field, a list of the field names or a single subhalo index. e.g., selection=('Rank', 'Nbound') will load only the Rank and Nbound fields of subhaloes. selection=3 will only load subhalo with subindex 3. Default will load all fields of all subhaloes.
+	
+	...Note: subindex specifies the order of the subhalo in the file at the current snapshot, i.e., subhalo=AllSubhalo[subindex].    subindex==trackId for single file output, but subindex!=trackId for mpi multiple-file outputs. 
+	
+	You can also use numpy slice for selection, e.g., selection=np.s_[:10, 'Rank','HostHaloId'] will select the 'Rank' and 'HostHaloId' of the first 10 subhaloes. You can also specify multiple subhaloes by passing a list of (ordered) subindex, e.g., selection=((1,2,3),). However, currently only a single subhalo can be specified for multiple-file hbt data (not restricted for single-file data).
+	
 	'''
 	subhalos=[]
 	offset=0
+	trans_index=False
+	if selection is None:
+	  selection=np.s_[:]
+	else:
+	  trans_index=(type(selection)==int)
+	  
+	if type(selection) is list:
+	  selection=tuple(selection)
+	
 	for i in xrange(max(self.nfiles,1)):
 	  with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
-		if subindex is None:
-		  if fields is None:
-			subhalos.append(subfile['Subhalos'][...])
-		  else:
-			subhalos.append(subfile['Subhalos'][fields])
-		else:
-		  nsub=subfile['Subhalos'].shape[0]
-		  if offset+nsub>subindex:
-			subhalos.append(subfile['Subhalos'][subindex-offset])
+		nsub=subfile['Subhalos'].shape[0]
+		if nsub==0:
+		  continue
+		if trans_index:
+		  if offset+nsub>selection:
+			subhalos.append(subfile['Subhalos'][selection-offset])
 			break
 		  offset+=nsub
+		else:
+		  subhalos.append(subfile['Subhalos'][selection])
+		  
 	subhalos=np.hstack(subhalos)
 	#subhalos.sort(order=['HostHaloId','Nbound'])
 	return subhalos
@@ -132,15 +147,17 @@ class HBTReader:
 	  subid=find(self.LoadSubhalos(isnap, 'TrackId')==trackId)[0]
 	else:
 	  subid=trackId
-	return self.LoadSubhalos(isnap, subindex=subid)
+	return self.LoadSubhalos(isnap, subid)
 
-  def GetTrack(self, trackId):
+  def GetTrack(self, trackId, fields=None):
 	''' load an entire track of the given trackId '''
 	track=[];
 	snaps=[]
 	snapbirth=self.GetSub(trackId)['SnapshotIndexOfBirth']
 	for isnap in range(snapbirth, self.MaxSnap+1):
 		s=self.GetSub(trackId, isnap)
+		if fields is not None:
+		  s=s[fields]
 		track.append(s)
 		snaps.append(isnap)
 	return append_fields(np.array(track), 'Snapshot', np.array(snaps), usemask=False)
@@ -157,9 +174,10 @@ if __name__ == '__main__':
     #apostle=HBTReader('../configs/Apostle_S1_LR.conf')
     apostle=HBTReader('/cosma/home/jvbq85/data/HBT/data/apostle/S1_LR/subcat/VER1.8.1.param')
     #apostle=HBTReader('/cosma/home/jvbq85/data/HBT/data/MilliMill/subcat2_full/VER1.8.1.param')
-    print(timeit.timeit("[apostle.LoadSubhalos(i, subindex=1) for i in range(10,apostle.MaxSnap)]", setup="from __main__ import apostle", number=1))
+    print(timeit.timeit("[apostle.LoadSubhalos(i, 1) for i in range(10,apostle.MaxSnap)]", setup="from __main__ import apostle", number=1))
+    #print(timeit.timeit("[apostle.LoadSubhalos(i, np.s_['Nbound','Rank']) for i in range(10,apostle.MaxSnap)]", setup="from __main__ import apostle,np", number=1))
     print(timeit.timeit("[apostle.LoadSubhalos(i, 'Nbound') for i in range(10,apostle.MaxSnap)]", setup="from __main__ import apostle", number=1))
-    print(timeit.timeit("apostle.LoadSubhalos(-1, 'Nbound')", setup="from __main__ import apostle", number=100))
+    print(timeit.timeit("apostle.LoadSubhalos(-1, ('Nbound','Rank'))", setup="from __main__ import apostle", number=100))
     print(timeit.timeit("[apostle.LoadSubhalos(i) for i in range(10,apostle.MaxSnap)]", setup="from __main__ import apostle", number=1))
     print(timeit.timeit("apostle.GetTrack(12)", setup="from __main__ import apostle", number=1))
     print(timeit.timeit("apostle.GetTrack(103)", setup="from __main__ import apostle", number=1))
