@@ -273,6 +273,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   auto &RefPos=ComovingAveragePosition;
   auto &RefVel=PhysicalAverageVelocity;
   
+  HBTInt OldMostboundParticle=Particles[0];//backup 
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
@@ -338,7 +339,8 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  Nbound=1;
 		  Nlast=1;
 		  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
-		  //old particle list retained. old mostbound coordinates also retained
+		  Particles[0]=OldMostboundParticle; //restore
+		  //old mostbound coordinates retained
 		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
 		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
 		  break;

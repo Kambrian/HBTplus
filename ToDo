@@ -1,3 +1,13 @@
+* check Orphan branch output
+* update default params: Precision=0.995, OneLoop=False? (or set mass limit above which to do oneloop main), Refine=false?
+
+  Effect of optimization:
+	Sampling/Refine: does not affect mass/tracks significantly; improves scaling/speed significantly
+	OneLoopCentralUnbind: leads to less tracks (less orphans and more good ones, less newbirth since more good progenitors). improves speed moderately.
+	relaxed MassPrecision: leads to more tracks and more mass. improves speed moderately.
+
+advise to remove temporary tracks that die before infall?
+
 Add Virial/Vmax: test bound vs all: how much does the virial mass/radius differ? is the density profile still NFW? is it correct with the mass/concentration parameters?
 
 one loop unbinding for main? (note these are only intended to remove fake haloes)
