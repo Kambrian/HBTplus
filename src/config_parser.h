@@ -94,11 +94,11 @@ public:
 	SnapshotIdUnsigned=false;
 	SaveSubParticleProperties=true;
 	OneLoopCentralUnbinding=false;
-	MajorProgenitorMassRatio=0.67;
+	MajorProgenitorMassRatio=0.8;
 #ifdef ALLOW_BINARY_SYSTEM
 	BinaryMassRatioLimit=1.; //default: no binary system will be marked.
 #endif
-	BoundMassPrecision=0.9;
+	BoundMassPrecision=0.995;
 	SourceSubRelaxFactor=3.;
 	SubCoreSizeFactor=0.25;
 	SubCoreSizeMin=20;
@@ -106,7 +106,7 @@ public:
 	TreeNodeOpenAngle=0.45;
 	TreeMinNumOfCells=500;
 	MaxSampleSizeOfPotentialEstimate=1000;//set to 0 to disable sampling
-	RefineMostboundParticle=false;
+	RefineMostboundParticle=true;
 	GroupLoadedIndex=false;
   }
   void ReadSnapshotNameList();
