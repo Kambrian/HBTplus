@@ -85,11 +85,11 @@ public:
 	ParticleIdRankStyle=false;//to be removed
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
-	MajorProgenitorMassRatio=0.67;
+	MajorProgenitorMassRatio=0.8;
 #ifdef ALLOW_BINARY_SYSTEM
 	BinaryMassRatioLimit=1.; //default: no binary system will be marked.
 #endif
-	BoundMassPrecision=0.9;
+	BoundMassPrecision=0.995;
 	SourceSubRelaxFactor=3.;
 	SubCoreSizeFactor=0.25;
 	SubCoreSizeMin=20;
