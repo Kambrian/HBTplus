@@ -189,6 +189,24 @@ class HBTReader:
 	except:
 	  return h5py.File(self.GetFileName(isnap),'r')['ScaleFactor'][0]
 
+  def GetExclusiveParticles(self, isnap=-1):
+	'''return an exclusive set of particles for subhaloes at isnap, by assigning duplicate particles to the lowest mass subhaloes'''
+	OriginPart=self.LoadParticles(isnap)
+	OriginPart=zip(range(len(OriginPart)),OriginPart)
+	comp_mass=lambda x: len(x[1])
+	OriginPart.sort(key=comp_mass)
+	repo=set()
+	NewPart=[]
+	for i,p in OriginPart:
+	  if len(p)>1:
+		p=set(p)
+		p.difference_update(repo)
+		repo.update(p)
+	  NewPart.append((i,list(p)))
+	comp_id=lambda x: x[0]
+	NewPart.sort(key=comp_id)
+	NewPart=[x[1] for x in NewPart]
+	return NewPart
 
 if __name__ == '__main__':
     import timeit
