@@ -245,11 +245,13 @@ void SubhaloSnapshot_t::Save()
   H5LTset_attribute_string(datagrp,"GroupedTrackIds","Comment","Nhalo+1 groups. The last group contain tracks outside any host halo (i.e., field subhaloes).");
   H5Gclose(datagrp);
    
+  hsize_t dim_sub[]={Subhalos.size()};
   //now write the particle list for each subhalo
   if(HBTConfig.SaveSubParticleProperties)
   {
 	struct Particle_t
 	{
+	  HBTInt ParticleIndex;
 	  HBTxyz ComovingPosition;
 	  HBTxyz PhysicalVelocity;
 	  HBTReal Mass;
@@ -262,6 +264,7 @@ void SubhaloSnapshot_t::Save()
 	hsize_t dim_xyz=3;
 	hid_t H5T_HBTxyz=H5Tarray_create2(H5T_HBTReal, 1, &dim_xyz);
 	#define InsertMember(x,t) H5Tinsert(H5T_Particle, #x, HOFFSET(Particle_t, x), t)
+	InsertMember(ParticleIndex, H5T_HBTInt);
 	InsertMember(ComovingPosition, H5T_HBTxyz);
 	InsertMember(PhysicalVelocity, H5T_HBTxyz);
 	InsertMember(Mass, H5T_HBTReal);
@@ -271,18 +274,22 @@ void SubhaloSnapshot_t::Save()
 	InsertMember(Type, H5T_NATIVE_INT);
 	#undef InsertMember
 	H5Tclose(H5T_HBTxyz);
-  
-	hid_t particlegrp=H5Gcreate2(file, "/ParticleProperties", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-	vector <Particle_t> SubParticles;
+	
+	hid_t H5T_ParticleArr=H5Tvlen_create(H5T_Particle);
+
+	vector <vector<Particle_t> > SubParticles(Subhalos.size());
+	vl.resize(Subhalos.size());
 	for(HBTInt subid=0;subid<Subhalos.size();subid++)
 	{
 	  auto &IdList=Subhalos[subid].Particles;
 	  HBTInt np=Subhalos[subid].Nbound;
-	  SubParticles.resize(np);
+	  auto &ParticleList=SubParticles[subid];
+	  ParticleList.resize(np);
 	  for(HBTInt i=0;i<np;i++)
 	  {
-		auto &p=SubParticles[i];
+		auto &p=ParticleList[i];
 		auto &ind=IdList[i];
+		p.ParticleIndex=ind;
 		copyHBTxyz(p.ComovingPosition, SnapshotPointer->GetComovingPosition(ind));
 		copyHBTxyz(p.PhysicalVelocity, SnapshotPointer->GetPhysicalVelocity(ind));
 		p.Mass=SnapshotPointer->GetMass(ind);
@@ -291,17 +298,14 @@ void SubhaloSnapshot_t::Save()
 		#endif
 		p.Type=SnapshotPointer->GetParticleType(ind);
 	  }
-	  stringstream subname;
-	  subname<<"Sub"<<subid;
-	  hsize_t dim_particle=np;
-	  writeHDFmatrix(particlegrp, SubParticles.data(), subname.str().c_str(), 1, &dim_particle, H5T_Particle);
+	  vl[subid].len=np;
+	  vl[subid].p=ParticleList.data();
 	}
-	H5Gclose(particlegrp);
+	writeHDFmatrix(file, vl.data(), "ParticleProperties", ndim, dim_sub, H5T_ParticleArr);
+	H5Tclose(H5T_ParticleArr);
 	H5Tclose(H5T_Particle);
   }
-  
-  hsize_t dim_sub[]={Subhalos.size()};
-  
+    
   ParticleIndexToId();
   vl.resize(Subhalos.size());
   for(HBTInt i=0;i<vl.size();i++)

@@ -152,11 +152,16 @@ class HBTReader:
 
   def GetParticleProperties(self, subindex, isnap=-1):	  
 	'''load subhalo particle properties for subhalo with index subindex (the order it appears in the file, subindex==trackId for single file output, but not for mpi multiple-file outputs)'''
+	
+	offset=0
 	for i in xrange(max(self.nfiles,1)):
-	  with h5py.File(self.GetFileName(isnap,  i, filetype), 'r') as subfile:
+	  with h5py.File(self.GetFileName(isnap,  i), 'r') as subfile:
 		nsub=subfile['Subhalos'].shape[0]
 		if offset+nsub>subindex:
-		  return subfile['ParticleProperties/Subhalo%d'%(subindex-offset)][...]
+		  try:
+			return subfile['ParticleProperties/Sub%d'%(subindex-offset)][...] #for compatibility with old data
+		  except: 
+			return subfile['ParticleProperties'][subindex-offset]
 		offset+=nsub
 	raise RuntimeError("subhalo %d not found"%subindex)
   
