@@ -195,7 +195,10 @@ void MyBcast(MpiWorker_t &world, InParticleIterator_T &InParticleIterator, OutPa
   for(HBTInt iloop=0;iloop<Nloop;iloop++)
   {
 	if(iloop==nremainder)//switch sendcount from n+1 to n
+	{
 	  buffersize--;
+	  buffer.pop_back();
+	}
 	if(world.rank()==root)//pack
 	{
 	  for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)
