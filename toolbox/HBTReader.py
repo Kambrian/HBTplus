@@ -40,8 +40,15 @@ class HBTReader:
 	self.MaxSnap=int(self.Options['MaxSnapshotIndex'])
 	self.BoxSize=float(self.Options['BoxSize'])
 	self.Softening=float(self.Options['SofteningHalo'])
-
-	lastfile=sorted(glob.glob(self.rootdir+'/'+'SubSnap_*.hdf5'))[-1]
+	
+	try:
+	  lastfile=sorted(glob.glob(self.rootdir+'/'+'SubSnap_*.hdf5'))[-1]
+	except IndexError:
+	  print "=================Error: ================"
+	  print "Incorrect subhalo path in param file? Failed to find "+self.rootdir+'/SubSnap_*.hdf5'
+	  print "========================================"
+	  raise
+	
 	extension=lastfile.rsplit('SubSnap_')[1].split('.')
 	MaxSnap=int(extension[0])
 	if MaxSnap!=self.MaxSnap:
