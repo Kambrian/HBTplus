@@ -11,200 +11,117 @@
 #include "mymath.h"
 #include "mpi_wrapper.h"
 
-struct RemoteParticleId_t
-{
-  HBTInt Id;
-  int ProcessorId;
-  HBTInt Order;
-  RemoteParticleId_t()=default;
-  RemoteParticleId_t(HBTInt id, int processorId, HBTInt order): Id(id), ProcessorId(processorId), Order(order)
-  {
-  }
-};
 class RemoteParticle_t: public Particle_t
 {
 public:
-  int ProcessorId;
   HBTInt Order;
   
 //   using Particle_t::Particle_t;
   using Particle_t::operator=;//inherit assignment operator
   RemoteParticle_t()=default;
-  RemoteParticle_t(HBTInt id, int processorId, HBTInt order): Particle_t(id), ProcessorId(processorId), Order(order)
+  RemoteParticle_t(HBTInt id, HBTInt order): Particle_t(id), Order(order)
   {
   }
-  RemoteParticle_t(const Particle_t &p, int processorId, HBTInt order): Particle_t(p), ProcessorId(processorId), Order(order)
+  RemoteParticle_t(const Particle_t &p, HBTInt order): Particle_t(p), Order(order)
   {
   }
 };
 
-template <class Pair_t, class Val_t>
-inline int CompPairWithValue(const Pair_t a, const Val_t b)
+namespace ParticleExchangeComp
 {
-  return (a.Key<b);
-};
-template <class Key_t, class Index_t>
-void MappedIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles) const
-{ 
-#define ALWAYS_BATCH_BINARY_SEARCH
-  
-#ifdef ALWAYS_BATCH_BINARY_SEARCH
-  GetIndicesRecursive(particles, 0, particles.size(), Map.begin(), Map.end());//batch-binary-search: is this always faster?
-#else  
-  if(particles.size()<NumQueryCrit)//do individual binary search
+  inline bool CompParticleOrder(const RemoteParticle_t &a, const RemoteParticle_t &b)
   {
-	for(auto &&p: particles)
-	  p.Id=GetIndex(p.Id);
-	return;
+	return a.Order<b.Order;
   }
-  //otherwise do batch sequential search
-  auto &null=BaseClass_t::NullIndex;
-  
-  auto it_p=particles.begin();
-  auto it_map=Map.begin();
-  while(true)
+  inline bool CompParticleId(const RemoteParticle_t &a, const RemoteParticle_t &b)
   {
-	if(it_p==particles.end()) return;
+	return a.Id<b.Id;
+  }
+
+  inline bool CompIdAndOrder(const RemoteParticle_t &a, const RemoteParticle_t &b)
+  {
+	bool a_type=(a.Id!=SpecialConst::NullParticleId);
+	bool b_type=(b.Id!=SpecialConst::NullParticleId);
+
+	if(a_type>b_type)
+	  return true;
 	
-	if(it_map==Map.end()) break;
-	
-	if(it_p->Id<it_map->Key)
-	{
-	  it_p->Id=null;
-	  ++it_p;
-	}
-	else if(it_p->Id==it_map->Key)
-	{
-	  it_p->Id=it_map->Index;
-	  ++it_p;
-	}
-	else
-	  ++it_map;
+	if(a_type&&b_type)
+	  return a.Order<b.Order; 
   }
   
-  while(true)
-  {
-	  it_p->Id=null;
-	  ++it_p;
-	  if(it_p==particles.end()) return;
-  }
-#endif  
+  extern void SortRemoteParticles(vector <RemoteParticle_t> &P);
+  extern void ReduceRemoteParticle( void *in, void *inout, int *len, MPI_Datatype *dptr );
 }
 
-template <class Key_t, class Index_t>
-void MappedIndexTable_t<Key_t, Index_t>::GetIndicesRecursive(ParticleIdList_T &particles, HBTInt imin, HBTInt imax, MapIter_t MapBegin,  MapIter_t MapEnd) const
-{
-  //GetIndices of particles in storage range [imin, imax) from map [MapBegin, MapEnd).
-  auto &null=BaseClass_t::NullIndex;
- 
-  if(MapBegin==MapEnd)
-  {
-	for(HBTInt i=imin;i<imax;i++)
-	  particles[i].Id=null;
-	return;
-  }
-  
-  if(imin>=imax) return;
-  
-  HBTInt imid;
-  if(imax-imin==1) 
-	imid=imin;
-  else
-	imid=(imin+imax)/2;
-  Key_t key=particles[imid].Id;
-  MapIter_t MapMid=lower_bound(MapBegin, MapEnd, key, CompPairWithValue<Pair_t, Key_t>);
-  MapIter_t MapEndLeft=MapMid, MapBeginRight=MapMid;
-  if(MapMid==MapEnd||MapMid->Key>key)
-	particles[imid].Id=null;
-  else
-  {
-	particles[imid].Id=MapMid->Index;
-	++MapEndLeft;
-  }
-	
-  GetIndicesRecursive(particles, imin, imid, MapBegin, MapEndLeft);
-  GetIndicesRecursive(particles, imid+1, imax, MapBeginRight, MapEnd);
-}
-
-template <class Key_t, class Index_t>
-void FlatIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles) const
-{
-  for(auto &&p: particles)
-	p.Id=GetIndex(p.Id);
-}
-
+#include "hash_remote.tpp"
 
 extern void create_Mpi_RemoteParticleType(MPI_Datatype& dtype);
-extern void create_Mpi_RemoteParticleIdType(MPI_Datatype& dtype);
+
+template <class HaloParticleIterator_T>
 class ParticleExchanger_t
 {
-  MPI_Datatype MPI_RemoteParticleId_t, MPI_RemoteParticle_t;//todo: init and free them
+  MPI_Op MPI_ReduceRemoteParticleOp;
+  MPI_Datatype MPI_RemoteParticle_t;//todo: init and free them
   MpiWorker_t &world;
   const ParticleSnapshot_t &snap;
-  typedef vector <RemoteParticleId_t> ParticleStack_t;
-  ParticleStack_t ParticlesToProcess, ParticlesToSend;
-  HBTInt SendStackSize, SendStackSize0;
-  int CurrSendingRank;
-  vector <RemoteParticle_t> LocalParticles;
+  vector <RemoteParticle_t> ParticlesToProcess;
+  HBTInt NumPartToSend, NumPartToRecv;
+  int CurrSendingRank, CurrRecvingRank;
+  HBTInt CurrSendingOrder;
+  HaloParticleIterator_T SendParticleIter, RecvParticleIter;
+  vector <int> TargetProcessor;
+  vector <int>::iterator TargetProcessorIter;
 public:
-  template <class HaloParticleIterator_t>
-  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it);
+  ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_T &particle_it);
   ~ParticleExchanger_t()
   {
-	MPI_Type_free(&MPI_RemoteParticleId_t);
 	MPI_Type_free(&MPI_RemoteParticle_t);
+	MPI_Op_free(&MPI_ReduceRemoteParticleOp);
   }
   void BcastParticles(HBTInt &ParticleCount);
   bool GatherParticles(HBTInt capacity);
   void QueryParticles();
+  void ReduceParticles(HBTInt &ParticleOffset, HBTInt &ParticleCount);
+  bool RestoreParticles();
   void Exchange();
-  void RestoreParticles();
   template <class Halo_T>
-  void UnPackHaloParticles(vector <Halo_T> &InHalos, vector <IdRank_t> &TargetRank);
+  void CompileTargets(vector <Halo_T> &InHalos, vector <IdRank_t> &TargetRank);
 };
 
-template <class HaloParticleIterator_t>
-ParticleExchanger_t::ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_t &particle_it): world(_world), snap(_snap),  CurrSendingRank(0)
+template <class HaloParticleIterator_T>
+ParticleExchanger_t<HaloParticleIterator_T>::ParticleExchanger_t(MpiWorker_t &_world, const ParticleSnapshot_t &_snap, HaloParticleIterator_T &particle_it): SendParticleIter(particle_it), RecvParticleIter(particle_it), world(_world), snap(_snap),  CurrSendingRank(0), CurrSendingOrder(0), CurrRecvingRank(0)
 {
   create_Mpi_RemoteParticleType(MPI_RemoteParticle_t);
-  create_Mpi_RemoteParticleIdType(MPI_RemoteParticleId_t);
+  MPI_Op_create( ParticleExchangeComp::ReduceRemoteParticle, true, &MPI_ReduceRemoteParticleOp ); 
   {
-	SendStackSize=0;
-	while(!particle_it.is_end())
+	NumPartToSend=0;
+	while(!SendParticleIter.is_end())
 	{
-	  ++particle_it;
-	  ++SendStackSize;
+	  ++SendParticleIter;
+	  ++NumPartToSend;
 	}
-	particle_it.reset();
-	ParticlesToSend.reserve(SendStackSize);
+	SendParticleIter.reset();
   }
-  HBTInt order=0;
-  while(!particle_it.is_end())
-  {
-	ParticlesToSend.emplace_back((*particle_it).Id, world.rank(), order);
-	++particle_it;
-	++order;
-  }
-  SendStackSize=order;
-  SendStackSize0=SendStackSize;//backup size for later sanity check
-  particle_it.reset();
+  NumPartToRecv=NumPartToSend;//backup size for later sanity check
+  TargetProcessor.resize(NumPartToSend);
+  TargetProcessorIter=TargetProcessor.begin();
 }
 
+template <class HaloParticleIterator_T>
 template <class Halo_T>
-void ParticleExchanger_t::UnPackHaloParticles(vector <Halo_T> &InHalos, vector <IdRank_t> &TargetRank)
+void ParticleExchanger_t<HaloParticleIterator_T>::CompileTargets(vector <Halo_T> &InHalos, vector <IdRank_t> &TargetRank)
 {
   TargetRank.reserve(InHalos.size());
-  auto it=LocalParticles.begin();
+  auto it=TargetProcessor.begin();
   for(HBTInt ihalo=0;ihalo<InHalos.size();ihalo++)
   {
 	auto &h=InHalos[ihalo];
 	vector <HBTInt> counter(world.size(),0);
 	for(auto &&p: h.Particles)
 	{
-	  auto &rp=*it;
-	  p=rp;
-	  if(rp.ProcessorId>=0)
-		counter[rp.ProcessorId]++;
+	  if(*it>=0)
+		counter[*it]++;
 	  ++it;
 	}
 	int targetrank=world.rank();
@@ -212,7 +129,7 @@ void ParticleExchanger_t::UnPackHaloParticles(vector <Halo_T> &InHalos, vector <
 	if(*target) targetrank=target-counter.begin();
 	TargetRank.emplace_back(ihalo, targetrank);
   }
-  vector <RemoteParticle_t>().swap(LocalParticles);//clear up
+  vector <int>().swap(TargetProcessor);//clear up
 }
 
 template <class HaloIterator>
@@ -266,12 +183,6 @@ public:
   }
 };
 
-template <class ParticleIdList_t>
-void ParticleSnapshot_t::GetIndices(ParticleIdList_t& particles) const
-{//ParticleIdList_t is a list of particle structs containing at least an Id field
-  return ParticleHash->GetIndices(particles);
-}
-
 template <class Halo_T>
 void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHalos, vector<Halo_T>& OutHalos, MPI_Datatype MPI_Halo_Shell_Type) const
 {
@@ -282,9 +193,9 @@ void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHa
   vector <IdRank_t>TargetRank;
   {//query particles
 	ParticleIterator_t InParticles(InHalos.begin(), InHalos.end());
-	ParticleExchanger_t Exchanger(world, *this, InParticles);
+	ParticleExchanger_t<ParticleIterator_t> Exchanger(world, *this, InParticles);
 	Exchanger.Exchange();
-	Exchanger.UnPackHaloParticles(InHalos, TargetRank);
+	Exchanger.CompileTargets(InHalos, TargetRank);
   }
   
   //distribute halo shells
@@ -330,6 +241,162 @@ void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHa
 	
 	MPI_Type_free(&MPI_HBT_Particle);
 	}
+}
+
+template <class HaloParticleIterator_T>
+void ParticleExchanger_t<HaloParticleIterator_T>::BcastParticles(HBTInt& ParticleCount)
+{
+  int root=CurrSendingRank;
+  HBTInt np=ParticlesToProcess.size();
+  MPI_Bcast(&ParticleCount, 1, MPI_HBT_INT, root, world.Communicator);
+  if(ParticleCount)
+  {
+	//determine loops
+	const int chunksize=1024*1024;
+	HBTInt  Nloop=ceil(1.*ParticleCount/chunksize);
+	int buffersize=ParticleCount/Nloop+1, nremainder=ParticleCount%Nloop;
+	//transmit
+	vector <HBTInt> buffer(buffersize);
+	for(HBTInt iloop=0;iloop<Nloop;iloop++)
+	{
+	  if(iloop==nremainder)//switch sendcount from n+1 to n
+	  {
+		buffersize--;
+		buffer.resize(buffersize);
+	  }
+	  if(world.rank()==root)//pack
+	  {
+		for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)
+		{
+		  *it_buff=(*SendParticleIter).Id;
+		  ++SendParticleIter;
+		}
+	  }
+	  MPI_Bcast(buffer.data(), buffersize, MPI_HBT_INT, root, world.Communicator);
+	  for(auto it_buff=buffer.begin();it_buff!=buffer.end();++it_buff)//unpack
+	  {
+		ParticlesToProcess.emplace_back(*it_buff, np++);
+	  }
+	}
+  }
+  if(world.rank()==root)
+  {
+	NumPartToSend-=ParticleCount;
+	if(SendParticleIter.is_end()) CurrSendingRank++;
+  }
+  MPI_Bcast(&CurrSendingRank, 1, MPI_HBT_INT, root, world.Communicator);
+}
+
+template <class HaloParticleIterator_T>
+bool ParticleExchanger_t<HaloParticleIterator_T>::GatherParticles(HBTInt capacity)
+{
+  HBTInt nsend;
+  while(capacity)
+  {
+	if(world.rank()==CurrSendingRank)
+	  nsend=min(NumPartToSend, capacity);
+	BcastParticles(nsend);
+	capacity-=nsend;
+	if(CurrSendingRank==world.size()) return true;
+  }
+  
+  return false;
+}
+
+template <class HaloParticleIterator_T>
+void ParticleExchanger_t<HaloParticleIterator_T>::QueryParticles()
+{
+  sort(ParticlesToProcess.begin(), ParticlesToProcess.end(), ParticleExchangeComp::CompParticleId);
+
+  snap.GetIndices(ParticlesToProcess);
+  for(auto &&p: ParticlesToProcess)
+	if(p.Id!=SpecialConst::NullParticleId)
+	  p=snap.Particles[p.Id];
+  
+  ParticleExchangeComp::SortRemoteParticles(ParticlesToProcess);
+//   sort(ParticlesToProcess.begin(), ParticlesToProcess.end(), ParticleExchangeComp::CompParticleOrder);
+  
+  HBTInt rank=world.rank();
+  for(auto &&p: ParticlesToProcess)	p.Order=rank;
+  
+//  ParticlesToProcess.clear();
+}
+
+template <class HaloParticleIterator_T>
+void ParticleExchanger_t<HaloParticleIterator_T>::Exchange()
+{
+  HBTInt capacity=ceil(1.*snap.NumberOfParticlesOnAllNodes/world.size());//decrease this if out of memory; increase this to increase efficiency
+  while(true)
+  {
+	ParticlesToProcess.reserve(capacity);
+	bool flag_end=GatherParticles(capacity);
+	assert(ParticlesToProcess.size()<=capacity);
+	QueryParticles();
+	RestoreParticles();
+	ParticlesToProcess.clear();
+	if(flag_end) break;
+  }
+}
+
+template <class HaloParticleIterator_T>
+void ParticleExchanger_t<HaloParticleIterator_T>::ReduceParticles(HBTInt &ParticleOffset, HBTInt &ParticleCount)
+{
+  int root=CurrRecvingRank;
+  MPI_Bcast(&ParticleCount, 1, MPI_HBT_INT, root, world.Communicator);
+  RemoteParticle_t * data=ParticlesToProcess.data()+ParticleOffset;
+  if(ParticleCount)
+  {
+	//determine loops
+	const int chunksize=1024*1024;
+	HBTInt  Nloop=ceil(1.*ParticleCount/chunksize);
+	int buffersize=ParticleCount/Nloop+1, nremainder=ParticleCount%Nloop;
+	//transmit
+	HBTInt ndone=0;
+	for(HBTInt iloop=0;iloop<Nloop;iloop++)
+	{
+	  if(iloop==nremainder)//switch sendcount from n+1 to n
+		buffersize--;
+	  if(world.rank()==root)
+		MPI_Reduce(MPI_IN_PLACE, data+ndone, buffersize, MPI_RemoteParticle_t, MPI_ReduceRemoteParticleOp, root, world.Communicator);
+	  else
+		MPI_Reduce(data+ndone, NULL, buffersize, MPI_RemoteParticle_t, MPI_ReduceRemoteParticleOp, root, world.Communicator);
+	  ndone+=buffersize;
+	}
+	if(world.rank()==root)//unload
+	{
+	  for(auto it_buff=data;it_buff!=data+ParticleCount;++it_buff)
+	  {
+		*TargetProcessorIter=it_buff->Order;
+		++TargetProcessorIter;
+		*RecvParticleIter=move(*it_buff);
+		++RecvParticleIter;
+	  }
+	}
+	ParticleOffset+=ParticleCount;
+  }
+  if(world.rank()==root)
+  {
+	NumPartToRecv-=ParticleCount;
+	if(RecvParticleIter.is_end()) CurrRecvingRank++;
+  }
+  MPI_Bcast(&CurrRecvingRank, 1, MPI_HBT_INT, root, world.Communicator);
+}
+
+template <class HaloParticleIterator_T>
+bool ParticleExchanger_t<HaloParticleIterator_T>::RestoreParticles()
+{
+  HBTInt nsend, offset=0;
+  HBTInt capacity=ParticlesToProcess.size();
+  while(capacity)
+  {
+	if(world.rank()==CurrRecvingRank)
+	  nsend=min(NumPartToRecv, capacity);
+	ReduceParticles(offset, nsend);
+	capacity-=nsend;
+	if(CurrRecvingRank==world.size()) return true;
+  }
+  
+  return false;
 }
 
 #endif

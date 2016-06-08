@@ -7,7 +7,7 @@
 #include <exception>
 #include <string>
 
-class RemoteParticleId_t;
+class RemoteParticle_t;
 
 template <class Key_t, class Index_t>
 class KeyList_t
@@ -55,7 +55,7 @@ public:
   virtual void Fill(const KeyList_t<Key_t, Index_t> &Keys, Index_t null_index=SpecialConst::NullParticleId)=0;
   virtual void Clear()=0;
   virtual Index_t GetIndex(const Key_t key) const =0;
-  typedef vector <RemoteParticleId_t> ParticleIdList_T; 
+  typedef vector <RemoteParticle_t> ParticleIdList_T; 
   virtual void GetIndices(ParticleIdList_T &particles) const =0;
 };
 
