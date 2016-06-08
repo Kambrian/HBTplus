@@ -285,6 +285,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   if(Particles.size()==0) return;
   if(Particles.size()==1) 
   {
+	Nbound=1;
 	Mbound=snapshot.GetMass(Particles[0]);
 	return;
   }

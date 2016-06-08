@@ -62,6 +62,14 @@ void SubhaloSnapshot_t::AverageCoordinates()
   }
 }
 
+inline bool CompProfRadius(const RadVelMass_t &a, const RadVelMass_t &b)
+{
+  return a.r<b.r;
+}
+inline bool CompProfVel(const RadVelMass_t &a, const RadVelMass_t &b)
+{
+  return a.v<b.v;
+}
 void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 {
   /* to calculate the following density-profile related properties
@@ -105,39 +113,39 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
   
   const HBTxyz &cen=ComovingMostBoundPosition; //most-bound particle as center.
   
-  vector <HBTReal> r(Nbound), v(Nbound);
-  vector <double> m_in(Nbound);
+  vector <RadVelMass_t> prof(Nbound);
   #pragma omp parallel if(Nbound>100)
   {
   #pragma omp for
   for(HBTInt i=0;i<Nbound;i++)
   {
-	r[i]=PeriodicDistance(cen, part_snap.GetComovingPosition(Particles[i]));
-	m_in[i]=part_snap.GetMass(Particles[i]);
+	prof[i].r=PeriodicDistance(cen, part_snap.GetComovingPosition(Particles[i]));
+	prof[i].m=part_snap.GetMass(Particles[i]);
   }
   #pragma omp single
   {
-	sort(r.begin(), r.end());
-	partial_sum(m_in.begin(), m_in.end(), m_in.begin());
+	sort(prof.begin(), prof.end(), CompProfRadius);
+	double m_cum=0.;
+	for(auto && p: prof)  p.m=(m_cum+=p.m);
   }
   #pragma omp for
   for(HBTInt i=0;i<Nbound;i++)
   {
-	  if(r[i]<HBTConfig.SofteningHalo) r[i]=HBTConfig.SofteningHalo; //resolution
-	  v[i]=m_in[i]/r[i];//v**2
+	  if(prof[i].r<HBTConfig.SofteningHalo) prof[i].r=HBTConfig.SofteningHalo; //resolution
+	  prof[i].v=prof[i].m/prof[i].r;//v**2
   }
   }
-  HBTInt imax=max_element(v.begin(), v.end())-v.begin();
-  RmaxComoving=r[imax];
-  VmaxPhysical=sqrt(v[imax]*VelocityUnit);
-  RHalfComoving=r[Nbound/2];
-  R2SigmaComoving=r[(HBTInt)(Nbound*0.955)];
+  auto maxprof=max_element(prof.begin(), prof.end(), CompProfVel);
+  RmaxComoving=maxprof->r;
+  VmaxPhysical=sqrt(maxprof->v*VelocityUnit);
+  RHalfComoving=prof[Nbound/2].r;
+  R2SigmaComoving=prof[(HBTInt)(Nbound*0.955)].r;
   
   HBTReal virialF_tophat, virialF_b200, virialF_c200;
   part_snap.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
-  part_snap.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, r, m_in);
-  part_snap.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, r, m_in);
-  part_snap.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, r, m_in);
+  part_snap.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
+  part_snap.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, prof);
+  part_snap.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
   
   if(VmaxPhysical>=LastMaxVmaxPhysical)
   {

@@ -140,7 +140,7 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
   Rvir=pow(i/RhoVirial, 1.0/3);//comoving
 }
 
-void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, const vector <double> &MassInR) const
+void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector <RadVelMass_t> &prof) const
 /*
  * find SphericalOverdensitySize from a given list of sorted particle distances.
  * all distances comoving.
@@ -149,15 +149,19 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
  * 
  */
 {  
-  HBTInt i, np=RSorted.size();
   HBTReal RhoVirial=VirialFactor*Cosmology.Hz*Cosmology.Hz/2.0/PhysicalConst::G*Cosmology.ScaleFactor*Cosmology.ScaleFactor*Cosmology.ScaleFactor;
-  for(i=np;i>0;i--)
+  
+  for(auto p=prof.rbegin();p!=prof.rend();++p)
   {
-	HBTReal r=RSorted[i-1];
-	if(MassInR[i]>RhoVirial*r*r*r) break;
+	auto r=p->r;
+	auto m=p->m;
+	if(m>RhoVirial*r*r*r) 
+	{
+	  Mvir=m;
+	  Rvir=pow(m/RhoVirial, 1.0/3);//comoving
+	  return;
+	}
   }
-  Mvir=MassInR[i];
-  Rvir=pow(MassInR[i]/RhoVirial, 1.0/3);//comoving
 }
 
 void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
