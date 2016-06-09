@@ -240,7 +240,11 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 	while(true)
 	{
 		Nlast=Nbound;
-		tree.Build(ESnap, Nlast);
+		if(tree.Build(ESnap, Nlast)<0)
+		{
+		  cerr<<"Tree Error for track "<<TrackId<<endl;
+		  exit(1);
+		}
 	  #pragma omp parallel for if(Nlast>100)
 	  for(HBTInt i=0;i<Nlast;i++)
 	  {
@@ -297,15 +301,5 @@ void SubhaloSnapshot_t::RefineParticles()
 #endif  
 #pragma omp parallel for if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
-  {
-	try
-	{
 	  Subhalos[subid].Unbind(*this);
-	}
-	catch(OctTreeExceeded_t &tree_exception)
-	{
-	  cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<subid<<endl;
-	  exit(1);
-	}
-  }
 }
