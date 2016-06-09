@@ -314,11 +314,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		snapshot.RelativeVelocity(OldRefPos, OldRefVel, RefPos, RefVel, RefVelDiff);
 		HBTReal dK=0.5*VecNorm(RefVelDiff);
 		EnergySnapshot_t ESnapCorrection(&Elist[Nbound], Nlast-Nbound, snapshot); //point to freshly removed particles
-		if(tree.Build(ESnapCorrection)<0)
-		{
-		  cerr<<"Tree Error for track "<<TrackId<<endl;
-		  exit(1);
-		}
+		tree.Build(ESnapCorrection); 
 		#pragma omp parallel for if(Nlast>100)
 		for(HBTInt i=0;i<Nbound;i++)
 		{
@@ -340,11 +336,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  np_tree=MaxSampleSize;
 		  ESnap.SetMassUnit((HBTReal)Nlast/MaxSampleSize);
 		}
-		if(tree.Build(ESnap, np_tree)<0)
-		{
-		  cerr<<"Tree Error for track "<<TrackId<<endl;
-		  exit(1);
-		}
+		tree.Build(ESnap, np_tree);
 		#pragma omp parallel for if(Nlast>100)
 		for(HBTInt i=0;i<Nlast;i++)
 		{
@@ -420,5 +412,15 @@ void SubhaloSnapshot_t::RefineParticles()
 #endif  
 #pragma omp parallel for if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
+  {
+	try
+	{
 	  Subhalos[subid].Unbind(*SnapshotPointer);
+	}
+	catch(OctTreeExceeded_t &tree_exception)
+	{
+	  cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<subid<<endl;
+	  exit(1);
+	}
+  }
 }
