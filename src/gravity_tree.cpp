@@ -85,9 +85,7 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 
 HBTInt OctTree_t::Build(const Snapshot_t &snapshot, HBTInt num_part)
 /* build tree for a snapshot (or SnapshotView); automatically resize memory if necessary.
-  * if num_part>0 is given, then only use the first num_part particles in the snapshot
-  return -1 if build failed; otherwise return number of nodes.
-  */
+  * if num_part>0 is given, then only use the first num_part particles in the snapshot*/
 {
 	HBTInt NumNids,numnodes;
 	HBTInt sub,subid,i,j,nodeid;
@@ -191,10 +189,9 @@ Cells->sons[i] = -1;
 			NumNids++;
 			if(NumNids >= MaxNodeId)
 			{
-// 			  stringstream msg;
-			  cerr<<"maximum number "<<MaxNumberOfCells<<" of tree-nodes reached for particle "<<i<<endl;
-			  return -1;
-// 			  throw OctTreeExceeded_t(msg.str());
+			  stringstream msg;
+			  msg<<"maximum number "<<MaxNumberOfCells<<" of tree-nodes reached for particle "<<i;
+			  throw OctTreeExceeded_t(msg.str());
 			}
 			for(sub=0;sub<8;sub++)//initialize new node
 				Nodes[nodeid].sons[sub]=-1;
