@@ -9,6 +9,7 @@ using namespace std;
 #include <numeric> 
 #include <cstdlib>
 #include <cstdio>
+#include <boost/concept_check.hpp>
 
 #include "../mpi_wrapper.h"
 #include "../snapshot.h"
@@ -237,6 +238,8 @@ else
 	
 	if(fill_particle_hash)
 	FillParticleHash();
+	
+	cout<<"IdRange=("<<IdMin<<","<<IdMax<<") on "<<world.rank()<<endl;
 }
 inline int GetGrid(HBTReal x, HBTReal step, int dim)
 {
@@ -287,45 +290,144 @@ void ParticleSnapshot_t::ExchangeParticles(MpiWorker_t &world)
   cout<<NewParticles.size()<<" particles received on node "<<world.rank()<<endl;
   Particles.swap(NewParticles);
 } */
+void ParallelStride(MpiWorker_t &world, vector <Particle_t> &Particles, HBTInt &offset, HBTInt steps)
+{  
+  while(steps)
+  {
+	HBTInt nmax=Particles.size()-offset;
+	MPI_Comm newcomm;
+	MPI_Comm_split(world.Communicator, nmax==0, 0, &newcomm);
+	int newcomm_size;
+	MPI_Comm_size(newcomm, &newcomm_size);
+	
+	HBTInt n=0;
+	if(nmax)
+	{
+	  n=steps/newcomm_size;
+	  if(n*newcomm_size<steps) n++;
+	  if(n>nmax) n=nmax;
+
+	  HBTInt pid=Particles[offset+n-1].Id;
+	  HBTInt MinId;
+	  MPI_Allreduce(&pid, &MinId, 1, MPI_HBT_INT, MPI_MIN, newcomm);
+	
+	  if(pid>MinId)//fastforward sparse ranks
+	  {
+		n=offset;
+		while(Particles[offset].Id<MinId)
+		  offset++;
+		n=offset-n;
+	  }
+	  else
+		offset+=n;
+	}
+	
+	MPI_Comm_free(&newcomm);
+	
+	MPI_Allreduce(MPI_IN_PLACE, &n, 1, MPI_HBT_INT, MPI_SUM, world.Communicator);
+	steps-=n;
+  }
+}
+bool ParticleSnapshot_t::IsContiguousId(MpiWorker_t &world, HBTInt &GlobalIdMin)
+{
+  MPI_Comm newcomm;
+  MPI_Comm_split(world.Communicator, Particles.size()==0, 0, &newcomm);
+  int newcomm_size, newrank;
+  MPI_Comm_size(newcomm, &newcomm_size);
+  MPI_Comm_rank(newcomm, &newrank);
+  
+  int flag_contig=0;
+  if(Particles.size())
+  {
+	IdMin=Particles.front().Id;
+	IdMax=Particles.back().Id;
+	MPI_Reduce(MPI_IN_PLACE, &IdMin, 1, MPI_HBT_INT, MPI_MIN, 0, newcomm);
+	MPI_Reduce(MPI_IN_PLACE, &IdMax, 1, MPI_HBT_INT, MPI_MAX, 0, newcomm);
+	if(newrank) 
+	  IdMin=0;
+	else
+	{
+	  flag_contig=(IdMax-IdMin+1==NumberOfParticlesOnAllNodes);
+	  if(flag_contig) cout<<"Contiguous particle Ids."<<endl;
+	}
+  }
+  else
+	IdMin=0;
+  
+  MPI_Comm_free(&newcomm);
+  MPI_Allreduce(MPI_IN_PLACE, &flag_contig, 1, MPI_INT, MPI_LOR, world.Communicator);
+  MPI_Allreduce(&IdMin, &GlobalIdMin, 1, MPI_HBT_INT, MPI_BOR, world.Communicator);
+  
+  return flag_contig;
+}
+
+void ParticleSnapshot_t::PartitionParticles(MpiWorker_t &world, vector <int> &offset)
+{
+  int nremainder=NumberOfParticlesOnAllNodes%world.size();
+  HBTInt nnew=NumberOfParticlesOnAllNodes/world.size()+1;
+  
+  HBTInt GlobalIdMin;
+  if(IsContiguousId(world, GlobalIdMin))
+  {
+	HBTInt & upperbound=GlobalIdMin;
+	int rank=0, pid=0;
+	while(pid<Particles.size())
+	{
+	  if(Particles[pid].Id<upperbound) 
+		pid++;
+	  else
+	  {
+		offset[rank]=pid;
+		if(rank==nremainder) 
+		  nnew--;
+		rank++;
+		upperbound+=nnew;
+	  }
+	}
+	while(rank<world.size())
+	  offset[rank++]=pid;
+	assert(pid==Particles.size());
+  }
+  else 
+  {
+	HBTInt this_offset=0;
+	for(int i=0;i<world.size();i++)
+	{
+	  offset[i]=this_offset;
+	  if(i==nremainder) 
+		nnew--;
+	  ParallelStride(world, Particles, this_offset, nnew);
+	}
+	assert(this_offset==Particles.size());
+  }
+}
+inline bool CompParticleId(const Particle_t &a, const Particle_t &b)
+{
+  return a.Id<b.Id;
+}
 void ParticleSnapshot_t::ExchangeParticles(MpiWorker_t &world)
 {
-  auto dims=ClosestFactors(world.size(), 3);
-  HBTReal step[3];
-  for(int i=0;i<3;i++)
-	step[i]=HBTConfig.BoxSize/dims[i];
+  sort(Particles.begin(), Particles.end(), CompParticleId);
   
-  vector <int> CellIds(Particles.size());
-  vector <int> CellSizes(world.size(),0), CellOffsets(world.size());
-   
-  for(HBTInt i=0;i<Particles.size();i++)
-  {
-	int rank=AssignCell(Particles[i].ComovingPosition, step, dims);
-	CellIds[i]=rank;
-	CellSizes[rank]++;
-  }
-  if(CompileOffsets(CellSizes, CellOffsets)>INT_MAX)
-  {
-	cerr<<"Error: sending more than INT_MAX particles around with MPI causes overflow. try increase the number of mpi threads.\n";
-	exit(1);
-  }
-
-  vector <Particle_t> SendBuffer(Particles.size());
-  {
-  vector <int> CellCounter=CellOffsets;
-  for(HBTInt i=0;i<Particles.size();i++)
-	SendBuffer[CellCounter[CellIds[i]]++]=Particles[i];
-  }
+  vector <int> SendOffsets(world.size()+1), SendSizes(world.size(), 0);
+  PartitionParticles(world, SendOffsets);
+  SendOffsets.back()=Particles.size();
+  for(int i=0;i<world.size();i++)
+	SendSizes[i]=SendOffsets[i+1]-SendOffsets[i];
   
   vector <int> ReceiveSizes(world.size(),0), ReceiveOffsets(world.size());
-  MPI_Alltoall(CellSizes.data(), 1, MPI_INT, ReceiveSizes.data(), 1, MPI_INT, world.Communicator);
-  Particles.resize(CompileOffsets(ReceiveSizes, ReceiveOffsets));//TODO: sort particles in place instead of using SendBuffer, and create a new vector for ReceivedParticles, then swap.
+  MPI_Alltoall(SendSizes.data(), 1, MPI_INT, ReceiveSizes.data(), 1, MPI_INT, world.Communicator);
+  vector <Particle_t> ReceivedParticles;
+  ReceivedParticles.resize(CompileOffsets(ReceiveSizes, ReceiveOffsets));
   
   MPI_Datatype MPI_HBT_Particle;
   Particle_t().create_MPI_type(MPI_HBT_Particle);
-  MPI_Alltoallv(SendBuffer.data(), CellSizes.data(), CellOffsets.data(), MPI_HBT_Particle, 
-				Particles.data(), ReceiveSizes.data(), ReceiveOffsets.data(), MPI_HBT_Particle, world.Communicator);
+  MPI_Alltoallv(Particles.data(), SendSizes.data(), SendOffsets.data(), MPI_HBT_Particle, 
+				ReceivedParticles.data(), ReceiveSizes.data(), ReceiveOffsets.data(), MPI_HBT_Particle, world.Communicator);
 
   MPI_Type_free(&MPI_HBT_Particle);
+  
+  Particles.swap(ReceivedParticles);
   
   cout<<Particles.size()<<" particles received on node "<<world.rank()<<endl;
 }

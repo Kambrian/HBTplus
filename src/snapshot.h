@@ -179,6 +179,9 @@ class ParticleSnapshot_t: public Snapshot_t
   HBTInt ReadNumberOfDMParticles(int ifile);
   size_t SkipBlock(FILE *fp);
   void ExchangeParticles(MpiWorker_t &world);
+  void PartitionParticles(MpiWorker_t &world, vector <int> &offset);
+  bool IsContiguousId(MpiWorker_t &world, HBTInt &GlobalIdMin);
+  HBTInt IdMin, IdMax;
 public:
   SnapshotHeader_t Header;
   vector <Particle_t> Particles;

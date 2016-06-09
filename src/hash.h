@@ -57,6 +57,7 @@ public:
   virtual Index_t GetIndex(const Key_t key) const =0;
   typedef vector <RemoteParticle_t> ParticleIdList_T; 
   virtual void GetIndices(ParticleIdList_T &particles) const =0;
+  virtual void GetKeyMinMax(Key_t &key_min, Key_t &key_max) const=0;
 };
 
 template <class Key_t, class Index_t>
@@ -76,6 +77,11 @@ public:
   void Clear();
   Index_t GetIndex(const Key_t key) const;
   void GetIndices(ParticleIdList_T &particles) const;
+  void GetKeyMinMax(Key_t &key_min, Key_t &key_max) const
+  {
+	key_min=KeyMin;
+	key_max=KeyMax;
+  }
   ~FlatIndexTable_t()
   {
 	Clear();
@@ -102,6 +108,12 @@ public:
   void Clear();
   Index_t GetIndex(const Key_t key) const;
   void GetIndices(ParticleIdList_T &particles) const;
+  void GetKeyMinMax(Key_t &key_min, Key_t &key_max) const
+  {
+	if(Map.empty()) return;
+	key_min=Map.front().Key;
+	key_max=Map.back().Key;
+  }
   ~MappedIndexTable_t()
   {
 	Clear();
