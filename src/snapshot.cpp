@@ -99,7 +99,7 @@ void ParticleSnapshot_t::FillParticleHash()
 {
   ParticleKeyList_t Ids(*this); 
   ParticleHash->Fill(Ids);
-  ParticleHash->GetKeyMinMax(IdMin, IdMax);
+//   ParticleHash->GetKeyMinMax(IdMin, IdMax);
 }
 void ParticleSnapshot_t::ClearParticleHash()
 {

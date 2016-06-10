@@ -186,6 +186,7 @@ public:
   SnapshotHeader_t Header;
   vector <Particle_t> Particles;
   HBTInt NumberOfParticlesOnAllNodes;
+  vector <HBTInt> ProcessIdRanges;
   
   ParticleSnapshot_t(): Snapshot_t(), Header(), Particles(), ParticleHash(), MappedHash(), FlatHash(), NumberOfParticlesOnAllNodes(0)
   {

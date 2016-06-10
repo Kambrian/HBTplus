@@ -7,6 +7,7 @@ inline int CompPairWithValue(const Pair_t a, const Val_t b)
   return (a.Key<b);
 };
 template <class Key_t, class Index_t>
+template <class ParticleIdList_T>
 void MappedIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles) const
 { 
 #define ALWAYS_BATCH_BINARY_SEARCH
@@ -55,6 +56,7 @@ void MappedIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles)
 }
 
 template <class Key_t, class Index_t>
+template <class ParticleIdList_T>
 void MappedIndexTable_t<Key_t, Index_t>::GetIndicesRecursive(ParticleIdList_T &particles, HBTInt imin, HBTInt imax, MapIter_t MapBegin,  MapIter_t MapEnd) const
 {
   //GetIndices of particles in storage range [imin, imax) from map [MapBegin, MapEnd).
@@ -90,6 +92,7 @@ void MappedIndexTable_t<Key_t, Index_t>::GetIndicesRecursive(ParticleIdList_T &p
 }
 
 template <class Key_t, class Index_t>
+template <class ParticleIdList_T>
 void FlatIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles) const
 {
   for(auto &&p: particles)
@@ -99,5 +102,8 @@ void FlatIndexTable_t<Key_t, Index_t>::GetIndices(ParticleIdList_T &particles) c
 template <class ParticleIdList_t>
 void ParticleSnapshot_t::GetIndices(ParticleIdList_t& particles) const
 {//ParticleIdList_t is a list of particle structs containing at least an Id field
-  ParticleHash->GetIndices(particles);
+  if(HBTConfig.ParticleIdNeedHash)
+	MappedHash.GetIndices(particles);
+  else
+	FlatHash.GetIndices(particles);
 }

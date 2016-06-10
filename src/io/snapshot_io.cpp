@@ -238,8 +238,6 @@ else
 	
 	if(fill_particle_hash)
 	FillParticleHash();
-	
-	cout<<"IdRange=("<<IdMin<<","<<IdMax<<") on "<<world.rank()<<endl;
 }
 inline int GetGrid(HBTReal x, HBTReal step, int dim)
 {
@@ -254,42 +252,7 @@ inline int AssignCell(HBTxyz & Pos, const HBTReal step[3], const vector <int> &d
   #define GID(i) GetGrid(Pos[i], step[i], dims[i])
   return GRIDtoRank(GID(0), GID(1), GID(2));
 }
-/* chunked version
-void ParticleSnapshot_t::ExchangeParticles(MpiWorker_t &world)
-{
-  #define MSG_SIZE 1024
-  
-  auto dims=ClosestFactors(world.size(), 3);
-  HBTReal step[3];
-  for(int i=0;i<3;i++)
-	step[i]=HBTConfig.BoxSize/dims[i];
-  
-  typedef vector <Particle_t> ParticleList_t;
-  ParticleList_t NewParticles;
-  vector <ParticleList_t> SendCells(world.size());
-  vector <ParticleList_t> ReceiveCells(world.size());
-  auto current_particle=Particles.begin(), end_particle=current_particle, max_particle=Particles.end();
-  HBTInt nloop=ceil(1.*Particles.size()/MSG_SIZE);
-  nloop=mpi::all_reduce(world, nloop, mpi::maximum<HBTInt>());
-  for(HBTInt iloop=0;iloop<nloop;iloop++)
-  {
-	end_particle=min(current_particle+MSG_SIZE, max_particle);
-	for(;current_particle<end_particle;current_particle++)//pick
-	{
-	  int rank=AssignCell(current_particle->ComovingPosition, step, dims);
-	  SendCells[rank].push_back(*current_particle);
-	}
-	all_to_all(world, SendCells, ReceiveCells);//deliver
-  	for(int i=0;i<world.size();i++)//insert
-	{
-	  NewParticles.insert(NewParticles.end(), ReceiveCells[i].begin(), ReceiveCells[i].end());
-	  ReceiveCells[i].clear();
-	  SendCells[i].clear();
-	}
-  }
-  cout<<NewParticles.size()<<" particles received on node "<<world.rank()<<endl;
-  Particles.swap(NewParticles);
-} */
+
 void ParallelStride(MpiWorker_t &world, vector <Particle_t> &Particles, HBTInt &offset, HBTInt steps)
 {  
   while(steps)
@@ -429,7 +392,15 @@ void ParticleSnapshot_t::ExchangeParticles(MpiWorker_t &world)
   
   Particles.swap(ReceivedParticles);
   
-  cout<<Particles.size()<<" particles received on node "<<world.rank()<<endl;
+  sort(Particles.begin(), Particles.end(), CompParticleId);
+  IdMin=Particles.front().Id; 
+  IdMax=Particles.back().Id;
+  ProcessIdRanges.resize(world.size()+1);
+  MPI_Allgather(&IdMin, 1, MPI_HBT_INT, ProcessIdRanges.data(), 1, MPI_HBT_INT, world.Communicator);
+  ProcessIdRanges.back()=IdMax+1;
+  MPI_Bcast(&ProcessIdRanges.back(), 1, MPI_HBT_INT, world.size()-1, world.Communicator);
+  
+  cout<<Particles.size()<<" particles received on node "<<world.rank()<<": IdRange=("<<IdMin<<","<<IdMax<<") "<<endl;
 }
 
 #define ReadScalarBlock(dtype, Attr) {\

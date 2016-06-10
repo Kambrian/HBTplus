@@ -29,29 +29,3 @@ void create_Mpi_RemoteParticleType(MPI_Datatype& dtype)
   MPI_Type_commit(&dtype);
   #undef NumAttr
 }
-
-namespace ParticleExchangeComp
-{
-  void SortRemoteParticles(vector <RemoteParticle_t> &P)
-  {
-	for(HBTInt i=0;i<P.size();i++)
-	{
-	  auto &p=P[i];
-	  auto &j=p.Order;
-	  while(i!=j)
-		swap(p, P[j]);
-	}
-  }
-  
-  void ReduceRemoteParticle( void *in, void *inout, int *len, MPI_Datatype *dptr ) 
-  { 
-	RemoteParticle_t *p_in=static_cast<RemoteParticle_t *>(in);
-	RemoteParticle_t *p_inout=static_cast<RemoteParticle_t*>(inout);
-	int &n=*len;
-	for(int i=0;i<n;++i)
-	{
-	  if(p_inout[i].Id==SpecialConst::NullParticleId&&p_in[i].Id!=SpecialConst::NullParticleId)
-		p_inout[i]=p_in[i];
-	}
-  } 
-}
