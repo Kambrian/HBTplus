@@ -106,14 +106,14 @@ class ParticleExchanger_t
   void SendParticles();
   void QueryParticles();
   void RecvParticles();
-  void RestoreParticles(vector <IdRank_t> &TargetRank);
+  void RestoreParticles();
 public:
   ParticleExchanger_t(MpiWorker_t &world, const ParticleSnapshot_t &snap, vector <Halo_T> &InHalos);
   ~ParticleExchanger_t()
   {
 	MPI_Type_free(&MPI_HBTParticle_t);
   }
-  void Exchange(vector <IdRank_t> &TargetRank);
+  void Exchange();
 };
 
 template <class Halo_T>
@@ -217,38 +217,60 @@ void ParticleExchanger_t<Halo_T>::RecvParticles()
 }
 
 template <class Halo_T>
-void ParticleExchanger_t<Halo_T>::RestoreParticles(vector <IdRank_t> &TargetRank)
+void ParticleExchanger_t<Halo_T>::RestoreParticles()
 {
-  TargetRank.reserve(InHalos.size());
   auto it=LocalParticles.begin();
   for(HBTInt ihalo=0;ihalo<InHalos.size();ihalo++)
   {
-	auto &h=InHalos[ihalo];
-	vector <HBTInt> counter(world.size(),0);
-	h.Particles.resize(HaloSizes[ihalo]);
-	for(auto &&p: h.Particles)
-	{
-	  counter[it->ProcessorId]++;
-	  p=*it;
-	  ++it;
-	}
-	int targetrank=world.rank();
-	auto target=max_element(counter.begin(), counter.end());
-	if(*target) targetrank=target-counter.begin();
-	TargetRank.emplace_back(ihalo, targetrank);
+	auto it_end=it+HaloSizes[ihalo];
+	InHalos[ihalo].Particles.assign(it, it_end);
+	it=it_end;
   }
   assert(it==LocalParticles.end());
   vector <RemoteParticle_t>().swap(LocalParticles);
 }
 
 template <class Halo_T>
-void ParticleExchanger_t<Halo_T>::Exchange(vector <IdRank_t> &TargetRank)
+void ParticleExchanger_t<Halo_T>::Exchange()
 {
   CollectParticles();
   SendParticles();
   QueryParticles();
   RecvParticles();
-  RestoreParticles(TargetRank);
+  RestoreParticles();
+}
+
+inline int GetGrid(HBTReal x, HBTReal step, int dim)
+{
+  int i=floor(x/step);
+  if(i<0) i=0;
+  if(i>=dim) i=dim-1;
+  return i;
+}
+inline int AssignCell(const HBTxyz & Pos, const HBTxyz &step, const vector <int> &dims)
+{
+  #define GRIDtoRank(g0,g1,g2) (((g0)*dims[1]+(g1))*dims[2]+(g2))
+  #define GID(i) GetGrid(Pos[i], step[i], dims[i])
+  return GRIDtoRank(GID(0), GID(1), GID(2));
+#undef GID
+#undef GRIDtoRank
+}
+
+template <class Halo_T>
+void DecideTargetProcessor(int NumProc, vector <Halo_T> &InHalos, vector <IdRank_t> &TargetRank)
+{
+  auto dims=ClosestFactors(NumProc, 3);
+  HBTxyz step;
+  for(int i=0;i<3;i++)
+	step[i]=HBTConfig.BoxSize/dims[i];
+  
+#pragma omp parallel for
+  for(HBTInt i=0;i<InHalos.size();i++)
+  {
+	InHalos[i].AverageCoordinates();
+	TargetRank[i].Id=i;
+	TargetRank[i].Rank=AssignCell(InHalos[i].ComovingAveragePosition, step, dims);
+  }
 }
 
 template <class Halo_T>
@@ -258,12 +280,14 @@ void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHa
   typedef HaloParticleIterator_t<HaloIterator_t> ParticleIterator_t;
   
 //   cout<<"Query particle..."<<flush;
-  vector <IdRank_t>TargetRank;
   {//query particles
 	ParticleExchanger_t <Halo_T>Exchanger(world, *this, InHalos);
-	Exchanger.Exchange(TargetRank);
+	Exchanger.Exchange();
   }
   
+  vector <IdRank_t>TargetRank(InHalos.size());
+  DecideTargetProcessor(world.size(), InHalos, TargetRank);
+
   //distribute halo shells
 	vector <int> SendHaloCounts(world.size(),0), RecvHaloCounts(world.size()), SendHaloDisps(world.size()), RecvHaloDisps(world.size());
 	sort(TargetRank.begin(), TargetRank.end(), CompareRank);

@@ -13,14 +13,14 @@
 #include "halo.h"
 #include "particle_exchanger.h"
 
-#include <cstdio>
-#include <cstdlib>
+// #include <cstdio>
+// #include <cstdlib>
 
 static void create_MPI_Halo_Id_type(MPI_Datatype &MPI_HBTHalo_Id_t)
 {
 /*to create the struct containing only haloid*/	
 Halo_t p;
-#define NumAttr 1
+#define NumAttr 3
 MPI_Datatype oldtypes[NumAttr];
 int blockcounts[NumAttr];
 MPI_Aint   offsets[NumAttr], origin,extent;
@@ -32,17 +32,24 @@ extent-=origin;
 int i=0;
 #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
 RegisterAttr(HaloId, MPI_HBT_INT, 1)
-// RegisterAttr(ComovingPosition[0], MPI_HBT_REAL, 3)
-// RegisterAttr(PhysicalVelocity[0], MPI_HBT_REAL, 3)
+RegisterAttr(ComovingAveragePosition[0], MPI_HBT_REAL, 3)
+RegisterAttr(PhysicalAverageVelocity[0], MPI_HBT_REAL, 3)
 // assert(offsets[i-1]-offsets[i-2]==sizeof(HBTReal)*3);//to make sure HBTxyz is stored locally.
 #undef RegisterAttr
 assert(i==NumAttr);
 
-MPI_Type_create_struct(NumAttr,blockcounts,offsets,oldtypes, &MPI_HBTHalo_Id_t);//some padding is added automatically by MPI as well
+MPI_Type_create_struct(i,blockcounts,offsets,oldtypes, &MPI_HBTHalo_Id_t);//some padding is added automatically by MPI as well
 MPI_Type_create_resized(MPI_HBTHalo_Id_t,(MPI_Aint)0, extent, &MPI_HBTHalo_Id_t);
 MPI_Type_commit(&MPI_HBTHalo_Id_t);
 #undef NumAttr
 }
+
+void Halo_t::AverageCoordinates()
+{
+  AveragePosition(ComovingAveragePosition, Particles.data(), Particles.size());
+  AverageVelocity(PhysicalAverageVelocity, Particles.data(), Particles.size());
+}
+
 void HaloSnapshot_t::BuildMPIDataType()
 {
   create_MPI_Halo_Id_type(MPI_HBT_HaloId_t);
@@ -140,12 +147,3 @@ void HaloSnapshot_t::ParticleIndexToId()
   ParticleSnapshot=nullptr;
 }
 */
-void HaloSnapshot_t::AverageCoordinates()
-{
-#pragma omp for
-  for(HBTInt i=0;i<Halos.size();i++)
-  {
-	AveragePosition(Halos[i].ComovingAveragePosition, Halos[i].Particles.data(), Halos[i].Particles.size());
-	AverageVelocity(Halos[i].PhysicalAverageVelocity, Halos[i].Particles.data(), Halos[i].Particles.size());
-  }
-}

@@ -507,8 +507,6 @@ void SubhaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
 {
   #pragma omp parallel
   {
-  halo_snap.AverageCoordinates();
-  AverageCoordinates();
   DecideCentrals(halo_snap);
   FeedCentrals(halo_snap);
   }

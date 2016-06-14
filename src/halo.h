@@ -18,6 +18,7 @@ public:
   HBTInt HaloId;
   HBTxyz ComovingAveragePosition;
   HBTxyz PhysicalAverageVelocity;
+  void AverageCoordinates();
   /* deprecated; use move assignment instead; 
    * shall not define destructor in order for default move to be implemented by the compiler.
   void MoveTo(Halo_t & dest, bool MoveParticle=true)
@@ -55,7 +56,6 @@ public:
   void Clear();
   void UpdateParticles(MpiWorker_t & world, const ParticleSnapshot_t & snapshot);
 //   void ParticleIndexToId();
-  void AverageCoordinates();
   void FillParticleHash();
   void ClearParticleHash();
   HBTInt size() const

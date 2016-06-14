@@ -116,6 +116,7 @@ public:
   }
   void CalculateProfileProperties(const Snapshot_t &epoch);
   void CalculateShape();
+  void AverageCoordinates();
 };
 
 typedef vector <Subhalo_t> SubhaloList_t;
@@ -198,7 +199,6 @@ public:
   }
   void UpdateParticles(MpiWorker_t & world, const ParticleSnapshot_t & snapshot);
 //   void ParticleIndexToId();
-  void AverageCoordinates();
   void AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap);
   void PrepareCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();

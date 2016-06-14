@@ -116,19 +116,16 @@ void SubhaloSnapshot_t::ParticleIndexToId()
   SnapshotPointer=nullptr;
 }
 */
-void SubhaloSnapshot_t::AverageCoordinates()
-{
-#pragma omp for
-  for(HBTInt subid=0;subid<Subhalos.size();subid++)
-  {
-// 	int coresize=GetCoreSize(Subhalos[subid].Nbound);
-	copyHBTxyz(Subhalos[subid].ComovingMostBoundPosition, Subhalos[subid].Particles[0].ComovingPosition);
-	copyHBTxyz(Subhalos[subid].PhysicalMostBoundVelocity, Subhalos[subid].Particles[0].PhysicalVelocity);
-	AveragePosition(Subhalos[subid].ComovingAveragePosition, Subhalos[subid].Particles.data(), Subhalos[subid].Nbound);
-	AverageVelocity(Subhalos[subid].PhysicalAverageVelocity, Subhalos[subid].Particles.data(), Subhalos[subid].Nbound);
-  }
-}
 
+void Subhalo_t::AverageCoordinates()
+{
+  // 	int coresize=GetCoreSize(Nbound);
+  copyHBTxyz(ComovingMostBoundPosition, Particles[0].ComovingPosition);
+  copyHBTxyz(PhysicalMostBoundVelocity, Particles[0].PhysicalVelocity);
+  AveragePosition(ComovingAveragePosition, Particles.data(), Nbound);
+  AverageVelocity(PhysicalAverageVelocity, Particles.data(), Nbound);
+}
+  
 void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
 {
   /* to calculate the following density-profile related properties
