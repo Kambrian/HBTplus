@@ -115,7 +115,7 @@ void VectorAllToAll(MpiWorker_t &world, vector < vector<T> > &SendVecs, vector <
 }
 
 template <class Particle_T, class InParticleIterator_T, class OutParticleIterator_T>
-void MyAllToAll(MpiWorker_t &world, const vector <InParticleIterator_T> &InParticleIterator, const vector <HBTInt> &InParticleCount, const vector <OutParticleIterator_T> &OutParticleIterator, MPI_Datatype &MPI_Particle_T)
+void MyAllToAll(MpiWorker_t &world, vector <InParticleIterator_T> InParticleIterator, const vector <HBTInt> &InParticleCount, vector <OutParticleIterator_T> OutParticleIterator, MPI_Datatype &MPI_Particle_T)
 /*break the task into smaller pieces to avoid message size overflow
  * allocate a temporary buffer of type Particle_T to copy from InParticleIterator, send around, and copy out to OutParticleIterator.
  InParticleIterator should point to data directly assignable to Particle_T.
@@ -158,7 +158,7 @@ void MyAllToAll(MpiWorker_t &world, const vector <InParticleIterator_T> &InParti
 	  {
 		auto buff_begin=SendBuffer.begin()+SendParticleDisps[rank];
 		auto buff_end=buff_begin+SendParticleCounts[rank];
-		auto it_part=InParticleIterator[rank];
+		auto &it_part=InParticleIterator[rank];
 		for(auto it_buff=buff_begin;it_buff!=buff_end;++it_buff)
 		{
 		  *it_buff=(*it_part);
@@ -172,7 +172,7 @@ void MyAllToAll(MpiWorker_t &world, const vector <InParticleIterator_T> &InParti
 	  {
 		auto buff_begin=RecvBuffer.begin()+RecvParticleDisps[rank];
 		auto buff_end=buff_begin+RecvParticleCounts[rank];
-		auto it_part=OutParticleIterator[rank];
+		auto &it_part=OutParticleIterator[rank];
 		for(auto it_buff=buff_begin;it_buff!=buff_end;++it_buff)//unpack
 		{
 		  *it_part=move(*it_buff);
@@ -183,7 +183,7 @@ void MyAllToAll(MpiWorker_t &world, const vector <InParticleIterator_T> &InParti
 }
 
 template <class Particle_T, class InParticleIterator_T, class OutParticleIterator_T>
-void MyBcast(MpiWorker_t &world, InParticleIterator_T &InParticleIterator, OutParticleIterator_T &OutParticleIterator, HBTInt &ParticleCount, MPI_Datatype &MPI_Particle_T, int root)
+void MyBcast(MpiWorker_t &world, InParticleIterator_T InParticleIterator, OutParticleIterator_T OutParticleIterator, HBTInt &ParticleCount, MPI_Datatype &MPI_Particle_T, int root)
 /*break the task into smaller pieces to avoid message size overflow
  InParticleIterator only significant at root, and should be different from OutParticleIterator.
  ParticleCount automatically broadcasted from root to every process.
