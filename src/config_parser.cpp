@@ -44,6 +44,7 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(ParticleIdRankStyle)
   else TrySetPar(ParticleIdNeedHash)
   else TrySetPar(SnapshotIdUnsigned)
+//   else TrySetPar(SaveSubParticleProperties)
   else TrySetPar(MajorProgenitorMassRatio)
 #ifdef ALLOW_BINARY_SYSTEM
   else TrySetPar(BinaryMassRatioLimit)
@@ -55,6 +56,8 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(TreeAllocFactor)
   else TrySetPar(TreeNodeOpenAngle)
   else TrySetPar(TreeMinNumOfCells)
+  else TrySetPar(MaxSampleSizeOfPotentialEstimate)
+  else TrySetPar(RefineMostboundParticle)
 #undef TrySetPar
   else if("SnapshotIdList"==name)
   {
@@ -176,6 +179,7 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   _SyncBool(ParticleIdRankStyle);
   _SyncBool(ParticleIdNeedHash);
   _SyncBool(SnapshotIdUnsigned);
+//   _SyncBool(SaveSubParticleProperties);
   _SyncVec(SnapshotIdList, MPI_INT);
   
   _SyncReal(MajorProgenitorMassRatio);
@@ -196,6 +200,8 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   _SyncReal(TreeNodeResolutionHalf);
   _SyncReal(BoxHalf);
   
+  _SyncAtom(MaxSampleSizeOfPotentialEstimate, MPI_HBT_INT);
+  _SyncBool(RefineMostboundParticle);
   //---------------end sync params-------------------------//	
   
   _SyncReal(PhysicalConst::G);
@@ -244,6 +250,7 @@ void Parameter_t::DumpParameters()
   DumpPar(ParticleIdRankStyle)
   DumpPar(ParticleIdNeedHash)
   DumpPar(SnapshotIdUnsigned)
+//   DumpPar(SaveSubParticleProperties)
   if(SnapshotIdList.size())
   {
   version_file<<"SnapshotIdList";
@@ -264,6 +271,9 @@ void Parameter_t::DumpParameters()
   DumpPar(TreeAllocFactor)
   DumpPar(TreeNodeOpenAngle)
   DumpPar(TreeMinNumOfCells)
+  
+  DumpPar(MaxSampleSizeOfPotentialEstimate)
+  DumpPar(RefineMostboundParticle)
 #undef DumpPar  
   version_file.close();
 }

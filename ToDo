@@ -1,6 +1,4 @@
-1)optimize unbinding
-
-2)debug distributehaloes
+add exclusive mass
 
 optimize openmp version query particles with batch sequential search as well.
 

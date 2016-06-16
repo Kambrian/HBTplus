@@ -76,10 +76,15 @@ public:
   typedef vector <Particle_t> ParticleList_t;
   HBTInt N;
   const ParticleList_t & Particles;
-  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const ParticleList_t &particles, const Snapshot_t & epoch): Elist(e), N(n), Particles(particles)
+  HBTReal MassFactor;
+  EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const ParticleList_t &particles, const Snapshot_t & epoch): Elist(e), N(n), Particles(particles), MassFactor(1.)
   {
 	SetEpoch(epoch);
   };
+  void SetMassUnit(HBTReal mass_unit)
+  {
+	MassFactor=mass_unit;
+  }
   HBTInt size() const
   {
 	return N;
@@ -90,7 +95,7 @@ public:
   }
   HBTReal GetMass(HBTInt i) const
   {
-	return Particles[GetParticle(i)].Mass;
+	return Particles[GetParticle(i)].Mass*MassFactor;
   }
   const HBTxyz & GetPhysicalVelocity(HBTInt i) const
   {
@@ -115,7 +120,7 @@ public:
 	
 	svx=svy=svz=0.;
 	msum=0.;
-	#pragma omp paralle for reduction(+:msum, svx, svy, svz) if(NumPart>100)
+	#pragma omp parallel for reduction(+:msum, svx, svy, svz) if(NumPart>100)
 	for(i=0;i<NumPart;i++)
 	{
 	  HBTReal m=GetMass(i);
@@ -149,7 +154,7 @@ public:
 	
 	sx=sy=sz=0.;
 	msum=0.;
-	#pragma omp paralle for reduction(+:msum, sx, sy, sz) if(NumPart>100)
+	#pragma omp parallel for reduction(+:msum, sx, sy, sz) if(NumPart>100)
 	  for(i=0;i<NumPart;i++)
 	  {
 		HBTReal m=GetMass(i);
@@ -224,35 +229,113 @@ public:
 	SpecificAngularMomentum[2]=AMz/NumPart;
   }
 };
+inline void RefineBindingEnergyOrder(EnergySnapshot_t &ESnap, HBTInt Size, OctTree_t &tree, HBTxyz &RefPos, HBTxyz &RefVel)
+{//reorder the first Size particles according to their self-binding energy
+  auto &Elist=ESnap.Elist;
+  auto &Particles=ESnap.Particles;
+  tree.Build(ESnap, Size);
+  vector <ParticleEnergy_t> Einner(Size);
+  #pragma omp parallel if(Size>100)
+  {
+	#pragma omp for
+	for(HBTInt i=0;i<Size;i++)
+	{
+	  HBTInt pid=Elist[i].pid;
+	  Einner[i].pid=i;
+	  Einner[i].E=tree.BindingEnergy(Particles[pid].ComovingPosition, Particles[pid].PhysicalVelocity, RefPos, RefVel, Particles[pid].Mass);
+	}
+	#pragma omp single
+	sort(Einner.begin(), Einner.end(), CompEnergy);
+	#pragma omp for
+	for(HBTInt i=0;i<Size;i++)
+	{
+	  Einner[i]=Elist[Einner[i].pid];
+	}
+	#pragma omp for
+	for(HBTInt i=0;i<Size;i++)
+	{
+	  Elist[i]=Einner[i];
+	}
+  }
+}
 void Subhalo_t::Unbind(const Snapshot_t &epoch)
 {//the reference frame (pos and vel) should already be initialized before unbinding.
-  if(1==Particles.size()) return;
+  HBTInt MaxSampleSize=HBTConfig.MaxSampleSizeOfPotentialEstimate;
+  bool RefineMostboundParticle=(MaxSampleSize>0&&HBTConfig.RefineMostboundParticle);
+  HBTReal BoundMassPrecision=HBTConfig.BoundMassPrecision;
   
+  if(1==Particles.size()) return;
+  HBTxyz OldRefPos, OldRefVel;
+  auto &RefPos=ComovingAveragePosition;
+  auto &RefVel=PhysicalAverageVelocity;
+  
+  auto OldMostboundParticle=Particles[0];//backup 
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
+  if(MaxSampleSize>0&&Nbound>MaxSampleSize) random_shuffle(Particles.begin(), Particles.end()); //shuffle for easy resampling later.
   HBTInt Nlast; 
   
   vector <ParticleEnergy_t> Elist(Nbound);
 	for(HBTInt i=0;i<Nbound;i++)
 	  Elist[i].pid=i;
   EnergySnapshot_t ESnap(Elist.data(), Elist.size(), Particles, epoch);
+  bool CorrectionLoop=false;
 	while(true)
 	{
+	  if(CorrectionLoop)
+	  {//correct the potential due to removed particles
+		#define VecNorm(x) (x[0]*x[0]+x[1]*x[1]+x[2]*x[2])
+		#define VecDot(x,y) (x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
+		HBTxyz RefVelDiff;
+		epoch.RelativeVelocity(OldRefPos, OldRefVel, RefPos, RefVel, RefVelDiff);
+		HBTReal dK=0.5*VecNorm(RefVelDiff);
+		EnergySnapshot_t ESnapCorrection(&Elist[Nbound], Nlast-Nbound, Particles, epoch); //point to freshly removed particles
+		tree.Build(ESnapCorrection); 
+		#pragma omp parallel for if(Nlast>100)
+		for(HBTInt i=0;i<Nbound;i++)
+		{
+		  HBTInt pid=Elist[i].pid;
+		  auto &x=Particles[pid].ComovingPosition;
+		  auto &v=Particles[pid].PhysicalVelocity;
+		  HBTxyz OldVel;
+		  epoch.RelativeVelocity(x,v,OldRefPos, OldRefVel, OldVel);
+		  Elist[i].E+=VecDot(OldVel, RefVelDiff)+dK-tree.EvaluatePotential(x, 0);;
+		}
+		#undef VecNorm
+		#undef VecDot
 		Nlast=Nbound;
-		tree.Build(ESnap, Nlast);
-	  #pragma omp parallel for if(Nlast>100)
-	  for(HBTInt i=0;i<Nlast;i++)
+	  }
+	  else
 	  {
-		HBTInt pid=Elist[i].pid;
-		Elist[i].E=tree.BindingEnergy(Particles[pid].ComovingPosition, Particles[pid].PhysicalVelocity, ComovingAveragePosition, PhysicalAverageVelocity, Particles[pid].Mass);
+		Nlast=Nbound;
+		HBTInt np_tree=Nlast;
+		if(MaxSampleSize>0&&Nlast>MaxSampleSize)//downsample
+		{
+		  np_tree=MaxSampleSize;
+		  ESnap.SetMassUnit((HBTReal)Nlast/MaxSampleSize);
+		}
+		tree.Build(ESnap, np_tree);
+		#pragma omp parallel for if(Nlast>100)
+		for(HBTInt i=0;i<Nlast;i++)
+		{
+		  HBTInt pid=Elist[i].pid;
+		  HBTReal mass;
+		  if(i<np_tree)
+			mass=ESnap.GetMass(i); //to correct for self-gravity
+		  else
+			mass=0.;//not sampled in tree, no self gravity to correct
+		  Elist[i].E=tree.BindingEnergy(Particles[pid].ComovingPosition, Particles[pid].PhysicalVelocity, RefPos, RefVel, mass);
+		}
+		ESnap.SetMassUnit(1.);//reset, no necessary
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
 		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
 		{
 		  Nbound=1;
 		  Nlast=1;
-		  Particles.resize(1);//old particle list retained, only need to shrink
+		  Particles[0]=OldMostboundParticle;
+		  Particles.resize(1);
 		  SnapshotIndexOfDeath=epoch.GetSnapshotIndex();
 		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
 		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
@@ -261,12 +344,24 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		else
 		{
 		  sort(Elist.begin()+Nbound, Elist.begin()+Nlast, CompEnergy); //only sort the unbound part
+		  HBTInt Ndiff=Nlast-Nbound;
+		  if(Ndiff<Nbound)
+		  {
+			if(MaxSampleSize<=0||Ndiff<MaxSampleSize)
+			{
+			  CorrectionLoop=true;
+			  copyHBTxyz(OldRefPos, RefPos);
+			  copyHBTxyz(OldRefVel, RefVel);
+			}
+		  }
 		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
 		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
-		  if(Nbound>Nlast*HBTConfig.BoundMassPrecision)//converge
+		  if(Nbound>Nlast*BoundMassPrecision)//converge
 		  {
 			//update particle list
 			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
+			if(RefineMostboundParticle&&Nbound>MaxSampleSize)//refine most-bound particle, not necessary usually..
+			  RefineBindingEnergyOrder(ESnap, MaxSampleSize, tree, RefPos, RefVel);
 			Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
 			if(Nlast>Particles.size()) Nlast=Particles.size();
 			//todo: optimize this with in-place permutation, to avoid mem alloc and copying.
