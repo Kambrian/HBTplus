@@ -11,6 +11,11 @@ GSLLIB=-lgsl -lgslcblas
 #CXXFLAGS+=-DUNBIND_WITH_THERMAL_ENERGY
 ###
 
+###for Dark Matter only simulations
+#CXXFLAGS+=-DDM_ONLY
+###
+
+
 CXX=g++
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 
 

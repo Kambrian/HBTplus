@@ -153,7 +153,6 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 	LastMaxVmaxPhysical=VmaxPhysical;
   }
 
-  HBTReal Mbound=GetMass();
   /*the spin parameters are kind of ambiguous. do not provide*/
   for(int i=0;i<3;i++)
   {
@@ -218,7 +217,6 @@ void Subhalo_t::CalculateShape(const ParticleSnapshot_t& part_snap)
   }
   InertialTensor[0]=Ixx; InertialTensor[1]=Ixy; InertialTensor[2]=Ixz; InertialTensor[3]=Iyy; InertialTensor[4]=Iyz; InertialTensor[5]=Izz;
   InertialTensorWeighted[0]=Ixxw; InertialTensorWeighted[1]=Ixyw; InertialTensorWeighted[2]=Ixzw; InertialTensorWeighted[3]=Iyyw; InertialTensorWeighted[4]=Iyzw; InertialTensorWeighted[5]=Izzw;
-  HBTReal Mbound=GetMass();
   for(auto && I: InertialTensor) I/=Mbound;
   for(auto && I: InertialTensorWeighted) I/=Mbound;
 #ifdef HAS_GSL  
@@ -239,8 +237,10 @@ struct CompareParticleType_t
   }
 };
 
+
 void Subhalo_t::CountParticleTypes(const ParticleSnapshot_t& part_snap)
 {
+#ifndef DM_ONLY  
 //   CompareParticleType_t comparator(part_snap);
 //   stable_sort(Particles.begin(), Particles.begin()+Nbound, comparator);//only sort the bound part
   for(int itype=0;itype<TypeMax;itype++)
@@ -281,8 +281,19 @@ void Subhalo_t::CountParticleTypes(const ParticleSnapshot_t& part_snap)
 	  MboundType[itype]+=part_snap.GetMass(p);
 	}
   }
+#endif  
 }
 
+#ifdef DM_ONLY
+HBTInt Subhalo_t::ParticleIdToIndex(const ParticleSnapshot_t& part_snap)
+/*change from id to index for Particles in the subhalo */
+{
+  #pragma omp parallel for
+  for(HBTInt i=0;i<Particles.size();i++)
+	Particles[i]=part_snap.GetParticleIndex(Particles[i]);
+  return 0;
+}
+#else
 HBTInt Subhalo_t::ParticleIdToIndex(const ParticleSnapshot_t& part_snap)
 /*change from id to index for Particles in the subhalo, and remove unfound (e.g., consumed by BHs) particles.
  * update Nbound, Mbound, NboundType, MboundType and Particle list *
@@ -295,7 +306,7 @@ HBTInt Subhalo_t::ParticleIdToIndex(const ParticleSnapshot_t& part_snap)
   for(;it!=it_end;++it)
   {
 	auto index=part_snap.GetParticleIndex(*it);
-	if(index!=SpecialConst::NullParticleId)
+	if(index!=SpecialConst::NullParticleId)//there will be consumed particles
 	{
 	  Particles[np_new++]=index;
 	  int itype=part_snap.GetParticleType(index);
@@ -324,5 +335,6 @@ HBTInt Subhalo_t::ParticleIdToIndex(const ParticleSnapshot_t& part_snap)
 	
   return np_old-np_new;
 }
+#endif
 
 

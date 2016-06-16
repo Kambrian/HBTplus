@@ -10,7 +10,7 @@
 #include <cmath>
 #include "datatypes.h"
 
-#define HBT_VERSION "1.9.6"
+#define HBT_VERSION "1.9.7"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
@@ -85,7 +85,7 @@ public:
 	MinNumPartOfSub=20;
 	GroupParticleIdMask=0;
 	MassInMsunh=1e10;
-	LengthInMpch=1e3;
+	LengthInMpch=1;
 	VelInKmS=1.;
 	PeriodicBoundaryOn=true;
 	SnapshotHasIdBlock=true;

@@ -58,7 +58,14 @@ void ApostleReader_t::ReadHeader(int ifile, ApostleHeader_t &header)
 	Header.npartTotal[i]=(((unsigned long)np_high[i])<<32)|np[i];
   H5Fclose(file);
 }
-
+void ApostleReader_t::GetParticleCountInFile(hid_t file, int np[])
+{
+  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, np);
+#ifdef DM_ONLY
+  for(int i=0;i<TypeMax;i++)
+	if(i!=TypeDM) np[i]=0;
+#endif
+}
 HBTInt ApostleReader_t::CompileFileOffsets(int nfiles)
 {
   HBTInt offset=0;
@@ -72,7 +79,7 @@ HBTInt ApostleReader_t::CompileFileOffsets(int nfiles)
 	string filename;
 	GetFileName(ifile, filename);
 	hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-	ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, np_this);
+	GetParticleCountInFile(file, np_this);
 	H5Fclose(file);
 	HBTInt np=accumulate(begin(np_this), end(np_this), (HBTInt)0);
 	
@@ -98,7 +105,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   vector <int> np_this(TypeMax);
   vector <HBTInt> offset_this(TypeMax);
-  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, np_this.data());
+  GetParticleCountInFile(file, np_this.data());
   CompileOffsets(np_this, offset_this);
  
   HBTReal vunit=sqrt(Header.ScaleFactor);
@@ -106,6 +113,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
   for(int itype=0;itype<TypeMax;itype++)
   {
 	int np=np_this[itype];
+	if(np==0) continue;
 	auto ParticlesThisType=ParticlesInFile+offset_this[itype];
 	stringstream grpname;
 	grpname<<"PartType"<<itype;
@@ -143,6 +151,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 		ParticlesThisType[i].Id=id[i];
 	}
 	
+#ifndef DM_ONLY
 	//mass
 	if(Header.mass[itype]==0)
 	{
@@ -178,7 +187,8 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].Type=t;
 	}
-	
+#endif
+
 	H5Gclose(particle_data);
   }
   
@@ -192,12 +202,13 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bo
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   vector <int> np_this(TypeMax);
   vector <HBTInt> offset_this(TypeMax);
-  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, np_this.data());
+  GetParticleCountInFile(file, np_this.data());
   CompileOffsets(np_this, offset_this);
   
   for(int itype=0;itype<TypeMax;itype++)
   {
 	int np=np_this[itype];
+	if(np==0) continue;
 	auto ParticlesThisType=ParticlesInFile+offset_this[itype];
 	stringstream grpname;
 	grpname<<"PartType"<<itype;
@@ -231,7 +242,10 @@ void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particle
   SetSnapshot(snapshotId);
   
   ReadHeader(0, Header);
-  Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);  
+  Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
+#ifdef DM_ONLY
+  Cosmology.ParticleMass=Header.mass[TypeDM];
+#endif
   HBTInt np=CompileFileOffsets(Header.NumberOfFiles);
   Particles.resize(np);
   

@@ -42,6 +42,7 @@ class ApostleReader_t
   void ReadGroupId(int ifile, ParticleHost_t * ParticlesInFile, bool FlagReadParticleId);
   void GetFileName(int ifile, string &filename);
   void SetSnapshot(int snapshotId);
+  void GetParticleCountInFile(hid_t file, int np[]);
   
   hid_t CountTable_t, MassTable_t, H5T_HBTxyz;
 public:

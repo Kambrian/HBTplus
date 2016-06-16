@@ -103,8 +103,12 @@ HBTInt GadgetReader_t::ReadGadgetNumberOfParticles(int ifile)
   ReadGadgetFileHeader(fp, header);
   fclose(fp);
   HBTInt np=0;
+#ifdef DM_ONLY
+  np=header.npart[TypeDM];
+#else
   for(int i=0;i<TypeMax;i++)
 	np+=header.npart[i];
+#endif
   return np;
 }
 
@@ -166,12 +170,15 @@ void GadgetReader_t::Load()
   LoadGadgetHeader();
 
   Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);  
+#ifdef DM_ONLY
+  Cosmology.ParticleMass=Header.mass[TypeDM];
+#endif
   Particles.resize(NumberOfParticleInFiles.back()+OffsetOfParticleInFiles.back());
   
 #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<Header.num_files; iFile++)
 	ReadGadgetFile(iFile);
-	
+  
   cout<<" ( "<<Header.num_files<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 }
 
@@ -230,9 +237,13 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
   myfopen(fp, filename.c_str(), "r");
   GadgetHeader_t header;
   ReadGadgetFileHeader(fp, header);
+#ifdef DM_ONLY
+  size_t n_read=header.npart[TypeDM], n_skip=accumulate(header.npart, header.npart+TypeDM, size_t(0));
+#else
   size_t n_read=accumulate(begin(header.npart), end(header.npart), (size_t)0), n_skip=0;
   vector <HBTInt> offset(TypeMax);
   CompileOffsets(begin(header.npart), end(header.npart), offset.begin());
+#endif
   
   const auto NewParticles=Particles.begin()+OffsetOfParticleInFiles[iFile];
   
@@ -284,7 +295,8 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 	  for(HBTInt i=0;i<n_read;i++)
 		NewParticles[i].Id=id_now+i;
 	}
-  
+ 
+#ifndef DM_ONLY
   #define MassDataPresent(i) ((0==header.mass[i])&&(header.npartTotal[i]))
   if(RealTypeSize==4)
 	ReadMassBlock(float)
@@ -305,7 +317,8 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 	for(HBTInt i=0;i<header.npart[itype];i++)
 	  p[i].Type=static_cast<ParticleType_t>(itype);
   }
-	
+#endif
+
   if(feof(fp))
   {
 	cout<<"Error: End-of-File when reading "<<filename<<endl;

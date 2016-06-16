@@ -392,6 +392,5 @@ void SubhaloSnapshot_t::UpdateTracks()
   {
 	Subhalos[i].CalculateProfileProperties(*SnapshotPointer);
 	Subhalos[i].CalculateShape(*SnapshotPointer);
-// 	Subhalos[i].CountParticleTypes(*SnapshotPointer);//now integrated inside unbinding
   }
 }

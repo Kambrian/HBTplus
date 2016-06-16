@@ -28,8 +28,10 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   dims[0]=TypeMax;
   hid_t H5T_HBTIntArray_TypeMax=H5Tarray_create2(H5T_HBTInt, 1, dims);
   hid_t H5T_FloatArray_TypeMax=H5Tarray_create2(H5T_NATIVE_FLOAT, 1, dims);
+#ifndef DM_ONLY
   InsertMember(NboundType, H5T_HBTIntArray_TypeMax);
   InsertMember(MboundType, H5T_FloatArray_TypeMax);
+#endif
   H5Tclose(H5T_HBTIntArray_TypeMax);
   H5Tclose(H5T_FloatArray_TypeMax);
   
@@ -126,6 +128,9 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
   ReadDataset(file, "/Cosmology/OmegaLambda0", H5T_HBTReal, &Cosmology.OmegaLambda0);
   ReadDataset(file, "/Cosmology/HubbleParam", H5T_HBTReal, &Cosmology.Hz);
   ReadDataset(file, "/Cosmology/ScaleFactor", H5T_HBTReal, &Cosmology.ScaleFactor);
+#ifdef DM_ONLY
+  ReadDataset(file, "/Cosmology/ParticleMass", H5T_HBTReal, &Cosmology.ParticleMass);
+#endif
   
   hsize_t dims[1];
   dset=H5Dopen2(file, "Subhalos", H5P_DEFAULT);
@@ -215,6 +220,9 @@ void SubhaloSnapshot_t::Save()
   writeHDFmatrix(cosmology, &Cosmology.OmegaLambda0, "OmegaLambda0", ndim, dim_atom, H5T_HBTReal);
   writeHDFmatrix(cosmology, &Cosmology.Hz, "HubbleParam", ndim, dim_atom, H5T_HBTReal);
   writeHDFmatrix(cosmology, &Cosmology.ScaleFactor, "ScaleFactor", ndim, dim_atom, H5T_HBTReal);
+#ifdef DM_ONLY
+  writeHDFmatrix(cosmology, &Cosmology.ParticleMass, "ParticleMass", ndim, dim_atom, H5T_HBTReal);
+#endif
   H5Gclose(cosmology);
 //   writeHDFmatrix(file, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);
 //   writeHDFmatrix(file, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
@@ -254,11 +262,13 @@ void SubhaloSnapshot_t::Save()
 	  HBTInt ParticleIndex;
 	  HBTxyz ComovingPosition;
 	  HBTxyz PhysicalVelocity;
+#ifndef DM_ONLY
 	  HBTReal Mass;
 #ifdef UNBIND_WITH_THERMAL_ENERGY
 	  HBTReal InternalEnergy;
 #endif
 	  int Type;
+#endif
 	};
 	hid_t H5T_Particle=H5Tcreate(H5T_COMPOUND, sizeof (Particle_t));
 	hsize_t dim_xyz=3;
@@ -267,11 +277,13 @@ void SubhaloSnapshot_t::Save()
 	InsertMember(ParticleIndex, H5T_HBTInt);
 	InsertMember(ComovingPosition, H5T_HBTxyz);
 	InsertMember(PhysicalVelocity, H5T_HBTxyz);
+#ifndef DM_ONLY
 	InsertMember(Mass, H5T_HBTReal);
 	#ifdef UNBIND_WITH_THERMAL_ENERGY
 	InsertMember(InternalEnergy, H5T_HBTReal);
 	#endif
 	InsertMember(Type, H5T_NATIVE_INT);
+#endif
 	#undef InsertMember
 	H5Tclose(H5T_HBTxyz);
 	
@@ -292,11 +304,13 @@ void SubhaloSnapshot_t::Save()
 		p.ParticleIndex=ind;
 		copyHBTxyz(p.ComovingPosition, SnapshotPointer->GetComovingPosition(ind));
 		copyHBTxyz(p.PhysicalVelocity, SnapshotPointer->GetPhysicalVelocity(ind));
+#ifndef DM_ONLY
 		p.Mass=SnapshotPointer->GetMass(ind);
 		#ifdef UNBIND_WITH_THERMAL_ENERGY
 		p.InternalEnergy=SnapshotPointer->GetInternalEnergy(ind);
 		#endif
 		p.Type=SnapshotPointer->GetParticleType(ind);
+#endif
 	  }
 	  vl[subid].len=np;
 	  vl[subid].p=ParticleList.data();

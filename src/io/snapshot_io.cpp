@@ -37,6 +37,9 @@ void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
   else
 	throw(runtime_error("unknown SnapshotFormat "+HBTConfig.SnapshotFormat));
   
+#ifdef DM_ONLY
+  assert(Cosmology.ParticleMass>0);
+#endif
   
   if(fill_particle_hash)
 	FillParticleHash();

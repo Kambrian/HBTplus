@@ -17,8 +17,10 @@ public:
   HBTInt TrackId;
   HBTInt Nbound;
   float Mbound;
+#ifndef DM_ONLY
   HBTInt NboundType[TypeMax];
   float MboundType[TypeMax];
+#endif
   HBTInt HostHaloId;
   HBTInt Rank;
   float LastMaxMass;
@@ -70,7 +72,10 @@ public:
   
   ParticleList_t Particles;
   
-  Subhalo_t(): Nbound(0), Rank(0), Mbound(0), NboundType{0}, MboundType{0.}
+  Subhalo_t(): Nbound(0), Rank(0), Mbound(0)
+#ifndef DM_ONLY
+  ,NboundType{0}, MboundType{0.}
+#endif
   {
 	TrackId=SpecialConst::NullTrackId;
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;

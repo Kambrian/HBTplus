@@ -116,7 +116,7 @@ public:
 	
 	svx=svy=svz=0.;
 	msum=0.;
-	#pragma omp paralle for reduction(+:msum, svx, svy, svz) if(NumPart>100)
+	#pragma omp parallel for reduction(+:msum, svx, svy, svz) if(NumPart>100)
 	for(i=0;i<NumPart;i++)
 	{
 	  HBTReal m=GetMass(i);
@@ -151,7 +151,7 @@ public:
 	
 	sx=sy=sz=0.;
 	msum=0.;
-	#pragma omp paralle for reduction(+:msum, sx, sy, sz) if(NumPart>100)
+	#pragma omp parallel for reduction(+:msum, sx, sy, sz) if(NumPart>100)
 	  for(i=0;i<NumPart;i++)
 	  {
 		HBTReal m=GetMass(i);
@@ -298,7 +298,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   OctTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
-  random_shuffle(Particles.begin(), Particles.end()); //shuffle for easy resampling later.
+  if(MaxSampleSize>0&&Nbound>MaxSampleSize)	random_shuffle(Particles.begin(), Particles.end()); //shuffle for easy resampling later.
   HBTInt Nlast; 
   
   vector <ParticleEnergy_t> Elist(Nbound);

@@ -26,11 +26,13 @@ struct Particle_t
   HBTInt Id;
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
+#ifndef DM_ONLY
   HBTReal Mass;
 #ifdef UNBIND_WITH_THERMAL_ENERGY
   HBTReal InternalEnergy;
 #endif
   ParticleType_t Type;
+#endif
 };
 
 struct Cosmology_t
@@ -38,6 +40,9 @@ struct Cosmology_t
   HBTReal OmegaM0;
   HBTReal OmegaLambda0;
   HBTReal ScaleFactor;
+#ifdef DM_ONLY
+  HBTReal ParticleMass;
+#endif
   
   //derived parameters:
   HBTReal Hz; //current Hubble param in internal units
@@ -209,7 +214,11 @@ inline const HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(const ParticleIndex
 }
 inline HBTReal ParticleSnapshot_t::GetParticleMass(const ParticleIndex_t index) const
 {
+#ifdef DM_ONLY
+	return Cosmology.ParticleMass;
+#else
 	return Particles[index].Mass;
+#endif
 }
 inline HBTReal ParticleSnapshot_t::GetMass(const HBTInt index) const
 {
@@ -217,7 +226,7 @@ inline HBTReal ParticleSnapshot_t::GetMass(const HBTInt index) const
 }
 inline HBTReal ParticleSnapshot_t::GetInternalEnergy(HBTInt index) const
 {
-#ifdef UNBIND_WITH_THERMAL_ENERGY
+#if !defined(DM_ONLY) && defined(UNBIND_WITH_THERMAL_ENERGY) 
   return Particles[index].InternalEnergy;
 #else
   return 0.;
@@ -225,6 +234,10 @@ inline HBTReal ParticleSnapshot_t::GetInternalEnergy(HBTInt index) const
 }
 inline ParticleType_t ParticleSnapshot_t::GetParticleType(HBTInt index) const
 {
+#ifdef DM_ONLY
+  return TypeDM;
+#else
   return Particles[index].Type;
+#endif  
 }
 #endif
