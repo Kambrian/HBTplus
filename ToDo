@@ -1,4 +1,7 @@
 add exclusive mass
+add save particle properties
+
+unify OMP and MPI branches
 
 optimize openmp version query particles with batch sequential search as well.
 
