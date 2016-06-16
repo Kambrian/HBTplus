@@ -26,6 +26,7 @@ To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte fl
 - `HBT_INT8` : use 8 byte integer (i.e., C long int) as default integer type (for particle IDs etc.)
 - `HBT_REAL8`: use 8 byte float (i.e., C double) as default float type (for particle position/velocity)
 - `UNBIND_WITH_THERMAL_ENERGY`: include thermal energy in unbinding. If this is not defined, the code does not read in or use the thermal energy at all.
+- `DM_ONLY` : compile the code for dark matter only simulations. You do not have to turn this on for DM-only simulations, but doing this saves some memory.
 
   Simply add these macro definitions to the CXXFLAGS of your target in the Makefile. For example, adding this line to the Makefile
   
