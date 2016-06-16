@@ -49,6 +49,8 @@ Each subhalo is labelled by a unique `TrackId`, which is fixed throughout its ev
 
 Once a subhalo is stripped to below `MinNumPartOfSub` specified in the parameter file, HBT continues to track its most bound particle. This single-particle descendents then have `Nbound=1`, and represent the "orphan" galaxy population in the framework of semi-analytical models. These orphans are also listed as subhaloes.
 
+`MVir`, `RVirComoving`, etc are the virial mass and radius for each bound subhalo, obtaining by searching for a spherical overdensity (SO) radius counting only the bound density. This could differ slightly from the SO quantities for the host halo defined using all the mass (no matter bound or not) enclosed in a sphere. At low redshift, the 200Mean mass can be underestimated by 10%. However, the 200Crit and the tophat virial masses are generally unbiased since almost all the masses inside these two radii are found in the bound structure of the FoF halo.
+
 The other properties should be self-explainatory.
 
 If you have difficulty reading the structure array of subhaloes or the variable length particle list, you can use `toolbox/convertSubSnap.py` to convert it to basic hdf5 files contains only vanilla arrays.
