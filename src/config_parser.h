@@ -81,7 +81,7 @@ public:
 	GroupFileVariant=GROUP_FORMAT_GADGET3_INT;
 	GroupParticleIdMask=0;
 	MassInMsunh=1e10;
-	LengthInMpch=1e3;
+	LengthInMpch=1;
 	VelInKmS=1.;
 	PeriodicBoundaryOn=true;
 	SnapshotHasIdBlock=true;
