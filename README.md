@@ -1,4 +1,4 @@
-new implementation of HBT in C++ . This is the hybrid MPI/OpenMP parallelized version. Check the [master](https://github.com/Kambrian/HBT2/tree/master) branch for a pure OpenMP version.
+new implementation of HBT in C++ . This is the hybrid MPI/OpenMP parallelized version. Check the [Hydro](https://github.com/Kambrian/HBT2/tree/Hydro) branch for a pure OpenMP version (that can also handle hydro simulations).
 
 ## Prerequisites
 
