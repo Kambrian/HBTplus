@@ -166,6 +166,7 @@ public:
   ParticleType_t GetParticleType(ParticleIndex_t index) const;
   double AveragePosition(HBTxyz & CoM, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const; 
   double AverageVelocity(HBTxyz & CoV, const ParticleIndex_t Particles[], const ParticleIndex_t NumPart) const;
+  const Particle_t & GetParticle(HBTInt index) const;
   
   void Load(int snapshot_index, bool fill_particle_hash=true);
 };
@@ -239,5 +240,9 @@ inline ParticleType_t ParticleSnapshot_t::GetParticleType(HBTInt index) const
 #else
   return Particles[index].Type;
 #endif  
+}
+inline const Particle_t& ParticleSnapshot_t::GetParticle(HBTInt index) const
+{
+  return Particles[index];
 }
 #endif
