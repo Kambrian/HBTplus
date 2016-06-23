@@ -29,6 +29,10 @@ public:
   HaloSnapshot_t(): Snapshot_t(), Halos(), ParticleSnapshot(nullptr), TotNumberOfParticles(0), NumPartOfLargestHalo(0)
   {
   }
+  HaloSnapshot_t(int snapshot_index): HaloSnapshot_t()
+  {
+	Load(snapshot_index);
+  }
   void Load(int snapshot_index);
   void Clear();
   void ParticleIdToIndex(const ParticleSnapshot_t & snapshot);

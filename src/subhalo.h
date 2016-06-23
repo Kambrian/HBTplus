@@ -175,6 +175,10 @@ public:
   {
 	BuildHDFDataType();
   }
+  SubhaloSnapshot_t(int snapshot_index, bool load_src=false): SubhaloSnapshot_t()
+  {
+	Load(snapshot_index, load_src);
+  }
   void GetSubFileName(string &filename);
   void GetSrcFileName(string &filename);
   void Load(int snapshot_index, bool load_src=false);

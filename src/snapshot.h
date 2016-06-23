@@ -146,6 +146,10 @@ public:
 	else
 	  ParticleHash=&FlatHash;
   }
+  ParticleSnapshot_t(int snapshot_index, bool fill_particle_hash=true): ParticleSnapshot_t()
+  {
+	Load(snapshot_index, fill_particle_hash);
+  }
   ~ParticleSnapshot_t()
   {
 	Clear();
