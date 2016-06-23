@@ -123,11 +123,20 @@ class HBTReader:
 		  offset+=nsub
 		else:
 		  subhalos.append(subfile['Subhalos'][selection])
-		  
-	subhalos=np.hstack(subhalos)
+	if len(subhalos):	  
+	  subhalos=np.hstack(subhalos)
+	else:
+	  subhalos=np.array(subhalos)
 	#subhalos.sort(order=['HostHaloId','Nbound'])
 	return subhalos
 
+  def GetNumberOfSubhalos(self, isnap=-1):
+  	with h5py.File(self.GetFileName(isnap, 0),'r') as f:
+  		if self.nfiles:
+  			return f['TotalNumberOfSubhalosInAllFiles'][...]
+  		else:
+  			return f['Subhalos'].shape[0]
+  			
   def LoadParticles(self, isnap=-1, subindex=None, filetype='Sub'):	  
 	''' load subhalo particle list at snapshot isnap. 
 	
