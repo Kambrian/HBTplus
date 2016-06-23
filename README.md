@@ -44,6 +44,9 @@ If `snapshotend` is omitted, only process `snapshotstart`. If `snapshotstart` is
 
 To submit to a batch queue, check `HBTjob.bsub`
 
+### EAGLE runs
+To process EAGLE outputs, you will have to create a snapshotlist.txt file (due to the complex snapshot names) and place it under the subhalo path. There is a script toolbox/CreateSnapshotlist.py for creating the list.
+
 ## Output
 The outputs are in HDF5 format, which can be viewed with [HDFView](https://www.hdfgroup.org/products/java/hdfview/index.html) or any other HDF tools. In python, you can use [h5py](https://pypi.python.org/pypi/h5py) to read them directly. A python reader module is also provided in `toolbox/HBTReader.py`. There are two types of files in the output:
   
