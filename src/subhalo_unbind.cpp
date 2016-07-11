@@ -2,7 +2,6 @@
 #include <iostream>
 #include <new>
 #include <algorithm>
-#include <boost/concept_check.hpp>
 #include <omp.h>
 
 #include "datatypes.h"
