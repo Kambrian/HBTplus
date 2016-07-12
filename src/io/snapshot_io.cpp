@@ -9,7 +9,6 @@ using namespace std;
 #include <numeric> 
 #include <cstdlib>
 #include <cstdio>
-#include <boost/concept_check.hpp>
 
 #include "../mpi_wrapper.h"
 #include "../snapshot.h"

@@ -8,7 +8,6 @@ using namespace std;
 #include <cstdlib>
 #include <cstdio>
 #include <chrono>
-// #include <boost/concept_check.hpp>
 
 #include "snapshot.h"
 #include "mymath.h"
