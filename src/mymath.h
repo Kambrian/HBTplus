@@ -17,6 +17,15 @@
 
 #include "datatypes.h"
 
+extern int GetGrid(HBTReal x, HBTReal step, int dim);
+extern int AssignCell(const HBTxyz & Pos, const HBTxyz &step, const vector <int> &dims);
+
+template <class T>
+void VectorFree(vector <T> &x)
+{
+  vector <T>().swap(x);
+}
+
 template <class T>
 size_t CompileOffsets(const vector <T> &Counts, vector <T> &Offsets)
 {

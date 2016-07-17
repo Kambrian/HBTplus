@@ -16,11 +16,11 @@
 // #include <cstdio>
 // #include <cstdlib>
 
-static void create_MPI_Halo_Id_type(MPI_Datatype &MPI_HBTHalo_Id_t)
+void create_MPI_Halo_Id_type(MPI_Datatype &MPI_HBTHalo_Id_t)
 {
 /*to create the struct containing only haloid*/	
 Halo_t p;
-#define NumAttr 3
+#define NumAttr 4
 MPI_Datatype oldtypes[NumAttr];
 int blockcounts[NumAttr];
 MPI_Aint   offsets[NumAttr], origin,extent;
@@ -34,6 +34,7 @@ int i=0;
 RegisterAttr(HaloId, MPI_HBT_INT, 1)
 RegisterAttr(ComovingAveragePosition[0], MPI_HBT_REAL, 3)
 RegisterAttr(PhysicalAverageVelocity[0], MPI_HBT_REAL, 3)
+RegisterAttr(Mass, MPI_HBT_REAL, 1)
 // assert(offsets[i-1]-offsets[i-2]==sizeof(HBTReal)*3);//to make sure HBTxyz is stored locally.
 #undef RegisterAttr
 assert(i==NumAttr);
@@ -47,7 +48,7 @@ MPI_Type_commit(&MPI_HBTHalo_Id_t);
 void Halo_t::AverageCoordinates()
 {
   AveragePosition(ComovingAveragePosition, Particles.data(), Particles.size());
-  AverageVelocity(PhysicalAverageVelocity, Particles.data(), Particles.size());
+  Mass=AverageVelocity(PhysicalAverageVelocity, Particles.data(), Particles.size());
 }
 
 void HaloSnapshot_t::BuildMPIDataType()
@@ -57,9 +58,12 @@ void HaloSnapshot_t::BuildMPIDataType()
 void HaloSnapshot_t::UpdateParticles(MpiWorker_t &world, const ParticleSnapshot_t &snap)
 {
   SetEpoch(snap);
+  if(!HBTConfig.GroupLoadedFullParticle)
+  {
   HaloList_t LocalHalos;
   snap.ExchangeHalos(world, Halos, LocalHalos, MPI_HBT_HaloId_t);
   Halos.swap(LocalHalos);
+  }
   
   TotNumberOfParticles=0;
   NumPartOfLargestHalo=0;

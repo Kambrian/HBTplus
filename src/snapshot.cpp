@@ -13,42 +13,6 @@ using namespace std;
 #include "mymath.h"
 #include <mpi.h>
 
-void SnapshotHeader_t::create_MPI_type(MPI_Datatype& dtype)
-{
-  /*to create the struct data type for communication*/	
-  SnapshotHeader_t &p=*this;
-  #define NumAttr 13
-  MPI_Datatype oldtypes[NumAttr];
-  int blockcounts[NumAttr];
-  MPI_Aint   offsets[NumAttr], origin,extent;
-  
-  MPI_Get_address(&p,&origin);
-  MPI_Get_address((&p)+1,&extent);//to get the extent of s
-  extent-=origin;
-  
-  int i=0;
-  #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
-  RegisterAttr(npart, MPI_INT, NUMBER_OF_PARTICLE_TYPES)
-  RegisterAttr(mass, MPI_DOUBLE, NUMBER_OF_PARTICLE_TYPES)
-  RegisterAttr(ScaleFactor, MPI_DOUBLE, 1)
-  RegisterAttr(redshift, MPI_DOUBLE, 1)
-  RegisterAttr(flag_sfr, MPI_INT, 1)
-  RegisterAttr(flag_feedback, MPI_INT, 1)
-  RegisterAttr(npartTotal, MPI_UNSIGNED, 1)
-  RegisterAttr(flag_cooling, MPI_INT, 1)
-  RegisterAttr(num_files, MPI_INT, 1)
-  RegisterAttr(BoxSize, MPI_DOUBLE, 1)
-  RegisterAttr(OmegaM0, MPI_DOUBLE, 1)
-  RegisterAttr(OmegaLambda0, MPI_DOUBLE, 1)
-  RegisterAttr(HubbleParam, MPI_DOUBLE, 1)
-  #undef RegisterAttr
-  assert(i==NumAttr);
-  
-  MPI_Type_create_struct(NumAttr,blockcounts,offsets,oldtypes, &dtype);
-  MPI_Type_create_resized(dtype,(MPI_Aint)0, extent, &dtype);
-  MPI_Type_commit(&dtype);
-  #undef NumAttr
-}
 ostream& operator << (ostream& o, Particle_t &p)
 {
    o << "[" << p.Id << ", " <<p.Mass<<", " << p.ComovingPosition << ", " << p.PhysicalVelocity << "]";
@@ -170,54 +134,41 @@ void ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const HBTInt Particles[], 
 	  CoV[j]=sv[j]/msum;
 }
 
-void Particle_t::create_MPI_type(MPI_Datatype &MPI_HBTParticle_t)
+void Particle_t::create_MPI_type(MPI_Datatype &dtype)
 {
 /*to create the struct data type for communication*/	
 Particle_t &p=*this;
-#define NumAttr 4
-MPI_Datatype oldtypes[NumAttr];
-MPI_Aint   offsets[NumAttr], origin,extent;
-int blockcounts[NumAttr];
+#define MaxNumAttr 10
+MPI_Datatype oldtypes[MaxNumAttr];
+MPI_Aint   offsets[MaxNumAttr], origin,extent;
+int blockcounts[MaxNumAttr];
 
 MPI_Get_address(&p,&origin);
-MPI_Get_address(&p.Id,offsets);
-MPI_Get_address(p.ComovingPosition.data(),offsets+1);//caution: this might be implementation dependent??
-MPI_Get_address(p.PhysicalVelocity.data(),offsets+2);
-MPI_Get_address(&p.Mass,offsets+3);
 MPI_Get_address((&p)+1,&extent);//to get the extent of s
-
-for(int i=0;i<NumAttr;i++)
-  offsets[i]-=origin;
-
-oldtypes[0] = MPI_HBT_INT;
-blockcounts[0] = 1;
-
-oldtypes[1] = MPI_HBT_REAL;
-blockcounts[1] = 3;
-
-oldtypes[2] = MPI_HBT_REAL;
-blockcounts[2] = 3;
-
-oldtypes[3] = MPI_HBT_REAL;
-blockcounts[3] = 1;
-
 extent-=origin;
-
-assert(offsets[2]-offsets[1]==sizeof(HBTReal)*3);//to make sure HBTxyz is stored locally.
-/*
-for(int i=0;i<NumAttr;i++)
-  cout<<offsets[i]<<',';
-cout<<endl<<extent<<endl;
-*/
-MPI_Type_create_struct(NumAttr,blockcounts,offsets,oldtypes, &MPI_HBTParticle_t);//some padding is added automatically by MPI as well
-MPI_Type_create_resized(MPI_HBTParticle_t,(MPI_Aint)0, extent, &MPI_HBTParticle_t);
-MPI_Type_commit(&MPI_HBTParticle_t);
-//~ MPI_Type_get_extent(*pMPIshearprof,&origin,&extent);
-//~ printf("%d\n",extent);
-#undef NumAttr
+  
+  int i=0;
+  #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
+  RegisterAttr(Id, MPI_HBT_INT, 1)
+  RegisterAttr(ComovingPosition, MPI_HBT_REAL, 3)
+  RegisterAttr(PhysicalVelocity, MPI_HBT_REAL, 3)
+#ifndef DM_ONLY
+  RegisterAttr(Mass, MPI_HBT_REAL, 1)
+#ifdef UNBIND_WITH_THERMAL_ENERGY
+  RegisterAttr(InternalEnergy, MPI_HBT_REAL, 1)
+#endif
+  RegisterAttr(Type, MPI_INT, 1)
+#endif
+  #undef RegisterAttr
+  assert(i<=MaxNumAttr);
+  
+  MPI_Type_create_struct(i,blockcounts,offsets,oldtypes, &dtype);
+  MPI_Type_create_resized(dtype,(MPI_Aint)0, extent, &dtype);
+  MPI_Type_commit(&dtype);
+  #undef MaxNumAttr
 }
 
-void AveragePosition(HBTxyz& CoM, const Particle_t Particles[], HBTInt NumPart)
+double AveragePosition(HBTxyz& CoM, const Particle_t Particles[], HBTInt NumPart)
 /*mass weighted average position*/
 {
 	HBTInt i,j;
@@ -253,8 +204,9 @@ void AveragePosition(HBTxyz& CoM, const Particle_t Particles[], HBTInt NumPart)
 		if(HBTConfig.PeriodicBoundaryOn) sx[j]+=origin[j];
 		CoM[j]=sx[j];
 	}
+	return msum;
 }
-void AverageVelocity(HBTxyz& CoV, const Particle_t Particles[], HBTInt NumPart)
+double AverageVelocity(HBTxyz& CoV, const Particle_t Particles[], HBTInt NumPart)
 /*mass weighted average velocity*/
 {
 	HBTInt i,j;
@@ -280,6 +232,8 @@ void AverageVelocity(HBTxyz& CoV, const Particle_t Particles[], HBTInt NumPart)
 	
 	for(j=0;j<3;j++)
 	  CoV[j]=sv[j]/msum;
+	
+	return msum;
 }
 
 void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
@@ -358,4 +312,15 @@ void Snapshot_t::HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b20
 	virialF_tophat=18.0*3.1416*3.1416+82.0*x-39.0*x*x;//<Rho_vir>/Rho_cri
 	virialF_c200=200.;
 	virialF_b200=200.*OmegaZ;//virialF w.r.t contemporary critical density 
+}
+
+void ParticleSnapshot_t::Clear()
+/*reset to empty*/
+{
+  #define RESET(x, T) {vector <T>().swap(x);}
+  RESET(Particles, Particle_t);
+  #undef RESET 
+  ClearParticleHash();//even if you don't do this, the destructor will still clean up the memory.
+  //   cout<<NumberOfParticles<<" particles cleared from snapshot "<<SnapshotIndex<<endl;
+  NumberOfParticlesOnAllNodes=0;
 }

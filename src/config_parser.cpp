@@ -25,10 +25,11 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(SofteningHalo,6)
 #undef TrySetPar		
 #define TrySetPar(var) if(name==#var) ss>>var;
+  else TrySetPar(SnapshotFormat)
+  else TrySetPar(GroupFileFormat)
   else TrySetPar(MaxConcurrentIO)
   else TrySetPar(MinSnapshotIndex)
   else TrySetPar(MinNumPartOfSub)
-  else TrySetPar(GroupFileVariant)
 //   else TrySetPar(GroupParticleIdMask)
   else if(name=="GroupParticleIdMask")
   {
@@ -102,7 +103,39 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   TreeNodeResolution=SofteningHalo*0.1;
   TreeNodeResolutionHalf=TreeNodeResolution/2.;
   TreeNodeOpenAngleSquare=TreeNodeOpenAngle*TreeNodeOpenAngle;
+  
+  if(GroupFileFormat=="apostle_particle_index")
+	GroupLoadedFullParticle=true;
+  
+  ReadSnapshotNameList();
 }
+void Parameter_t::ReadSnapshotNameList()
+{//to specify snapshotnamelist, create a file "snapshotlist.txt" under SubhaloPath, and list the filenames inside, one per line.
+  string snaplist_filename=SubhaloPath+"/snapshotlist.txt";
+  ifstream ifs;
+  ifs.open(snaplist_filename);
+  if(ifs.is_open())
+  {
+	cout<<"Found SnapshotNameList file "<<snaplist_filename<<endl;
+	
+	string line;	
+	while(getline(ifs,line))
+	{
+	  trim_trailing_garbage(line, "#");
+	  istringstream ss(line);
+	  string name;
+	  ss>>name;
+	  if(!name.empty())
+	  {
+// 		cout<<name<<endl;
+		SnapshotNameList.push_back(name);
+	  }
+	}
+  }
+  if(SnapshotNameList.size())
+	assert(SnapshotNameList.size()==MaxSnapshotIndex+1);
+}
+
 void Parameter_t::CheckUnsetParameters()
 {
   for(int i=0;i<IsSet.size();i++)
@@ -166,10 +199,11 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   _SyncReal(SofteningHalo);
   _SyncVecBool(IsSet);
   
+  _SyncVec(SnapshotFormat, MPI_CHAR);
+  _SyncVec(GroupFileFormat, MPI_CHAR);
   _SyncAtom(MaxConcurrentIO, MPI_INT);
   _SyncAtom(MinSnapshotIndex, MPI_INT);
   _SyncAtom(MinNumPartOfSub, MPI_INT);
-  _SyncAtom(GroupFileVariant, MPI_INT);
   _SyncAtom(GroupParticleIdMask, MPI_LONG);
   _SyncReal(MassInMsunh);
   _SyncReal(LengthInMpch);
@@ -179,8 +213,9 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   _SyncBool(ParticleIdRankStyle);
   _SyncBool(ParticleIdNeedHash);
   _SyncBool(SnapshotIdUnsigned);
-//   _SyncBool(SaveSubParticleProperties);
+  _SyncBool(SaveSubParticleProperties);
   _SyncVec(SnapshotIdList, MPI_INT);
+  world.SyncVectorString(SnapshotNameList, root);
   
   _SyncReal(MajorProgenitorMassRatio);
   #ifdef ALLOW_BINARY_SYSTEM
@@ -195,13 +230,15 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   _SyncReal(TreeNodeOpenAngle);
   _SyncAtom(TreeMinNumOfCells, MPI_HBT_INT);
   
+  _SyncAtom(MaxSampleSizeOfPotentialEstimate, MPI_HBT_INT);
+  _SyncBool(RefineMostboundParticle);
+  
   _SyncReal(TreeNodeOpenAngleSquare);
   _SyncReal(TreeNodeResolution);
   _SyncReal(TreeNodeResolutionHalf);
   _SyncReal(BoxHalf);
   
-  _SyncAtom(MaxSampleSizeOfPotentialEstimate, MPI_HBT_INT);
-  _SyncBool(RefineMostboundParticle);
+  _SyncBool(GroupLoadedFullParticle);
   //---------------end sync params-------------------------//	
   
   _SyncReal(PhysicalConst::G);
@@ -227,6 +264,7 @@ void Parameter_t::DumpParameters()
 	exit(1);
   }
 #define DumpPar(var) version_file<<#var<<"  "<<var<<endl;
+#define DumpComment(var) {version_file<<"#";DumpPar(var);}
   DumpPar(SnapshotPath)
   DumpPar(HaloPath)
   DumpPar(SubhaloPath)
@@ -236,10 +274,11 @@ void Parameter_t::DumpParameters()
   DumpPar(SofteningHalo)
   
   /*optional*/
+  DumpPar(SnapshotFormat)
+  DumpPar(GroupFileFormat)
   DumpPar(MaxConcurrentIO)
   DumpPar(MinSnapshotIndex)
   DumpPar(MinNumPartOfSub)
-  DumpPar(GroupFileVariant)
   if(GroupParticleIdMask)
 	version_file<<"GroupParticleIdMask "<<hex<<GroupParticleIdMask<<dec<<endl;
   DumpPar(MassInMsunh)
@@ -250,11 +289,18 @@ void Parameter_t::DumpParameters()
   DumpPar(ParticleIdRankStyle)
   DumpPar(ParticleIdNeedHash)
   DumpPar(SnapshotIdUnsigned)
-//   DumpPar(SaveSubParticleProperties)
+  DumpPar(SaveSubParticleProperties)
   if(SnapshotIdList.size())
   {
   version_file<<"SnapshotIdList";
   for(auto && i: SnapshotIdList)
+	version_file<<" "<<i;
+  version_file<<endl;
+  }
+  if(SnapshotNameList.size())
+  {
+  version_file<<"#SnapshotNameList";
+  for(auto && i: SnapshotNameList)
 	version_file<<" "<<i;
   version_file<<endl;
   }
@@ -274,6 +320,9 @@ void Parameter_t::DumpParameters()
   
   DumpPar(MaxSampleSizeOfPotentialEstimate)
   DumpPar(RefineMostboundParticle)
-#undef DumpPar  
+  
+  DumpComment(GroupLoadedFullParticle)
+#undef DumpPar
+#undef DumpComment  
   version_file.close();
 }

@@ -34,7 +34,7 @@ typedef float HBTReal;
 #define MPI_HBT_REAL MPI_FLOAT
 #endif
 
-// the user should ganrantee that HBTInt can at least hold NP_DM (when HBTPID_RANKSTYLE is defined)
+// the user should ganrantee that HBTInt can at least hold NP_DM 
 #ifdef HBT_INT8
 typedef long HBTInt;  
 #define HBTIFMT "%ld"
@@ -44,26 +44,6 @@ typedef int HBTInt;
 #define HBTIFMT "%d"
 #define MPI_HBT_INT MPI_INT
 #endif
-
-#if (defined INPUT_REAL8 && defined HBT_REAL8)||(!defined INPUT_REAL8 && !defined HBT_REAL8)
- #define SAME_REALTYPE
-#endif
-
-#if (defined INPUT_INT8 && defined HBT_INT8)||(!defined INPUT_INT8 && !defined HBT_INT8)
- #define SAME_INTTYPE
-#endif
-
-//constants
-#define FRSH_GRPCAT -1
-#define FRSH_SUBCAT -2
-#define FRSH_SRCCAT -3
-//#define FRSH_MBDCAT -4
-
-#define GROUP_FORMAT_GADGET4 40
-#define GROUP_FORMAT_GADGET3_INT 30
-#define GROUP_FORMAT_GADGET3_LONG 31
-#define GROUP_FORMAT_GADGET2_INT 20
-#define GROUP_FORMAT_GADGET2_LONG 21
 
 // typedef HBTReal HBTxyz[3];  //3-d pos/vel data
 /*inline void copyHBTxyz(HBTxyz & dest, const HBTxyz & src)
@@ -169,6 +149,17 @@ public:
   {
 	return Data[N-1];
   }
+};
+
+enum ParticleType_t:int
+{
+  TypeGas=0,
+  TypeDM,
+  TypeDisk,
+  TypeBulge	,
+  TypeStar,
+  TypeBndry,
+  TypeMax
 };
 #define DATATYPES_INCLUDED
 #endif

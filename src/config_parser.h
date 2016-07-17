@@ -34,10 +34,11 @@ public:
   vector <bool> IsSet;
   
   /*optional*/
+  string SnapshotFormat;
+  string GroupFileFormat;
   int MaxConcurrentIO;
   int MinSnapshotIndex;
   int MinNumPartOfSub;
-  int GroupFileVariant;
   long GroupParticleIdMask;
   HBTReal MassInMsunh;
   HBTReal LengthInMpch;
@@ -48,8 +49,10 @@ public:
   bool ParticleIdRankStyle;//load particleId as id ranks
   bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
+  bool SaveSubParticleProperties;
 //   bool SaveSubParticleProperties;
   vector <int> SnapshotIdList;
+  vector <string> SnapshotNameList;
   
   HBTReal MajorProgenitorMassRatio; 
 #ifdef ALLOW_BINARY_SYSTEM
@@ -72,24 +75,25 @@ public:
   HBTReal TreeNodeResolution;
   HBTReal TreeNodeResolutionHalf;
   HBTReal BoxHalf; 
+  bool GroupLoadedFullParticle;//whether group particles are loaded with full particle properties or just ids.
   
-  Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries, false),SnapshotIdList()
+  Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries, false),SnapshotIdList(), SnapshotNameList()
   {
+	SnapshotFormat="gadget"; //see example config file for alternative formats
+	GroupFileFormat="gadget3_int";
 	MaxConcurrentIO=10;
 	MinSnapshotIndex=0;
 	MinNumPartOfSub=20;
-	GroupFileVariant=GROUP_FORMAT_GADGET3_INT;
 	GroupParticleIdMask=0;
 	MassInMsunh=1e10;
 	LengthInMpch=1;
 	VelInKmS=1.;
 	PeriodicBoundaryOn=true;
 	SnapshotHasIdBlock=true;
-// 	SnapshotNoMassBlock=false;//to be removed
 	ParticleIdRankStyle=false;//to be removed
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
-// 	SaveSubParticleProperties=true;
+	SaveSubParticleProperties=true;
 	MajorProgenitorMassRatio=0.8;
 #ifdef ALLOW_BINARY_SYSTEM
 	BinaryMassRatioLimit=1.; //default: no binary system will be marked.
@@ -103,7 +107,9 @@ public:
 	TreeMinNumOfCells=500;
 	MaxSampleSizeOfPotentialEstimate=1000;//set to 0 to disable sampling
 	RefineMostboundParticle=true;
+	GroupLoadedFullParticle=false;
   }
+  void ReadSnapshotNameList();
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
   void CheckUnsetParameters();

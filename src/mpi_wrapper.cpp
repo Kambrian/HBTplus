@@ -17,3 +17,27 @@ void MpiWorker_t::SyncVectorBool(vector< bool >& x, int root)
   if(rank()!=root)
 	x.assign(y.begin(),y.end());
 }
+
+void MpiWorker_t::SyncVectorString(vector< string >& x, int root)
+{
+  string buffer;
+  
+  if(rank()==root)
+  {
+    ostringstream file;
+    for(auto &s: x)
+      file<<s<<'\n';
+    buffer=file.str();
+  }
+  
+  SyncContainer(buffer, MPI_CHAR, root);
+  
+  if(rank()!=root)
+  {
+    x.clear();
+    istringstream file(buffer);
+    string s;
+    while(getline(file, s))
+      x.push_back(s);
+  }
+}

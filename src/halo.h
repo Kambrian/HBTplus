@@ -18,6 +18,7 @@ public:
   HBTInt HaloId;
   HBTxyz ComovingAveragePosition;
   HBTxyz PhysicalAverageVelocity;
+  HBTReal Mass;
   void AverageCoordinates();
   /* deprecated; use move assignment instead; 
    * shall not define destructor in order for default move to be implemented by the compiler.
@@ -31,6 +32,7 @@ public:
   }
   */
 };
+extern void create_MPI_Halo_Id_type(MPI_Datatype &MPI_HBTHalo_Id_t);
 
 class HaloSnapshot_t: public Snapshot_t
 {  
@@ -76,7 +78,7 @@ public:
   }
   HBTReal GetMass(HBTInt index) const
   {
-	return Halos[index].Particles.size();
+	return Halos[index].Mass;
   }
 };
 

@@ -53,6 +53,7 @@ public:
   void SyncAtom(T &x, MPI_Datatype dtype, int root_worker);
   void SyncAtomBool(bool &x, int root);
   void SyncVectorBool(vector <bool>&x, int root);
+  void SyncVectorString(vector <string>&x, int root);
 };
 
 template <class T>

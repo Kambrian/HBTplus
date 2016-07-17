@@ -4,6 +4,21 @@
 
 #include "mymath.h"
 
+int GetGrid(HBTReal x, HBTReal step, int dim)
+{
+  int i=floor(x/step);
+  if(i<0) i=0;
+  if(i>=dim) i=dim-1;
+  return i;
+}
+int AssignCell(const HBTxyz & Pos, const HBTxyz &step, const vector <int> &dims)
+{
+  #define GRIDtoRank(g0,g1,g2) (((g0)*dims[1]+(g1))*dims[2]+(g2))
+  #define GID(i) GetGrid(Pos[i], step[i], dims[i])
+  return GRIDtoRank(GID(0), GID(1), GID(2));
+#undef GID
+#undef GRIDtoRank
+}
 
 int count_pattern_files(char *filename_pattern)
 {
