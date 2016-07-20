@@ -1,4 +1,4 @@
-new implementation of HBT in C++ . This is the hybrid MPI/OpenMP parallelized version. Check the [Hydro](https://github.com/Kambrian/HBT2/tree/Hydro) branch for a pure OpenMP version (that can also handle hydro simulations).
+new implementation of HBT in C++ . This is the hybrid MPI/OpenMP parallelized version. Check the [Hydro](https://github.com/Kambrian/HBT2/tree/Hydro) branch for a pure OpenMP version.
 
 ## Prerequisites
 
@@ -22,8 +22,7 @@ To produce single-precision `HBT` (internal datatypes are 4byte int and 4byte fl
 ### Special Compiler Flags
 Below are a few macros to further customize the behaviour of HBT. These flags can be switched on or off in `Makefile.inc` and `Makefile`. Check the `CXXFLAGS` lines for these macros.
   
-- `-DENABLE_EXPERIMENTAL_PROPERTIES`: output the peebles and bullock spin parameters. These parameters are vaguely defined due to the ambiguity/lack of standard in the mass, radius, and energy of a subhalo. Use them with caution. If possible, use the `SpecificAngularMomentum` instead of the spin parameters.
-
+- `-DDM_ONLY': compile the code for dark matter only simulations. this produces a more memory-efficient executable compared to the default hydro-capable version.
  
 ## Run
 
