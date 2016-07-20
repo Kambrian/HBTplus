@@ -89,7 +89,7 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   
   while(getline(ifs,line))
   {
-	trim_trailing_garbage(line, "#");
+	trim_trailing_garbage(line, "#[");
 	trim_leading_garbage(line, " \t");
 	if(!line.empty()) SetParameterValue(line);
   }
