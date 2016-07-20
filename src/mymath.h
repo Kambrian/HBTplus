@@ -29,8 +29,8 @@ void VectorFree(vector <T> &x)
   vector <T>().swap(x);
 }
 
-template <class T>
-size_t CompileOffsets(const vector <T> &Counts, vector <T> &Offsets)
+template <class T, class T2>
+size_t CompileOffsets(const vector <T> &Counts, vector <T2> &Offsets)
 {
   size_t offset=0;
   Offsets.resize(Counts.size());
