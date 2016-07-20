@@ -37,6 +37,11 @@ int NumAttr=0;
 #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+NumAttr); offsets[NumAttr]-=origin; oldtypes[NumAttr]=type; blockcounts[NumAttr]=count; NumAttr++;}
 RegisterAttr(TrackId, MPI_HBT_INT, 1)
 RegisterAttr(Nbound, MPI_HBT_INT, 1)
+RegisterAttr(Mbound, MPI_FLOAT, 1)
+#ifndef DM_ONLY
+RegisterAttr(NboundType, MPI_HBT_INT, TypeMax)
+RegisterAttr(MboundType, MPI_HBT_INT, TypeMax)
+#endif
 RegisterAttr(HostHaloId, MPI_HBT_INT, 1)
 RegisterAttr(Rank, MPI_HBT_INT, 1)
 RegisterAttr(LastMaxMass, MPI_HBT_INT, 1)
@@ -59,10 +64,8 @@ RegisterAttr(MVir, MPI_FLOAT, 1)
 RegisterAttr(SpecificSelfPotentialEnergy, MPI_FLOAT, 1)
 RegisterAttr(SpecificSelfKineticEnergy, MPI_FLOAT, 1)
 RegisterAttr(SpecificAngularMomentum[0], MPI_FLOAT, 3)
-#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
 RegisterAttr(SpinPeebles[0], MPI_FLOAT, 3)
 RegisterAttr(SpinBullock[0], MPI_FLOAT, 3)
-#endif
 #ifdef HAS_GSL
 RegisterAttr(InertialEigenVector[0], MPI_FLOAT, 9)
 RegisterAttr(InertialEigenVectorWeighted[0], MPI_FLOAT, 9)
@@ -84,10 +87,12 @@ MPI_Type_commit(&MPI_HBT_SubhaloShell_t);
 }
 void SubhaloSnapshot_t::UpdateParticles(MpiWorker_t& world, const ParticleSnapshot_t& snapshot)
 {
-  SetEpoch(snapshot);
+  Cosmology=snapshot.Cosmology;
   SubhaloList_t LocalSubhalos;
   snapshot.ExchangeHalos(world, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t);
   Subhalos.swap(LocalSubhalos);
+  for(auto &&h: Subhalos)
+    h.CountParticles();
 }
 /*
 void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
@@ -125,11 +130,19 @@ void Subhalo_t::AverageCoordinates()
   AveragePosition(ComovingAveragePosition, Particles.data(), Nbound);
   AverageVelocity(PhysicalAverageVelocity, Particles.data(), Nbound);
 }
-  
+
+inline bool CompProfRadius(const RadVelMass_t &a, const RadVelMass_t &b)
+{
+  return a.r<b.r;
+}
+inline bool CompProfVel(const RadVelMass_t &a, const RadVelMass_t &b)
+{
+  return a.v<b.v;
+}
+
 void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
 {
   /* to calculate the following density-profile related properties
-   *  currently only support const particle masses. TODO: extend to variable particle mass.
    * 
   HBTReal RmaxComoving;
   HBTReal VmaxPhysical;
@@ -158,46 +171,50 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
 	M200Crit=0.;
 	M200Mean=0.;
 	MVir=0.;
-	#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
 	for(int i=0;i<3;i++)
 	{
 	  SpinPeebles[i]=0.;
 	  SpinBullock[i]=0.;
 	}
-	#endif
 	return;
   }
-  HBTReal PartMass=Particles[0].Mass;
-  HBTReal VelocityUnit=PhysicalConst::G*PartMass/epoch.ScaleFactor;
+  HBTReal VelocityUnit=PhysicalConst::G/epoch.Cosmology.ScaleFactor;
   
-  const HBTxyz &cen=Particles[0].ComovingPosition; //most-bound particle as center.
+  const HBTxyz &cen=ComovingMostBoundPosition; //most-bound particle as center.
   
-  vector <HBTReal> r(Nbound), v(Nbound);
+  vector <RadVelMass_t> prof(Nbound);
   #pragma omp parallel if(Nbound>100)
   {
   #pragma omp for
   for(HBTInt i=0;i<Nbound;i++)
-	r[i]=PeriodicDistance(cen, Particles[i].ComovingPosition);
+  {
+	prof[i].r=PeriodicDistance(cen, Particles[i].ComovingPosition);
+	prof[i].m=Particles[i].Mass;
+  }
   #pragma omp single
-  sort(r.begin(), r.end());
+  {
+	sort(prof.begin(), prof.end(), CompProfRadius);
+	double m_cum=0.;
+	for(auto && p: prof)  p.m=(m_cum+=p.m);
+  }
   #pragma omp for
   for(HBTInt i=0;i<Nbound;i++)
   {
-	  if(r[i]<HBTConfig.SofteningHalo) r[i]=HBTConfig.SofteningHalo; //resolution
-	  v[i]=(HBTReal)(i+1)/r[i];//v**2
+	  if(prof[i].r<HBTConfig.SofteningHalo) prof[i].r=HBTConfig.SofteningHalo; //resolution
+	  prof[i].v=prof[i].m/prof[i].r;//v**2
   }
   }
-  HBTInt imax=max_element(v.begin(), v.end())-v.begin();
-  RmaxComoving=r[imax];
-  VmaxPhysical=sqrt(v[imax]*VelocityUnit);
-  RHalfComoving=r[Nbound/2];
-  R2SigmaComoving=r[(HBTInt)(Nbound*0.955)];
+  auto maxprof=max_element(prof.begin(), prof.end(), CompProfVel);
+  RmaxComoving=maxprof->r;
+  VmaxPhysical=sqrt(maxprof->v*VelocityUnit);
+  RHalfComoving=prof[Nbound/2].r;
+  R2SigmaComoving=prof[(HBTInt)(Nbound*0.955)].r;
   
   HBTReal virialF_tophat, virialF_b200, virialF_c200;
   epoch.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
-  epoch.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, r, PartMass);
-  epoch.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, r, PartMass);
-  epoch.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, r, PartMass);
+  epoch.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
+  epoch.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, prof);
+  epoch.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
   
   if(VmaxPhysical>=LastMaxVmaxPhysical)
   {
@@ -205,15 +222,13 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
 	LastMaxVmaxPhysical=VmaxPhysical;
   }
 
-#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
   /*the spin parameters are kind of ambiguous. do not provide*/
   for(int i=0;i<3;i++)
   {
 	SpinPeebles[i]=SpecificAngularMomentum[i]*
-	  sqrt(fabs(SpecificSelfPotentialEnergy+SpecificSelfKineticEnergy))/PhysicalConst::G/Nbound/PartMass;
-	SpinBullock[i]=SpecificAngularMomentum[i]/sqrt(2.*PhysicalConst::G*PartMass*Nbound*R2SigmaComoving);
+	  sqrt(fabs(SpecificSelfPotentialEnergy+SpecificSelfKineticEnergy))/PhysicalConst::G/Mbound;
+	SpinBullock[i]=SpecificAngularMomentum[i]/sqrt(2.*PhysicalConst::G*Mbound*R2SigmaComoving);
   }
-#endif
 }
 
 void Subhalo_t::CalculateShape()
@@ -232,14 +247,14 @@ void Subhalo_t::CalculateShape()
 	for(auto && I: InertialTensorWeighted) I=0.;
 	return;
   }
-  const HBTxyz &cen=Particles[0].ComovingPosition; //most-bound particle as center.
+  const HBTxyz &cen=ComovingMostBoundPosition; //most-bound particle as center.
   
   double Ixx=0,Iyy=0, Izz=0, Ixy=0, Ixz=0, Iyz=0;
   double Ixxw=0,Iyyw=0, Izzw=0, Ixyw=0, Ixzw=0, Iyzw=0;
   #pragma omp parallel for reduction(+:Ixx,Iyy,Izz,Ixy,Ixz,Iyz,Ixxw,Iyyw,Izzw,Ixyw,Ixzw,Iyzw) if(Nbound>100)
   for(HBTInt i=1;i<Nbound;i++)
   {
-// 	  HBTReal PartMass=part_snap.GetMass(Particles[i]);//TODO: variable particle mass support.
+	  HBTReal m=Particles[i].Mass;
 	  const HBTxyz & pos=Particles[i].ComovingPosition;
 	  HBTReal dx=pos[0]-cen[0];
 	  HBTReal dy=pos[1]-cen[1];
@@ -253,14 +268,15 @@ void Subhalo_t::CalculateShape()
 	  HBTReal dx2=dx*dx;
 	  HBTReal dy2=dy*dy;
 	  HBTReal dz2=dz*dz;
-	  Ixx+=dx2;
-	  Iyy+=dy2;
-	  Izz+=dz2;
-	  Ixy+=dx*dy;
-	  Ixz+=dx*dz;
-	  Iyz+=dy*dz;
+	  Ixx+=dx2*m;
+	  Iyy+=dy2*m;
+	  Izz+=dz2*m;
+	  Ixy+=dx*dy*m;
+	  Ixz+=dx*dz*m;
+	  Iyz+=dy*dz*m;
 	  
 	  HBTReal dr2=dx2+dy2+dz2;
+	  dr2/=m; //for mass weighting
 	  Ixxw+=dx2/dr2;
 	  Iyyw+=dy2/dr2;
 	  Izzw+=dz2/dr2;
@@ -270,8 +286,109 @@ void Subhalo_t::CalculateShape()
   }
   InertialTensor[0]=Ixx; InertialTensor[1]=Ixy; InertialTensor[2]=Ixz; InertialTensor[3]=Iyy; InertialTensor[4]=Iyz; InertialTensor[5]=Izz;
   InertialTensorWeighted[0]=Ixxw; InertialTensorWeighted[1]=Ixyw; InertialTensorWeighted[2]=Ixzw; InertialTensorWeighted[3]=Iyyw; InertialTensorWeighted[4]=Iyzw; InertialTensorWeighted[5]=Izzw;
+  for(auto && I: InertialTensor) I/=Mbound;
+  for(auto && I: InertialTensorWeighted) I/=Mbound;
 #ifdef HAS_GSL  
   EigenAxis(Ixx, Ixy, Ixz, Iyy, Iyz, Izz, InertialEigenVector);
   EigenAxis(Ixxw, Ixyw, Ixzw, Iyyw, Iyzw, Izzw, InertialEigenVectorWeighted);
 #endif
 }
+
+void Subhalo_t::CountParticleTypes()
+{
+#ifndef DM_ONLY  
+  for(int itype=0;itype<TypeMax;itype++)
+  {
+	NboundType[itype]=0;
+	MboundType[itype]=0.;
+  }
+  if(Nbound>100)//parallelize
+  {
+	#pragma omp parallel
+	{
+	  vector <HBTInt> nboundtype(TypeMax, 0);
+	  vector <float> mboundtype(TypeMax, 0.);
+	  #pragma omp for
+	  for(HBTInt i=0;i<Nbound;i++)
+	  {
+		auto &p=Particles[i];
+// 		if(p.Id==SpecialConst::NullParticleId) continue;
+		int itype=p.Type;
+		nboundtype[itype]++;
+		mboundtype[itype]+=p.Mass;
+	  }
+	  #pragma omp critical
+	  for(int i=0;i<TypeMax;i++)
+	  {
+		NboundType[i]+=nboundtype[i];
+		MboundType[i]+=mboundtype[i];
+	  }
+	}
+  }
+  else
+  {
+	auto end=Particles.begin()+Nbound;
+	for(auto it=Particles.begin();it!=end;++it)
+	{
+	  auto &p=*it;
+	  if(p.Id==SpecialConst::NullParticleId) continue;
+	  int itype=p.Type;
+	  NboundType[itype]++;
+	  MboundType[itype]+=p.Mass;
+	}
+  }
+#endif  
+}
+
+HBTInt Subhalo_t::KickNullParticles()
+{
+#ifdef DM_ONLY
+  return 0;
+#else
+  HBTInt np_old=Particles.size();
+  auto it_begin=Particles.begin(), it_save=it_begin, it=it_begin, it_end=it_begin+Nbound;
+  for(;it!=it_end;++it)
+  {
+	if(it->Id!=SpecialConst::NullParticleId)//there will be consumed particles
+	{
+	  if(it!=it_save)  *it_save=move(*it);
+	  ++it_save;
+	}
+  }
+  Nbound=it_save-it_begin;
+ 
+  it_end=Particles.end();
+  for(;it!=it_end;++it)//unbound particles
+  {
+	if(it!=it_save)  *it_save=move(*it);
+	  ++it_save;
+  }
+  Particles.resize(it_save-it_begin);
+  
+  if(it!=it_save) cout<<it-it_save<<" outof "<<np_old<<" particles consumed for track "<<TrackId<<"\n";
+  return it-it_save;
+#endif
+}
+
+void Subhalo_t::CountParticles()
+/*update Nbound, Mbound, NboundType, MboundType */
+{
+#ifdef DM_ONLY
+  Mbound=0.;
+  for(auto &&p: Particles) Mbound+=p.Mass;
+#else
+  for(auto & n: NboundType) n=0;
+  for(auto & m: MboundType) m=0.;
+  auto it=Particles.begin(), it_end=Particles.begin()+Nbound;
+  for(;it!=it_end;++it)
+  {
+	  int itype=it->Type;
+	  NboundType[itype]++;
+	  MboundType[itype]+=it->Mass;
+  }
+  Mbound=accumulate(begin(MboundType), end(MboundType), (HBTReal)0.);
+#endif
+}
+
+
+

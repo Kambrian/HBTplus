@@ -1,4 +1,6 @@
 #include "mpi_wrapper.h"
+#include <sstream>
+// using namespace std;
 
 void MpiWorker_t::SyncAtomBool(bool& x, int root)
 {

@@ -55,7 +55,7 @@ GadgetReader_t::GadgetReader_t(MpiWorker_t &world, int snapshot_id, vector< Part
   NeedByteSwap=false;
   IntTypeSize=0;
   RealTypeSize=0;
-  Load(MpiWorker_t &world);
+  Load(world);
 }
 
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
@@ -219,7 +219,7 @@ void GadgetReader_t::Load(MpiWorker_t &world)
 
   Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);  
 #ifdef DM_ONLY
-  Cosmology.ParticleMass=Header.mass[TypeDM];
+//   Cosmology.ParticleMass=Header.mass[TypeDM];
 #endif
   
   int nfiles_skip, nfiles_end;
@@ -362,7 +362,6 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 		NewParticles[i].Id=id_now+i;
 	}
  
-#ifndef DM_ONLY
   #define MassDataPresent(i) ((0==header.mass[i])&&(header.npartTotal[i]))
   if(RealTypeSize==4)
 	ReadMassBlock(float)
@@ -370,6 +369,7 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 	ReadMassBlock(double)
 #undef MassDataPresent
 
+#ifndef DM_ONLY
 #ifdef UNBIND_WITH_THERMAL_ENERGY
   if(RealTypeSize==4)
 	ReadEnergyBlock(float)

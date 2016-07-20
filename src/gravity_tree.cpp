@@ -320,7 +320,7 @@ double OctTree_t::EvaluatePotential(const HBTxyz &targetPos, const HBTReal targe
 	}
     }
     
-  return pot*PhysicalConst::G/Snapshot->ScaleFactor;
+  return pot*PhysicalConst::G/Snapshot->Cosmology.ScaleFactor;
 }
 
 double OctTree_t::BindingEnergy(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, const HBTReal targetMass)
@@ -335,7 +335,7 @@ double OctTree_t::BindingEnergy(const HBTxyz& targetPos, const HBTxyz& targetVel
 		dx[j]=targetPos[j]-refPos[j];
 		if(HBTConfig.PeriodicBoundaryOn)  dx[j]=NEAREST(dx[j]);
 		dv[j]=targetVel[j]-refVel[j];
-		dv[j]+=Snapshot->Hz*Snapshot->ScaleFactor*dx[j];
+		dv[j]+=Snapshot->Cosmology.Hz*Snapshot->Cosmology.ScaleFactor*dx[j];
 		E+=dv[j]*dv[j];
 	  }
 	  E=E*0.5+pot;

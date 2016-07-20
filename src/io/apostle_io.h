@@ -55,12 +55,12 @@ public:
   {
     create_ApostleHeader_MPI_type(MPI_ApostleHeader_t);
   }
-  ~ApostleHeader_t()
+  ~ApostleReader_t()
   {
     MPI_Type_free(&MPI_ApostleHeader_t);
   }
   void LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology);
-  HBTInt LoadGroups(MpiWorker_t &world, int snapshotId, vector <Halo_t> &Halos);
+  void LoadGroups(MpiWorker_t &world, int snapshotId, vector <Halo_t> &Halos);
 };
 
 extern bool IsApostleGroup(const string &GroupFileFormat);

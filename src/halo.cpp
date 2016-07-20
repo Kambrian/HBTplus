@@ -57,7 +57,7 @@ void HaloSnapshot_t::BuildMPIDataType()
 }
 void HaloSnapshot_t::UpdateParticles(MpiWorker_t &world, const ParticleSnapshot_t &snap)
 {
-  SetEpoch(snap);
+  Cosmology=snap.Cosmology;
   if(!HBTConfig.GroupLoadedFullParticle)
   {
   HaloList_t LocalHalos;
@@ -119,35 +119,32 @@ void HaloSnapshot_t::ClearParticleHash()
 {
   ParticleHash.Clear();
 }
-/* deprecated.
-void HaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
+void HaloSnapshot_t::Clear()
+/* call this to reset the HaloSnapshot to empty.
+ This is usually not necessary because the destructor will release the memory automatically*/
 {
-  chrono::high_resolution_clock::time_point time_begin, time_end;
-#pragma omp master
-  {
-  ParticleSnapshot=&snapshot;
-  }
-#pragma omp for //maybe try collapse(2)? need to remove intermediate variables to enable this.
-  for(HBTInt haloid=0;haloid<Halos.size();haloid++)
-  {
-	Halo_t::ParticleList_t & Particles=Halos[haloid].Particles;
-	HBTInt np=Particles.size();
-	for(HBTInt pid=0;pid<np;pid++)
-	  Particles[pid]=snapshot.GetIndex(Particles[pid]);//this should be safe since its a const func
-  }
+//   Halos.clear(); //this does not actually clear
+  HaloList_t().swap(Halos);//this deeply cleans it
+  ParticleHash.Clear();
 }
 
-void HaloSnapshot_t::ParticleIndexToId()
+HBTInt Halo_t::KickNullParticles()
 {
-#pragma omp for
-  for(HBTInt haloid=0;haloid<Halos.size();haloid++)
+#ifdef DM_ONLY
+  return 0;
+#else
+  auto it_save=Particles.begin(), it=it_save;
+  for(;it!=Particles.end();++it)
   {
-	Halo_t::ParticleList_t &Particles=Halos[haloid].Particles;
-	HBTInt nP=Halos[haloid].Particles.size();
-	for(HBTInt pid=0;pid<nP;pid++)
-	  Particles[pid]=ParticleSnapshot->GetId(Particles[pid]);
+	if(it->Id!=SpecialConst::NullParticleId)//there will be consumed particles
+	{
+	  if(it!=it_save)
+	    *it_save=move(*it);
+	  ++it_save;
+	}
   }
-#pragma omp single
-  ParticleSnapshot=nullptr;
+  Particles.resize(it_save-Particles.begin());
+  
+  return it-it_save;
+#endif
 }
-*/

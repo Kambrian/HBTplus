@@ -13,17 +13,17 @@ void Subhalo_t::UpdateTrack(const Snapshot_t &epoch)
   if(TrackId==SpecialConst::NullTrackId) return;
   
   if(0==Rank) SnapshotIndexOfLastIsolation=epoch.GetSnapshotIndex();
-  if(Nbound>=LastMaxMass) 
+  if(Mbound>=LastMaxMass) 
   {
 	SnapshotIndexOfLastMaxMass=epoch.GetSnapshotIndex();
-	LastMaxMass=Nbound;
+	LastMaxMass=Mbound;
   }
 }
 HBTReal Subhalo_t::KineticDistance(const Halo_t &halo, const Snapshot_t &epoch)
 {
   HBTxyz dv;
   epoch.RelativeVelocity(ComovingAveragePosition, PhysicalAverageVelocity, halo.ComovingAveragePosition, halo.PhysicalAverageVelocity, dv);
-  return dv[0]*dv[0]+dv[1]*dv[1]+dv[2]*dv[2];
+  return VecNorm(dv);
 }
 void MemberShipTable_t::ResizeAllMembers(size_t n)
 {
@@ -93,7 +93,7 @@ struct CompareMass_t
   }
   bool operator () (const HBTInt & i, const HBTInt & j)
   {
-	return (*Subhalos)[i].Nbound>(*Subhalos)[j].Nbound;
+	return (*Subhalos)[i].Mbound>(*Subhalos)[j].Mbound;
   }
 };
 void MemberShipTable_t::SortMemberLists(const SubhaloList_t & Subhalos)
@@ -127,7 +127,7 @@ void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
 	HBTInt rankoffset=0;
 	if(SubGroup.size()>1)
 	{
-	  if(Subhalos[SubGroup[1]].Nbound>Subhalos[SubGroup[0]].Nbound*HBTConfig.BinaryMassRatioLimit)
+	  if(Subhalos[SubGroup[1]].Mbound>Subhalos[SubGroup[0]].Mbound*HBTConfig.BinaryMassRatioLimit)
 		rankoffset=1;//binary system, rank start from 1.
 	}
 #endif
@@ -420,16 +420,16 @@ void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 	if(List.size()>1)
 	{
 #ifdef ALLOW_BINARY_SYSTEM
-	  if(Subhalos[List[1]].Nbound>Subhalos[List[0]].Nbound*HBTConfig.BinaryMassRatioLimit)
+	  if(Subhalos[List[1]].Mbound>Subhalos[List[0]].Mbound*HBTConfig.BinaryMassRatioLimit)
 	  {
 		Subhalos[List[0]].Rank=1;//mark as a binary system. do not FeedCentral.
 		continue;
 	  }
 #endif	  
 	  int n_major;
-	  HBTInt MassLimit=Subhalos[List[0]].Nbound*HBTConfig.MajorProgenitorMassRatio;
+	  HBTInt MassLimit=Subhalos[List[0]].Mbound*HBTConfig.MajorProgenitorMassRatio;
 	  for(n_major=1;n_major<List.size();n_major++)
-		if(Subhalos[List[n_major]].Nbound<MassLimit) break;
+		if(Subhalos[List[n_major]].Mbound<MassLimit) break;
 	  if(n_major>1)
 	  {
 		HBTReal dmin=Subhalos[List[0]].KineticDistance(halo_snap.Halos[hostid], *this);

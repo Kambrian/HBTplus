@@ -18,6 +18,18 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   #define InsertMember(x,t) H5Tinsert(H5T_SubhaloInMem, #x, HOFFSET(Subhalo_t, x), t)//;cout<<#x<<": "<<HOFFSET(Subhalo_t, x)<<endl
   InsertMember(TrackId, H5T_HBTInt);
   InsertMember(Nbound, H5T_HBTInt);
+  InsertMember(Mbound, H5T_NATIVE_FLOAT);
+  
+  dims[0]=TypeMax;
+  hid_t H5T_HBTIntArray_TypeMax=H5Tarray_create2(H5T_HBTInt, 1, dims);
+  hid_t H5T_FloatArray_TypeMax=H5Tarray_create2(H5T_NATIVE_FLOAT, 1, dims);
+#ifndef DM_ONLY
+  InsertMember(NboundType, H5T_HBTIntArray_TypeMax);
+  InsertMember(MboundType, H5T_FloatArray_TypeMax);
+#endif
+  H5Tclose(H5T_HBTIntArray_TypeMax);
+  H5Tclose(H5T_FloatArray_TypeMax);
+  
   InsertMember(HostHaloId, H5T_HBTInt);
   InsertMember(Rank, H5T_HBTInt);
   InsertMember(LastMaxMass, H5T_HBTInt);  
@@ -40,10 +52,8 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(SpecificSelfPotentialEnergy, H5T_NATIVE_FLOAT);
   InsertMember(SpecificSelfKineticEnergy, H5T_NATIVE_FLOAT);
   InsertMember(SpecificAngularMomentum, H5T_FloatVec3);
-#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
   InsertMember(SpinPeebles, H5T_FloatVec3);
   InsertMember(SpinBullock, H5T_FloatVec3);
-#endif
 #ifdef HAS_GSL
   dims[0]=3;
   dims[1]=3;
@@ -92,31 +102,6 @@ void SubhaloSnapshot_t::GetSrcFileName(string &filename, int iFile)
   stringstream formater;
   formater<<HBTConfig.SubhaloPath<<"/SrcSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
   filename=formater.str();
-}
-inline int GetDatasetDims(hid_t dset, hsize_t dims[])
-{
-  hid_t dspace=H5Dget_space(dset);
-  int ndim=H5Sget_simple_extent_dims(dspace, dims, NULL);
-  H5Sclose(dspace);
-  return ndim;
-}
-inline herr_t ReclaimVlenData(hid_t dset, hid_t dtype, void * buf)
-{
-  herr_t status;
-  hid_t dspace=H5Dget_space(dset);
-  status=H5Dvlen_reclaim(dtype, dspace, H5P_DEFAULT, buf);
-  status=H5Sclose(dspace);
-  return status;
-}
-inline herr_t ReadDataset(hid_t file, const char *name, hid_t dtype, void *buf)
-/* read named dataset from file into buf.
- * dtype specifies the datatype of buf; it does not need to be the same as the storage type in file*/
-{
-  herr_t status;
-  hid_t dset=H5Dopen2(file, name, H5P_DEFAULT);
-  status=H5Dread(dset, dtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
-  status=H5Dclose(dset);
-  return status;
 }
 void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_src)
 {
@@ -183,10 +168,10 @@ void SubhaloSnapshot_t::ReadFile(int iFile, bool load_src)
   ReadDataset(file, "SnapshotId", H5T_HBTInt, &snapshot_id);
   assert(snapshot_id==SnapshotId);
   
-  ReadDataset(file, "OmegaM0", H5T_HBTReal, &OmegaM0);
-  ReadDataset(file, "OmegaLambda0", H5T_HBTReal, &OmegaLambda0);
-  ReadDataset(file, "HubbleParam", H5T_HBTReal, &Hz);
-  ReadDataset(file, "ScaleFactor", H5T_HBTReal, &ScaleFactor);
+  ReadDataset(file, "/Cosmology/OmegaM0", H5T_HBTReal, &Cosmology.OmegaM0);
+  ReadDataset(file, "/Cosmology/OmegaLambda0", H5T_HBTReal, &Cosmology.OmegaLambda0);
+  ReadDataset(file, "/Cosmology/HubbleParam", H5T_HBTReal, &Cosmology.Hz);
+  ReadDataset(file, "/Cosmology/ScaleFactor", H5T_HBTReal, &Cosmology.ScaleFactor);
   
 //   ReadDataset(file, "NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);
 //   ReadDataset(file, "NumberOfFakeHalos", H5T_HBTInt, &MemberTable.NFake);
@@ -244,22 +229,6 @@ void SubhaloSnapshot_t::ReadFile(int iFile, bool load_src)
   H5Tclose(H5T_HBTIntArr);
 }
 
-void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsize_t ndim, const hsize_t *dims, hid_t dtype, hid_t dtype_file)
-{
-  hid_t dataspace = H5Screate_simple (ndim, dims, NULL);
-  hid_t dataset= H5Dcreate2(file, name, dtype_file, dataspace, H5P_DEFAULT, H5P_DEFAULT,
-                H5P_DEFAULT);
-  if(!(NULL==buf||0==dims[0]))
-  {
-	herr_t status = H5Dwrite (dataset, dtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
-  }
-  H5Sclose(dataspace);
-  H5Dclose(dataset);
-}
-inline void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsize_t ndim, const hsize_t *dims, hid_t dtype)
-{
-  writeHDFmatrix(file, buf, name, ndim, dims, dtype, dtype);
-}
 void SubhaloSnapshot_t::Save(MpiWorker_t &world)
 {
   HBTInt NumSubsAll=0, NumSubs=Subhalos.size();
@@ -288,41 +257,55 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
   hsize_t ndim=1, dim_atom[]={1};
   writeHDFmatrix(file, &nfiles, "NumberOfFiles", ndim, dim_atom, H5T_NATIVE_INT);
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5T_NATIVE_INT);
-  writeHDFmatrix(file, &OmegaM0, "OmegaM0", ndim, dim_atom, H5T_HBTReal);
-  writeHDFmatrix(file, &OmegaLambda0, "OmegaLambda0", ndim, dim_atom, H5T_HBTReal);
-  writeHDFmatrix(file, &Hz, "HubbleParam", ndim, dim_atom, H5T_HBTReal);
-  writeHDFmatrix(file, &ScaleFactor, "ScaleFactor", ndim, dim_atom, H5T_HBTReal);
+  hid_t cosmology=H5Gcreate2(file, "/Cosmology", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  writeHDFmatrix(cosmology, &Cosmology.OmegaM0, "OmegaM0", ndim, dim_atom, H5T_HBTReal);
+  writeHDFmatrix(cosmology, &Cosmology.OmegaLambda0, "OmegaLambda0", ndim, dim_atom, H5T_HBTReal);
+  writeHDFmatrix(cosmology, &Cosmology.Hz, "HubbleParam", ndim, dim_atom, H5T_HBTReal);
+  writeHDFmatrix(cosmology, &Cosmology.ScaleFactor, "ScaleFactor", ndim, dim_atom, H5T_HBTReal);
+  H5Gclose(cosmology);
   writeHDFmatrix(file, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);
   writeHDFmatrix(file, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
   writeHDFmatrix(file, &NumSubsAll, "NumberOfSubhalosInAllFiles", ndim, dim_atom, H5T_HBTInt);//for data verification
   
-  hsize_t dim_sub[]={Subhalos.size()};
-  writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); 
-  
-  /* do not write membertable; this can always be rebuilt.
-  H5::Group datagrp(file.createGroup("/Membership"));
-  H5LTset_attribute_string(file.getId(),"/Membership","Comment","List of subhaloes in each group.");
-  writeHDFmatrix(datagrp, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);
-  writeHDFmatrix(datagrp, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
- 
-//   MemberTable.SubIdToTrackId(Subhalos);
-  HBTInt Ngroups=MemberTable.SubGroups.size();
-  hsize_t dim_grp[]={(hsize_t)Ngroups+1};
-  H5::VarLenType H5T_HBTIntArr(&H5T_HBTInt);
-  vector <hvl_t> vl(Ngroups+1);
-  for(HBTInt i=0;i<Ngroups;i++)
-  {
-	vl[i].len=MemberTable.SubGroups[i].size();
-	vl[i].p=MemberTable.SubGroups[i].data();
-  }
-  vl[Ngroups].len=MemberTable.SubGroups[-1].size();
-  vl[Ngroups].p=MemberTable.SubGroups[-1].data();
-  writeHDFmatrix(datagrp, vl.data(), "GroupedSubIds", ndim, dim_grp, H5T_HBTIntArr);
-  H5LTset_attribute_string(datagrp.getId(),"GroupedSubIds","Comment","Nhalo+1 groups. The last group contains tracks outside any host halo (i.e., field subhaloes). Each group contains the list of subhaloes inside this group");
-  */
-  //now write the particle list for each subhalo
-  hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
   vector <hvl_t> vl(Subhalos.size());
+  hsize_t dim_sub[]={Subhalos.size()};
+    //now write the particle list for each subhalo
+  if(HBTConfig.SaveSubParticleProperties)
+  {
+	hid_t H5T_ParticleInMem=H5Tcreate(H5T_COMPOUND, sizeof (Particle_t));
+	hsize_t dim_xyz=3;
+	hid_t H5T_HBTxyz=H5Tarray_create2(H5T_HBTReal, 1, &dim_xyz);
+	#define InsertMember(x,t) H5Tinsert(H5T_ParticleInMem, #x, HOFFSET(Particle_t, x), t)
+	InsertMember(ComovingPosition, H5T_HBTxyz);
+	InsertMember(PhysicalVelocity, H5T_HBTxyz);
+	InsertMember(Mass, H5T_HBTReal);
+#ifndef DM_ONLY	
+	#ifdef UNBIND_WITH_THERMAL_ENERGY
+	InsertMember(InternalEnergy, H5T_HBTReal);
+	#endif
+	InsertMember(Type, H5T_NATIVE_INT);
+#endif
+	#undef InsertMember
+	H5Tclose(H5T_HBTxyz);
+	hid_t H5T_ParticleInDisk=H5Tcopy(H5T_ParticleInMem);
+	H5Tpack(H5T_ParticleInDisk);
+	hid_t H5T_ParticleArrInMem=H5Tvlen_create(H5T_ParticleInMem);
+	hid_t H5T_ParticleArrInDisk=H5Tvlen_create(H5T_ParticleInDisk);
+
+	for(HBTInt subid=0;subid<Subhalos.size();subid++)
+	{
+	  HBTInt np=Subhalos[subid].Nbound;
+	  vl[subid].len=np;
+	  vl[subid].p=Subhalos[subid].Particles.data();
+	}
+	writeHDFmatrix(file, vl.data(), "ParticleProperties", ndim, dim_sub, H5T_ParticleArrInMem, H5T_ParticleArrInDisk);
+	H5Tclose(H5T_ParticleArrInMem);
+	H5Tclose(H5T_ParticleArrInDisk);
+	H5Tclose(H5T_ParticleInMem);
+	H5Tclose(H5T_ParticleArrInDisk);
+  }
+  
+  hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
   vector <HBTInt> IdBuffer;
   {
 	HBTInt NumberOfParticles=0;
@@ -340,6 +323,8 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	}
   }
   writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);
+  
+  writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); 
   
   H5Fclose(file);
   

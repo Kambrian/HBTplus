@@ -152,8 +152,8 @@ extent-=origin;
   RegisterAttr(Id, MPI_HBT_INT, 1)
   RegisterAttr(ComovingPosition, MPI_HBT_REAL, 3)
   RegisterAttr(PhysicalVelocity, MPI_HBT_REAL, 3)
-#ifndef DM_ONLY
   RegisterAttr(Mass, MPI_HBT_REAL, 1)
+#ifndef DM_ONLY  
 #ifdef UNBIND_WITH_THERMAL_ENERGY
   RegisterAttr(InternalEnergy, MPI_HBT_REAL, 1)
 #endif
@@ -174,11 +174,11 @@ double AveragePosition(HBTxyz& CoM, const Particle_t Particles[], HBTInt NumPart
 	HBTInt i,j;
 	double sx[3],origin[3],msum;
 	
-	if(0==NumPart) return;
+	if(0==NumPart) return 0.;
 	if(1==NumPart) 
 	{
 	  copyHBTxyz(CoM, Particles[0].ComovingPosition);
-	  return;
+	  return Particles[0].Mass;
 	}
 	
 	sx[0]=sx[1]=sx[2]=0.;
@@ -212,11 +212,11 @@ double AverageVelocity(HBTxyz& CoV, const Particle_t Particles[], HBTInt NumPart
 	HBTInt i,j;
 	double sv[3],msum;
 	
-	if(0==NumPart) return;
+	if(0==NumPart) return 0.;
 	if(1==NumPart) 
 	{
 	  copyHBTxyz(CoV, Particles[0].PhysicalVelocity);
-	  return;
+	  return Particles[0].Mass;
 	}
 	
 	sv[0]=sv[1]=sv[2]=0.;
@@ -247,7 +247,7 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
  */
 {  
   HBTInt i, np=RSorted.size();
-  HBTReal RhoVirial=VirialFactor*Hz*Hz/2.0/PhysicalConst::G/ParticleMass*ScaleFactor*ScaleFactor*ScaleFactor;
+  HBTReal RhoVirial=VirialFactor*Cosmology.Hz*Cosmology.Hz/2.0/PhysicalConst::G/ParticleMass*Cosmology.ScaleFactor*Cosmology.ScaleFactor*Cosmology.ScaleFactor;
   for(i=np;i>0;i--)
   {
 	HBTReal r=RSorted[i-1];
@@ -256,7 +256,29 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
   Mvir=i*ParticleMass;
   Rvir=pow(i/RhoVirial, 1.0/3);//comoving
 }
-
+void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector <RadVelMass_t> &prof) const
+/*
+ * find SphericalOverdensitySize from a given list of sorted particle distances.
+ * all distances comoving.
+ * 
+ * Brute-force method to scan from most-distant particle.
+ * 
+ */
+{  
+  HBTReal RhoVirial=VirialFactor*Cosmology.Hz*Cosmology.Hz/2.0/PhysicalConst::G*Cosmology.ScaleFactor*Cosmology.ScaleFactor*Cosmology.ScaleFactor;
+  
+  for(auto p=prof.rbegin();p!=prof.rend();++p)
+  {
+	auto r=p->r;
+	auto m=p->m;
+	if(m>RhoVirial*r*r*r) 
+	{
+	  Mvir=m;
+	  Rvir=pow(m/RhoVirial, 1.0/3);//comoving
+	  return;
+	}
+  }
+}
 void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
 /*
  * find SphericalOverdensitySize from a given list of sorted particle distances.
@@ -273,7 +295,7 @@ void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal Vir
   
   ndiv=np;//guess mass
   rdiv=RSorted[ndiv-1];
-  rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//guess radius
+  rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Cosmology.Hz/Cosmology.Hz,1.0/3)/Cosmology.ScaleFactor;//guess radius
   while(true)
   {
 	if(rdiv>rvir)//reduce mass guess
@@ -294,7 +316,7 @@ void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal Vir
 	}
 	
 	rdiv=rvir;
-	rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//recalibrate radius
+	rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Cosmology.Hz/Cosmology.Hz,1.0/3)/Cosmology.ScaleFactor;//recalibrate radius
 	
 	if(0==ndiv||np==ndiv||fabs((rvir-rdiv)/rvir)<tol) break; //converged
   }
@@ -305,13 +327,12 @@ void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal Vir
 
 void Snapshot_t::HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const
 {
-	HBTReal Hratio,x,OmegaZ;
-	Hratio=Hz/PhysicalConst::H0;
-	OmegaZ=OmegaM0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
-	x=OmegaZ-1;
+	HBTReal Hratio,x;
+	Hratio=Cosmology.Hz/PhysicalConst::H0;
+	x=Cosmology.OmegaZ-1;
 	virialF_tophat=18.0*3.1416*3.1416+82.0*x-39.0*x*x;//<Rho_vir>/Rho_cri
 	virialF_c200=200.;
-	virialF_b200=200.*OmegaZ;//virialF w.r.t contemporary critical density 
+	virialF_b200=200.*Cosmology.OmegaZ;//virialF w.r.t contemporary critical density 
 }
 
 void ParticleSnapshot_t::Clear()

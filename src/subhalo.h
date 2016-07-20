@@ -4,23 +4,11 @@
 #include <iostream>
 #include <new>
 #include <vector>
-#include "hdf5.h"
-#include "hdf5_hl.h"	
-// #include "H5Cpp.h"
-#ifdef HBT_REAL8
-#define H5T_HBTReal H5T_NATIVE_DOUBLE
-#else
-#define H5T_HBTReal H5T_NATIVE_FLOAT
-#endif
-#ifdef HBT_INT8
-#define H5T_HBTInt H5T_NATIVE_LONG
-#else 
-#define H5T_HBTInt H5T_NATIVE_INT
-#endif
 
 #include "datatypes.h"
 #include "snapshot_number.h"
 #include "halo.h"
+#include "hdf_wrapper.h"
 
 class Subhalo_t
 {
@@ -28,6 +16,11 @@ public:
   typedef vector <Particle_t> ParticleList_t;
   HBTInt TrackId;
   HBTInt Nbound;
+  float Mbound;
+#ifndef DM_ONLY
+  HBTInt NboundType[TypeMax];
+  float MboundType[TypeMax];
+#endif  
   HBTInt HostHaloId;
   HBTInt Rank;
   HBTInt LastMaxMass;
@@ -58,10 +51,8 @@ public:
   float SpecificSelfPotentialEnergy;
   float SpecificSelfKineticEnergy;//<0.5*v^2>
   float SpecificAngularMomentum[3];//<Rphysical x Vphysical>
-#ifdef ENABLE_EXPERIMENTAL_PROPERTIES
   float SpinPeebles[3];
   float SpinBullock[3];
-#endif
   
   //shapes
 #ifdef HAS_GSL
@@ -81,7 +72,10 @@ public:
   
   ParticleList_t Particles;
   
-  Subhalo_t(): Nbound(0), Rank(0)
+  Subhalo_t(): Nbound(0), Rank(0), Mbound(0)
+#ifndef DM_ONLY
+  ,NboundType{0}, MboundType{0.}
+#endif
   {
 	TrackId=SpecialConst::NullTrackId;
 	SnapshotIndexOfLastIsolation=SpecialConst::NullSnapshotId;
@@ -92,23 +86,12 @@ public:
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
   }
- /* deprecated. use move assignement instead.
-  * void MoveTo(Subhalo_t & dest, bool MoveParticle=true)
-  {//override dest with this, leaving this unspecified if MoveParticle=true.
-	dest.TrackId=TrackId;
-	dest.Nbound=Nbound;
-	dest.HostHaloId=HostHaloId;
-	dest.Rank=Rank;
-	dest.LastMaxMass=LastMaxMass;
-	dest.SnapshotIndexOfLastMaxMass=SnapshotIndexOfLastMaxMass;
-	dest.SnapshotIndexOfLastIsolation=SnapshotIndexOfLastIsolation;
-	copyHBTxyz(dest.ComovingPosition, ComovingPosition);
-	copyHBTxyz(dest.PhysicalVelocity, PhysicalVelocity);
-	if(MoveParticle)
-	  dest.Particles.swap(Particles);
-  }*/
   void Unbind(const Snapshot_t &epoch);
   HBTReal KineticDistance(const Halo_t & halo, const Snapshot_t & epoch);
+  float GetMass() const
+  {
+	return Mbound; //accumulate(begin(MboundType), end(MboundType), (HBTReal)0.);
+  }
   void UpdateTrack(const Snapshot_t &epoch);
   bool IsCentral()
   {
@@ -117,6 +100,9 @@ public:
   void CalculateProfileProperties(const Snapshot_t &epoch);
   void CalculateShape();
   void AverageCoordinates();
+  void CountParticleTypes();
+  HBTInt KickNullParticles();
+  void CountParticles();
 };
 
 typedef vector <Subhalo_t> SubhaloList_t;
@@ -182,6 +168,10 @@ public:
 	BuildHDFDataType();
 	BuildMPIDataType();
   }
+  SubhaloSnapshot_t(MpiWorker_t &world, int snapshot_index, bool load_src=false): SubhaloSnapshot_t()
+  {
+	Load(world, snapshot_index, load_src);
+  }
   ~SubhaloSnapshot_t()
   {
 	H5Tclose(H5T_SubhaloInDisk);
@@ -221,11 +211,16 @@ public:
   }
   HBTReal GetMass(HBTInt index) const
   {
-	return Subhalos[index].Nbound;
+	return Subhalos[index].GetMass();
   }
 };
 
 inline HBTInt GetCoreSize(HBTInt nbound)
+/* get the size of the core that determines the position of the subhalo.
+ * coresize controlled by SubCoreSizeFactor and SubCoreSizeMin.
+ * if you do not want a cored center, then
+ * set SubCoreSizeFactor=0 and SubCoreSizeMin=1 to use most-bound particle;
+ * set SubCoreSizeFactor=1 to use all the particles*/
 {
   int coresize=nbound*HBTConfig.SubCoreSizeFactor;
   if(coresize<HBTConfig.SubCoreSizeMin) coresize=HBTConfig.SubCoreSizeMin;

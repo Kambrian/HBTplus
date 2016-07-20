@@ -2,6 +2,7 @@
 #define GADGET_GROUP_IO_INCLUDED
 
 #include "../halo.h"
+#include "../mpi_wrapper.h"
 
 namespace GadgetGroup
 {
@@ -23,7 +24,7 @@ struct GroupV4Header_t
   int flag_doubleprecision;//long? no, but padding may exist
 };
 
-extern HBTInt Load(int SnapshotId, vector <Halo_t> &Halos);
+extern void Load(MpiWorker_t &world, int SnapshotId, vector <Halo_t> &Halos);
 extern bool IsGadgetGroup(const string &GroupFileFormat);
 
 }

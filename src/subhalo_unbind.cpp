@@ -79,7 +79,7 @@ public:
   HBTReal MassFactor;
   EnergySnapshot_t(ParticleEnergy_t *e, HBTInt n, const ParticleList_t &particles, const Snapshot_t & epoch): Elist(e), N(n), Particles(particles), MassFactor(1.)
   {
-	SetEpoch(epoch);
+	Cosmology=epoch.Cosmology;
   };
   void SetMassUnit(HBTReal mass_unit)
   {
@@ -105,17 +105,17 @@ public:
   {
 	return Particles[GetParticle(i)].ComovingPosition;
   }
-  void AverageVelocity(HBTxyz& CoV, HBTInt NumPart)
+  double AverageVelocity(HBTxyz& CoV, HBTInt NumPart)
   /*mass weighted average velocity*/
   {
 	HBTInt i,j;
 	double svx,svy,svz,msum;
 	
-	if(0==NumPart) return;
+	if(0==NumPart) return 0.;
 	if(1==NumPart) 
 	{
 	  copyHBTxyz(CoV, GetPhysicalVelocity(0));
-	  return;
+	  return GetMass(0);
 	}
 	
 	svx=svy=svz=0.;
@@ -134,18 +134,19 @@ public:
 	CoV[0]=svx/msum;
 	CoV[1]=svy/msum;
 	CoV[2]=svz/msum;
+	return msum;
   }
-  void AveragePosition(HBTxyz& CoM, HBTInt NumPart)
+  double AveragePosition(HBTxyz& CoM, HBTInt NumPart)
   /*mass weighted average position*/
   {
 	HBTInt i,j;
 	double sx,sy,sz,origin[3],msum;
 	
-	if(0==NumPart) return;
+	if(0==NumPart) return 0.;
 	if(1==NumPart) 
 	{
 	  copyHBTxyz(CoM, GetComovingPosition(0));
-	  return;
+	  return GetMass(0);
 	}
 	
 	if(HBTConfig.PeriodicBoundaryOn)
@@ -183,13 +184,12 @@ public:
 	  CoM[0]=sx;
 	  CoM[1]=sy;
 	  CoM[2]=sz;
+	  return msum;
   }
   void AverageKinematics(float &SpecificPotentialEnergy, float &SpecificKineticEnergy, float SpecificAngularMomentum[3], HBTInt NumPart, const HBTxyz & refPos, const HBTxyz &refVel)
   /*obtain specific potential, kinetic energy, and angular momentum for the first NumPart particles
    * all quantities are physical
-   * currently only support fixed particle mass
-   * 
-   * TODO: extend to variable mass?
+
    * Note there is a slight inconsistency in the energy since they were calculated from the previous unbinding loop, but the refVel has been updated.
    */
   {
@@ -200,11 +200,12 @@ public:
 	  SpecificAngularMomentum[0]=SpecificAngularMomentum[1]=SpecificAngularMomentum[2]=0.;
 	  return;
 	}
-	double E=0., K=0., AMx=0., AMy=0., AMz=0.;
-	#pragma omp parallel for reduction(+:E, K, AMx, AMy, AMz) if(NumPart>100)
+	double E=0., K=0., AMx=0., AMy=0., AMz=0., M=0.;
+	#pragma omp parallel for reduction(+:E, K, AMx, AMy, AMz, M) if(NumPart>100)
 	for(HBTInt i=0;i<NumPart;i++)
 	{
-	  E+=Elist[i].E;
+	  HBTReal m=GetMass(i);
+	  E+=Elist[i].E*m;
 	  const HBTxyz & x=GetComovingPosition(i);
 	  const HBTxyz & v=GetPhysicalVelocity(i);
 	  double dx[3], dv[3];
@@ -212,21 +213,22 @@ public:
 	  {
 		dx[j]=x[j]-refPos[j];
 		if(HBTConfig.PeriodicBoundaryOn) dx[j]=NEAREST(dx[j]);
-		dx[j]*=ScaleFactor; //physical
-		dv[j]=v[j]-refVel[j]+Hz*dx[j];
-		K+=dv[j]*dv[j];
+		dx[j]*=Cosmology.ScaleFactor; //physical
+		dv[j]=v[j]-refVel[j]+Cosmology.Hz*dx[j];
+		K+=dv[j]*dv[j]*m;
 	  }
-	  AMx+=dx[1]*dv[2]-dx[2]*dv[1];
-	  AMy+=dx[0]*dv[2]-dx[2]*dv[0];
-	  AMz+=dx[0]*dv[1]-dx[1]*dv[0];
+	  AMx+=dx[1]*dv[2]-dx[2]*dv[1]*m;
+	  AMy+=dx[0]*dv[2]-dx[2]*dv[0]*m;
+	  AMz+=dx[0]*dv[1]-dx[1]*dv[0]*m;
+	  M+=m;
 	}
-	E/=NumPart;
-	K*=0.5/NumPart;
+	E/=M;
+	K*=0.5/M;
 	SpecificPotentialEnergy=E-K;
 	SpecificKineticEnergy=K;
-	SpecificAngularMomentum[0]=AMx/NumPart;
-	SpecificAngularMomentum[1]=AMy/NumPart;
-	SpecificAngularMomentum[2]=AMz/NumPart;
+	SpecificAngularMomentum[0]=AMx/M;
+	SpecificAngularMomentum[1]=AMy/M;
+	SpecificAngularMomentum[2]=AMz/M;
   }
 };
 inline void RefineBindingEnergyOrder(EnergySnapshot_t &ESnap, HBTInt Size, OctTree_t &tree, HBTxyz &RefPos, HBTxyz &RefVel)
@@ -264,7 +266,13 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
   bool RefineMostboundParticle=(MaxSampleSize>0&&HBTConfig.RefineMostboundParticle);
   HBTReal BoundMassPrecision=HBTConfig.BoundMassPrecision;
   
-  if(1==Particles.size()) return;
+  if(Particles.size()==0) return;
+  if(Particles.size()==1) 
+  {
+	Nbound=1;
+	Mbound=Particles[0].Mass;
+	return;
+  }
   HBTxyz OldRefPos, OldRefVel;
   auto &RefPos=ComovingAveragePosition;
   auto &RefVel=PhysicalAverageVelocity;
@@ -285,8 +293,6 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 	{
 	  if(CorrectionLoop)
 	  {//correct the potential due to removed particles
-		#define VecNorm(x) (x[0]*x[0]+x[1]*x[1]+x[2]*x[2])
-		#define VecDot(x,y) (x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
 		HBTxyz RefVelDiff;
 		epoch.RelativeVelocity(OldRefPos, OldRefVel, RefPos, RefVel, RefVelDiff);
 		HBTReal dK=0.5*VecNorm(RefVelDiff);
@@ -302,8 +308,6 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		  epoch.RelativeVelocity(x,v,OldRefPos, OldRefVel, OldVel);
 		  Elist[i].E+=VecDot(OldVel, RefVelDiff)+dK-tree.EvaluatePotential(x, 0);;
 		}
-		#undef VecNorm
-		#undef VecDot
 		Nlast=Nbound;
 	  }
 	  else
@@ -326,6 +330,9 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		  else
 			mass=0.;//not sampled in tree, no self gravity to correct
 		  Elist[i].E=tree.BindingEnergy(Particles[pid].ComovingPosition, Particles[pid].PhysicalVelocity, RefPos, RefVel, mass);
+		#ifdef UNBIND_WITH_THERMAL_ENERGY
+		  Elist[i].E+=Particles[pid].InternalEnergy;
+		#endif
 		}
 		ESnap.SetMassUnit(1.);//reset, no necessary
 	  }
@@ -339,6 +346,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		  SnapshotIndexOfDeath=epoch.GetSnapshotIndex();
 		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
 		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
+		  Mbound=Particles[0].Mass;
 		  break;
 		}
 		else
@@ -354,7 +362,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 			  copyHBTxyz(OldRefVel, RefVel);
 			}
 		  }
-		  ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
+		  Mbound=ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
 		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
 		  if(Nbound>Nlast*BoundMassPrecision)//converge
 		  {
@@ -380,6 +388,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		}
 	}
 	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingAveragePosition, PhysicalAverageVelocity);//only use CoM frame when unbinding and calculating Kinematics
+	CountParticleTypes();
 }
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 

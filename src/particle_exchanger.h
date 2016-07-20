@@ -195,7 +195,10 @@ void ParticleExchanger_t<Halo_T>::QueryParticles()
   
   snap.GetIndices(RoamParticles);
   for(auto &&p: RoamParticles)
-	p=snap.Particles[p.Id];
+  {
+    if(p.Id!=SpecialConst::NullParticleId)
+      p=snap.Particles[p.Id];
+  }
   
   ParticleExchangeComp::RestoreParticleOrder(RoamParticles);
 }
@@ -228,6 +231,9 @@ void ParticleExchanger_t<Halo_T>::RestoreParticles()
   }
   assert(it==LocalParticles.end());
   vector <RemoteParticle_t>().swap(LocalParticles);
+
+  for(auto &&h: InHalos)
+    h.KickNullParticles();
 }
 
 template <class Halo_T>

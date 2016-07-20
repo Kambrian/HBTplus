@@ -14,34 +14,11 @@
 #include "hash.h"
 #include "mpi_wrapper.h"
 
-struct RadVelMass_t
-{
-  HBTReal r, v, m; 
-};
-  
-struct Particle_t
-{
-  HBTInt Id;
-  HBTxyz ComovingPosition;
-  HBTxyz PhysicalVelocity;
-#ifndef DM_ONLY
-  HBTReal Mass;
-#ifdef UNBIND_WITH_THERMAL_ENERGY
-  HBTReal InternalEnergy;
-#endif
-  ParticleType_t Type;
-#endif
-  void create_MPI_type(MPI_Datatype &dtype);
-};
-
 struct Cosmology_t
 {
   HBTReal OmegaM0;
   HBTReal OmegaLambda0;
   HBTReal ScaleFactor;
-#ifdef DM_ONLY
-  HBTReal ParticleMass;
-#endif
   
   //derived parameters:
   HBTReal Hz; //current Hubble param in internal units
@@ -58,6 +35,30 @@ struct Cosmology_t
 	
 	HBTReal Hratio=Hz/PhysicalConst::H0;
 	OmegaZ=OmegaM0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
+  }
+};
+
+struct RadVelMass_t
+{
+  HBTReal r, v, m; 
+};
+  
+struct Particle_t
+{
+  HBTInt Id;
+  HBTxyz ComovingPosition;
+  HBTxyz PhysicalVelocity;
+  HBTReal Mass;
+#ifndef DM_ONLY
+#ifdef UNBIND_WITH_THERMAL_ENERGY
+  HBTReal InternalEnergy;
+#endif
+  ParticleType_t Type;
+#endif
+  void create_MPI_type(MPI_Datatype &dtype);
+  Particle_t()=default;
+  Particle_t(HBTInt id): Id(id)
+  {
   }
 };
 extern ostream& operator << (ostream& o, Particle_t &p);
@@ -165,9 +166,9 @@ public:
 	else
 	  ParticleHash=&FlatHash;
   }
-  ParticleSnapshot_t(int snapshot_index, bool fill_particle_hash=true): ParticleSnapshot_t()
+  ParticleSnapshot_t(MpiWorker_t &world, int snapshot_index, bool fill_particle_hash=true): ParticleSnapshot_t()
   {
-	Load(snapshot_index, fill_particle_hash);
+	Load(world, snapshot_index, fill_particle_hash);
   }
   ~ParticleSnapshot_t()
   {
@@ -186,7 +187,7 @@ public:
   const HBTxyz & GetPhysicalVelocity(HBTInt index) const;
   HBTReal GetMass(HBTInt index) const;
   HBTReal GetInternalEnergy(HBTInt index) const;
-  HBTInt GetParticleType(HBTInt index) const;
+  ParticleType_t GetParticleType(HBTInt index) const;
   
   void Load(MpiWorker_t &world, int snapshot_index, bool fill_particle_hash=true);
   void Clear();
@@ -223,11 +224,7 @@ inline const HBTxyz& ParticleSnapshot_t::GetPhysicalVelocity(HBTInt index) const
 }
 inline HBTReal ParticleSnapshot_t::GetMass(HBTInt index) const
 {
-#ifdef DM_ONLY
-  return Cosmology.ParticleMass;
-#else
   return Particles[index].Mass;
-#endif
 }
 inline HBTReal ParticleSnapshot_t::GetInternalEnergy(HBTInt index) const
 {

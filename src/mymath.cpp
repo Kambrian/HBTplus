@@ -255,4 +255,16 @@ void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, doubl
   gsl_vector_free (eigen_values);
   gsl_matrix_free (eigen_vecs);
 }
+
+size_t SkipFortranBlock(FILE *fp, bool NeedByteSwap)
+{
+  int blocksize,blocksize2;
+#define ReadBlockSize(a) fread_swap(&a,sizeof(a),1,fp, NeedByteSwap)  
+  ReadBlockSize(blocksize);	  
+  fseek(fp, blocksize, SEEK_CUR);
+  ReadBlockSize(blocksize2);
+  assert(blocksize==blocksize2);
+  return blocksize;
+#undef ReadBlockSize
+}
 #endif

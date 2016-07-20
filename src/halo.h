@@ -31,6 +31,7 @@ public:
 	  dest.Particles.swap(Particles);
   }
   */
+  HBTInt KickNullParticles();
 };
 extern void create_MPI_Halo_Id_type(MPI_Datatype &MPI_HBTHalo_Id_t);
 

@@ -17,6 +17,9 @@
 
 #include "datatypes.h"
 
+#define VecDot(x,y) ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
+#define VecNorm(x) VecDot(x,x)
+
 extern int GetGrid(HBTReal x, HBTReal step, int dim);
 extern int AssignCell(const HBTxyz & Pos, const HBTxyz &step, const vector <int> &dims);
 
@@ -35,6 +38,19 @@ size_t CompileOffsets(const vector <T> &Counts, vector <T> &Offsets)
   {
 	Offsets[i]=offset;
 	offset+=Counts[i];
+  }
+  return offset;
+}
+
+template <class CountIterator_t, class OffsetIterator_t>
+size_t CompileOffsets(CountIterator_t CountBegin, CountIterator_t CountEnd, OffsetIterator_t OffsetBegin)
+{
+  size_t offset=0;
+  auto it_off=OffsetBegin;
+  for(auto it=CountBegin;it!=CountEnd;++it)
+  {
+	*it_off++=offset;
+	offset+=*it;
   }
   return offset;
 }
@@ -102,7 +118,7 @@ public:
 extern int count_pattern_files(char *filename_pattern);
 // extern std::ostream& operator << (std::ostream& o, HBTxyz &a);
 extern void swap_Nbyte(void *data2swap,size_t nel,size_t mbyte);
-
+extern size_t SkipFortranBlock(FILE *fp, bool NeedByteSwap);
 template <class T, std::size_t N>
 ostream& operator<<(ostream& o, const array<T, N>& arr)
 {

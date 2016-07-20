@@ -21,7 +21,7 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
   Clear();
   SetSnapshotIndex(snapshot_index);
   
-  if(HBTConfig.SnapshotFormat=="gadget")//FIXME
+  if(HBTConfig.SnapshotFormat=="gadget")
   {
 	GadgetReader_t(world, SnapshotId, Particles, Cosmology);
   }
@@ -41,7 +41,7 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
 	throw(runtime_error("unknown SnapshotFormat "+HBTConfig.SnapshotFormat));
   
 #ifdef DM_ONLY
-  assert(Cosmology.ParticleMass>0);
+//   assert(Cosmology.ParticleMass>0);
 #endif
   
   ExchangeParticles(world);

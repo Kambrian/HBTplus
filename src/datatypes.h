@@ -59,7 +59,7 @@ inline void copyHBTxyz(HBTxyz &dest, const HBTxyz &src)
 
 namespace SpecialConst
 {
-  const HBTInt NullParticleId=-1;
+  const HBTInt NullParticleId=-1;//reserved special id, should not be used by input simulation data
   const HBTInt NullSnapshotId=-1;
   const HBTInt NullHaloId=-1;//do not change this.
   const HBTInt NullSubhaloId=-1;

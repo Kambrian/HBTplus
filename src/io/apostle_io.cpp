@@ -37,8 +37,8 @@ void create_ApostleHeader_MPI_type(MPI_Datatype& dtype)
   RegisterAttr(OmegaM0, MPI_DOUBLE, 1)
   RegisterAttr(OmegaLambda0, MPI_DOUBLE, 1)
   RegisterAttr(mass, MPI_DOUBLE, TypeMax)
-  RegisterAttr(npart, MPI_INT, TypeMax)
-  RegisterAttr(npartTotal, MPI_HBT_INT, TypeMax)
+  RegisterAttr(npart[0], MPI_INT, TypeMax)
+  RegisterAttr(npartTotal[0], MPI_HBT_INT, TypeMax)
   #undef RegisterAttr
   assert(i<=NumAttr);
   
@@ -184,7 +184,6 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 		ParticlesThisType[i].Id=id[i];
 	}
 	
-#ifndef DM_ONLY
 	//mass
 	if(Header.mass[itype]==0)
 	{
@@ -198,7 +197,8 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].Mass=Header.mass[itype];
 	}
-	
+
+#ifndef DM_ONLY
 	//internal energy
 #ifdef UNBIND_WITH_THERMAL_ENERGY
 	if(itype==0)
@@ -280,7 +280,7 @@ void ApostleReader_t::ReadGroupParticles(int ifile, ParticleHost_t *ParticlesInF
 		ParticlesThisType[i].Id=id[i];
 	}
 	
-#ifndef DM_ONLY
+
 	//mass
 	if(Header.mass[itype]==0)
 	{
@@ -295,6 +295,7 @@ void ApostleReader_t::ReadGroupParticles(int ifile, ParticleHost_t *ParticlesInF
 		ParticlesThisType[i].Mass=Header.mass[itype];
 	}
 	
+#ifndef DM_ONLY	
 	//internal energy
 #ifdef UNBIND_WITH_THERMAL_ENERGY
 	if(itype==0)
@@ -342,13 +343,13 @@ void ApostleReader_t::LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <P
     ReadHeader(0, Header);
     CompileFileOffsets(Header.NumberOfFiles);
   }
-  MPI_Bcast(&Header, MPI_ApostleHeader_t, 1, root, world.Communicator);
+  MPI_Bcast(&Header, 1, MPI_ApostleHeader_t, root, world.Communicator);
   world.SyncContainer(np_file, MPI_HBT_INT, root);
   world.SyncContainer(offset_file, MPI_HBT_INT, root);
   
   Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
 #ifdef DM_ONLY
-  Cosmology.ParticleMass=Header.mass[TypeDM];
+//   Cosmology.ParticleMass=Header.mass[TypeDM];
 #endif
   
   int nfiles_skip, nfiles_end;
@@ -385,7 +386,7 @@ inline bool CompParticleHost(const ParticleHost_t &a, const ParticleHost_t &b)
   return a.HostId<b.HostId;
 }
 
-HBTInt ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< Halo_t >& Halos)
+void ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< Halo_t >& Halos)
 {//read in particle properties at the same time, to avoid particle look-up at later stage.
   SetSnapshot(snapshotId);
   
@@ -395,7 +396,7 @@ HBTInt ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< H
     ReadHeader(0, Header);
     CompileFileOffsets(Header.NumberOfFiles);
   }
-  MPI_Bcast(&Header, MPI_ApostleHeader_t, 1, root, world.Communicator);
+  MPI_Bcast(&Header, 1, MPI_ApostleHeader_t, root, world.Communicator);
   world.SyncContainer(np_file, MPI_HBT_INT, root);
   world.SyncContainer(offset_file, MPI_HBT_INT, root);
   
@@ -433,6 +434,10 @@ HBTInt ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< H
   {
     HBTInt haloid;
     HBTInt np;
+    HaloLen_t()=default;
+    HaloLen_t(HBTInt haloid, HBTInt np): haloid(haloid), np(np)
+    {
+    }
   };
   vector <HaloLen_t> HaloLen;
   
@@ -473,11 +478,11 @@ HBTInt ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< H
   if(Halos.size()>1) cout<<","<<Halos[1].Particles.size()<<"...";
   cout<<endl;
   
-  HBTInt np=0;
-  for(auto &&h: Halos)
-    np+=h.Particles.size();
-  MPI_Allreduce(MPI_IN_PLACE, &np, 1, MPI_HBT_INT, MPI_SUM, world.Communicator);
-  return np;
+//   HBTInt np=0;
+//   for(auto &&h: Halos)
+//     np+=h.Particles.size();
+//   MPI_Allreduce(MPI_IN_PLACE, &np, 1, MPI_HBT_INT, MPI_SUM, world.Communicator);
+//   return np;
 }
 
 bool IsApostleGroup(const string &GroupFileFormat)
@@ -494,7 +499,7 @@ struct HaloInfo_t
 };
 static void create_MPI_HaloInfo_t(MPI_Datatype &dtype)
 {
-  MPI_HaloInfo_t p;
+  HaloInfo_t p;
   #define NumAttr 13
   MPI_Datatype oldtypes[NumAttr];
   int blockcounts[NumAttr];
@@ -508,7 +513,7 @@ static void create_MPI_HaloInfo_t(MPI_Datatype &dtype)
   #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
   RegisterAttr(id, MPI_HBT_INT, 1)
   RegisterAttr(m, MPI_HBT_REAL, 1)
-  RegisterAttr(x, MPI_HBT_REAL, 3)
+  RegisterAttr(x[0], MPI_HBT_REAL, 3)
   RegisterAttr(order, MPI_INT, 1)
   #undef RegisterAttr
   assert(i<=NumAttr);
@@ -536,11 +541,11 @@ double ReduceHaloPosition(vector <HaloInfo_t>::iterator it_begin, vector <HaloIn
   HBTInt i,j;
   double sx[3],origin[3],msum;
   
-  if(it_begin==it_end) return;
+  if(it_begin==it_end) return 0.;
   if(it_begin+1==it_end) 
   {
     copyHBTxyz(x, it_begin->x);
-    return;
+    return it_begin->m;
   }
   
   sx[0]=sx[1]=sx[2]=0.;
@@ -627,8 +632,13 @@ static void DecideTargetProcessor(MpiWorker_t& world, vector< Halo_t >& Halos, v
   HBTxyz step;
   for(int i=0;i<3;i++)
 	step[i]=HBTConfig.BoxSize/dims[i];
-  for(auto it=haloid_offsets.begin();it!=haloid_offsets.end()-1;it++)
-    ReduceHaloRank(HaloInfoOut.begin()+*it, HaloInfoOut.begin()+*(it+1));
+  auto it_end=haloid_offsets.end(); --it_end;
+  for(auto it=haloid_offsets.begin();it!=it_end;it++)
+  {
+    auto it_next=it;
+    ++it_next;
+    ReduceHaloRank(HaloInfoOut.begin()+*it, HaloInfoOut.begin()+*it_next, step, dims);
+  }
   sort(HaloInfoOut.begin(), HaloInfoOut.end(), CompHaloInfo_Order);
   //send back
   MPI_Alltoallv(HaloInfoOut.data(), RecvSizes.data(), RecvOffsets.data(), MPI_HaloInfo_t, HaloInfoIn.data(), SendSizes.data(), SendOffsets.data(), MPI_HaloInfo_t, world.Communicator);
@@ -638,7 +648,7 @@ static void DecideTargetProcessor(MpiWorker_t& world, vector< Halo_t >& Halos, v
   for(HBTInt i=0; i<TargetRank.size();i++)
   {
     TargetRank[i].Id=i;
-    TargetRank[i].rank=HaloInfoIn[i].id;
+    TargetRank[i].Rank=HaloInfoIn[i].id;
   }
   
 }
@@ -672,7 +682,7 @@ static void ExchangeHalos(MpiWorker_t& world, vector <Halo_t>& InHalos, vector<H
   typedef HaloParticleIterator_t<HaloIterator_t> ParticleIterator_t;
    
   vector <IdRank_t>TargetRank(InHalos.size());
-  DecideTargetProcessor(world.size(), InHalos, TargetRank);
+  DecideTargetProcessor(world, InHalos, TargetRank);
 
   //distribute halo shells
 	vector <int> SendHaloCounts(world.size(),0), RecvHaloCounts(world.size()), SendHaloDisps(world.size()), RecvHaloDisps(world.size());
