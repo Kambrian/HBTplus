@@ -217,9 +217,9 @@ public:
 		dv[j]=v[j]-refVel[j]+Cosmology.Hz*dx[j];
 		K+=dv[j]*dv[j]*m;
 	  }
-	  AMx+=dx[1]*dv[2]-dx[2]*dv[1]*m;
-	  AMy+=dx[0]*dv[2]-dx[2]*dv[0]*m;
-	  AMz+=dx[0]*dv[1]-dx[1]*dv[0]*m;
+	  AMx+=(dx[1]*dv[2]-dx[2]*dv[1])*m;
+	  AMy+=(dx[0]*dv[2]-dx[2]*dv[0])*m;
+	  AMz+=(dx[0]*dv[1]-dx[1]*dv[0])*m;
 	  M+=m;
 	}
 	E/=M;

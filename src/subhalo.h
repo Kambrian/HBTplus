@@ -56,7 +56,7 @@ public:
   
   //shapes
 #ifdef HAS_GSL
-  float InertialEigenVector[3][3];//three float[3] vectors.
+  float InertialEigenVector[3][3];//three float[3] vectors, with amplitude equal to eigenvalue.
   float InertialEigenVectorWeighted[3][3];
 #endif
   float InertialTensor[6]; //{Ixx, Ixy, Ixz, Iyy, Iyz, Izz}
