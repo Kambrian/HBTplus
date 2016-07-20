@@ -306,9 +306,9 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
   size_t n_read=header.npart[TypeDM], n_skip=accumulate(header.npart, header.npart+TypeDM, size_t(0));
 #else
   size_t n_read=accumulate(begin(header.npart), end(header.npart), (size_t)0), n_skip=0;
+#endif
   vector <HBTInt> offset(TypeMax);
   CompileOffsets(begin(header.npart), end(header.npart), offset.begin());
-#endif
   
   Particles.resize(Particles.size()+n_read);
   const auto NewParticles=Particles.end()-n_read;

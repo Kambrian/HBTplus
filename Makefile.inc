@@ -9,7 +9,7 @@ GSLLIB=-lgsl -lgslcblas
 
 #CC=mpicc
 CXX=mpiCC
-CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g  
+CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g  -DDM_ONLY
 CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
 #CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs
 #CXXFLAGS+=-xHost #to get it runnable on cosma-e 
