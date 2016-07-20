@@ -302,7 +302,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	H5Tclose(H5T_ParticleArrInMem);
 	H5Tclose(H5T_ParticleArrInDisk);
 	H5Tclose(H5T_ParticleInMem);
-	H5Tclose(H5T_ParticleArrInDisk);
+	H5Tclose(H5T_ParticleInDisk);
   }
   
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);

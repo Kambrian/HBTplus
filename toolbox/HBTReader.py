@@ -1,3 +1,24 @@
+'''
+class to read the HBT outputs.
+
+To use it, initialize the reader with the parameter file under the subhalo directory, e.g.,
+
+  from HBTReader import HBTReader
+
+  reader=HBTReader('subcat2/VER1.8.2.param')
+
+  snapshotnumber=-1 # or 0~MaxSnap. -1 means last snapshot
+
+  subs=reader.LoadSubhalos(snapshotnumber) #load all
+
+  nbound=reader.LoadSubhalos(snapshotnumber, 'Nbound') #only Nbound
+
+  sub2=reader.LoadSubhalos(snapshotnumber, subindex=2) #only subhalo 2
+
+  track2=reader.GetTrack(2) #track 2
+
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
@@ -40,15 +61,8 @@ class HBTReader:
 	self.MaxSnap=int(self.Options['MaxSnapshotIndex'])
 	self.BoxSize=float(self.Options['BoxSize'])
 	self.Softening=float(self.Options['SofteningHalo'])
-	
-	try:
-	  lastfile=sorted(glob.glob(self.rootdir+'/'+'SubSnap_*.hdf5'))[-1]
-	except IndexError:
-	  print "=================Error: ================"
-	  print "Incorrect subhalo path in param file? Failed to find "+self.rootdir+'/SubSnap_*.hdf5'
-	  print "========================================"
-	  raise
-	
+
+	lastfile=sorted(glob.glob(self.rootdir+'/'+'SubSnap_*.hdf5'))[-1]
 	extension=lastfile.rsplit('SubSnap_')[1].split('.')
 	MaxSnap=int(extension[0])
 	if MaxSnap!=self.MaxSnap:
@@ -109,11 +123,20 @@ class HBTReader:
 		  offset+=nsub
 		else:
 		  subhalos.append(subfile['Subhalos'][selection])
-		  
-	subhalos=np.hstack(subhalos)
+	if len(subhalos):	  
+	  subhalos=np.hstack(subhalos)
+	else:
+	  subhalos=np.array(subhalos)
 	#subhalos.sort(order=['HostHaloId','Nbound'])
 	return subhalos
 
+  def GetNumberOfSubhalos(self, isnap=-1):
+  	with h5py.File(self.GetFileName(isnap, 0),'r') as f:
+  		if self.nfiles:
+  			return f['TotalNumberOfSubhalosInAllFiles'][...]
+  		else:
+  			return f['Subhalos'].shape[0]
+  			
   def LoadParticles(self, isnap=-1, subindex=None, filetype='Sub'):	  
 	''' load subhalo particle list at snapshot isnap. 
 	
@@ -128,7 +151,7 @@ class HBTReader:
 		if subindex is None:
 		  subhalos.append(subfile[filetype+'haloParticles'][...])
 		else:
-		  nsub=subfile['Subhalos'].shape[0]
+		  nsub=subfile[filetype+'haloParticles'].shape[0]
 		  if offset+nsub>subindex:
 			subhalos.append(subfile[filetype+'haloParticles'][subindex-offset])
 			break
@@ -138,11 +161,16 @@ class HBTReader:
 
   def GetParticleProperties(self, subindex, isnap=-1):	  
 	'''load subhalo particle properties for subhalo with index subindex (the order it appears in the file, subindex==trackId for single file output, but not for mpi multiple-file outputs)'''
+	
+	offset=0
 	for i in xrange(max(self.nfiles,1)):
-	  with h5py.File(self.GetFileName(isnap,  i, filetype), 'r') as subfile:
+	  with h5py.File(self.GetFileName(isnap,  i), 'r') as subfile:
 		nsub=subfile['Subhalos'].shape[0]
 		if offset+nsub>subindex:
-		  return subfile['ParticleProperties/Subhalo%d'%(subindex-offset)][...]
+		  try:
+			return subfile['ParticleProperties/Sub%d'%(subindex-offset)][...] #for compatibility with old data
+		  except: 
+			return subfile['ParticleProperties'][subindex-offset]
 		offset+=nsub
 	raise RuntimeError("subhalo %d not found"%subindex)
   
