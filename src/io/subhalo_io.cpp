@@ -305,7 +305,11 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	H5Tclose(H5T_ParticleInDisk);
   }
   
+#ifdef UNSIGNED_LONG_ID_OUTPUT  
+  hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_NATIVE_ULONG);//this does not affect anything inside the code, but the presentation in the hdf file
+#else
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
+#endif
   vector <HBTInt> IdBuffer;
   {
 	HBTInt NumberOfParticles=0;
