@@ -587,13 +587,13 @@ static void DecideTargetProcessor(MpiWorker_t& world, vector< Halo_t >& Halos, v
   for(auto &&h: Halos)
     AveragePosition(h.ComovingAveragePosition, h.Particles.data(), h.Particles.size());
    
-  vector <HaloInfo_t> HaloInfoOut(Halos.size()), HaloInfoIn;
+  vector <HaloInfo_t> HaloInfoSend(Halos.size()), HaloInfoRecv;
   for(HBTInt i=0;i<Halos.size();i++)
   {
-    HaloInfoOut[i].id=Halos[i].HaloId;
-    HaloInfoOut[i].m=Halos[i].Mass;
-    HaloInfoOut[i].x=Halos[i].ComovingAveragePosition;
-//     HaloInfoOut[i].rank=this_rank;
+    HaloInfoSend[i].id=Halos[i].HaloId;
+    HaloInfoSend[i].m=Halos[i].Mass;
+    HaloInfoSend[i].x=Halos[i].ComovingAveragePosition;
+//     HaloInfoSend[i].rank=this_rank;
   }
   HBTInt MaxHaloId=0; 
   if(Halos.size()) MaxHaloId=Halos.back().HaloId;
@@ -607,23 +607,23 @@ static void DecideTargetProcessor(MpiWorker_t& world, vector< Halo_t >& Halos, v
     SendSizes[idiv]++;
   }
   CompileOffsets(SendSizes, SendOffsets);
-  MPI_Alltoall(SendSizes.data(), 1, MPI_HBT_INT, RecvSizes.data(), 1, MPI_HBT_INT, world.Communicator);
+  MPI_Alltoall(SendSizes.data(), 1, MPI_INT, RecvSizes.data(), 1, MPI_INT, world.Communicator);
   int nhalo_recv=CompileOffsets(RecvSizes, RecvOffsets);
-  HaloInfoOut.resize(nhalo_recv);
+  HaloInfoRecv.resize(nhalo_recv);
   MPI_Datatype MPI_HaloInfo_t;
   create_MPI_HaloInfo_t(MPI_HaloInfo_t);
-  MPI_Alltoallv(HaloInfoIn.data(), SendSizes.data(), SendOffsets.data(), MPI_HaloInfo_t, HaloInfoOut.data(), RecvSizes.data(), RecvOffsets.data(), MPI_HaloInfo_t, world.Communicator);
+  MPI_Alltoallv(HaloInfoSend.data(), SendSizes.data(), SendOffsets.data(), MPI_HaloInfo_t, HaloInfoRecv.data(), RecvSizes.data(), RecvOffsets.data(), MPI_HaloInfo_t, world.Communicator);
   for(int i=0;i<nhalo_recv;i++)
-    HaloInfoOut[i].order=i;
-  sort(HaloInfoOut.begin(), HaloInfoOut.end(), CompHaloInfo_Id);
+    HaloInfoRecv[i].order=i;
+  sort(HaloInfoRecv.begin(), HaloInfoRecv.end(), CompHaloInfo_Id);
   list <int> haloid_offsets;
   HBTInt curr_id=-1;
   for(int i=0;i<nhalo_recv;i++)
   {
-    if(curr_id!=HaloInfoOut[i].id)
+    if(curr_id!=HaloInfoRecv[i].id)
     {
       haloid_offsets.push_back(i);
-      curr_id=HaloInfoOut[i].id;
+      curr_id=HaloInfoRecv[i].id;
     }
   }
   haloid_offsets.push_back(nhalo_recv);
@@ -637,18 +637,18 @@ static void DecideTargetProcessor(MpiWorker_t& world, vector< Halo_t >& Halos, v
   {
     auto it_next=it;
     ++it_next;
-    ReduceHaloRank(HaloInfoOut.begin()+*it, HaloInfoOut.begin()+*it_next, step, dims);
+    ReduceHaloRank(HaloInfoRecv.begin()+*it, HaloInfoRecv.begin()+*it_next, step, dims);
   }
-  sort(HaloInfoOut.begin(), HaloInfoOut.end(), CompHaloInfo_Order);
+  sort(HaloInfoRecv.begin(), HaloInfoRecv.end(), CompHaloInfo_Order);
   //send back
-  MPI_Alltoallv(HaloInfoOut.data(), RecvSizes.data(), RecvOffsets.data(), MPI_HaloInfo_t, HaloInfoIn.data(), SendSizes.data(), SendOffsets.data(), MPI_HaloInfo_t, world.Communicator);
+  MPI_Alltoallv(HaloInfoRecv.data(), RecvSizes.data(), RecvOffsets.data(), MPI_HaloInfo_t, HaloInfoSend.data(), SendSizes.data(), SendOffsets.data(), MPI_HaloInfo_t, world.Communicator);
   MPI_Type_free(&MPI_HaloInfo_t);
   
   TargetRank.resize(Halos.size());
   for(HBTInt i=0; i<TargetRank.size();i++)
   {
     TargetRank[i].Id=i;
-    TargetRank[i].Rank=HaloInfoIn[i].id;
+    TargetRank[i].Rank=HaloInfoSend[i].id;
   }
   
 }
@@ -667,7 +667,8 @@ void MergeHalos(vector< Halo_t >& Halos)
     else
     {
       ++it1;
-      *it1=move(*it2);
+      if(it2!=it1)
+	*it1=move(*it2);
     }
   }
   Halos.resize(it1-Halos.begin()+1); 
