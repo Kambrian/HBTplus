@@ -123,20 +123,8 @@ void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
   for(HBTInt haloid=0;haloid<SubGroups.size();haloid++)
   {
 	MemberList_t & SubGroup=SubGroups[haloid];
-#ifdef ALLOW_BINARY_SYSTEM
-	HBTInt rankoffset=0;
-	if(SubGroup.size()>1)
-	{
-	  if(Subhalos[SubGroup[1]].Mbound>Subhalos[SubGroup[0]].Mbound*HBTConfig.BinaryMassRatioLimit)
-		rankoffset=1;//binary system, rank start from 1.
-	}
-#endif
 	for(HBTInt i=0;i<SubGroup.size();i++)
-#ifdef ALLOW_BINARY_SYSTEM
-	  Subhalos[SubGroup[i]].Rank=i+rankoffset;
-#else
 	  Subhalos[SubGroup[i]].Rank=i;
-#endif
   }
 }
 void MemberShipTable_t::CountEmptyGroups()
@@ -407,25 +395,12 @@ void SubhaloSnapshot_t::AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_sna
 void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 /* to select central subhalo according to KineticDistance, and move each central to the beginning of each list in MemberTable*/
 {
-  //initialize the ranks
-#ifdef ALLOW_BINARY_SYSTEM
-#pragma omp for
-  for(HBTInt subid=0;subid<Subhalos.size();subid++)
-	Subhalos[subid].Rank=0;
-#endif
 #pragma omp for
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   {
 	MemberShipTable_t::MemberList_t &List=MemberTable.SubGroups[hostid];
 	if(List.size()>1)
-	{
-#ifdef ALLOW_BINARY_SYSTEM
-	  if(Subhalos[List[1]].Mbound>Subhalos[List[0]].Mbound*HBTConfig.BinaryMassRatioLimit)
-	  {
-		Subhalos[List[0]].Rank=1;//mark as a binary system. do not FeedCentral.
-		continue;
-	  }
-#endif	  
+	{	  
 	  int n_major;
 	  HBTInt MassLimit=Subhalos[List[0]].Mbound*HBTConfig.MajorProgenitorMassRatio;
 	  for(n_major=1;n_major<List.size();n_major++)
@@ -485,19 +460,16 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	else
 	{
 	  auto &central=Subhalos[Members[0]];
-#ifdef ALLOW_BINARY_SYSTEM	  
-	  if(0==central.Rank)//only update particles if not a binary system
-#endif		
-		central.Particles.swap(Host.Particles); //reuse the halo particles
-		{
-		  auto mostbndid=Host.Particles[0].Id; 
-		  for(auto & p: central.Particles)
-		  if(p.Id==mostbndid)//swap previous mostbound particle to the beginning
-		  {
-			swap(p, central.Particles[0]);
-			break;
-		  }
-		}
+	  central.Particles.swap(Host.Particles); //reuse the halo particles
+	  {
+	    auto mostbndid=Host.Particles[0].Id; 
+	    for(auto & p: central.Particles)
+	    if(p.Id==mostbndid)//swap previous mostbound particle to the beginning
+	    {
+		  swap(p, central.Particles[0]);
+		  break;
+	    }
+	  }
 	}
   }
 //   #pragma omp single
@@ -607,4 +579,8 @@ void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &h
 	Subhalos[i].CalculateProfileProperties(*this);
 	Subhalos[i].CalculateShape();
   }
+}
+void SubhaloSnapshot_t::NestSubhalos()
+{
+  
 }

@@ -14,6 +14,7 @@ class Subhalo_t
 {
 public:
   typedef vector <Particle_t> ParticleList_t;
+  typedef vector <HBTInt> SubhaloIdList_t;
   HBTInt TrackId;
   HBTInt Nbound;
   float Mbound;
@@ -71,6 +72,7 @@ public:
 //   HBTxyz PhysicalVelocity;
   
   ParticleList_t Particles;
+  SubhaloIdList_t NestedSubhalos;//list of sub-in-subs.
   
   Subhalo_t(): Nbound(0), Rank(0), Mbound(0)
 #ifndef DM_ONLY
@@ -193,6 +195,7 @@ public:
   void PrepareCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
   void UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap);
+  void NestSubhalos();
   HBTInt size() const
   {
 	return Subhalos.size();
