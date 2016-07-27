@@ -117,6 +117,7 @@ public:
   void CountParticleTypes(const ParticleSnapshot_t &part_snap);
   HBTInt ParticleIdToIndex(const ParticleSnapshot_t &part_snap);
 //   void SetHostHalo(const vector <HBTInt> &ParticleToHost);
+  void LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos);
 };
 
 typedef vector <Subhalo_t> SubhaloList_t;
@@ -142,6 +143,7 @@ public:
   VectorView_t <MemberList_t> SubGroups; //list of subhaloes inside each host halo. contain one more group than halo catalogue, to hold field subhaloes. It is properly offseted so that SubGroup[hostid=-1] gives field subhaloes, and hostid>=0 for the normal groups.
   HBTInt NBirth; //newly born halos, excluding fake halos
   HBTInt NFake; //Fake (unbound) halos with no progenitors
+  vector < vector<HBTInt> > SubGroupsOfHeads; //list of top-level subhaloes in each halo
   
   MemberShipTable_t(): Mem_SubGroups(), AllMembers(), SubGroups(), NBirth(0), NFake(0)
   {
@@ -169,6 +171,9 @@ private:
   void FeedCentrals(HaloSnapshot_t &halo_snap);
   void BuildHDFDataType();
   void PurgeMostBoundParticles();
+  void LevelUpDetachedSubhalos();
+  void NestSubhalos();
+  void MaskSubhalos();
 public:
   const ParticleSnapshot_t * SnapshotPointer;
   SubhaloList_t Subhalos;
@@ -198,7 +203,6 @@ public:
   void PrepareCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
   void UpdateTracks();
-  void NestSubhalos();
   HBTInt size() const
   {
 	return Subhalos.size();

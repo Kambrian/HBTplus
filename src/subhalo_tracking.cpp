@@ -286,6 +286,8 @@ void SubhaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
   AverageCoordinates();
   DecideCentrals(halo_snap);
   FeedCentrals(halo_snap);
+  NestSubhalos();
+  MaskSubhalos();
 }
 
 void SubhaloSnapshot_t::RegisterNewTracks()
@@ -371,5 +373,111 @@ void SubhaloSnapshot_t::UpdateTracks()
 }
 void SubhaloSnapshot_t::NestSubhalos()
 {
+  LevelUpDetachedSubhalos();
+  //collect detached(head) subhalos
+  MemberTable.SubGroupsOfHeads.resize(MemberTable.SubGroups.size());
+  #pragma omp parallel for
+  for(HBTInt haloid=0;haloid<MemberTable.SubGroups.size();haloid++)
+  {
+    auto &subgroup=MemberTable.SubGroups[haloid];
+    for(HBTInt i=0;i<subgroup.size();i++)
+    {
+      auto subid=subgroup[i];
+      if(Subhalos[subid].Rank==0)
+	MemberTable.SubGroupsOfHeads[haloid].push_back(subid);
+    }
+  }  
+  //TODO: caution: update NestedSubhalos when changing central.xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+}
+
+void SubhaloSnapshot_t::LevelUpDetachedSubhalos()
+/*
+ * assign rank=0 to subhaloes that has drifted away from the hosthalo of its host-subhalo.
+ */
+{
+  vector <bool> IsHeadSub(Subhalos.size());
+//record head list first, since the ranks are modified during LevelUpDetachedMembers().
+#pragma omp parallel for
+  for(HBTInt subid=0; subid<Subhalos.size(); subid++)
+      IsHeadSub[subid]=(Subhalos[subid].Rank==0);
   
+//promote centrals to detached
+ #pragma omp parallel for
+  for(HBTInt haloid=0;haloid<MemberTable.SubGroups.size();haloid++)
+  {
+    auto &subgroup=MemberTable.SubGroups[haloid];
+    if(subgroup.size())
+      Subhalos[subgroup[0]].Rank=0;
+  }
+  {
+  auto &subgroup=MemberTable.SubGroups[-1];
+#pragma omp parallel for
+  for(HBTInt i=0, iend=subgroup.size(); i<iend;i++)//break up all field subhalos
+    Subhalos[subgroup[i]].Rank=0;
+  }
+  
+#pragma omp parallel for
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
+    if(IsHeadSub[subid])
+      Subhalos[subid].LevelUpDetachedMembers(Subhalos);
+}
+
+void Subhalo_t::LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos)
+{
+  HBTInt isave=0;
+  for(HBTInt i=0;i<NestedSubhalos.size();i++)
+  {
+    auto subid=NestedSubhalos[i];
+    if(Subhalos[subid].HostHaloId!=HostHaloId||Subhalos[subid].Rank==0)
+    {
+      if(Subhalos[subid].Rank)
+	Subhalos[subid].Rank=0;
+    }
+    else
+    {
+      if(isave!=i)
+	NestedSubhalos[isave]=subid;
+      isave++;
+    }
+    Subhalos[subid].LevelUpDetachedMembers(Subhalos);//recursively level up members. Note this can be further improved: if its members didn't follow it but stayed in the original host, then they should be added to the current NestedSubhalos, instead of being leveled up to rank 0. probably not necessary, since you did not actually check the host-sub but only adopted the historical relation.
+  }
+  NestedSubhalos.resize(isave);//remove detached ones from the list
+}
+
+void SubhaloSnapshot_t::MaskSubhalos()
+{
+  //ToDo: FINISH THIS>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  #pragma omp for
+  for(HBTInt i=-1;i<MemberTable.SubGroups.size();i++)
+  {
+	auto &Group=MemberTable.SubGroups[i];
+	unordered_set <HBTInt> ExclusionList;
+	{
+	HBTInt np=0;
+	for(auto &&subid: Group)
+	  if(Subhalos[subid].Nbound>1) np+=Subhalos[subid].Nbound;
+	ExclusionList.reserve(np);
+	}
+	for(HBTInt j=Group.size()-1;j>=0;j--)
+	{
+	  auto & subhalo=Subhalos[Group[j]];
+	  if(subhalo.Nbound>1)
+	  {
+		for(auto & p: subhalo.Particles)
+		{
+		  if(ExclusionList.find(p)==ExclusionList.end())
+		  {
+			if(&p!=&subhalo.Particles[0])
+			{
+			  copyHBTxyz(subhalo.ComovingMostBoundPosition, SnapshotPointer->GetComovingPosition(p));
+			  copyHBTxyz(subhalo.PhysicalMostBoundVelocity, SnapshotPointer->GetPhysicalVelocity(p));
+			  swap(subhalo.Particles[0], p);
+			  break;
+			}
+		  }
+		}
+		ExclusionList.insert(subhalo.Particles.begin(), subhalo.Particles.end());//alternative: only filter most-bounds
+	  }
+	}
+  }
 }
