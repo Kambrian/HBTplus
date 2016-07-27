@@ -49,14 +49,10 @@ public:
   bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
   bool SaveSubParticleProperties;
-  bool OneLoopCentralUnbinding;
   vector <int> SnapshotIdList;
   vector <string> SnapshotNameList;
   
   HBTReal MajorProgenitorMassRatio; 
-#ifdef ALLOW_BINARY_SYSTEM
-  HBTReal BinaryMassRatioLimit;//the lower limit of the mass ratio of the two most-massive subhaloes (<=1), above which the system is marked as a binary system with no central subhalo (no Rank=0 sub). 
-#endif
   HBTReal BoundMassPrecision;
   HBTReal SourceSubRelaxFactor;
   HBTReal SubCoreSizeFactor; //coresize=Nbound*CoreSizeFactor, to get center coordinates for the KineticDistance test.
@@ -93,11 +89,7 @@ public:
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
 	SaveSubParticleProperties=true;
-	OneLoopCentralUnbinding=false;
 	MajorProgenitorMassRatio=0.8;
-#ifdef ALLOW_BINARY_SYSTEM
-	BinaryMassRatioLimit=1.; //default: no binary system will be marked.
-#endif
 	BoundMassPrecision=0.995;
 	SourceSubRelaxFactor=3.;
 	SubCoreSizeFactor=0.25;

@@ -122,20 +122,8 @@ void MemberShipTable_t::AssignRanks(SubhaloList_t& Subhalos)
   for(HBTInt haloid=0;haloid<SubGroups.size();haloid++)
   {
 	MemberList_t & SubGroup=SubGroups[haloid];
-#ifdef ALLOW_BINARY_SYSTEM
-	HBTInt rankoffset=0;
-	if(SubGroup.size()>1)
-	{
-	  if(Subhalos[SubGroup[1]].Mbound>Subhalos[SubGroup[0]].Mbound*HBTConfig.BinaryMassRatioLimit)
-		rankoffset=1;//binary system, rank start from 1.
-	}
-#endif
 	for(HBTInt i=0;i<SubGroup.size();i++)
-#ifdef ALLOW_BINARY_SYSTEM
-	  Subhalos[SubGroup[i]].Rank=i+rankoffset;
-#else
 	  Subhalos[SubGroup[i]].Rank=i;
-#endif
   }
 }
 void MemberShipTable_t::CountEmptyGroups()
@@ -205,27 +193,19 @@ void SubhaloSnapshot_t::AssignHosts(const HaloSnapshot_t &halo_snap)
 	cout<<"Error: TrimNonHostParticles not implemented yet...\n";
 	exit(1);
   } */
-  MemberTable.Build(halo_snap.Halos.size(), Subhalos, true);//build without orphans first.
+  MemberTable.Build(halo_snap.Halos.size(), Subhalos, true);
 //   MemberTable.AssignRanks(Subhalos); //not needed here
 }
 
 void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 /* to select central subhalo according to KineticDistance, and move each central to the beginning of each list in MemberTable*/
 {
-  //initialize the ranks
-#pragma omp for
-  for(HBTInt subid=0;subid<Subhalos.size();subid++)
-	Subhalos[subid].Rank=1;
 #pragma omp for
   for(HBTInt hostid=0;hostid<halo_snap.Halos.size();hostid++)
   {
 	MemberShipTable_t::MemberList_t &List=MemberTable.SubGroups[hostid];
 	if(List.size()>1)
-	{
-#ifdef ALLOW_BINARY_SYSTEM
-	  if(Subhalos[List[1]].Mbound>Subhalos[List[0]].Mbound*HBTConfig.BinaryMassRatioLimit)
-		continue;
-#endif	  
+	{	  
 	  int n_major;
 	  HBTReal MassLimit=Subhalos[List[0]].Mbound*HBTConfig.MajorProgenitorMassRatio;
 	  for(n_major=1;n_major<List.size();n_major++)
@@ -246,7 +226,6 @@ void SubhaloSnapshot_t::DecideCentrals(const HaloSnapshot_t &halo_snap)
 		if(icenter)  swap(List[0], List[icenter]);
 	  }
 	}
-	if(List.size()) Subhalos[List[0]].Rank=0;
   }
 }
 
@@ -282,14 +261,10 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	  Subhalos[subid].Particles.swap(Host.Particles);
 	  
 	  Subhalos[subid].SnapshotIndexOfBirth=SnapshotIndex;
-	  Subhalos[subid].Rank=-1;//new birth
 	}
 	else
 	{
 	  auto &central=Subhalos[Members[0]];
-#ifdef ALLOW_BINARY_SYSTEM	  
-	  if(0==Subhalos[Members[0]].Rank)//only update particles if not a binary system
-#endif
 	  {
 		central.Particles.swap(Host.Particles); //reuse the halo particles
 		auto &mostbndid=Host.Particles[0]; 
@@ -393,4 +368,8 @@ void SubhaloSnapshot_t::UpdateTracks()
 	Subhalos[i].CalculateProfileProperties(*SnapshotPointer);
 	Subhalos[i].CalculateShape(*SnapshotPointer);
   }
+}
+void SubhaloSnapshot_t::NestSubhalos()
+{
+  
 }
