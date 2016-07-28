@@ -444,40 +444,46 @@ void Subhalo_t::LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos)
   NestedSubhalos.resize(isave);//remove detached ones from the list
 }
 
+class SubhaloMasker_t
+{
+  unordered_set <HBTInt> ExclusionList;
+public:
+  SubhaloMasker_t(HBTInt np_guess)
+  {
+    ExclusionList.reserve(np_guess);
+  }
+  void Mask(HBTInt subid, vector <Subhalo_t> &Subhalos)
+  {
+    auto &subhalo=Subhalos[subid];
+    for(auto nestedid: subhalo.NestedSubhalos)//TODO: do we have to do it recursively? satellites are already masked among themselves?
+      Mask(nestedid, Subhalos);
+    auto it_begin=subhalo.Particles.begin(), it_save=it_begin;
+    for(auto it=it_begin;it!=subhalo.Particles.end();++it)
+    {
+      auto insert_status=ExclusionList.insert(*it);
+      if(insert_status.second)//inserted, meaning not excluded
+      {
+	if(it!=it_save)
+	  *it_save=move(*it);
+	++it_save;
+      }
+    }
+    subhalo.Particles.resize(it_save-it_begin);
+  }
+};
+
 void SubhaloSnapshot_t::MaskSubhalos()
 {
-  //ToDo: FINISH THIS>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   #pragma omp for
-  for(HBTInt i=-1;i<MemberTable.SubGroups.size();i++)
+  for(HBTInt i=0;i<MemberTable.SubGroups.size();i++)
   {
 	auto &Group=MemberTable.SubGroups[i];
-	unordered_set <HBTInt> ExclusionList;
-	{
-	HBTInt np=0;
-	for(auto &&subid: Group)
-	  if(Subhalos[subid].Nbound>1) np+=Subhalos[subid].Nbound;
-	ExclusionList.reserve(np);
-	}
-	for(HBTInt j=Group.size()-1;j>=0;j--)
-	{
-	  auto & subhalo=Subhalos[Group[j]];
-	  if(subhalo.Nbound>1)
-	  {
-		for(auto & p: subhalo.Particles)
-		{
-		  if(ExclusionList.find(p)==ExclusionList.end())
-		  {
-			if(&p!=&subhalo.Particles[0])
-			{
-			  copyHBTxyz(subhalo.ComovingMostBoundPosition, SnapshotPointer->GetComovingPosition(p));
-			  copyHBTxyz(subhalo.PhysicalMostBoundVelocity, SnapshotPointer->GetPhysicalVelocity(p));
-			  swap(subhalo.Particles[0], p);
-			  break;
-			}
-		  }
-		}
-		ExclusionList.insert(subhalo.Particles.begin(), subhalo.Particles.end());//alternative: only filter most-bounds
-	  }
-	}
+	if(Group.size()==0) continue;
+	auto old_membercount=Subhalos[Group[0]].NestedSubhalos.size();
+	//update central member list (append other heads except itself)
+	Subhalos[Group[0]].NestedSubhalos.insert(Subhalos[Group[0]].NestedSubhalos.end(), MemberTable.SubGroupsOfHeads[i].begin()+1, MemberTable.SubGroupsOfHeads.end());
+	SubhaloMasker_t Masker(Subhalos[Group[0]].Particles.size()*1.2);
+	Masker.Mask(Group[0], Subhalos);
+	Subhalos[Group[0]].NestedSubhalos.resize(old_membercount);//TODO: better way to do this? Remember to expand nestedsubhalos before unbinding
   }
 }
