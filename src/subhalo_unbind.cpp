@@ -397,7 +397,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
 	CountParticleTypes(snapshot);
 }
-void Subhalo_t::RecursiveUnbind(vector <Subhalo_t> &Subhalos, const ParticleSnapshot_t &snap)
+void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_t &snap)
 {
   bool is_orphan=(Particles.size()<=1);
   ParticleList_t particle_backup;
@@ -449,26 +449,32 @@ void SubhaloSnapshot_t::RefineParticles()
 	auto &subgroup=MemberTable.SubGroups[haloid];
 	if(subgroup.size()==0) continue;
 	//add new satellites to central's NestedSubhalos
-	auto old_membercount=Subhalos[subgroup[0]].NestedSubhalos.size();
+	auto &central=Subhalos[subgroup[0]];
+	auto &nests=central.NestedSubhalos;
+	auto old_membercount=nests.size();
+	auto &heads=MemberTable.SubGroupsOfHeads[haloid];
 	//update central member list (append other heads except itself)
-	Subhalos[subgroup[0]].NestedSubhalos.insert(Subhalos[subgroup[0]].NestedSubhalos.end(), MemberTable.SubGroupsOfHeads[i].begin()+1, MemberTable.SubGroupsOfHeads.end());
-	Subhalos[subgroup[0]].RecursiveUnbind(Subhalos, *SnapshotPointer);
-	Subhalos[subgroup[0]].NestedSubhalos.resize(old_membercount);//restore old satellite list
+	nests.insert(nests.end(), heads.begin()+1, heads.end());
+	central.RecursiveUnbind(Subhalos, *SnapshotPointer);
+	nests.resize(old_membercount);//restore old satellite list
   }
 //unbind field subs  
-#pragma omp parallel for
+#pragma omp parallel
+{
+#pragma omp for
   for(HBTInt i=0; i<MemberTable.SubGroups[-1].size();i++)
   {
 	HBTInt subid=MemberTable.SubGroups[-1][i];
 	Subhalos[subid].Unbind(*SnapshotPointer);
   }
 //unbind new-born subs
-#pragma omp parallel for
+#pragma omp for
   for(HBTInt i=MemberTable.AllMembers.size();i<Subhalos.size();i++)
   {
 	Subhalos[i].Unbind(*SnapshotPointer);
   }
-#pragma omp parallel for
+#pragma omp for
   for(HBTInt i=0;i<Subhalos.size();i++)
 	Subhalos[i].TruncateSource();
+}
 }

@@ -200,6 +200,21 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
 	H5Dclose(dset);
 	H5Fclose(file2);
   }
+  
+  {//read nested subhalos
+    dset=H5Dopen2(file, "NestedSubhalos", H5P_DEFAULT);
+    GetDatasetDims(dset, dims);
+    assert(dims[0]==nsubhalos);
+    H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+    for(HBTInt i=0;i<nsubhalos;i++)
+    {
+      Subhalos[i].NestedSubhalos.resize(vl[i].len);
+      memcpy(Subhalos[i].NestedSubhalos.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+    }
+    ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
+    H5Dclose(dset);
+  }
+  
   H5Fclose(file);
   H5Tclose(H5T_HBTIntArr);
   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
@@ -319,9 +334,17 @@ void SubhaloSnapshot_t::Save()
 	H5Tclose(H5T_ParticleArr);
 	H5Tclose(H5T_Particle);
   }
-    
-  ParticleIndexToId();
+  
   vl.resize(Subhalos.size());
+  for(HBTInt i=0;i<vl.size();i++)
+  {
+	vl[i].len=Subhalos[i].NestedSubhalos.size();
+	vl[i].p=Subhalos[i].NestedSubhalos.data();
+  }
+  writeHDFmatrix(file, vl.data(), "NestedSubhalos", ndim, dim_sub, H5T_HBTIntArr);
+  H5LTset_attribute_string(file,"/NestedSubhalos","Comment","List of the indices of first-level sub-subhaloes within each subhalo.");
+  
+  ParticleIndexToId();
   for(HBTInt i=0;i<vl.size();i++)
   {
 	vl[i].len=Subhalos[i].Nbound;

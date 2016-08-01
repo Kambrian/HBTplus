@@ -282,10 +282,13 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 }
 void SubhaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
 {
+  #pragma omp parallel
+  {
   halo_snap.AverageCoordinates();
   AverageCoordinates();
   DecideCentrals(halo_snap);
   FeedCentrals(halo_snap);
+  }
   NestSubhalos();
   MaskSubhalos();
 }
@@ -351,27 +354,7 @@ void SubhaloSnapshot_t::PurgeMostBoundParticles()
 	}
   }
 }
-void SubhaloSnapshot_t::UpdateTracks()
-{
-  /*renew ranks after unbinding*/
-  RegisterNewTracks();
-#pragma omp parallel
-  {
-  MemberTable.SortMemberLists(Subhalos);//reorder
-  MemberTable.AssignRanks(Subhalos);
-//   PurgeMostBoundParticles();
-  MemberTable.UpdateNestedSubhalos();//TODO
-#pragma omp for
-  for(HBTInt i=0;i<Subhalos.size();i++)
-	Subhalos[i].UpdateTrack(*SnapshotPointer);
-  }
-#pragma omp parallel for if(ParallelizeHaloes)
-  for(HBTInt i=0;i<Subhalos.size();i++)
-  {
-	Subhalos[i].CalculateProfileProperties(*SnapshotPointer);
-	Subhalos[i].CalculateShape(*SnapshotPointer);
-  }
-}
+
 void SubhaloSnapshot_t::NestSubhalos()
 {
   LevelUpDetachedSubhalos();
@@ -388,7 +371,31 @@ void SubhaloSnapshot_t::NestSubhalos()
 	MemberTable.SubGroupsOfHeads[haloid].push_back(subid);
     }
   }  
-  //TODO: caution: update NestedSubhalos when changing central.xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+}
+
+void SubhaloSnapshot_t::ExtendCentralNest()
+{
+  #pragma omp for
+  for(HBTInt haloid=0;haloid<MemberTable.SubGroups.size();haloid++)
+  {
+    auto &subgroup=MemberTable.SubGroups[haloid];
+    auto &heads=MemberTable.SubGroupsOfHeads[haloid];
+    if(subgroup.size()<=1) continue;
+    auto &central=Subhalos[subgroup[0]];
+    if(central.Rank==0)//already a central
+    {
+      central.NestedSubhalos.reserve(central.NestedSubhalos.size()+heads.size()-1);
+      for(auto &&h: heads)
+	if(h!=subgroup[0]) central.NestedSubhalos.push_back(h);
+    }
+    else
+    {
+      central.Rank=0; //promote to central
+      for(auto &&h: heads)
+	Subhalos[h].LevelUpDetachedMembers(Subhalos);
+      central.NestedSubhalos.insert(central.NestedSubhalos.end(), heads.begin(), heads.end());
+    }
+  }
 }
 
 void SubhaloSnapshot_t::LevelUpDetachedSubhalos()
@@ -398,29 +405,32 @@ void SubhaloSnapshot_t::LevelUpDetachedSubhalos()
 {
   vector <bool> IsHeadSub(Subhalos.size());
 //record head list first, since the ranks are modified during LevelUpDetachedMembers().
-#pragma omp parallel for
-  for(HBTInt subid=0; subid<Subhalos.size(); subid++)
-      IsHeadSub[subid]=(Subhalos[subid].Rank==0);
-  
-//promote centrals to detached
- #pragma omp parallel for
-  for(HBTInt haloid=0;haloid<MemberTable.SubGroups.size();haloid++)
+#pragma omp parallel
   {
-    auto &subgroup=MemberTable.SubGroups[haloid];
-    if(subgroup.size())
-      Subhalos[subgroup[0]].Rank=0;
+  #pragma omp for
+    for(HBTInt subid=0; subid<Subhalos.size(); subid++)
+	IsHeadSub[subid]=(Subhalos[subid].Rank==0);
+    
+  //promote centrals to detached
+  #pragma omp for
+    for(HBTInt haloid=0;haloid<MemberTable.SubGroups.size();haloid++)
+    {
+      auto &subgroup=MemberTable.SubGroups[haloid];
+      if(subgroup.size())
+	Subhalos[subgroup[0]].Rank=0;
+    }
+    {
+    auto &subgroup=MemberTable.SubGroups[-1];
+  #pragma omp for
+    for(HBTInt i=0; i<subgroup.size();i++)//break up all field subhalos
+      Subhalos[subgroup[i]].Rank=0;
+    }
+    
+  #pragma omp for
+    for(HBTInt subid=0;subid<Subhalos.size();subid++)
+      if(IsHeadSub[subid])
+	Subhalos[subid].LevelUpDetachedMembers(Subhalos);
   }
-  {
-  auto &subgroup=MemberTable.SubGroups[-1];
-#pragma omp parallel for
-  for(HBTInt i=0, iend=subgroup.size(); i<iend;i++)//break up all field subhalos
-    Subhalos[subgroup[i]].Rank=0;
-  }
-  
-#pragma omp parallel for
-  for(HBTInt subid=0;subid<Subhalos.size();subid++)
-    if(IsHeadSub[subid])
-      Subhalos[subid].LevelUpDetachedMembers(Subhalos);
 }
 
 void Subhalo_t::LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos)
@@ -478,16 +488,41 @@ public:
 
 void SubhaloSnapshot_t::MaskSubhalos()
 {
-  #pragma omp for
+  #pragma omp parallel for
   for(HBTInt i=0;i<MemberTable.SubGroups.size();i++)
   {
 	auto &Group=MemberTable.SubGroups[i];
 	if(Group.size()==0) continue;
-	auto old_membercount=Subhalos[Group[0]].NestedSubhalos.size();
+	auto &central=Subhalos[Group[0]];
+	auto &nest=central.NestedSubhalos;
+	auto old_membercount=nest.size();
+	auto &heads=MemberTable.SubGroupsOfHeads[i];
 	//update central member list (append other heads except itself)
-	Subhalos[Group[0]].NestedSubhalos.insert(Subhalos[Group[0]].NestedSubhalos.end(), MemberTable.SubGroupsOfHeads[i].begin()+1, MemberTable.SubGroupsOfHeads.end());
-	SubhaloMasker_t Masker(Subhalos[Group[0]].Particles.size()*1.2);
+	nest.insert(nest.end(), heads.begin()+1, heads.end());
+	SubhaloMasker_t Masker(central.Particles.size()*1.2);
 	Masker.Mask(Group[0], Subhalos);
-	Subhalos[Group[0]].NestedSubhalos.resize(old_membercount);//TODO: better way to do this? Remember to expand nestedsubhalos before unbinding
+	nest.resize(old_membercount);//TODO: better way to do this? or do not change the nest for central?
+  }
+}
+
+void SubhaloSnapshot_t::UpdateTracks()
+{
+  /*renew ranks after unbinding*/
+  RegisterNewTracks();
+#pragma omp parallel
+  {
+  MemberTable.SortMemberLists(Subhalos);//reorder
+  ExtendCentralNest();
+  MemberTable.AssignRanks(Subhalos);
+//   PurgeMostBoundParticles();
+#pragma omp for
+  for(HBTInt i=0;i<Subhalos.size();i++)
+	Subhalos[i].UpdateTrack(*SnapshotPointer);
+  }
+#pragma omp parallel for if(ParallelizeHaloes)
+  for(HBTInt i=0;i<Subhalos.size();i++)
+  {
+	Subhalos[i].CalculateProfileProperties(*SnapshotPointer);
+	Subhalos[i].CalculateShape(*SnapshotPointer);
   }
 }

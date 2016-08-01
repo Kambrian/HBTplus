@@ -10,11 +10,14 @@
 #include "halo.h"
 #include "hdf_wrapper.h"
 
+class Subhalo_t;
+typedef vector <Subhalo_t> SubhaloList_t;
+
 class Subhalo_t
 {
 public:
   typedef vector <HBTInt> ParticleList_t;
-  typedef vector <HBTInt> SubhaloList_t;
+  typedef vector <HBTInt> SubIdList_t;
   HBTInt TrackId;
   HBTInt Nbound;
   float Mbound;
@@ -72,7 +75,7 @@ public:
 //   HBTxyz PhysicalVelocity;
   
   ParticleList_t Particles;
-  SubhaloList_t NestedSubhalos;//list of sub-in-subs.
+  SubIdList_t NestedSubhalos;//list of sub-in-subs.
   
   Subhalo_t(): Nbound(0), Rank(0), Mbound(0)
 #ifndef DM_ONLY
@@ -103,7 +106,7 @@ public:
   }*/
   void Unbind(const ParticleSnapshot_t &part_snap);
   void TruncateSource();
-  void RecursiveUnbind(const ParticleSnapshot_t &snap);
+  void RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_t &snap);
   HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
   float GetMass() const
   {
@@ -121,8 +124,6 @@ public:
 //   void SetHostHalo(const vector <HBTInt> &ParticleToHost);
   void LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos);
 };
-
-typedef vector <Subhalo_t> SubhaloList_t;
 
 class MemberShipTable_t
 /* list the subhaloes inside each host, rather than ordering the subhaloes 
@@ -174,6 +175,7 @@ private:
   void BuildHDFDataType();
   void PurgeMostBoundParticles();
   void LevelUpDetachedSubhalos();
+  void ExtendCentralNest();
   void NestSubhalos();
   void MaskSubhalos();
 public:

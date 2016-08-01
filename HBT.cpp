@@ -46,8 +46,8 @@ int main(int argc, char **argv)
 	#pragma omp master
 	timer.Tick();
 	subsnap.AssignHosts(halosnap);
-	subsnap.PrepareCentrals(halosnap);
 	}
+	subsnap.PrepareCentrals(halosnap);
 
 	timer.Tick();
 	subsnap.RefineParticles();
