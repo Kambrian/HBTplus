@@ -102,6 +102,8 @@ public:
 	dest.Particles.swap(Particles);
   }*/
   void Unbind(const ParticleSnapshot_t &part_snap);
+  void TruncateSource();
+  void RecursiveUnbind(const ParticleSnapshot_t &snap);
   HBTReal KineticDistance(const Halo_t & halo, const ParticleSnapshot_t & partsnap);
   float GetMass() const
   {

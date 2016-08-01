@@ -359,7 +359,8 @@ void SubhaloSnapshot_t::UpdateTracks()
   {
   MemberTable.SortMemberLists(Subhalos);//reorder
   MemberTable.AssignRanks(Subhalos);
-  PurgeMostBoundParticles();
+//   PurgeMostBoundParticles();
+  MemberTable.UpdateNestedSubhalos();//TODO
 #pragma omp for
   for(HBTInt i=0;i<Subhalos.size();i++)
 	Subhalos[i].UpdateTrack(*SnapshotPointer);
@@ -457,6 +458,9 @@ public:
     auto &subhalo=Subhalos[subid];
     for(auto nestedid: subhalo.NestedSubhalos)//TODO: do we have to do it recursively? satellites are already masked among themselves?
       Mask(nestedid, Subhalos);
+	
+	if(subhalo.Particles.size()<=1) return; //skip orphans
+    
     auto it_begin=subhalo.Particles.begin(), it_save=it_begin;
     for(auto it=it_begin;it!=subhalo.Particles.end();++it)
     {
