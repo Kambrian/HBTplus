@@ -396,6 +396,8 @@ void SubhaloSnapshot_t::ExtendCentralNest()
       central.NestedSubhalos.insert(central.NestedSubhalos.end(), heads.begin(), heads.end());
     }
   }
+#pragma omp single
+  MemberTable.SubGroupsOfHeads.clear();
 }
 
 void SubhaloSnapshot_t::LevelUpDetachedSubhalos()

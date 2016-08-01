@@ -148,7 +148,7 @@ public:
   HBTInt NFake; //Fake (unbound) halos with no progenitors
   vector < vector<HBTInt> > SubGroupsOfHeads; //list of top-level subhaloes in each halo
   
-  MemberShipTable_t(): Mem_SubGroups(), AllMembers(), SubGroups(), NBirth(0), NFake(0)
+  MemberShipTable_t(): Mem_SubGroups(), AllMembers(), SubGroups(), SubGroupsOfHeads(), NBirth(0), NFake(0)
   {
   }
   HBTInt GetNumberOfFieldSubs()
