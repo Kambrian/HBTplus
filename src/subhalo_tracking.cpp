@@ -290,7 +290,9 @@ void SubhaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
   FeedCentrals(halo_snap);
   }
   NestSubhalos();
+#ifndef INCLUSIVE_MASS
   MaskSubhalos();
+#endif
 }
 
 void SubhaloSnapshot_t::RegisterNewTracks()
@@ -516,7 +518,9 @@ void SubhaloSnapshot_t::UpdateTracks()
   MemberTable.SortMemberLists(Subhalos);//reorder
   ExtendCentralNest();
   MemberTable.AssignRanks(Subhalos);
-//   PurgeMostBoundParticles();
+#ifdef INCLUSIVE_MASS
+  PurgeMostBoundParticles();
+#endif
 #pragma omp for
   for(HBTInt i=0;i<Subhalos.size();i++)
 	Subhalos[i].UpdateTrack(*SnapshotPointer);

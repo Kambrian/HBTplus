@@ -15,6 +15,9 @@ GSLLIB=-lgsl -lgslcblas
 #CXXFLAGS+=-DDM_ONLY
 ###
 
+###To produce inclusive subhalos
+#CXXFLAGS+=-DINCLUSIVE_MASS
+###
 
 CXX=g++
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3

@@ -443,41 +443,58 @@ void SubhaloSnapshot_t::RefineParticles()
 #else
  cout<<"Unbinding..."<<endl;
 #endif
- HBTInt NumHalos=MemberTable.SubGroups.size();
-#pragma omp parallel for if(ParallelizeHaloes)
-  for(HBTInt haloid=0;haloid<NumHalos;haloid++)
+#ifdef INCLUSIVE_MASS
+  #pragma omp parallel for if(ParallelizeHaloes)
+  for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
-	auto &subgroup=MemberTable.SubGroups[haloid];
-	if(subgroup.size()==0) continue;
-	//add new satellites to central's NestedSubhalos
-	auto &central=Subhalos[subgroup[0]];
-	auto &nests=central.NestedSubhalos;
-	auto old_membercount=nests.size();
-	auto &heads=MemberTable.SubGroupsOfHeads[haloid];
-	//update central member list (append other heads except itself)
-	nests.insert(nests.end(), heads.begin()+1, heads.end());
-	central.RecursiveUnbind(Subhalos, *SnapshotPointer);
-	nests.resize(old_membercount);//restore old satellite list
+    try
+    {
+	    Subhalos[subid].Unbind(*SnapshotPointer);
+	    Subhalos[subid].TruncateSource();
+    }
+    catch(OctTreeExceeded_t &tree_exception)
+    {
+	  cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<subid<<endl;
+	  exit(1);
+    }
   }
-//unbind field subs  
-#pragma omp parallel
-{
-  HBTInt NumField=MemberTable.SubGroups[-1].size();
-#pragma omp for
-  for(HBTInt i=0; i<NumField;i++)
+#else 
+  HBTInt NumHalos=MemberTable.SubGroups.size();
+  #pragma omp parallel for if(ParallelizeHaloes)
+    for(HBTInt haloid=0;haloid<NumHalos;haloid++)
+    {
+	  auto &subgroup=MemberTable.SubGroups[haloid];
+	  if(subgroup.size()==0) continue;
+	  //add new satellites to central's NestedSubhalos
+	  auto &central=Subhalos[subgroup[0]];
+	  auto &nests=central.NestedSubhalos;
+	  auto old_membercount=nests.size();
+	  auto &heads=MemberTable.SubGroupsOfHeads[haloid];
+	  //update central member list (append other heads except itself)
+	  nests.insert(nests.end(), heads.begin()+1, heads.end());
+	  central.RecursiveUnbind(Subhalos, *SnapshotPointer);
+	  nests.resize(old_membercount);//restore old satellite list
+    }
+  //unbind field subs  
+  #pragma omp parallel
   {
-	HBTInt subid=MemberTable.SubGroups[-1][i];
-	Subhalos[subid].Unbind(*SnapshotPointer);
+      HBTInt NumField=MemberTable.SubGroups[-1].size();
+    #pragma omp for
+      for(HBTInt i=0; i<NumField;i++)
+      {
+	    HBTInt subid=MemberTable.SubGroups[-1][i];
+	    Subhalos[subid].Unbind(*SnapshotPointer);
+      }
+    //unbind new-born subs
+    HBTInt NumSubOld=MemberTable.AllMembers.size(), NumSub=Subhalos.size();
+    #pragma omp for
+      for(HBTInt i=NumSubOld;i<NumSub;i++)
+      {
+	    Subhalos[i].Unbind(*SnapshotPointer);
+      }
+    #pragma omp for
+      for(HBTInt i=0;i<NumSub;i++)
+	    Subhalos[i].TruncateSource();
   }
-//unbind new-born subs
-HBTInt NumSubOld=MemberTable.AllMembers.size(), NumSub=Subhalos.size();
-#pragma omp for
-  for(HBTInt i=NumSubOld;i<NumSub;i++)
-  {
-	Subhalos[i].Unbind(*SnapshotPointer);
-  }
-#pragma omp for
-  for(HBTInt i=0;i<NumSub;i++)
-	Subhalos[i].TruncateSource();
-}
+#endif
 }
