@@ -17,7 +17,7 @@ GSLLIB=-lgsl -lgslcblas
 
 
 CXX=g++
-CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 
+CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3
 
 LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPFLAG)
 

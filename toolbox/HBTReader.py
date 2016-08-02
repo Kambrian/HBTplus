@@ -89,7 +89,17 @@ class HBTReader:
 	  return self.rootdir+'/'+filetype+'Snap_%03d.%d.hdf5'%(isnap, ifile)
 	else:
 	  return self.rootdir+'/'+filetype+'Snap_%03d.hdf5'%(isnap)
+
+  def Open(self, isnap, ifile=0, filetype='Sub', mode='r'):
+	'''return the opened hdf5 file'''
+	return h5py.File(self.GetFileName(isnap, ifile, filetype), mode)
   
+  def LoadNestedSubhalos(self, isnap=-1, selection=None):
+	'''load the list of nested subhalo indices for each subhalo'''
+	with h5py.File(self.GetFileName(isnap), 'r') as subfile:
+	  nests=subfile['NestedSubhalos'][...]
+	return nests
+	
   def LoadSubhalos(self, isnap=-1, selection=None):
 	'''load subhalos from snapshot isnap (default =-1, means final snapshot; isnap<0 will count backward from final snapshot)
 	

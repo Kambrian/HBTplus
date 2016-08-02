@@ -148,8 +148,8 @@ void GadgetReader_t::LoadGadgetHeader(int ifile)
 	IntTypeSize=blocksize/NumPartInFile;
 	assert(sizeof(int)==IntTypeSize||sizeof(long)==IntTypeSize);
 	assert(sizeof(HBTInt)>=IntTypeSize);
-	if(sizeof(HBTInt)<IntTypeSize)
-	  cerr<<"WARNING: loading size "<<IntTypeSize<<" integer in snapshot with size "<<sizeof(HBTInt)<<" int in HBT. possible data overflow.\n Please use ./HBTdouble unless you know what you are doing.";
+// 	if(sizeof(HBTInt)<IntTypeSize)
+// 	  cerr<<"WARNING: loading size "<<IntTypeSize<<" integer in snapshot with size "<<sizeof(HBTInt)<<" int in HBT. possible data overflow.\n Please use ./HBTdouble unless you know what you are doing.";
   }
   
   fclose(fp);
