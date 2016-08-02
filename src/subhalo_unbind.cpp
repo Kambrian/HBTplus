@@ -442,9 +442,10 @@ void SubhaloSnapshot_t::RefineParticles()
  else cout<<"Unbinding with ParticlePara...\n";
 #else
  cout<<"Unbinding..."<<endl;
-#endif  
+#endif
+ HBTInt NumHalos=MemberTable.SubGroups.size();
 #pragma omp parallel for if(ParallelizeHaloes)
-  for(HBTInt haloid=0;haloid<Subhalos.size();haloid++)
+  for(HBTInt haloid=0;haloid<NumHalos;haloid++)
   {
 	auto &subgroup=MemberTable.SubGroups[haloid];
 	if(subgroup.size()==0) continue;
@@ -461,20 +462,22 @@ void SubhaloSnapshot_t::RefineParticles()
 //unbind field subs  
 #pragma omp parallel
 {
+  HBTInt NumField=MemberTable.SubGroups[-1].size();
 #pragma omp for
-  for(HBTInt i=0; i<MemberTable.SubGroups[-1].size();i++)
+  for(HBTInt i=0; i<NumField;i++)
   {
 	HBTInt subid=MemberTable.SubGroups[-1][i];
 	Subhalos[subid].Unbind(*SnapshotPointer);
   }
 //unbind new-born subs
+HBTInt NumSubOld=MemberTable.AllMembers.size(), NumSub=Subhalos.size();
 #pragma omp for
-  for(HBTInt i=MemberTable.AllMembers.size();i<Subhalos.size();i++)
+  for(HBTInt i=NumSubOld;i<NumSub;i++)
   {
 	Subhalos[i].Unbind(*SnapshotPointer);
   }
 #pragma omp for
-  for(HBTInt i=0;i<Subhalos.size();i++)
+  for(HBTInt i=0;i<NumSub;i++)
 	Subhalos[i].TruncateSource();
 }
 }
