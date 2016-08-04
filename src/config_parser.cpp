@@ -253,13 +253,14 @@ void Parameter_t::DumpParameters()
 	cout<<"Warning: HBT_VERSION unknown.\n";
 #define HBT_VERSION "unknown"
 #endif
-  string filename=SubhaloPath+"/VER"+HBT_VERSION+".param";
+  string filename=SubhaloPath+"/Parameters.log";
   ofstream version_file(filename, ios::out|ios::trunc);
   if(!version_file.is_open())
   {
 	cerr<<"Error opening "<<filename<<" for parameter dump."<<endl;
 	exit(1);
   }
+  version_file<<"#VERSION "<<HBT_VERSION<<endl;
 #define DumpPar(var) version_file<<#var<<"  "<<var<<endl;
 #define DumpComment(var) {version_file<<"#";DumpPar(var);}
   DumpPar(SnapshotPath)

@@ -341,9 +341,15 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		{
 		  Nbound=1;
 		  Nlast=1;
-		  Particles[0]=OldMostboundParticle;
-		  Particles.resize(1);
 		  SnapshotIndexOfDeath=epoch.GetSnapshotIndex();
+		  for(auto &&p: Particles)
+		  {
+			if(p.Id==OldMostboundParticle.Id)
+			{
+			  swap(p, Particles[0]);//restore old most-bound to beginning
+			  break;
+			}
+		  }
 		  copyHBTxyz(ComovingAveragePosition, ComovingMostBoundPosition);
 		  copyHBTxyz(PhysicalAverageVelocity, PhysicalMostBoundVelocity);
 		  Mbound=Particles[0].Mass;
@@ -370,11 +376,9 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
 			if(RefineMostboundParticle&&Nbound>MaxSampleSize)//refine most-bound particle, not necessary usually..
 			  RefineBindingEnergyOrder(ESnap, MaxSampleSize, tree, RefPos, RefVel);
-			Nlast=Nbound*HBTConfig.SourceSubRelaxFactor;
-			if(Nlast>Particles.size()) Nlast=Particles.size();
 			//todo: optimize this with in-place permutation, to avoid mem alloc and copying.
-			ParticleList_t p(Nlast);
-			for(HBTInt i=0;i<Nlast;i++)
+			ParticleList_t p(Particles.size());
+			for(HBTInt i=0;i<Particles.size();i++)
 			{
 			  p[i]=Particles[Elist[i].pid];
 			  Elist[i].pid=i;//update particle index in Elist as well.
@@ -387,9 +391,46 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		  }
 		}
 	}
-	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, ComovingAveragePosition, PhysicalAverageVelocity);//only use CoM frame when unbinding and calculating Kinematics
+	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
 	CountParticleTypes();
 }
+void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_t &snap)
+{
+  bool is_orphan=(Particles.size()<=1);
+  ParticleList_t particle_backup;
+  if(is_orphan)	particle_backup=Particles;//orphans do not participate
+  for(HBTInt i=0;i<NestedSubhalos.size();i++)
+  {
+    auto subid=NestedSubhalos[i];
+	auto &subhalo=Subhalos[subid];
+	subhalo.RecursiveUnbind(Subhalos, snap);
+	Particles.insert(Particles.end(), subhalo.Particles.begin()+subhalo.Nbound, subhalo.Particles.end());
+  }
+  if(is_orphan)	Particles.swap(particle_backup);//restore to single particle for unbinding
+  try
+  {
+	  Unbind(snap);
+  }
+  catch(OctTreeExceeded_t &tree_exception)
+  {
+	cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<TrackId<<endl;
+	exit(1);
+  }
+  Unbind(snap);
+  if(is_orphan)	Particles.swap(particle_backup);//set to extended list, to feed to its host
+}
+
+void Subhalo_t::TruncateSource()
+{
+  HBTInt Nsource;
+  if(Nbound<=1) 
+	Nsource=Nbound;
+  else
+	Nsource=Nbound*HBTConfig.SourceSubRelaxFactor;
+  if(Nsource>Particles.size()) Nsource=Particles.size();
+  Particles.resize(Nsource);
+}
+
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
   //TODO: ensure the inclusive unbinding is stable (contaminating particles from big subhaloes may hurdle the unbinding
@@ -398,18 +439,59 @@ void SubhaloSnapshot_t::RefineParticles()
  else cout<<"Unbinding with ParticlePara...\n";
 #else
  cout<<"Unbinding..."<<endl;
-#endif  
-#pragma omp parallel for if(ParallelizeHaloes)
+#endif
+#ifdef INCLUSIVE_MASS
+  #pragma omp parallel for if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
-	try
-	{
-	  Subhalos[subid].Unbind(*this);
-	}
-	catch(OctTreeExceeded_t &tree_exception)
-	{
+    try
+    {
+	    Subhalos[subid].Unbind(*this);
+	    Subhalos[subid].TruncateSource();
+    }
+    catch(OctTreeExceeded_t &tree_exception)
+    {
 	  cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<subid<<endl;
 	  exit(1);
-	}
+    }
   }
+#else 
+  HBTInt NumHalos=MemberTable.SubGroups.size();
+  #pragma omp parallel for if(ParallelizeHaloes)
+    for(HBTInt haloid=0;haloid<NumHalos;haloid++)
+    {
+	  auto &subgroup=MemberTable.SubGroups[haloid];
+	  if(subgroup.size()==0) continue;
+	  //add new satellites to central's NestedSubhalos
+	  auto &central=Subhalos[subgroup[0]];
+	  auto &nests=central.NestedSubhalos;
+	  auto old_membercount=nests.size();
+	  auto &heads=MemberTable.SubGroupsOfHeads[haloid];
+	  //update central member list (append other heads except itself)
+	  nests.insert(nests.end(), heads.begin()+1, heads.end());
+	  central.RecursiveUnbind(Subhalos, *this);
+	  nests.resize(old_membercount);//restore old satellite list
+    }
+  //unbind field subs  
+  #pragma omp parallel
+  {
+      HBTInt NumField=MemberTable.SubGroups[-1].size();
+    #pragma omp for
+      for(HBTInt i=0; i<NumField;i++)
+      {
+	    HBTInt subid=MemberTable.SubGroups[-1][i];
+	    Subhalos[subid].Unbind(*this);
+      }
+    //unbind new-born subs
+    HBTInt NumSubOld=MemberTable.AllMembers.size(), NumSub=Subhalos.size();
+    #pragma omp for
+      for(HBTInt i=NumSubOld;i<NumSub;i++)
+      {
+	    Subhalos[i].Unbind(*this);
+      }
+    #pragma omp for
+      for(HBTInt i=0;i<NumSub;i++)
+	    Subhalos[i].TruncateSource();
+  }
+#endif
 }

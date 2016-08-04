@@ -10,11 +10,19 @@ GSLLIB=-lgsl -lgslcblas
 #CC=mpicc
 CXX=mpiCC
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g 
-CXXFLAGS+=-DENABLE_EXPERIMENTAL_PROPERTIES
+
+###To produce inclusive subhalos
+#CXXFLAGS+=-DINCLUSIVE_MASS
+###
+
+### dark matter only mode
 #CXXFLAGS+=-DDM_ONLY
+###
+
 #CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs
 #CXXFLAGS+=-xHost #to get it runnable on cosma-e 
-LDLIBS+=$(HDFLIB) $(OMPFLAG) $(GSLLIB) $(BOOSTLIB)
+
+LDLIBS+=$(HDFLIB) $(OMPFLAG) $(GSLLIB)
 LDFLAGS+=-g
 #LINK.o=$(LINK.cpp)
 
