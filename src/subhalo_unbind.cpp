@@ -419,7 +419,6 @@ void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_
 	cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<TrackId<<endl;
 	exit(1);
   }
-  Unbind(snap);
   if(is_orphan)	Particles.swap(particle_backup);//set to extended list, to feed to its host
 }
 
