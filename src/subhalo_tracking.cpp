@@ -255,18 +255,20 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	  {
 		subid=Npro++;
 	  }
-	  Subhalos[subid].HostHaloId=hostid;
-	  copyHBTxyz(Subhalos[subid].ComovingAveragePosition, Host.ComovingAveragePosition); 
-	  copyHBTxyz(Subhalos[subid].PhysicalAverageVelocity, Host.PhysicalAverageVelocity);
-	  Subhalos[subid].Particles.swap(Host.Particles);
-	  
-	  Subhalos[subid].SnapshotIndexOfBirth=SnapshotIndex;
+	  auto &central=Subhalos[subid];
+	  central.HostHaloId=hostid;
+	  copyHBTxyz(central.ComovingAveragePosition, Host.ComovingAveragePosition); 
+	  copyHBTxyz(central.PhysicalAverageVelocity, Host.PhysicalAverageVelocity);
+	  central.Particles.swap(Host.Particles);
+	  central.Nbound=central.Particles.size();//init Nbound to source size.
+	  central.SnapshotIndexOfBirth=SnapshotIndex;
 	}
 	else
 	{
 	  auto &central=Subhalos[Members[0]];
 	  {
 		central.Particles.swap(Host.Particles); //reuse the halo particles
+		central.Nbound=central.Particles.size();
 		auto &mostbndid=Host.Particles[0]; 
 		for(auto & p: central.Particles)
 		if(p==mostbndid)//swap previous mostbound particle to the beginning
@@ -429,6 +431,7 @@ void SubhaloSnapshot_t::LevelUpDetachedSubhalos()
     for(HBTInt i=0; i<subgroup.size();i++)//break up all field subhalos
       Subhalos[subgroup[i]].Rank=0;
     }
+    //TODO: break up all orphans as well?
     
   #pragma omp for
     for(HBTInt subid=0;subid<Subhalos.size();subid++)
@@ -473,7 +476,7 @@ public:
     for(auto nestedid: subhalo.NestedSubhalos)//TODO: do we have to do it recursively? satellites are already masked among themselves?
       Mask(nestedid, Subhalos);
 	
-	if(subhalo.Particles.size()<=1) return; //skip orphans
+	if(subhalo.Nbound<=1) return; //skip orphans
     
     auto it_begin=subhalo.Particles.begin(), it_save=it_begin;
     for(auto it=it_begin;it!=subhalo.Particles.end();++it)

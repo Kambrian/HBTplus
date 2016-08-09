@@ -274,7 +274,12 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   bool RefineMostboundParticle=(MaxSampleSize>0&&HBTConfig.RefineMostboundParticle);
   HBTReal BoundMassPrecision=HBTConfig.BoundMassPrecision;
   
-  if(Particles.size()==0) return;
+  if(Particles.size()==0)
+  {
+    Nbound=0;
+    Mbound=0.;
+    return;
+  }
   if(Particles.size()==1) 
   {
 	Nbound=1;
@@ -399,7 +404,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 }
 void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_t &snap)
 {
-  bool is_orphan=(Particles.size()<=1);
+  bool is_orphan=(Nbound<=1);
   ParticleList_t particle_backup;
   if(is_orphan)	particle_backup=Particles;//orphans do not participate
   for(HBTInt i=0;i<NestedSubhalos.size();i++)
@@ -490,7 +495,7 @@ void SubhaloSnapshot_t::RefineParticles()
       for(HBTInt i=NumSubOld;i<NumSub;i++)
       {
 	    Subhalos[i].Unbind(*SnapshotPointer);
-      }
+      }    
     #pragma omp for
       for(HBTInt i=0;i<NumSub;i++)
 	    Subhalos[i].TruncateSource();
