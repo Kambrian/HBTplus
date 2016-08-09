@@ -11,6 +11,10 @@ GSLLIB=-lgsl -lgslcblas
 CXX=mpiCC
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g 
 
+###for thermal unbinding:
+#CXXFLAGS+=-DUNBIND_WITH_THERMAL_ENERGY
+###
+
 ###To produce inclusive subhalos
 #CXXFLAGS+=-DINCLUSIVE_MASS
 ###
