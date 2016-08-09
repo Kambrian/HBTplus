@@ -389,6 +389,3 @@ void Subhalo_t::CountParticles()
   Mbound=accumulate(begin(MboundType), end(MboundType), (HBTReal)0.);
 #endif
 }
-
-
-

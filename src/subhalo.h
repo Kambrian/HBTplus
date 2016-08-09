@@ -92,7 +92,7 @@ public:
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
   }
   void Unbind(const Snapshot_t &epoch);
-  void RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_t &snap);
+  void RecursiveUnbind(SubhaloList_t &Subhalos, const Snapshot_t &snap);
   HBTReal KineticDistance(const Halo_t & halo, const Snapshot_t & epoch);
   void TruncateSource();
   float GetMass() const
@@ -168,7 +168,9 @@ private:
   void WriteFile(int iFile, int nfiles, HBTInt NumSubsAll);
   void LevelUpDetachedSubhalos();
   void ExtendCentralNest();
-  void NestSubhalos();
+  void LocalizeNestedIds(MpiWorker_t &world);
+  void GlobalizeNestedIds();
+  void NestSubhalos(MpiWorker_t &world);
   void MaskSubhalos();
 public:
   SubhaloList_t Subhalos;
@@ -201,7 +203,7 @@ public:
   void UpdateParticles(MpiWorker_t & world, const ParticleSnapshot_t & snapshot);
 //   void ParticleIndexToId();
   void AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &part_snap);
-  void PrepareCentrals(HaloSnapshot_t &halo_snap);
+  void PrepareCentrals(MpiWorker_t &world, HaloSnapshot_t &halo_snap);
   void RefineParticles();
   void UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap);
   HBTInt size() const
@@ -238,4 +240,25 @@ inline HBTInt GetCoreSize(HBTInt nbound)
   if(coresize>nbound) coresize=nbound;
   return coresize;
 }
+
+class TrackKeyList_t: public KeyList_t <HBTInt, HBTInt>
+{
+  typedef HBTInt Index_t;
+  typedef HBTInt Key_t;
+  const SubhaloSnapshot_t &Snap;
+public:
+  TrackKeyList_t(SubhaloSnapshot_t &snap): Snap(snap) {};
+  Index_t size() const
+  {
+	return Snap.size();
+  }
+  Key_t GetKey(Index_t i) const
+  {
+	return Snap.GetId(i);
+  }
+  Index_t GetIndex(Index_t i) const
+  {
+	return i;
+  }
+};
 #endif

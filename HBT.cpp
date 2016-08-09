@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 	
 	timer.Tick(world.Communicator);
 	subsnap.AssignHosts(world, halosnap, partsnap);
-	subsnap.PrepareCentrals(halosnap);
+	subsnap.PrepareCentrals(world, halosnap);
 
 	timer.Tick(world.Communicator);
 	subsnap.RefineParticles();

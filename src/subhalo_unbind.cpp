@@ -399,7 +399,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
 	CountParticleTypes();
 }
-void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_t &snap)
+void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const Snapshot_t &snap)
 {
   bool is_orphan=(Nbound<=1);
   ParticleList_t particle_backup;

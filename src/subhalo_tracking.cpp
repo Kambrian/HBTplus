@@ -477,14 +477,14 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 //   #pragma omp single
 //   halo_snap.Clear();//to avoid misuse
 }
-void SubhaloSnapshot_t::PrepareCentrals(HaloSnapshot_t &halo_snap)
+void SubhaloSnapshot_t::PrepareCentrals(MpiWorker_t &world, HaloSnapshot_t &halo_snap)
 {
   #pragma omp parallel
   {
   DecideCentrals(halo_snap);
   FeedCentrals(halo_snap);
   }
-  NestSubhalos();
+  NestSubhalos(world);
 #ifndef INCLUSIVE_MASS
   MaskSubhalos();
 #endif
@@ -560,10 +560,68 @@ void SubhaloSnapshot_t::PurgeMostBoundParticles()
   }
 }
 
-void SubhaloSnapshot_t::NestSubhalos()
+void SubhaloSnapshot_t::LocalizeNestedIds(MpiWorker_t &world)
 {
+  TrackKeyList_t Ids(*this); 
+  MappedIndexTable_t<HBTInt, HBTInt> TrackHash;
+  TrackHash.Fill(Ids, SpecialConst::NullTrackId);
+  
+  //collect lost tracks
+  vector <HBTInt> DissociatedTracks;
+  for(auto &&subhalo: Subhalos)
+  {
+    auto & nests=subhalo.NestedSubhalos;
+    auto it_begin=nests.begin();
+    auto it_save=it_begin, it=it_begin;
+    for(;it!=nests.end();++it)
+    {
+      HBTInt subid=TrackHash.GetIndex(*it);
+      if(subid==SpecialConst::NullTrackId)
+      {
+	DissociatedTracks.push_back(*it);
+      }
+      else
+      {
+	if(it!=it_save)
+	  *it_save=*it;
+	++it_save;
+      }
+    }
+    nests.resize(it_save-it_begin);
+  }
+  
+  //distribute, locate and levelup DissociatedTracks
+  vector <HBTInt> ReceivedTracks;
+  for(int root=0;root<world.size();root++)
+  {
+    HBTInt stacksize=DissociatedTracks.size();
+    MPI_Bcast(&stacksize, 1, MPI_HBT_INT, root, world.Communicator);
+    ReceivedTracks.resize(stacksize);
+    MyBcast<HBTInt, vector <HBTInt>::iterator, vector <HBTInt>::iterator>(world, DissociatedTracks.begin(), ReceivedTracks.begin(), stacksize, MPI_HBT_INT, root);
+    if(world.rank()!=root)
+    {
+      for(auto & tid: ReceivedTracks)
+      {
+	auto subid=TrackHash.GetIndex(tid);
+	if(subid!=SpecialConst::NullTrackId)//located
+	  Subhalos[subid].Rank=0; //level up this DissociatedTrack
+      }
+    }
+  }
+}
+void SubhaloSnapshot_t::GlobalizeNestedIds()
+{
+    for(auto &subhalo: Subhalos)
+      for(auto &&subid: subhalo.NestedSubhalos)
+	subid=Subhalos[subid].TrackId;
+}
+void SubhaloSnapshot_t::NestSubhalos(MpiWorker_t &world)
+{
+  LocalizeNestedIds(world);
   LevelUpDetachedSubhalos();
   //collect detached(head) subhalos
+  #pragma omp single
+  MemberTable.SubGroupsOfHeads.clear();
   MemberTable.SubGroupsOfHeads.resize(MemberTable.SubGroups.size());
   #pragma omp parallel for
   for(HBTInt haloid=0;haloid<MemberTable.SubGroups.size();haloid++)
@@ -682,7 +740,7 @@ public:
     auto it_begin=subhalo.Particles.begin(), it_save=it_begin;
     for(auto it=it_begin;it!=subhalo.Particles.end();++it)
     {
-      auto insert_status=ExclusionList.insert(*it);
+      auto insert_status=ExclusionList.insert(it->Id);
       if(insert_status.second)//inserted, meaning not excluded
       {
 	if(it!=it_save)
@@ -736,6 +794,7 @@ void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &h
 	  Subhalos[i].HostHaloId=halo_snap.Halos[HostId].HaloId;//restore global haloid
   }
   }
+  GlobalizeNestedIds();
   #pragma omp parallel for if(ParallelizeHaloes)
   for(HBTInt i=0;i<Subhalos.size();i++)
   {

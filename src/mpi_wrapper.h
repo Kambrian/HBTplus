@@ -184,7 +184,7 @@ void MyAllToAll(MpiWorker_t &world, vector <InParticleIterator_T> InParticleIter
 }
 
 template <class Particle_T, class InParticleIterator_T, class OutParticleIterator_T>
-void MyBcast(MpiWorker_t &world, InParticleIterator_T InParticleIterator, OutParticleIterator_T OutParticleIterator, HBTInt &ParticleCount, MPI_Datatype &MPI_Particle_T, int root)
+void MyBcast(MpiWorker_t &world, InParticleIterator_T InParticleIterator, OutParticleIterator_T OutParticleIterator, HBTInt &ParticleCount, MPI_Datatype MPI_Particle_T, int root)
 /*break the task into smaller pieces to avoid message size overflow
  InParticleIterator only significant at root, and should be different from OutParticleIterator.
  ParticleCount automatically broadcasted from root to every process.
