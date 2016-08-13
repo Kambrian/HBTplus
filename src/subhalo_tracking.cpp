@@ -409,7 +409,7 @@ void SubhaloSnapshot_t::LevelUpDetachedSubhalos()
  * assign rank=0 to subhaloes that has drifted away from the hosthalo of its host-subhalo.
  */
 {
-  vector <bool> IsHeadSub(Subhalos.size());
+  vector <char> IsHeadSub(Subhalos.size());
 //record head list first, since the ranks are modified during LevelUpDetachedMembers().
 #pragma omp parallel
   {

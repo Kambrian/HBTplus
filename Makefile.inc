@@ -12,7 +12,7 @@ GSLLIB=-lgsl -lgslcblas
 ###
 
 ###for Dark Matter only simulations
-CXXFLAGS+=-DDM_ONLY
+#CXXFLAGS+=-DDM_ONLY
 ###
 
 ###To produce inclusive subhalos
@@ -20,9 +20,9 @@ CXXFLAGS+=-DDM_ONLY
 ###
 
 CXX=g++
-CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O0 -g
+CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O0 -g #-lmcheck
 
-LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPFLAG)
+LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPFLAG) #-lmcheck
 
 # CXXFLAGS+=-xHost #to get it runnable on cosma-e
 #CXXFLAGS+=-g
