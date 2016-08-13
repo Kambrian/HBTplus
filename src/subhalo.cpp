@@ -125,8 +125,11 @@ void SubhaloSnapshot_t::ParticleIndexToId()
 void Subhalo_t::AverageCoordinates()
 {
   // 	int coresize=GetCoreSize(Nbound);
-  copyHBTxyz(ComovingMostBoundPosition, Particles[0].ComovingPosition);
-  copyHBTxyz(PhysicalMostBoundVelocity, Particles[0].PhysicalVelocity);
+  if(Particles.size())
+  {
+	copyHBTxyz(ComovingMostBoundPosition, Particles[0].ComovingPosition);
+	copyHBTxyz(PhysicalMostBoundVelocity, Particles[0].PhysicalVelocity);
+  }
   AveragePosition(ComovingAveragePosition, Particles.data(), Nbound);
   AverageVelocity(PhysicalAverageVelocity, Particles.data(), Nbound);
 }

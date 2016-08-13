@@ -175,12 +175,17 @@ void FindLocalHosts(const HaloSnapshot_t &halo_snap, const ParticleSnapshot_t &p
 {
   #pragma omp parallel for 
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
-	Subhalos[subid].HostHaloId=GetLocalHostId(Subhalos[subid].Particles[0].Id, halo_snap, part_snap);
+  {
+	if(Subhalos[subid].Particles.size())
+	  Subhalos[subid].HostHaloId=GetLocalHostId(Subhalos[subid].Particles[0].Id, halo_snap, part_snap);
+	else
+	  Subhalos[subid].HostHaloId=-1;
+  }
   
   HBTInt nsub=0;
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
-	if(Subhalos[subid].HostHaloId<0)
+	if(Subhalos[subid].HostHaloId<0&&Subhalos[subid].Particles.size())//only move nonempty subhalos
 	{
 	  if(subid>nsub)
 		Subhalos[nsub]=move(Subhalos[subid]);//there should be a default move assignement operator.
@@ -461,6 +466,7 @@ void SubhaloSnapshot_t::FeedCentrals(HaloSnapshot_t& halo_snap)
 	else
 	{
 	  auto &central=Subhalos[Members[0]];
+	  assert(central.Particles.size());
 	  central.Particles.swap(Host.Particles); //reuse the halo particles
 	  central.Nbound=central.Particles.size();
 	  {
