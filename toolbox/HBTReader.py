@@ -71,7 +71,7 @@ class HBTReader:
 
 	self.nfiles=0
 	if len(extension)==3:
-	  self.nfiles=int(extension[1])+1
+	  self.nfiles=len(glob.glob(self.rootdir+'/'+'SubSnap_%03d.*.hdf5'%MaxSnap))
 	  print self.nfiles, "subfiles per snapshot"
 
 	if 'MinSnapshotIndex' in self.Options:
