@@ -52,4 +52,57 @@ public:
   }
 };
 
+
+template <class HaloIterator>
+class HaloNestIterator_t
+{
+  typedef HBTInt NestMember_t;
+  typedef vector<NestMember_t>::iterator nest_iterator;
+  HaloIterator FirstHalo, EndHalo, CurrHalo;
+  nest_iterator CurrPart;
+public:
+  HaloNestIterator_t()=default;
+  HaloNestIterator_t(const HaloIterator &begin, const HaloIterator &end)
+  {
+	init(begin, end);
+  }
+  void init(HaloIterator begin, HaloIterator end)
+  {
+	while((begin!=end)&&(begin->NestedSubhalos.size()==0))//skip empty ones, though not necessary for current HBT2
+	  ++begin;
+	FirstHalo=begin;
+	EndHalo=end;
+	reset();
+  }
+  void reset()
+  {
+	CurrHalo=FirstHalo;
+	if(CurrHalo!=EndHalo)
+	  CurrPart=FirstHalo->NestedSubhalos.begin();
+  }
+  nest_iterator begin()
+  {
+	return FirstHalo->NestedSubhalos.begin();
+  }
+  HaloNestIterator_t<HaloIterator> & operator ++()//left operator
+  {
+	++CurrPart;
+	while(CurrPart==CurrHalo->NestedSubhalos.end())//increment halo and skip empty haloes
+	{
+	  ++CurrHalo;
+	  if(CurrHalo==EndHalo) break;
+	  CurrPart=CurrHalo->NestedSubhalos.begin();
+	}
+	return *this;
+  }
+  NestMember_t & operator *()
+  {
+	return *CurrPart;
+  }
+  bool is_end()
+  {
+	return CurrHalo==EndHalo;
+  }
+};
+
 #endif

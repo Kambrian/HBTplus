@@ -50,6 +50,16 @@ int main(int argc, char **argv)
 	HaloSnapshot_t halosnap;
 	halosnap.Load(world, isnap);
 	
+	for(auto && sub: subsnap.Subhalos)
+	{
+	  if(sub.TrackId==25)
+	  {
+	    cerr<<"after loading:"<<endl;
+	    for(auto s: sub.NestedSubhalos)
+	      cerr<<s<<" ";
+	    cerr<<endl;
+	  }
+	}
 	timer.Tick(world.Communicator);
 // 	cout<<"updating halo particles...\n";
 	halosnap.UpdateParticles(world, partsnap);
@@ -57,10 +67,31 @@ int main(int argc, char **argv)
 // 	if(world.rank()==0) cout<<"updateing subsnap particles...\n";
 	subsnap.UpdateParticles(world, partsnap);
 	
+	for(auto && sub: subsnap.Subhalos)
+	{
+	  if(sub.TrackId==25)
+	  {
+	    cerr<<"after updating:"<<endl;
+	    for(auto s: sub.NestedSubhalos)
+	      cerr<<s<<" ";
+	    cerr<<endl;
+	  }
+	}
+	
 	timer.Tick(world.Communicator);
 	subsnap.AssignHosts(world, halosnap, partsnap);
 	subsnap.PrepareCentrals(world, halosnap);
 
+	for(auto && sub: subsnap.Subhalos)
+	{
+	  if(sub.TrackId==25)
+	  {
+	    cerr<<"after preparing:"<<endl;
+	    for(auto s: sub.NestedSubhalos)
+	      cerr<<s<<" ";
+	    cerr<<endl;
+	  }
+	}
 	timer.Tick(world.Communicator);
 	subsnap.RefineParticles();
 	

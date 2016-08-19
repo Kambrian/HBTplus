@@ -25,6 +25,8 @@ import h5py
 import sys
 import os.path, glob
 from numpy.lib.recfunctions import append_fields
+from matplotlib.pylab import find
+import numbers
 
 def PeriodicDistance(x,y, BoxSize, axis=-1):
   d=x-y
@@ -96,9 +98,11 @@ class HBTReader:
   
   def LoadNestedSubhalos(self, isnap=-1, selection=None):
 	'''load the list of nested subhalo indices for each subhalo'''
-	with h5py.File(self.GetFileName(isnap), 'r') as subfile:
-	  nests=subfile['NestedSubhalos'][...]
-	return nests
+	nests=[]
+	for i in xrange(max(self.nfiles,1)):
+	  with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
+	    nests.extend(subfile['NestedSubhalos'][...])
+	return np.array(nests)
 	
   def LoadSubhalos(self, isnap=-1, selection=None):
 	'''load subhalos from snapshot isnap (default =-1, means final snapshot; isnap<0 will count backward from final snapshot)
@@ -116,7 +120,7 @@ class HBTReader:
 	if selection is None:
 	  selection=np.s_[:]
 	else:
-	  trans_index=(type(selection)==int)
+	  trans_index=isinstance(selection, numbers.Integral)
 	  
 	if type(selection) is list:
 	  selection=tuple(selection)
