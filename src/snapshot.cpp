@@ -8,10 +8,10 @@ using namespace std;
 #include <cstdlib>
 #include <cstdio>
 #include <chrono>
+#include <mpi.h>
 
 #include "snapshot.h"
 #include "mymath.h"
-#include <mpi.h>
 
 ostream& operator << (ostream& o, Particle_t &p)
 {

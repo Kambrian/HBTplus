@@ -245,14 +245,14 @@ void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_sna
   MPI_Allreduce(LocalHostIds.data(), GlobalHostIds.data(), NumSubhalos, MPI_HBTRankPair, MPI_MAXLOC, world.Communicator);
 
   //scatter free subhaloes from root to everywhere
-  //send particles; no scatterw, do it manually
+  //send particles and nests; no scatterw, do it manually
   MPI_Datatype MPI_HBT_Particle;
   Particle_t().create_MPI_type(MPI_HBT_Particle);
-  vector <vector<int> > SendSizes(world.size());  
-  vector <MPI_Request> Req0,Req1;
+  vector <vector<int> > SendSizes(world.size()), SendNestSizes(world.size());
+  vector <MPI_Request> Req0,Req1, ReqNest0, ReqNest1;
   if(thisrank==root)
   {
-	vector <vector <MPI_Aint> > SendBuffers(world.size());
+	vector <vector <MPI_Aint> > SendBuffers(world.size()), SendNestBuffers(world.size());
 	for(HBTInt subid=0;subid<NumSubhalos;subid++)//packing
 	{
 	  int rank=GlobalHostIds[subid].Rank;
@@ -261,22 +261,39 @@ void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_sna
 	  MPI_Address(Particles.data(),&p);
 	  SendBuffers[rank].push_back(p);
 	  SendSizes[rank].push_back(Particles.size());
+	  
+	  auto & Nest=Subhalos[subid].NestedSubhalos;
+	  MPI_Address(Nest.data(),&p);
+	  SendNestBuffers[rank].push_back(p);
+	  SendNestSizes[rank].push_back(Nest.size());
 	}
 	Req0.resize(world.size());
 	Req1.resize(world.size());
+	ReqNest0.resize(world.size());
+	ReqNest1.resize(world.size());
 	for(int rank=0;rank<world.size();rank++)
 	{
+	  {
 	  MPI_Isend(SendSizes[rank].data(), SendSizes[rank].size(), MPI_INT, rank, 0, world.Communicator, &Req0[rank]);
 	  MPI_Datatype SendType;
 	  MPI_Type_create_hindexed(SendSizes[rank].size(), SendSizes[rank].data(), SendBuffers[rank].data(), MPI_HBT_Particle, &SendType);
 	  MPI_Type_commit(&SendType);
 	  MPI_Isend(MPI_BOTTOM, 1, SendType, rank, 1, world.Communicator, &Req1[rank]);
 	  MPI_Type_free(&SendType);
+	  }
+	  {
+	  MPI_Isend(SendNestSizes[rank].data(), SendNestSizes[rank].size(), MPI_INT, rank, 0, world.Communicator, &ReqNest0[rank]);
+	  MPI_Datatype SendNestType;
+	  MPI_Type_create_hindexed(SendNestSizes[rank].size(), SendNestSizes[rank].data(), SendNestBuffers[rank].data(), MPI_HBT_INT, &SendNestType);
+	  MPI_Type_commit(&SendNestType);
+	  MPI_Isend(MPI_BOTTOM, 1, SendNestType, rank, 1, world.Communicator, &ReqNest1[rank]);
+	  MPI_Type_free(&SendNestType);
+	  }
 	}
   }
   //receive on every process, including root
-	vector <MPI_Aint> ReceiveBuffer;
-	vector <int> ReceiveSize;
+	vector <MPI_Aint> ReceiveBuffer, ReceiveNestBuffer;
+	vector <int> ReceiveSize, ReceiveNestSize;
 	int NumNewSubs;
 	MPI_Status stat;
 	MPI_Probe(root, 0, world.Communicator, &stat);
@@ -302,13 +319,32 @@ void FindOtherHosts(MpiWorker_t &world, int root, const HaloSnapshot_t &halo_sna
 	
 	MPI_Type_free(&MPI_HBT_Particle);
 	
+	ReceiveNestSize.resize(NumNewSubs);
+	MPI_Recv(ReceiveNestSize.data(), NumNewSubs, MPI_INT, root, 0, world.Communicator, &stat);
+	ReceiveNestBuffer.resize(NumNewSubs);
+	for(int i=0;i<NumNewSubs;i++)
+	{
+	  auto &Nest=NewSubhalos[i].NestedSubhalos;
+	  Nest.resize(ReceiveNestSize[i]);
+	  MPI_Aint p;
+	  MPI_Address(Nest.data(),&p);
+	  ReceiveNestBuffer[i]=p;
+	}
+	MPI_Datatype ReceiveNestType;
+	MPI_Type_create_hindexed(NumNewSubs, ReceiveNestSize.data(), ReceiveNestBuffer.data(), MPI_HBT_INT, &ReceiveNestType);
+	MPI_Type_commit(&ReceiveNestType);
+	MPI_Recv(MPI_BOTTOM, 1, ReceiveNestType, root, 1, world.Communicator, &stat);
+	MPI_Type_free(&ReceiveNestType);
+	
 	if(thisrank==root)
 	{
 // 	  vector <MPI_Status> stats(world.size());
 	  MPI_Waitall(world.size(), Req0.data(), MPI_STATUS_IGNORE);
 	  MPI_Waitall(world.size(), Req1.data(), MPI_STATUS_IGNORE);
+	  MPI_Waitall(world.size(), ReqNest0.data(), MPI_STATUS_IGNORE);
+	  MPI_Waitall(world.size(), ReqNest1.data(), MPI_STATUS_IGNORE);
 	}
-  
+	
   //copy other properties
     vector <int> Counts(world.size()), Disps(world.size());
 	vector <Subhalo_t> TmpHalos;

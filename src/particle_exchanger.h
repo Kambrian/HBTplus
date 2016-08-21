@@ -12,6 +12,7 @@
 #include "mpi_wrapper.h"
 #include "snapshot.h"
 #include "halo_particle_iterator.h"
+#include "subhalo.h"
 
 class OrderedParticle_t: public Particle_t
 {
@@ -262,32 +263,6 @@ void DecideTargetProcessor(int NumProc, vector <Halo_T> &InHalos, vector <IdRank
 	TargetRank[i].Rank=AssignCell(InHalos[i].ComovingAveragePosition, step, dims);
   }
 }
-template <class Halo_T>
-void MoveNestedSubhalos(MpiWorkert_t &world, vector <Halo_T> &InHalosSorted, vector <int> &SendHaloCounts, vector <int> &SendHaloDisps, vector <Halo_T>::iterator OutHaloIterator, vector <int>&RecvHaloCounts, vector <int> &RecvHaloDisps, vector <IdRank_t> &TargetRank)
-{
-}
-template <>
-void MoveNestedSubhalos<Subhalo_t>(MpiWorkert_t &world, vector <Subhalo_t> &InHalosSorted, vector <int> &SendHaloCounts, vector <int> &SendHaloDisps, vector <Subhalo_t>::iterator OutHaloIterator, vector <int>&RecvHaloCounts, vector <int> &RecvHaloDisps, vector <IdRank_t> &TargetRank)
-{
-  typedef typename vector <Subhalo_t>::iterator HaloIterator_t;
-  typedef HaloNestIterator_t<HaloIterator_t> ParticleIterator_t;
-  //distribute halo particles
-  //create combined iterator for each bunch of haloes
-  vector <ParticleIterator_t> InParticleIterator(world.size());
-  vector <ParticleIterator_t> OutParticleIterator(world.size());
-  for(int rank=0;rank<world.size();rank++)
-  {
-    InParticleIterator[rank].init(InHalosSorted.begin()+SendHaloDisps[rank], InHalosSorted.begin()+SendHaloDisps[rank]+SendHaloCounts[rank]);
-    OutParticleIterator[rank].init(OutHaloIterator+RecvHaloDisps[rank], OutHaloIterator+RecvHaloDisps[rank]+RecvHaloCounts[rank]);
-  }
-  vector <HBTInt> InParticleCount(world.size(),0);
-  for(HBTInt i=0;i<InHalosSorted.size();i++)
-    InParticleCount[TargetRank[i].Rank]+=InHalosSorted[i].Particles.size();
-  
-  MyAllToAll<HBTInt, ParticleIterator_t, ParticleIterator_t>(world, InParticleIterator, InParticleCount, OutParticleIterator, MPI_HBT_INT);
-}
-
-//TODO: specialize the template to exchange subhalos for nested subhalos
 
 template <class Halo_T>
 void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHalos, vector<Halo_T>& OutHalos, MPI_Datatype MPI_Halo_Shell_Type) const
@@ -348,6 +323,4 @@ void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHa
 	MPI_Type_free(&MPI_HBT_Particle);
 	}
 }
-
-
 #endif

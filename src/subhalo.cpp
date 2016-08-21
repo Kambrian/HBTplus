@@ -19,6 +19,88 @@ cout<<"Warning: TrackIdToSubId ToBe fully Implemented!\n";
 // exit(1);
 }
 */
+
+void ExchangeSubHalos(MpiWorker_t& world, vector <Subhalo_t>& InHalos, vector<Subhalo_t>& OutHalos, MPI_Datatype MPI_Halo_Shell_Type, const ParticleSnapshot_t &snap)
+{
+  typedef typename vector <Subhalo_t>::iterator HaloIterator_t;
+  typedef HaloParticleIterator_t<HaloIterator_t> ParticleIterator_t;
+  typedef HaloNestIterator_t<HaloIterator_t> NestIterator_t;
+  
+//   cout<<"Query particle..."<<flush;
+  {//query particles
+	ParticleExchanger_t <Subhalo_t>Exchanger(world, snap, InHalos);
+	Exchanger.Exchange();
+  }
+  
+  vector <IdRank_t>TargetRank(InHalos.size());
+  DecideTargetProcessor(world.size(), InHalos, TargetRank);
+
+  //distribute halo shells
+	vector <int> SendHaloCounts(world.size(),0), RecvHaloCounts(world.size()), SendHaloDisps(world.size()), RecvHaloDisps(world.size());
+	sort(TargetRank.begin(), TargetRank.end(), CompareRank);
+	vector <Subhalo_t> InHalosSorted(InHalos.size());
+	vector <HBTInt> InHaloSizes(InHalos.size()), InHaloNestSizes(InHalos.size());
+	for(HBTInt haloid=0;haloid<InHalos.size();haloid++)
+	{
+	  InHalosSorted[haloid]=move(InHalos[TargetRank[haloid].Id]);
+	  SendHaloCounts[TargetRank[haloid].Rank]++;
+	  InHaloSizes[haloid]=InHalosSorted[haloid].Particles.size();
+	  InHaloNestSizes[haloid]=InHalosSorted[haloid].NestedSubhalos.size();
+	}
+	MPI_Alltoall(SendHaloCounts.data(), 1, MPI_INT, RecvHaloCounts.data(), 1, MPI_INT, world.Communicator);
+	CompileOffsets(SendHaloCounts, SendHaloDisps);
+	HBTInt NumNewHalos=CompileOffsets(RecvHaloCounts, RecvHaloDisps);
+	OutHalos.resize(OutHalos.size()+NumNewHalos);
+	auto NewHalos=OutHalos.end()-NumNewHalos;
+	MPI_Alltoallv(InHalosSorted.data(), SendHaloCounts.data(), SendHaloDisps.data(), MPI_Halo_Shell_Type, &NewHalos[0], RecvHaloCounts.data(), RecvHaloDisps.data(), MPI_Halo_Shell_Type, world.Communicator);
+  //resize receivehalos
+	vector <HBTInt> OutHaloSizes(NumNewHalos), OutHaloNestSizes(NumNewHalos);
+	MPI_Alltoallv(InHaloSizes.data(), SendHaloCounts.data(), SendHaloDisps.data(), MPI_HBT_INT, OutHaloSizes.data(), RecvHaloCounts.data(), RecvHaloDisps.data(), MPI_HBT_INT, world.Communicator);
+	MPI_Alltoallv(InHaloNestSizes.data(), SendHaloCounts.data(), SendHaloDisps.data(), MPI_HBT_INT, OutHaloNestSizes.data(), RecvHaloCounts.data(), RecvHaloDisps.data(), MPI_HBT_INT, world.Communicator);
+	for(HBTInt i=0;i<NumNewHalos;i++)
+	{
+	  NewHalos[i].Particles.resize(OutHaloSizes[i]);
+	  NewHalos[i].NestedSubhalos.resize(OutHaloNestSizes[i]);
+	}
+	
+	{
+	//distribute halo particles
+	MPI_Datatype MPI_HBT_Particle;
+	Particle_t().create_MPI_type(MPI_HBT_Particle);
+	//create combined iterator for each bunch of haloes
+	vector <ParticleIterator_t> InParticleIterator(world.size());
+	vector <ParticleIterator_t> OutParticleIterator(world.size());
+	for(int rank=0;rank<world.size();rank++)
+	{
+	  InParticleIterator[rank].init(InHalosSorted.begin()+SendHaloDisps[rank], InHalosSorted.begin()+SendHaloDisps[rank]+SendHaloCounts[rank]);
+	  OutParticleIterator[rank].init(NewHalos+RecvHaloDisps[rank], NewHalos+RecvHaloDisps[rank]+RecvHaloCounts[rank]);
+	}
+	vector <HBTInt> InParticleCount(world.size(),0);
+	for(HBTInt i=0;i<InHalosSorted.size();i++)
+	  InParticleCount[TargetRank[i].Rank]+=InHalosSorted[i].Particles.size();
+	
+	MyAllToAll<Particle_t, ParticleIterator_t, ParticleIterator_t>(world, InParticleIterator, InParticleCount, OutParticleIterator, MPI_HBT_Particle);
+	
+	MPI_Type_free(&MPI_HBT_Particle);
+	}
+	
+	{
+	//distribute nests
+	//create combined iterator for each bunch of haloes
+	vector <NestIterator_t> InNestIterator(world.size());
+	vector <NestIterator_t> OutNestIterator(world.size());
+	for(int rank=0;rank<world.size();rank++)
+	{
+	  InNestIterator[rank].init(InHalosSorted.begin()+SendHaloDisps[rank], InHalosSorted.begin()+SendHaloDisps[rank]+SendHaloCounts[rank]);
+	  OutNestIterator[rank].init(NewHalos+RecvHaloDisps[rank], NewHalos+RecvHaloDisps[rank]+RecvHaloCounts[rank]);
+	}
+	vector <HBTInt> InNestCount(world.size(),0);
+	for(HBTInt i=0;i<InHalosSorted.size();i++)
+	  InNestCount[TargetRank[i].Rank]+=InHalosSorted[i].NestedSubhalos.size();
+	
+	MyAllToAll<HBTInt, NestIterator_t, NestIterator_t>(world, InNestIterator, InNestCount, OutNestIterator, MPI_HBT_INT);
+	}
+}
   
 void SubhaloSnapshot_t::BuildMPIDataType()
 {
@@ -89,7 +171,7 @@ void SubhaloSnapshot_t::UpdateParticles(MpiWorker_t& world, const ParticleSnapsh
 {
   Cosmology=snapshot.Cosmology;
   SubhaloList_t LocalSubhalos;
-  snapshot.ExchangeHalos(world, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t);
+  ExchangeSubHalos(world, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t, snapshot);
   Subhalos.swap(LocalSubhalos);
   for(auto &&h: Subhalos)
     h.CountParticles();
