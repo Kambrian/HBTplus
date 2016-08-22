@@ -428,7 +428,7 @@ void SubhaloSnapshot_t::AssignHosts(MpiWorker_t &world, HaloSnapshot_t &halo_sna
 	FindOtherHostsSafely(world, rank, halo_snap, part_snap, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t);
   Subhalos.swap(LocalSubhalos);
   halo_snap.ClearParticleHash();
-    
+  
   MemberTable.Build(halo_snap.Halos.size(), Subhalos, true);
 //   MemberTable.AssignRanks(Subhalos); //not needed here
 }
@@ -624,8 +624,7 @@ void SubhaloSnapshot_t::LocalizeNestedIds(MpiWorker_t &world)
       }
       else
       {
-	if(it!=it_save)
-	  *it_save=*it;
+	*it_save=subid;
 	++it_save;
       }
     }
