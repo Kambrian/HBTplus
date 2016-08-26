@@ -1,0 +1,25 @@
+ Omega_0 = 0.268,  Lambda_0 = 0.732
+ Omega_i = 1.00000,  Lambda_i = 0.00000, Initial redshift z_i =144.00
+ Physical Box size in Mpc/h: 600.0,  Softening in Mpc/h:  0.010
+
+ Index of P(k):25,       delta value for P(k):  0.8300
+
+ No. of particles:  28991029248,  No of grid: 6144
+ No. of grid for initial con.: 6144
+
+ p1= 1.00,  dp= 0.0288, total number of steps: 5000,  p = a** 1.000
+
+ Position and Velocity output steps:   247  256  266  275  285  295  305  316  327  338  350  362  374  387  399  413  427  441  455  470  485  501  517  534  551  569  587  605  625  644
+
+ Position and Velocity output steps:   665  685  707  729  752  775  799  824  849  875  902  929  958  987 1017 1048 1080 1112 1146 1180 1216 1252 1290 1328 1368 1409 1451 1494 1539 1584
+
+ Position and Velocity output steps:  1631 1679 1729 1780 1833 1887 1942 2000 2058 2119 2181 2245 2310 2378 2448 2519 2593 2668 2746 2826 2908 2993 3080 3169 3261 3356 3453 3553 3656 3762
+
+ Position and Velocity output steps:  3871 3982 4098 4216 4338 4463 4591 4724 4860 5000
+ Power spectrum output steps:   247  362  517  729 1017 1409 1942 2668 3656 5000
+
+ Run No.:  6610,  Seed number for init con:     1200,  Index for initpos:   2
+
+ Softening for MP:  3.00, Radius for SF:  2.67,  No. of HOC: ***
+ Assi. & Inter. Index:  1, Index for FDA:  4
+ No. of F in the SF table:      71112,  square of dr:  0.265E-11

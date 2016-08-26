@@ -1,0 +1,12 @@
+To create your own IO interface, you have to read-in the following data:
+  # particle positions and velocities in gadget units into struct ParticleData; 
+  # if input particle velocity is already physical, define VEL_INPUT_PHYSICAL in parameter file
+  # a header with at least the three quantities:
+         * header.Hz (current hubble param in gadget units),
+         * header.mass[2] (gas and dm particle masses in gadget units),
+         * header.time (current reduced scale factor a=1/(1+z))
+		 * header.Omega0, header.OmegaLambda : OmegaM and OmegaL at z=0.
+  # the fof catalogue (each fof's particle ids) into CATALOGUE.
+  # convert your system of units to standard gadget units when loading data for least code modification
+  # set INPUT_DOUBLEPRECISION if your Pdat.Pos[] and Vel are in double precision format
+  
