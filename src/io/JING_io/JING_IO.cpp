@@ -55,17 +55,27 @@ extern void read_group_header_int8_(float *b,long int *ngrp, int *fileno);
 #endif
 
 #ifndef PID_ORDERED
-static void read_id_file_single(HBTInt *pid, long int np, char *filename, int flag_endian)
+void JingReader_t::ReadIdFileSingle(int ifile, vector< Particle_t >& Particles)
 {
-	  int fileno, filestat;
-	  open_fortran_file_(filename,&fileno,&flag_endian,&filestat);
-	  if(filestat)
-	  {
-		  fprintf(logfile,"Error opening file %s,error no. %d\n",filename,filestat);fflush(logfile);
-		  exit(1);
-	  }
-	  read_fortran_record_HBTInt(pid, &np, &fileno);
-	  close_fortran_file_(&fileno);
+  long int nread=Header.Np/NumFilesId;
+  string filename=GetFileName("id", ifile);
+  vector <HBTInt> PId(nread);
+  
+  int fileno, filestat, flag_endian=NeedByteSwap;
+  open_fortran_file_(filename.c_str(),&fileno,&flag_endian,&filestat);
+  if(filestat) throw(runtime_error("failed to open file "+filename+", error no. "+to_string(filestat)+"\n"));
+  read_fortran_record_HBTInt(PId.data(), &nread, &fileno);
+  close_fortran_file_(&fileno);
+  
+  auto curr_particles=Particles.data()+nread*ifile;
+  for(HBTInt i=0;i<nread;i++)
+	curr_particles[i].Id=PId[i];
+}
+void JingReader_t::ReadId(vector <Particle_t> &Particles)
+{
+	for(int ifile=0;ifile<NumFilesId;ifile++)
+	#pragma omp task firstprivate(ifile)
+		ReadIdFileSingle(ifile, Particles);
 }
 static void check_part_id_range()
 {
@@ -75,44 +85,22 @@ static void check_part_id_range()
 		if(Pdat.PID[i]<1||Pdat.PID[i]>NP_SIM)
 		{fprintf(logfile,"error: id not in the range 0~"HBTIFMT", for i="HBTIFMT", pid="HBTIFMT", snap=%d\n",NP_SIM,i,Pdat.PID[i],(int)header.Nsnap);fflush(logfile);}
 }
-static void read_part_id_JING(int Nsnap,char *snapdir)
-{
-	char buf[1024];
-	HBTInt i;
-	long int nread;
-	int ifile;
-	
-	Pdat.PID=mymalloc(sizeof(HBTInt)*NP_DM);
-		
-#if !defined(NFILE_ID)||NFILE_ID==1
-	sprintf(buf,"%s/id%d.%04d",snapdir,RUN_NUM,(int)Nsnap);
-	read_id_file_single(Pdat.PID, NP_DM, buf, FLG_ENDIAN);
-#else
-	nread=NP_DM/NFILE_ID;
-	for(ifile=0;ifile<NFILE_ID;ifile++)
-	#pragma omp task firstprivate(ifile,nread) private(buf)
-	{
-	  sprintf(buf,"%s/id%d.%04d.%02d",snapdir,RUN_NUM,(int)Nsnap, ifile+1);
-	  read_id_file_single(Pdat.PID+nread*ifile, nread, buf, FLG_ENDIAN);
-	}
-#endif	
-}
 #endif
-static void read_pos_file_single(HBTReal pos[][3], long int np, char *filename, int flag_endian, int has_header, int has_scale)
+void JingReader_t::ReadPosFileSingle(int ifile, vector< Particle_t >& Particles)
 {
-  int fileno,filestat;
+  long int nread=Header.Np/NumFilesId;
+  string filename=GetFileName("id", ifile);
+  vector <HBTxyz> Pos(nread);
+  
+  int fileno,filestat, flag_endian=NeedByteSwap;
   HBTInt i,j;
-  open_fortran_file_(filename,&fileno,&flag_endian,&filestat);
-	if(filestat)
-	{
-		fprintf(logfile,"Error opening file %s,error no. %d\n",filename,filestat);fflush(logfile);
-		exit(1);
-	}
+  open_fortran_file_(filename.c_str(),&fileno,&flag_endian,&filestat);
+  if(filestat) throw(runtime_error("failed to open file "+filename+", error no. "+to_string(filestat)+"\n"));
 	
-	if(has_header)	skip_fortran_record_(&fileno);
+  if(0==ifile)	skip_fortran_record_(&fileno);
 	
 // 	Pdat.Pos=mymalloc(sizeof(HBTReal)*3*NP_DM);
-	if(has_scale)//has scale
+	if(FlagHasScale)//has scale
 	{
 	  short *tmp;
 		if(sizeof(short)!=2)
@@ -167,29 +155,11 @@ static void read_vel_file_single(HBTReal vel[][3], long int np, char *filename, 
 		read_part_arr(vel,&np,&fileno);
 	close_fortran_file_(&fileno);
 }
-static void read_part_pos_JING(int Nsnap,char *snapdir)
+void JingReader_t::ReadPosition(vector <Particle_t> &Particles)
 {
-	char buf[1024];
-	int ifile;
-	long int nread;
-	
-	Pdat.Pos=mymalloc(sizeof(HBTReal)*3*NP_DM);
-	
-#if !defined(NFILE_POS)||NFILE_POS==1
-	#pragma omp task private(buf)
-	{
-	sprintf(buf,"%s/pos%d.%04d",snapdir,RUN_NUM,Nsnap);
-	read_pos_file_single(Pdat.Pos, NP_DM, buf, FLG_ENDIAN, 1, Nsnap<=SNAP_DIV_SCALE);
-	}
-#else
-	nread=NP_DM/NFILE_POS;
-	for(ifile=0;ifile<NFILE_POS;ifile++)
-  	#pragma omp task firstprivate(ifile,nread) private(buf)
-	{
-	  sprintf(buf,"%s/pos%d.%04d.%02d",snapdir,RUN_NUM,(int)Nsnap, ifile+1);
-	  read_pos_file_single(Pdat.Pos+nread*ifile, nread, buf, FLG_ENDIAN, 0==ifile,  Nsnap<=SNAP_DIV_SCALE);
-	}
-#endif	
+	for(int ifile=0;ifile<NumFilesPos;ifile++)
+  	#pragma omp task firstprivate(ifile)
+	  ReadPosFileSingle(ifile, Particles);
 }
 static void read_part_vel_JING(int Nsnap,char *snapdir)
 {
@@ -223,7 +193,7 @@ string JingReader_t::GetFileName(const char * filetype, int iFile)
   char buf[1024];
   if(iFile==0)
   sprintf(buf,"%s/%s%s.%04d", HBTConfig.SnapshotPath.c_str(), filetype, HBTConfig.SnapshotFileBase.c_str(),SnapshotId);
-  if(!file_exist(buf))  sprintf(buf,"%s/%s%s.%04d.%02d",HBTConfig.SnapshotPath.c_str(), filetype, HBTConfig.SnapshotFileBase.c_str(),SnapshotId, iFile);
+  if(!file_exist(buf))  sprintf(buf,"%s/%s%s.%04d.%02d",HBTConfig.SnapshotPath.c_str(), filetype, HBTConfig.SnapshotFileBase.c_str(),SnapshotId, iFile+1);
   return string(buf);
 }
 
@@ -242,16 +212,16 @@ void JingReader_t::ProbeFiles()
   }
 
   JingHeader_t header;
-  read_part_header(&header.Np,&header.ips,&header.ztp,&header.Omegat,&header.Lambdat,
-					  &header.rLbox,&header.xscale,&header.vscale,&fileno);
-  if(header.rLbox!=HBTConfig.BoxSize)
+  read_part_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
+					  &header.BoxSize,&header.xscale,&header.vscale,&fileno);
+  if(header.BoxSize!=HBTConfig.BoxSize)
   {
     NeedByteSwap=!NeedByteSwap;
-    auto L=header.rLbox;
+    auto L=header.BoxSize;
     swap_Nbyte(&L, 1, sizeof(L));
     if(L!=HBTConfig.BoxSize)
     {
-      cerr<<"Error: boxsize check failed. maybe wrong unit? expect "<<HBTConfig.BoxSize<<", found "<<header.rLbox<<" (or "<<L<<" )"<<endl;
+      cerr<<"Error: boxsize check failed. maybe wrong unit? expect "<<HBTConfig.BoxSize<<", found "<<header.BoxSize<<" (or "<<L<<" )"<<endl;
       exit(1);
     }
   }
@@ -266,11 +236,11 @@ void JingReader_t::ProbeFiles()
 int JingReader_t::CountFiles(const char *filetype)
 {
   char filename[1024], pattern[1024], basefmt[1024], fmt[1024];
-  const int ifile=0;
+  const int ifile=1;
   sprintf(basefmt,"%s/%%s%s.%04d",HBTConfig.SnapshotPath.c_str(), HBTConfig.SnapshotFileBase.c_str(), SnapshotId);
   sprintf(basefmt, "%s/groups_%03d/subhalo_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId,SnapshotId);
   sprintf(fmt, "%s.%%02d", basefmt);
-  sprintf(filename, fmt, filetype, 0);
+  sprintf(filename, fmt, filetype, ifile);
   int nfiles=1;
   if(file_exist(filename))
   {
@@ -281,39 +251,39 @@ int JingReader_t::CountFiles(const char *filetype)
   return nfiles;
 }
 
-void JingReader_t::ReadHeader(JingHeader_t& header)
+void JingReader_t::ReadHeader(JingHeader_t& header, const char *filetype, int ifile)
 {	
   short *tmp;
   int flag_endian=NeedByteSwap,filestat,fileno;
   int reset_fileno=1;
   alloc_file_unit_(&reset_fileno);//reset fortran fileno pool 
   
-  string filename=GetFileName("pos");
+  string filename=GetFileName(filetype, ifile);
   open_fortran_file_(filename.c_str(),&fileno,&flag_endian,&filestat);
   if(filestat)
   {
     cerr<<"Error opening file "<<filename<<",error no. "<<filestat<<endl;
     exit(1);
   }
-  read_part_header(&header.Np,&header.ips,&header.ztp,&header.Omegat,&header.Lambdat,
-		   &header.rLbox,&header.xscale,&header.vscale,&fileno);
+  read_part_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
+		   &header.BoxSize,&header.xscale,&header.vscale,&fileno);
   close_fortran_file_(&fileno);
-  assert(header.rLbox==HBTConfig.BoxSize);
+  assert(header.BoxSize==HBTConfig.BoxSize);
   
-  cout<<"z="<<header.ztp<<endl;
+  cout<<"z="<<header.Redshift<<endl;
     
   float Hratio; //(Hz/H0)
   float scale_reduced,scale0;//a,R0
   Hratio=sqrt(OMEGAL0/header.Lambdat);
   header.Hz=PhysicalConst::H0*Hratio;
-  scale_reduced=1./(1.+header.ztp);
-  header.time=scale_reduced;
+  scale_reduced=1./(1.+header.Redshift);
+  header.ScaleFactor=scale_reduced;
   header.mass[0]=0.;
   header.mass[1]=PMass;
-  header.Omega0=OMEGA0;
-  header.OmegaLambda=OMEGAL0;	
+  header.OmegaM0=OMEGA0;
+  header.OmegaLambda0=OMEGAL0;	
   scale0=1+Redshift_INI;//scale_INI=1,scale_reduced_INI=1./(1.+z_ini),so scale0=scale_INI/scale_reduce_INI;
-  header.vunit=100.*header.rLbox*Hratio*scale_reduced*scale_reduced*scale0;   /*vunit=100*rLbox*R*(H*R)/(H0*R0)
+  header.vunit=100.*header.BoxSize*Hratio*scale_reduced*scale_reduced*scale0;   /*vunit=100*rLbox*R*(H*R)/(H0*R0)
   =L*H0*Hratio*R*R/R0 (H0=100 when length(L) in Mpc/h)
   *      =100*L*(H/H0)*a*a*R0
   * where a=R/R0;         */
@@ -339,7 +309,7 @@ void load_particle_data_bypart(HBTInt Nsnap, char *SnapPath, unsigned char loadf
 	
 	Pdat.Nsnap=Nsnap;
 	
-#pragma omp parallel num_threads(NFILE_CHUNK)
+#pragma omp parallel num_threads(NFILE_CHUNK) //FIXME: replace NFILE_CHUNK
 #pragma omp single
 	{
 	if(flag_pos)
@@ -384,14 +354,38 @@ void load_particle_data_bypart(HBTInt Nsnap, char *SnapPath, unsigned char loadf
 }
 void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cosmology)
 {
-  ReadHeader(0, Header);
+  ReadHeader(Header);
   Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
 #ifdef DM_ONLY
   Cosmology.ParticleMass=Header.mass[TypeDM];
 #endif
-  HBTInt np=CompileFileOffsets(Header.NumberOfFiles);
-  Particles.resize(np);
+  Particles.resize(Header.Np);
   
+  #pragma omp parallel num_threads(NFILE_CHUNK)//FIXME: replace NFILE_CHUNK
+	#pragma omp single //nowait //creating tasks inside
+	{
+	read_part_pos_JING(snaplist[Nsnap],SnapPath);
+	read_part_vel_JING(snaplist[Nsnap],SnapPath);
+	#ifndef PID_ORDERED
+	read_part_id_JING(snaplist[Nsnap],SnapPath);
+	#endif
+	}
+// 	#pragma omp taskwait
+	
+#ifndef PID_ORDERED
+	check_part_id_range();
+#endif
+	#pragma omp parallel for private(i,j)
+	for(i=0;i<header.Np;i++)
+		for(j=0;j<3;j++)
+		{
+			Pdat.Pos[i][j]-=floor(Pdat.Pos[i][j]);	//format coordinates to be in the range [0,1)
+			Pdat.Pos[i][j]*=BOXSIZE;				//comoving coordinate in units of kpc/h
+			Pdat.Vel[i][j]*=header.vunit;			//physical peculiar velocity in units of km/s
+		}
+	
+	Pdat.Nsnap=Nsnap;
+	
 #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
   {
