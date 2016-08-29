@@ -8,3 +8,8 @@
 
 	CXX=mpicxx -cxx=g++
   
+-  error "SEEK_SET is #defined but must not be for the C++ binding of MPI"
+
+  This could happen if your (intel) mpi compiler is not up to date. It is known as a [bug](https://software.intel.com/en-us/articles/intel-cluster-toolkit-for-linux-error-when-compiling-c-aps-using-intel-mpi-library-compilation-driver-mpiicpc) in the MPI-2 standard. Uncomment this line in Makefile.inc to work around it if you cannot upgrade your compiler:
+  
+	#CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs
