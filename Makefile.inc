@@ -1,3 +1,5 @@
+#HDFINC=-I/usr/include/hdf5/serial/
+#HDFLIB=-L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_hl -lhdf5
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5 
 

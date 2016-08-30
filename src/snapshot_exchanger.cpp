@@ -78,14 +78,19 @@ bool ParticleSnapshot_t::IsContiguousId(MpiWorker_t &world, HBTInt &GlobalIdMin)
   {
 	IdMin=Particles.front().Id;
 	IdMax=Particles.back().Id;
-	MPI_Reduce(MPI_IN_PLACE, &IdMin, 1, MPI_HBT_INT, MPI_MIN, 0, newcomm);
-	MPI_Reduce(MPI_IN_PLACE, &IdMax, 1, MPI_HBT_INT, MPI_MAX, 0, newcomm);
-	if(newrank) 
-	  IdMin=0;
-	else
+	const int root=0;
+	if(newrank==root)
 	{
+	  MPI_Reduce(MPI_IN_PLACE, &IdMin, 1, MPI_HBT_INT, MPI_MIN, root, newcomm);
+	  MPI_Reduce(MPI_IN_PLACE, &IdMax, 1, MPI_HBT_INT, MPI_MAX, root, newcomm);
 	  flag_contig=(IdMax-IdMin+1==NumberOfParticlesOnAllNodes);
 	  if(flag_contig) cout<<"Contiguous particle Ids."<<endl;
+	}
+	else
+	{
+	  MPI_Reduce(&IdMin, &IdMin, 1, MPI_HBT_INT, MPI_MIN, root, newcomm);
+	  MPI_Reduce(&IdMax, &IdMax, 1, MPI_HBT_INT, MPI_MAX, root, newcomm);
+	  IdMin=0;
 	}
   }
   else
