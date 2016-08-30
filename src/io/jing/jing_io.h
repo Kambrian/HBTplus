@@ -21,6 +21,7 @@ struct JingHeader_t
    HBTReal RedshiftIni;
    HBTInt SnapDivScale;
    bool FlagHasScale;
+   bool ParticleDataXMajor;
    /*==extension needed for calculating binding energy:==*/
    HBTReal ScaleFactor;//current reduced scale factor 
    HBTReal mass[2];//Gas (mass[0]) and DM (mass[1]) particle masses, in units of 10^10Msun/h
@@ -33,7 +34,7 @@ class JingReader_t
   int NumFilesPos, NumFilesVel, NumFilesId;
   
   string GetFileName(const char * filetype, int iFile=0);
-  void CountFiles(const char *filetype, int &nfiles); 
+  int CountFiles(const char *filetype); 
   void ProbeFiles();
   void ReadId(vector <Particle_t> &Particles);
   void ReadVelocity(vector <Particle_t> &Particles);
@@ -43,6 +44,7 @@ class JingReader_t
   void ReadVelFileSingle(int ifile, vector <Particle_t> &Particles);
   void CheckIdRange(vector <Particle_t> &Particles);
   void LoadExtraHeaderParams(JingHeader_t &header);
+  void ReadParticleArray(float partarr[][3],long int np,int fileno);
 public:
   JingReader_t(int snapshot_id): SnapshotId(snapshot_id)
   {

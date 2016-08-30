@@ -6,42 +6,16 @@
 #include <omp.h>
 
 #include "../../snapshot.h"
-#include "JING_IO.h"
+#include "jing_io.h"
+#include "fortread.h"
 
-extern int alloc_file_unit_(int *reset);
-extern void open_fortran_file_(char *filename,int *fileno,int *endian,int *error);
-extern void skip_fortran_record_(int *fileno);
-extern void read_fortran_record1_(void *arr,long int *arr_len,int *fileno);
-extern void read_fortran_record2_(void *arr,long int *arr_len,int *fileno);
-extern void read_fortran_record4_(void *arr,long int *arr_len,int *fileno);
-extern void read_fortran_record8_(void *arr,long int *arr_len,int *fileno);
-extern void close_fortran_file_(int *fileno);
-extern void read_part_arr_imajor_(float partarr[][3],long int *np,int *fileno);//old format
-extern void read_part_arr_xmajor_(float partarr[][3],long int *np,int *fileno);//newest format
-extern void read_part_header_int4_(int *np,int *ips,float *ztp,float *omgt,float *lbdt,
-			      float *boxsize,float *xscale,float *vscale,int *fileno);
-extern void read_part_header_int8_(long int *np,long int *ips,float *ztp,float *omgt,float *lbdt,
-			      float *boxsize,float *xscale,float *vscale,int *fileno);
-extern void read_group_header_int4_(float *b,int *ngrp, int *fileno);
-extern void read_group_header_int8_(float *b,long int *ngrp, int *fileno);
-
-//Caution:: only support SAME_INTTYPE and SAME_REALTYPE; if they differ, need further modification of code!
-#ifdef HBT_INT8
-#define read_fortran_record_HBTInt read_fortran_record8_
-#define read_part_header read_part_header_int8_
-#define read_group_header read_group_header_int8_
-#else
-#define read_fortran_record_HBTInt read_fortran_record4_
-#define read_part_header read_part_header_int4_
-#define read_group_header read_group_header_int4_
-#endif
-
-#ifdef PDAT_XMAJOR
-#define read_part_arr read_part_arr_xmajor_
-#else
-#define read_part_arr read_part_arr_imajor_
-#endif
-
+void JingReader_t::ReadParticleArray(float partarr[][3], long int np, int fileno)
+{
+  if(Header.ParticleDataXMajor)
+    read_part_arr_xmajor_(partarr, &np, &fileno);
+  else
+    read_part_arr_imajor_(partarr, &np, &fileno);
+}
 void JingReader_t::ReadIdFileSingle(int ifile, vector< Particle_t >& Particles)
 {
   long int nread=Header.Np/NumFilesId;
@@ -63,12 +37,12 @@ void JingReader_t::ReadId(vector <Particle_t> &Particles)
   if(HBTConfig.SnapshotHasIdBlock)
   {
     for(int ifile=0;ifile<NumFilesId;ifile++)
-    #pragma omp task firstprivate(ifile)
+    #pragma omp task firstprivate(ifile) shared(Particles)
       ReadIdFileSingle(ifile, Particles);
   }
   else
   {
-    #pragma omp task
+    #pragma omp task shared(Particles)
     for(HBTInt i=0;i<Particles.size();i++)
       Particles[i].Id=i;
   }
@@ -79,7 +53,7 @@ void JingReader_t::CheckIdRange(vector <Particle_t>&Particles)
   #pragma omp parallel for
   for(i=0;i<Header.Np;i++)
     if(Particles[i].Id<1||Particles[i].Id>Header.Np)
-      throw(runtime_error("id not in the range 1~"+to_string(Header.Np)+", for i="+to_string(i)+",pid="+to_string(Particles[i].Id)+", snap="+to_string(SnapshotId)+endl));
+      throw(runtime_error("id not in the range 1~"+to_string(Header.Np)+", for i="+to_string(i)+",pid="+to_string(Particles[i].Id)+", snap="+to_string(SnapshotId)+"\n"));
 }
 void JingReader_t::ReadPosFileSingle(int ifile, vector< Particle_t >& Particles)
 {
@@ -106,10 +80,12 @@ void JingReader_t::ReadPosFileSingle(int ifile, vector< Particle_t >& Particles)
   }
   else
   {
-    vector <HBTxyz> Pos(nread);
-    read_part_arr(Pos.data(),&nread,&fileno);
+    typedef float PosVec_t[3];
+    PosVec_t *Pos=new PosVec_t[nread];
+    ReadParticleArray(Pos,nread,fileno);
     for(HBTInt j=0;j<nread;j++)
-      curr_particles[j].ComovingPosition=Pos[j];
+      copyHBTxyz(curr_particles[j].ComovingPosition,Pos[j]);
+    delete [] Pos;
   }
   close_fortran_file_(&fileno);
 }
@@ -138,23 +114,25 @@ void JingReader_t::ReadVelFileSingle(int ifile, vector< Particle_t >& Particles)
   }
   else
   {
-    vector <HBTxyz> Pos(nread);
-    read_part_arr(Pos.data(),&nread,&fileno);
+    typedef float VelVec_t[3];
+    VelVec_t *Vel=new VelVec_t[nread];
+    ReadParticleArray(Vel,nread,fileno);
     for(HBTInt j=0;j<nread;j++)
-      curr_particles[j].PhysicalVelocity=Pos[j];
+      copyHBTxyz(curr_particles[j].PhysicalVelocity, Vel[j]);
+    delete [] Vel;
   }
   close_fortran_file_(&fileno);
 }
 void JingReader_t::ReadPosition(vector <Particle_t> &Particles)
 {
 	for(int ifile=0;ifile<NumFilesPos;ifile++)
-  	#pragma omp task firstprivate(ifile)
+  	#pragma omp task firstprivate(ifile) shared(Particles)
 	  ReadPosFileSingle(ifile, Particles);
 }
 void JingReader_t::ReadVelocity(vector <Particle_t> &Particles)
 {
 	for(int ifile=0;ifile<NumFilesVel;ifile++)
-  	#pragma omp task firstprivate(ifile)
+  	#pragma omp task firstprivate(ifile) shared(Particles)
 	  ReadVelFileSingle(ifile, Particles);
 }
 string JingReader_t::GetFileName(const char * filetype, int iFile)
@@ -271,12 +249,13 @@ void JingReader_t::LoadExtraHeaderParams(JingHeader_t &header)
   }
   string name;
   HBTReal OmegaM0, OmegaL0, RedshiftIni;
-  HBTInt SnapDivScale;
-#define ReadNameValue(x) ifs<<name<<x;assert(name==#x)
+  HBTInt SnapDivScale, ParticleDataXMajor;
+#define ReadNameValue(x) ifs>>name>>x;assert(name==#x)
   ReadNameValue(OmegaM0);
   ReadNameValue(OmegaL0);
   ReadNameValue(RedshiftIni);
   ReadNameValue(SnapDivScale);
+  ReadNameValue(ParticleDataXMajor);
 #undef ReadNameValue
   ifs.close();
   header.OmegaM0=OmegaM0;
@@ -284,6 +263,7 @@ void JingReader_t::LoadExtraHeaderParams(JingHeader_t &header)
   header.RedshiftIni=RedshiftIni;
   header.SnapDivScale=SnapDivScale;
   header.FlagHasScale=(SnapshotId<=header.SnapDivScale);
+  header.ParticleDataXMajor=ParticleDataXMajor;
 }
 
 void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cosmology)
@@ -328,9 +308,9 @@ namespace JingGroup
   {
     int flag_endian=false, filestat, fileno;
     char buf[1024];
-    sprintf(buf, "%s/fof.b20.%s.%04d",HBTConfig.HaloPath.c_str(), HBTConfig.SnapshotFileBase, snapshot_id);
+    sprintf(buf, "%s/fof.b20.%s.%04d",HBTConfig.HaloPath.c_str(), HBTConfig.SnapshotFileBase.c_str(), snapshot_id);
     open_fortran_file_(buf,&fileno,&flag_endian,&filestat);
-    if(filestat) throw(runtime_error("failed to open file "+buf+", error no. "+to_string(filestat)+endl));
+    if(filestat) throw(runtime_error("failed to open file "+string(buf)+", error no. "+to_string(filestat)+"\n"));
     float b;
     HBTInt Ngroups;
     read_group_header(&b,&Ngroups,&fileno);
@@ -338,7 +318,8 @@ namespace JingGroup
     if(b!=0.2)
     {
       flag_endian=true;
-      assert(swap_Nbyte(&b, 1, sizeof(b))==0.2);
+      swap_Nbyte(&b, 1, sizeof(b));
+      assert(b==0.2);
     }
     return flag_endian;
   }
@@ -348,9 +329,9 @@ namespace JingGroup
 	  
     int flag_endian=ProbeGroupFileByteOrder(snapshot_id), filestat, fileno;
     char buf[1024];
-    sprintf(buf, "%s/fof.b20.%s.%04d",HBTConfig.HaloPath.c_str(), HBTConfig.SnapshotFileBase, snapshot_id);
+    sprintf(buf, "%s/fof.b20.%s.%04d",HBTConfig.HaloPath.c_str(), HBTConfig.SnapshotFileBase.c_str(), snapshot_id);
     open_fortran_file_(buf,&fileno,&flag_endian,&filestat);
-    if(filestat) throw(runtime_error("failed to open file "+buf+", error no. "+to_string(filestat)+endl));
+    if(filestat) throw(runtime_error("failed to open file "+string(buf)+", error no. "+to_string(filestat)+"\n"));
     float b;
     HBTInt Ngroups;
     read_group_header(&b,&Ngroups,&fileno);
@@ -381,7 +362,7 @@ namespace JingGroup
       Nids+=Len[i];
 	  
       if(i>0&&Len[i]>Len[i-1]) 
-	throw(runtime_error("Group size not ordered or wrong file format? group "+to_string(i)+", size "+to_string(Len[i])+", "+to_string(Len[i+1])+endl));
+	throw(runtime_error("Group size not ordered or wrong file format? group "+to_string(i)+", size "+to_string(Len[i])+", "+to_string(Len[i+1])+"\n"));
 	  
       nread=Len[i];
       Halos[i].Particles.resize(Len[i]);

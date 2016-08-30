@@ -1,3 +1,5 @@
+#HDFINC=-I/usr/include/hdf5/serial/
+#HDFLIB=-L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_hl -lhdf5
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5
 
@@ -19,10 +21,16 @@ GSLLIB=-lgsl -lgslcblas
 #CXXFLAGS+=-DINCLUSIVE_MASS
 ###
 
-CXX=g++
-CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -g #-lmcheck
+FC=gfortran
+FTNLIB=-lgfortran
+#FC=ifort
+#FTNLIB=-lifport -lifcore
 
-LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPFLAG) #-lmcheck
+
+CXX=g++
+CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -g #-lmcheck
+
+LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPFLAG) #-lmcheck
 
 # CXXFLAGS+=-xHost #to get it runnable on cosma-e
 #CXXFLAGS+=-g
@@ -34,6 +42,9 @@ OMPFLAG=-fopenmp
 else
 OMPFLAG=-openmp
 endif
+
+%.f.o: %.f90
+	$(FC) $^ -c -o $@ 
 
 %.test.o: %.cpp
 	$(CXX) $^ -DTEST_$(basename $<) $(CXXFLAGS) -c -o $@

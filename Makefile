@@ -1,5 +1,6 @@
-SRC_COMM=$(wildcard src/*.cpp) $(wildcard src/io/*.cpp)
-OBJS_COMM=$(SRC_COMM:%.cpp=%.o)
+SRC_Jing=$(wildcard src/io/jing/*.cpp) $(wildcard src/io/jing/*.f90)
+SRC_COMM=$(wildcard src/*.cpp) $(wildcard src/io/*.cpp) $(SRC_Jing)
+OBJS_COMM=$(patsubst %.f90,%.f.o, $(SRC_COMM:%.cpp=%.o))
 
 SRC=$(wildcard *.cpp)
 EXE_HBT=HBT HBTdouble  HBT_majormerger_test  HBTi8 HBT.apostle HBT.apostle_thermal
@@ -7,6 +8,9 @@ EXE=$(EXE_HBT)
 
 default: HBT
 include Makefile.inc
+
+echo:
+	@echo $(OBJS_COMM)
 
 $(EXE): $(OBJS_COMM)
 
