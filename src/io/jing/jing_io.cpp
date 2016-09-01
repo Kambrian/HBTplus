@@ -239,13 +239,19 @@ void JingReader_t::ReadHeader(JingHeader_t& header, const char *filetype, int if
 void JingReader_t::LoadExtraHeaderParams(JingHeader_t &header)
 {
   stringstream filename;
-  filename<<HBTConfig.SnapshotPath<<"/"<<"Parameters.txt";
+  filename<<HBTConfig.SubhaloPath<<"/"<<"SimulationParametersExtra.txt";
   ifstream ifs;
   ifs.open(filename.str());
   if(!ifs.is_open())
   {
-	cerr<<"Error opening config file "<<filename.str()<<endl;
-	exit(1);
+    cerr<<"Error opening simulation parameter file "<<filename.str()<<endl;
+    cerr<<"Please create this file with the following content (modify as needed): "<<endl;
+    cerr<<"OmegaM0 0.3"<<endl;
+    cerr<<"OmegaL0 0.7"<<endl;
+    cerr<<"RedshiftIni 14."<<endl;
+    cerr<<"SnapDivScale -1"<<endl;
+    cerr<<"ParticleDataXMajor 1"<<endl;
+    exit(1);
   }
   string name;
   HBTReal OmegaM0, OmegaL0, RedshiftIni;
