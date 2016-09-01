@@ -59,7 +59,7 @@ public:
 namespace JingGroup
 {
   extern int ProbeGroupFileByteOrder(int snapshot_id);
-  extern void LoadGroup(int snapshot_id, vector< Halo_t >& Halos);
+  extern HBTInt LoadGroup(int snapshot_id, vector< Halo_t >& Halos);
 };
 
 #endif

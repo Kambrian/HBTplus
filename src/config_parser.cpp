@@ -85,6 +85,12 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   
   while(getline(ifs,line))
   {
+    if(line.compare(0,13,"[ReaderExtra]")==0)//skip this section
+    {
+      while(getline(ifs, line))
+	if(line[0]=='[') break;//found new section
+      continue;
+    }
 	trim_trailing_garbage(line, "#[");
 	trim_leading_garbage(line, " \t");
 	if(!line.empty()) SetParameterValue(line);
@@ -104,6 +110,7 @@ void Parameter_t::ParseConfigFile(const char * param_file)
 	GroupLoadedIndex=true;
   
   ReadSnapshotNameList();
+  ConfigFile=string(param_file);
 }
 void Parameter_t::ReadSnapshotNameList()
 {//to specify snapshotnamelist, create a file "snapshotlist.txt" under SubhaloPath, and list the filenames inside, one per line.
@@ -193,6 +200,7 @@ void Parameter_t::DumpParameters()
   version_file<<"#VERSION "<<HBT_VERSION<<endl;
 #define DumpPar(var) version_file<<#var<<"  "<<var<<endl;
 #define DumpComment(var) {version_file<<"#";DumpPar(var);}
+  DumpComment(ConfigFile)
   DumpPar(SnapshotPath)
   DumpPar(HaloPath)
   DumpPar(SubhaloPath)

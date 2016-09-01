@@ -15,6 +15,7 @@
 #include "../halo.h"
 #include "gadget_group_io.h"
 #include "apostle_io.h"
+#include "jing/jing_io.h"
 
 void HaloSnapshot_t::Load(int snapshot_index)
 {
@@ -26,6 +27,8 @@ void HaloSnapshot_t::Load(int snapshot_index)
 	TotNumberOfParticles=GadgetGroup::Load(SnapshotId, Halos);
   else if(IsApostleGroup(GroupFileFormat))
 	TotNumberOfParticles=ApostleReader_t().LoadGroups(SnapshotId, Halos);
+  else if(GroupFileFormat=="jing")
+	TotNumberOfParticles=JingGroup::LoadGroup(SnapshotId, Halos);
   else if(GroupFileFormat=="my_group_format")
   {/*extend your own group reader here, fill Halos and return TotNumberOfParticles, e.g.:
 	

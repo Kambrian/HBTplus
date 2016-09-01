@@ -71,6 +71,7 @@ public:
   HBTReal TreeNodeResolutionHalf;
   HBTReal BoxHalf; 
   bool GroupLoadedIndex;
+  string ConfigFile;
   
   Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries,false),SnapshotIdList(),SnapshotNameList()
   {

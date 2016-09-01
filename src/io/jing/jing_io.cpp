@@ -238,21 +238,21 @@ void JingReader_t::ReadHeader(JingHeader_t& header, const char *filetype, int if
 
 void JingReader_t::LoadExtraHeaderParams(JingHeader_t &header)
 {
-  stringstream filename;
-  filename<<HBTConfig.SubhaloPath<<"/"<<"SimulationParametersExtra.txt";
+  string filename=HBTConfig.ConfigFile;
   ifstream ifs;
-  ifs.open(filename.str());
+  ifs.open(filename);
   if(!ifs.is_open())
   {
-    cerr<<"Error opening simulation parameter file "<<filename.str()<<endl;
-    cerr<<"Please create this file with the following content (modify as needed): "<<endl;
-    cerr<<"OmegaM0 0.3"<<endl;
-    cerr<<"OmegaL0 0.7"<<endl;
-    cerr<<"RedshiftIni 14."<<endl;
-    cerr<<"SnapDivScale -1"<<endl;
-    cerr<<"ParticleDataXMajor 1"<<endl;
+    cerr<<"Error opening parameter file "<<filename<<endl;
     exit(1);
   }
+  string line;
+  while(getline(ifs,line))
+  {
+    if(line.compare(0,13,"[ReaderExtra]")==0)//find the section
+      break;
+  }
+
   string name;
   HBTReal OmegaM0, OmegaL0, RedshiftIni;
   HBTInt SnapDivScale, ParticleDataXMajor;
@@ -264,6 +264,7 @@ void JingReader_t::LoadExtraHeaderParams(JingHeader_t &header)
   ReadNameValue(ParticleDataXMajor);
 #undef ReadNameValue
   ifs.close();
+  
   header.OmegaM0=OmegaM0;
   header.OmegaLambda0=OmegaL0;
   header.RedshiftIni=RedshiftIni;
@@ -329,7 +330,7 @@ namespace JingGroup
     }
     return flag_endian;
   }
-  void LoadGroup(int snapshot_id, vector< Halo_t >& Halos)
+  HBTInt LoadGroup(int snapshot_id, vector< Halo_t >& Halos)
   {
     long int nread;
 	  
@@ -387,6 +388,8 @@ namespace JingGroup
 	for(auto && p: particles)
 	  p--;//change from [1,NP] to [0,NP-1] for index in C
     }
+    
+    return Nids;
   }
 };
 
