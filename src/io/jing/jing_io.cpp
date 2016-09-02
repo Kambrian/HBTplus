@@ -219,7 +219,7 @@ void JingReader_t::ReadHeader(JingHeader_t& header, const char *filetype, int if
   read_part_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
 		   &header.BoxSize,&header.xscale,&header.vscale,&fileno);
   close_fortran_file_(&fileno);
-  assert(header.BoxSize==HBTConfig.BoxSize);
+//   assert(header.BoxSize==HBTConfig.BoxSize);
   
   LoadExtraHeaderParams(header);
   header.mass[0]=0.;
