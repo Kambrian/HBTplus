@@ -161,17 +161,21 @@ void JingReader_t::ProbeFiles()
   JingHeader_t header;
   read_part_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
 					  &header.BoxSize,&header.xscale,&header.vscale,&fileno);
-  if(header.BoxSize!=HBTConfig.BoxSize)
+  auto L=header.BoxSize;
+  if(header.ips!=SnapshotId)
   {
     NeedByteSwap=!NeedByteSwap;
-    auto L=header.BoxSize;
-    swap_Nbyte(&L, 1, sizeof(L));
-    if(L!=HBTConfig.BoxSize)
+    auto i=header.ips;
+    swap_Nbyte(&i, 1, sizeof(i));
+	swap_Nbyte(&L, 1, sizeof(L));
+    if(i!=SnapshotId)
     {
-      cerr<<"Error: boxsize check failed. maybe wrong unit? expect "<<HBTConfig.BoxSize<<", found "<<header.BoxSize<<" (or "<<L<<" )"<<endl;
+      cerr<<"Error: fail to determine endianness for snapshot "<<SnapshotId<<", read ips="<<header.ips<<" or "<<i<<"(byteswapped)"<<endl;
       exit(1);
     }
   }
+  if(L!=HBTConfig.BoxSize)
+	cerr<<"Warning: boxsize does not match, maybe different units? "<<L<<","<<HBTConfig.BoxSize<<endl;
 
   close_fortran_file_(&fileno);
 
