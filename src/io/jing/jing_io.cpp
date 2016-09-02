@@ -315,6 +315,10 @@ void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cos
 
 namespace JingGroup
 {
+  bool check_b(float b)
+  {
+	return fabs(b-0.2)<0.01;
+  }
   int ProbeGroupFileByteOrder(int snapshot_id)
   {
     int flag_endian=false, filestat, fileno;
@@ -326,11 +330,11 @@ namespace JingGroup
     HBTInt Ngroups;
     read_group_header(&b,&Ngroups,&fileno);
     close_fortran_file_(&fileno);
-    if(b!=0.2)
+    if(!check_b(b))
     {
       flag_endian=true;
       swap_Nbyte(&b, 1, sizeof(b));
-      assert(b==0.2);
+      assert(check_b(b));
     }
     return flag_endian;
   }
