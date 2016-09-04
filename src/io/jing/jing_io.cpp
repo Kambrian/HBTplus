@@ -220,6 +220,11 @@ void JingReader_t::ReadHeader(JingHeader_t& header, const char *filetype, int if
 		   &header.BoxSize,&header.xscale,&header.vscale,&fileno);
   close_fortran_file_(&fileno);
 //   assert(header.BoxSize==HBTConfig.BoxSize);
+  if(fabs(header.BoxSize-HBTConfig.BoxSize)>1e-3*HBTConfig.BoxSize)
+  {
+	cerr<<"Warning: correcting boxsize from "<<header.BoxSize<<" to "<<HBTConfig.BoxSize<<endl;
+	header.BoxSize=HBTConfig.BoxSize;
+  }
   
   LoadExtraHeaderParams(header);
   header.mass[0]=0.;
@@ -234,7 +239,7 @@ void JingReader_t::ReadHeader(JingHeader_t& header, const char *filetype, int if
   scale_reduced=1./(1.+header.Redshift);
   header.ScaleFactor=scale_reduced;
   scale0=1+header.RedshiftIni;//scale_INI=1,scale_reduced_INI=1./(1.+z_ini),so scale0=scale_INI/scale_reduce_INI;
-  header.vunit=100.*header.BoxSize*Hratio*scale_reduced*scale_reduced*scale0;   /*vunit=100*rLbox*R*(H*R)/(H0*R0)
+  header.vunit=PhysicalConst::H0.*header.BoxSize*Hratio*scale_reduced*scale_reduced*scale0;   /*vunit=100*rLbox*R*(H*R)/(H0*R0)
   =L*H0*Hratio*R*R/R0 (H0=100 when length(L) in Mpc/h)
   *      =100*L*(H/H0)*a*a*R0
   * where a=R/R0;         */
@@ -393,7 +398,7 @@ namespace JingGroup
     for(HBTInt i=0;i<Ngroups;i++)
     {
 	auto &particles=Halos[i].Particles;
-	for(auto && p: particles)
+	for(auto & p: particles)
 	  p--;//change from [1,NP] to [0,NP-1] for index in C
     }
     
