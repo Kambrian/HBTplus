@@ -239,7 +239,7 @@ void JingReader_t::ReadHeader(JingHeader_t& header, const char *filetype, int if
   scale_reduced=1./(1.+header.Redshift);
   header.ScaleFactor=scale_reduced;
   scale0=1+header.RedshiftIni;//scale_INI=1,scale_reduced_INI=1./(1.+z_ini),so scale0=scale_INI/scale_reduce_INI;
-  header.vunit=PhysicalConst::H0.*header.BoxSize*Hratio*scale_reduced*scale_reduced*scale0;   /*vunit=100*rLbox*R*(H*R)/(H0*R0)
+  header.vunit=PhysicalConst::H0*header.BoxSize*Hratio*scale_reduced*scale_reduced*scale0;   /*vunit=100*rLbox*R*(H*R)/(H0*R0)
   =L*H0*Hratio*R*R/R0 (H0=100 when length(L) in Mpc/h)
   *      =100*L*(H/H0)*a*a*R0
   * where a=R/R0;         */
