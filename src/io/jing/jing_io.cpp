@@ -230,7 +230,7 @@ void JingReader_t::ReadHeader(JingHeader_t& header, const char *filetype, int if
   header.mass[0]=0.;
   header.mass[1]=header.OmegaM0*3.*PhysicalConst::H0*PhysicalConst::H0/8./3.1415926/PhysicalConst::G*header.BoxSize*header.BoxSize*header.BoxSize/header.Np;//particle mass in units of 10^10Msun/h
 
-  cout<<"z="<<header.Redshift<<endl;
+  cout<<"z="<<header.Redshift<<", mp="<<header.mass[1]<<endl;
     
   float Hratio; //(Hz/H0)
   float scale_reduced,scale0;//a,R0
@@ -312,6 +312,9 @@ void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cos
       p.ComovingPosition[j]-=floor(p.ComovingPosition[j]);	//format coordinates to be in the range [0,1)
       p.ComovingPosition[j]*=Header.BoxSize;			//comoving coordinate in units of kpc/h
       p.PhysicalVelocity[j]*=Header.vunit;			//physical peculiar velocity in units of km/s
+#ifndef DM_ONLY
+	  p.Mass=Header.mass[TypeDM];
+#endif
     }
   }
 	
