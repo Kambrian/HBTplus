@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <ompi/mpi/cxx/group.h>
 #include "config_parser.h"
 #include "mymath.h"
 
@@ -106,7 +107,7 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   TreeNodeResolutionHalf=TreeNodeResolution/2.;
   TreeNodeOpenAngleSquare=TreeNodeOpenAngle*TreeNodeOpenAngle;
   
-  if(GroupFileFormat=="apostle_particle_index")
+  if(GroupFileFormat=="apostle_particle_index"||GroupFileFormat=="jing_index")
 	GroupLoadedIndex=true;
   
   ReadSnapshotNameList();

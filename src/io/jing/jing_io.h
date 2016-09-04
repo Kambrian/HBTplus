@@ -58,6 +58,7 @@ public:
 
 namespace JingGroup
 {
+  extern bool IsJingGroup(const string &GroupFileFormat);
   extern int ProbeGroupFileByteOrder(int snapshot_id);
   extern HBTInt LoadGroup(int snapshot_id, vector< Halo_t >& Halos);
 };

@@ -320,6 +320,10 @@ void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cos
 
 namespace JingGroup
 {
+  bool IsJingGroup(const string & GroupFileFormat)
+  {
+	return GroupFileFormat.substr(0, 4)=="jing";
+  }
   bool check_b(float b)
   {
 	return fabs(b-0.2)<0.01;
