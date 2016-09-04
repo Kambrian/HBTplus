@@ -1,5 +1,4 @@
 #include <cstdlib>
-#include <ompi/mpi/cxx/group.h>
 #include "config_parser.h"
 #include "mymath.h"
 
