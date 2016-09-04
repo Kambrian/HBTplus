@@ -398,7 +398,7 @@ namespace JingGroup
     for(HBTInt i=0;i<Ngroups;i++)
     {
 	auto &particles=Halos[i].Particles;
-	for(auto & p: particles)
+	for(auto && p: particles)
 	  p--;//change from [1,NP] to [0,NP-1] for index in C
     }
     
