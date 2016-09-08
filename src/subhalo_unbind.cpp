@@ -448,7 +448,7 @@ void SubhaloSnapshot_t::RefineParticles()
  cout<<"Unbinding..."<<endl;
 #endif
 #ifdef INCLUSIVE_MASS
-  #pragma omp parallel for if(ParallelizeHaloes)
+  #pragma omp parallel for schedule(dynamic,1) if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
     try
@@ -464,7 +464,7 @@ void SubhaloSnapshot_t::RefineParticles()
   }
 #else 
   HBTInt NumHalos=MemberTable.SubGroups.size();
-  #pragma omp parallel for if(ParallelizeHaloes)
+  #pragma omp parallel for schedule(dynamic,1) if(ParallelizeHaloes)
     for(HBTInt haloid=0;haloid<NumHalos;haloid++)
     {
 	  auto &subgroup=MemberTable.SubGroups[haloid];
@@ -483,7 +483,7 @@ void SubhaloSnapshot_t::RefineParticles()
   #pragma omp parallel
   {
       HBTInt NumField=MemberTable.SubGroups[-1].size();
-    #pragma omp for
+    #pragma omp for schedule(dynamic,1) nowait
       for(HBTInt i=0; i<NumField;i++)
       {
 	    HBTInt subid=MemberTable.SubGroups[-1][i];
@@ -491,12 +491,12 @@ void SubhaloSnapshot_t::RefineParticles()
       }
     //unbind new-born subs
     HBTInt NumSubOld=MemberTable.AllMembers.size(), NumSub=Subhalos.size();
-    #pragma omp for
+    #pragma omp for schedule(dynamic,1) 
       for(HBTInt i=NumSubOld;i<NumSub;i++)
       {
 	    Subhalos[i].Unbind(*SnapshotPointer);
       }    
-    #pragma omp for
+    #pragma omp for schedule(dynamic,1) 
       for(HBTInt i=0;i<NumSub;i++)
 	    Subhalos[i].TruncateSource();
   }

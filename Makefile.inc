@@ -14,7 +14,7 @@ GSLLIB=-lgsl -lgslcblas
 ###
 
 ###for Dark Matter only simulations
-#CXXFLAGS+=-DDM_ONLY
+CXXFLAGS+=-DDM_ONLY
 ###
 
 ###To produce inclusive subhalos

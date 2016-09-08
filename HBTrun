@@ -1,0 +1,17 @@
+#!/bin/bash
+export OMP_SCHEDULE=dynamic,1
+#export OMP_DYNAMIC=FALSE # this works for icc v11.1.072, 
+# but seems not always use the maximum available number of cpus allowed by NUM_THREADS
+# so better not allow it to adjust. 
+#export KMP_BLOCKTIME=0  # this seems to help a lot, to reuse thread immediately after its job is finished
+export OMP_NUM_THREADS=32
+#export OMP_NESTED=0
+
+# ulimit -u unlimited #user process
+ulimit -m unlimited #memory
+# ulimit -n unlimited #openfiles
+ulimit -s unlimited #stack
+ulimit -v unlimited #virtual
+
+RUN_NUM=8213
+nohup ./HBT configs/$RUN_NUM.conf "$@" 1>>nohup.$RUN_NUM 2>&1 &
