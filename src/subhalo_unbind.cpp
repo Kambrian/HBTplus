@@ -303,7 +303,6 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  Elist[i].pid=Particles[i];
   EnergySnapshot_t ESnap(Elist.data(), Elist.size(), snapshot);
   bool CorrectionLoop=false;
-  try{
 	while(true)
 	{
 	  if(CorrectionLoop)
@@ -400,12 +399,6 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  }
 		}
 	}
-  }
-  catch(OctTreeExceeded_t &tree_exception)
-  {
-	cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<TrackId<<endl;
-	exit(1);
-  }
 	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
 	CountParticleTypes(snapshot);
 }
