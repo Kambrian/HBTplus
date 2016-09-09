@@ -303,6 +303,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	  Elist[i].pid=Particles[i];
   EnergySnapshot_t ESnap(Elist.data(), Elist.size(), snapshot);
   bool CorrectionLoop=false;
+  try{
 	while(true)
 	{
 	  if(CorrectionLoop)
@@ -399,6 +400,12 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  }
 		}
 	}
+  }
+  catch(OctTreeExceeded_t &tree_exception)
+  {
+	cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<TrackId<<endl;
+	exit(1);
+  }
 	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
 	CountParticleTypes(snapshot);
 }
@@ -415,15 +422,7 @@ void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_
 	Particles.insert(Particles.end(), subhalo.Particles.begin()+subhalo.Nbound, subhalo.Particles.end());
   }
   if(is_orphan)	Particles.swap(particle_backup);//restore to single particle for unbinding
-  try
-  {
-	  Unbind(snap);
-  }
-  catch(OctTreeExceeded_t &tree_exception)
-  {
-	cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<TrackId<<endl;
-	exit(1);
-  }
+  Unbind(snap);
   if(is_orphan)	Particles.swap(particle_backup);//set to extended list, to feed to its host
 }
 
@@ -451,16 +450,8 @@ void SubhaloSnapshot_t::RefineParticles()
   #pragma omp parallel for schedule(dynamic,1) if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
-    try
-    {
 	    Subhalos[subid].Unbind(*SnapshotPointer);
 	    Subhalos[subid].TruncateSource();
-    }
-    catch(OctTreeExceeded_t &tree_exception)
-    {
-	  cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<subid<<endl;
-	  exit(1);
-    }
   }
 #else 
   HBTInt NumHalos=MemberTable.SubGroups.size();
