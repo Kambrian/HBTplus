@@ -13,6 +13,7 @@ using namespace std;
 #include "../mymath.h"
 #include "gadget_io.h"
 #include "apostle_io.h"
+#include "jing/jing_io.h"
 
 void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
 { 
@@ -25,6 +26,11 @@ void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
   else if(HBTConfig.SnapshotFormat=="apostle")
   {
 	ApostleReader_t().LoadSnapshot(SnapshotId, Particles, Cosmology);
+  }
+  else if(HBTConfig.SnapshotFormat=="jing")
+  {
+    JingReader_t reader(SnapshotId);
+    reader.LoadSnapshot(Particles, Cosmology);
   }
   else if(HBTConfig.SnapshotFormat=="mysnapshot")
   {/*insert your snapshot reader here, and include relevant header in the header if necessary

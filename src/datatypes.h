@@ -65,6 +65,12 @@ inline void copyHBTxyz(HBTxyz &dest, const HBTxyz &src)
   /*copy for std:arr implementation*/
   dest=src;
 }
+template <class T>
+inline void copyHBTxyz(HBTxyz &dest, const T src[3])
+{
+  for(int i=0;i<3;i++)
+    dest[i]=src[i];
+}
 
 namespace SpecialConst
 {
