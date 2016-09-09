@@ -415,15 +415,7 @@ void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_
 	Particles.insert(Particles.end(), subhalo.Particles.begin()+subhalo.Nbound, subhalo.Particles.end());
   }
   if(is_orphan)	Particles.swap(particle_backup);//restore to single particle for unbinding
-  try
-  {
-	  Unbind(snap);
-  }
-  catch(OctTreeExceeded_t &tree_exception)
-  {
-	cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<TrackId<<endl;
-	exit(1);
-  }
+  Unbind(snap);
   if(is_orphan)	Particles.swap(particle_backup);//set to extended list, to feed to its host
 }
 
@@ -448,23 +440,15 @@ void SubhaloSnapshot_t::RefineParticles()
  cout<<"Unbinding..."<<endl;
 #endif
 #ifdef INCLUSIVE_MASS
-  #pragma omp parallel for if(ParallelizeHaloes)
+  #pragma omp parallel for schedule(dynamic,1) if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)
   {
-    try
-    {
 	    Subhalos[subid].Unbind(*SnapshotPointer);
 	    Subhalos[subid].TruncateSource();
-    }
-    catch(OctTreeExceeded_t &tree_exception)
-    {
-	  cerr<<"Error: "<<tree_exception.what()<<" in subhalo "<<subid<<endl;
-	  exit(1);
-    }
   }
 #else 
   HBTInt NumHalos=MemberTable.SubGroups.size();
-  #pragma omp parallel for if(ParallelizeHaloes)
+  #pragma omp parallel for schedule(dynamic,1) if(ParallelizeHaloes)
     for(HBTInt haloid=0;haloid<NumHalos;haloid++)
     {
 	  auto &subgroup=MemberTable.SubGroups[haloid];
@@ -483,7 +467,7 @@ void SubhaloSnapshot_t::RefineParticles()
   #pragma omp parallel
   {
       HBTInt NumField=MemberTable.SubGroups[-1].size();
-    #pragma omp for
+    #pragma omp for schedule(dynamic,1) nowait
       for(HBTInt i=0; i<NumField;i++)
       {
 	    HBTInt subid=MemberTable.SubGroups[-1][i];
@@ -491,12 +475,12 @@ void SubhaloSnapshot_t::RefineParticles()
       }
     //unbind new-born subs
     HBTInt NumSubOld=MemberTable.AllMembers.size(), NumSub=Subhalos.size();
-    #pragma omp for
+    #pragma omp for schedule(dynamic,1) 
       for(HBTInt i=NumSubOld;i<NumSub;i++)
       {
 	    Subhalos[i].Unbind(*SnapshotPointer);
       }    
-    #pragma omp for
+    #pragma omp for schedule(dynamic,1) 
       for(HBTInt i=0;i<NumSub;i++)
 	    Subhalos[i].TruncateSource();
   }
