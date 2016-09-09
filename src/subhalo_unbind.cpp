@@ -375,7 +375,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		  }
 		  Mbound=ESnap.AverageVelocity(PhysicalAverageVelocity, Nbound);
 		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
-		  if(Nbound>Nlast*BoundMassPrecision)//converge
+		  if(Nbound>=Nlast*BoundMassPrecision)//converge
 		  {
 			//update particle list
 			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
