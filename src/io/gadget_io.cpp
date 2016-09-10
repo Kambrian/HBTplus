@@ -370,7 +370,7 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 #undef MassDataPresent
 
 #ifndef DM_ONLY
-#ifdef UNBIND_WITH_THERMAL_ENERGY
+#ifdef HAS_THERMAL_ENERGY
   if(RealTypeSize==4)
 	ReadEnergyBlock(float)
   else

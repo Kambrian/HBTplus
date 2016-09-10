@@ -6,6 +6,16 @@
 using namespace std;
 #include <array>
 // #include <memory>
+#ifdef DM_ONLY
+#undef UNBIND_WITH_THERMAL_ENERGY
+#undef HAS_THERMAL_ENERGY
+#endif
+
+#ifdef UNBIND_WITH_THERMAL_ENERGY
+#ifndef HAS_THERMAL_ENERGY
+#define HAS_THERMAL_ENERGY
+#endif
+#endif
 
 /*datatype for input particle data*/
 #ifdef INPUT_REAL8

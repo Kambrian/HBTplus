@@ -154,7 +154,7 @@ extent-=origin;
   RegisterAttr(PhysicalVelocity, MPI_HBT_REAL, 3)
   RegisterAttr(Mass, MPI_HBT_REAL, 1)
 #ifndef DM_ONLY  
-#ifdef UNBIND_WITH_THERMAL_ENERGY
+#ifdef HAS_THERMAL_ENERGY
   RegisterAttr(InternalEnergy, MPI_HBT_REAL, 1)
 #endif
   RegisterAttr(Type, MPI_INT, 1)

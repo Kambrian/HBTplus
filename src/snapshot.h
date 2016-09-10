@@ -50,7 +50,7 @@ struct Particle_t
   HBTxyz PhysicalVelocity;
   HBTReal Mass;
 #ifndef DM_ONLY
-#ifdef UNBIND_WITH_THERMAL_ENERGY
+#ifdef HAS_THERMAL_ENERGY
   HBTReal InternalEnergy;
 #endif
   ParticleType_t Type;
@@ -228,7 +228,7 @@ inline HBTReal ParticleSnapshot_t::GetMass(HBTInt index) const
 }
 inline HBTReal ParticleSnapshot_t::GetInternalEnergy(HBTInt index) const
 {
-#if !defined(DM_ONLY) && defined(UNBIND_WITH_THERMAL_ENERGY) 
+#if !defined(DM_ONLY) && defined(HAS_THERMAL_ENERGY) 
   return Particles[index].InternalEnergy;
 #else
   return 0.;
