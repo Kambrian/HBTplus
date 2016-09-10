@@ -2,6 +2,7 @@
 #HDFLIB=-L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_hl -lhdf5
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5
+HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header
 
 ###comment out the following lines if you do not have GSL
 GSLINC=
@@ -17,7 +18,7 @@ GSLLIB=-lgsl -lgslcblas
 ###save binding energy:
 CXXFLAGS+=-DSAVE_BINDING_ENERGY
 ###
-###load thermal energy (also set SaveParticleProperties to 1 in config file if you want to save thermal energy)
+###load thermal energy (also set SaveSubParticleProperties to 1 in config file if you want to save thermal energy)
 CXXFLAGS+=-DHAS_THERMAL_ENERGY
 ###
 
