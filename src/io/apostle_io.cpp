@@ -166,7 +166,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	}
 	
 	//internal energy
-#ifdef UNBIND_WITH_THERMAL_ENERGY
+#ifdef HAS_THERMAL_ENERGY
 	if(itype==0)
 	{
 	  vector <HBTReal> u(np);

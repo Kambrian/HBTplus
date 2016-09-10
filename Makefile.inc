@@ -9,13 +9,21 @@ GSLINC+=-DHAS_GSL
 GSLLIB=-lgsl -lgslcblas
 ###comment up to here to disable GSL.
 
-###for thermal unbinding:
-#CXXFLAGS+=-DUNBIND_WITH_THERMAL_ENERGY
+###for Dark Matter only simulations
+#CXXFLAGS+=-DDM_ONLY
 ###
 
-###for Dark Matter only simulations
-CXXFLAGS+=-DDM_ONLY
+##enable these if you want to obtain (thermal) binding energy for each particle
+###save binding energy:
+CXXFLAGS+=-DSAVE_BINDING_ENERGY
 ###
+###load thermal energy (also set SaveParticleProperties to 1 in config file if you want to save thermal energy)
+CXXFLAGS+=-DHAS_THERMAL_ENERGY
+###
+
+###for thermal unbinding:
+#CXXFLAGS+=-DUNBIND_WITH_THERMAL_ENERGY
+### alternatively, you can save both the non-thermal binding energy and the thermal energy and do it yourself. see above.
 
 ###To produce inclusive subhalos
 #CXXFLAGS+=-DINCLUSIVE_MASS

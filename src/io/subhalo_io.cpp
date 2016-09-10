@@ -215,6 +215,24 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
     H5Dclose(dset);
   }
   
+#ifdef SAVE_BINDING_ENERGY
+  {//read binding energies
+	dset=H5Dopen2(file, "BindingEnergies", H5P_DEFAULT);
+    GetDatasetDims(dset, dims);
+    assert(dims[0]==nsubhalos);
+	hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
+    H5Dread(dset, H5T_FloatArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+    for(HBTInt i=0;i<nsubhalos;i++)
+    {
+      Subhalos[i].Energies.resize(vl[i].len);
+      memcpy(Subhalos[i].Energies.data(), vl[i].p, sizeof(float)*vl[i].len);
+    }
+    ReclaimVlenData(dset, H5T_FloatArr, vl.data());
+	H5Tclose(H5T_FloatArr);
+    H5Dclose(dset);
+  }
+#endif
+  
   H5Fclose(file);
   H5Tclose(H5T_HBTIntArr);
   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
@@ -279,7 +297,7 @@ void SubhaloSnapshot_t::Save()
 	  HBTxyz PhysicalVelocity;
 #ifndef DM_ONLY
 	  HBTReal Mass;
-#ifdef UNBIND_WITH_THERMAL_ENERGY
+#ifdef HAS_THERMAL_ENERGY
 	  HBTReal InternalEnergy;
 #endif
 	  int Type;
@@ -294,7 +312,7 @@ void SubhaloSnapshot_t::Save()
 	InsertMember(PhysicalVelocity, H5T_HBTxyz);
 #ifndef DM_ONLY
 	InsertMember(Mass, H5T_HBTReal);
-	#ifdef UNBIND_WITH_THERMAL_ENERGY
+	#ifdef HAS_THERMAL_ENERGY
 	InsertMember(InternalEnergy, H5T_HBTReal);
 	#endif
 	InsertMember(Type, H5T_NATIVE_INT);
@@ -321,7 +339,7 @@ void SubhaloSnapshot_t::Save()
 		copyHBTxyz(p.PhysicalVelocity, SnapshotPointer->GetPhysicalVelocity(ind));
 #ifndef DM_ONLY
 		p.Mass=SnapshotPointer->GetMass(ind);
-		#ifdef UNBIND_WITH_THERMAL_ENERGY
+		#ifdef HAS_THERMAL_ENERGY
 		p.InternalEnergy=SnapshotPointer->GetInternalEnergy(ind);
 		#endif
 		p.Type=SnapshotPointer->GetParticleType(ind);
@@ -351,6 +369,14 @@ void SubhaloSnapshot_t::Save()
 	vl[i].p=Subhalos[i].Particles.data();
   }
   writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);
+  
+#ifdef SAVE_BINDING_ENERGY
+  hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
+  for(HBTInt i=0;i<vl.size();i++)
+	vl[i].p=Subhalos[i].Energies.data();
+  writeHDFmatrix(file, vl.data(), "BindingEnergies", ndim, dim_sub, H5T_FloatArr);
+  H5Tclose(H5T_FloatArr);
+#endif
   
   writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); //write after calling ParticleIndexToId, for MostBoundParticleId
   

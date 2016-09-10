@@ -278,12 +278,19 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   {
     Nbound=0;
     Mbound=0.;
+#ifdef SAVE_BINDING_ENERGY
+	Energies.clear();
+#endif
     return;
   }
   if(Particles.size()==1) 
   {
 	Nbound=1;
 	Mbound=snapshot.GetMass(Particles[0]);
+#ifdef SAVE_BINDING_ENERGY
+	Energies.resize(1);
+	Energies[0]=0.;
+#endif
 	return;
   }
 
@@ -401,6 +408,12 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 	}
 	ESnap.AverageKinematics(SpecificSelfPotentialEnergy, SpecificSelfKineticEnergy, SpecificAngularMomentum, Nbound, RefPos, RefVel);//only use CoM frame when unbinding and calculating Kinematics
 	CountParticleTypes(snapshot);
+#ifdef SAVE_BINDING_ENERGY
+	Energies.resize(Nbound);
+#pragma omp paralle for if(Nbound>100)
+	for(HBTInt i=0;i<Nbound;i++)
+	  Energies[i]=Elist[i].E;
+#endif
 }
 void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_t &snap)
 {
