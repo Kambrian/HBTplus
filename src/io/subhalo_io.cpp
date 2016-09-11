@@ -362,22 +362,25 @@ void SubhaloSnapshot_t::Save()
   writeHDFmatrix(file, vl.data(), "NestedSubhalos", ndim, dim_sub, H5T_HBTIntArr);
   H5LTset_attribute_string(file,"/NestedSubhalos","Comment","List of the indices of first-level sub-subhaloes within each subhalo.");
   
-  ParticleIndexToId();
-  for(HBTInt i=0;i<vl.size();i++)
-  {
-	vl[i].len=Subhalos[i].Nbound;
-	vl[i].p=Subhalos[i].Particles.data();
-  }
-  writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);
-  
 #ifdef SAVE_BINDING_ENERGY
   hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
   for(HBTInt i=0;i<vl.size();i++)
+  {
+	vl[i].len=Subhalos[i].Nbound;
 	vl[i].p=Subhalos[i].Energies.data();
+  }
   writeHDFmatrix(file, vl.data(), "BindingEnergies", ndim, dim_sub, H5T_FloatArr);
   H5Tclose(H5T_FloatArr);
 #endif
   
+  ParticleIndexToId();
+  for(HBTInt i=0;i<vl.size();i++)
+  {
+// 	vl[i].len=Subhalos[i].Nbound;
+	vl[i].p=Subhalos[i].Particles.data();
+  }
+  writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);
+    
   writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); //write after calling ParticleIndexToId, for MostBoundParticleId
   
   H5Fclose(file);
