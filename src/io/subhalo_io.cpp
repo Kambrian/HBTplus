@@ -240,6 +240,24 @@ void SubhaloSnapshot_t::ReadFile(int iFile, bool load_src)
     H5Dclose(dset);
   }
   
+#ifdef SAVE_BINDING_ENERGY
+  {//read binding energies
+	dset=H5Dopen2(file, "BindingEnergies", H5P_DEFAULT);
+    GetDatasetDims(dset, dims);
+    assert(dims[0]==nsubhalos);
+	hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
+    H5Dread(dset, H5T_FloatArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+    for(HBTInt i=0;i<nsubhalos;i++)
+    {
+      Subhalos[i].Energies.resize(vl[i].len);
+      memcpy(Subhalos[i].Energies.data(), vl[i].p, sizeof(float)*vl[i].len);
+    }
+    ReclaimVlenData(dset, H5T_FloatArr, vl.data());
+	H5Tclose(H5T_FloatArr);
+    H5Dclose(dset);
+  }
+#endif
+  
   H5Fclose(file);
   H5Tclose(H5T_HBTIntArr);
 }
@@ -295,7 +313,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	InsertMember(PhysicalVelocity, H5T_HBTxyz);
 	InsertMember(Mass, H5T_HBTReal);
 #ifndef DM_ONLY	
-	#ifdef UNBIND_WITH_THERMAL_ENERGY
+	#ifdef HAS_THERMAL_ENERGY
 	InsertMember(InternalEnergy, H5T_HBTReal);
 	#endif
 	InsertMember(Type, H5T_NATIVE_INT);
@@ -334,6 +352,17 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
   writeHDFmatrix(file, vl.data(), "NestedSubhalos", ndim, dim_sub, H5T_HBTIntArr);
   H5LTset_attribute_string(file,"/NestedSubhalos","Comment","List of the indices of first-level sub-subhaloes within each subhalo.");
   
+  #ifdef SAVE_BINDING_ENERGY
+  hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
+  for(HBTInt i=0;i<vl.size();i++)
+  {
+	vl[i].len=Subhalos[i].Nbound;
+	vl[i].p=Subhalos[i].Energies.data();
+  }
+  writeHDFmatrix(file, vl.data(), "BindingEnergies", ndim, dim_sub, H5T_FloatArr);
+  H5Tclose(H5T_FloatArr);
+  #endif
+  
   vector <HBTInt> IdBuffer;
   {
 	HBTInt NumberOfParticles=0;
@@ -343,7 +372,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	HBTInt offset=0;
 	for(HBTInt i=0;i<Subhalos.size();i++)
 	{
-	  vl[i].len=Subhalos[i].Nbound;
+// 	  vl[i].len=Subhalos[i].Nbound;
 	  vl[i].p=&IdBuffer[offset];
 	  offset+=Subhalos[i].Particles.size();
 	  for(auto && p: Subhalos[i].Particles)
@@ -353,7 +382,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
   writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);
   
   writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); 
-  
+
   H5Fclose(file);
   
   formater.str("");

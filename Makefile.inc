@@ -2,6 +2,7 @@
 #HDFLIB=-L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_hl -lhdf5
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5 
+HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header
 
 ###comment out the following lines if you do not have GSL
 GSLINC=
@@ -13,17 +14,21 @@ GSLLIB=-lgsl -lgslcblas
 CXX=mpiCC
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g 
 
-###for thermal unbinding:
-#CXXFLAGS+=-DUNBIND_WITH_THERMAL_ENERGY
-###
-
-###To produce inclusive subhalos
-#CXXFLAGS+=-DINCLUSIVE_MASS
-###
-
-### dark matter only mode
+###for Dark Matter only simulations
 #CXXFLAGS+=-DDM_ONLY
 ###
+
+##enable these if you want to obtain (thermal) binding energy for each particle
+###save binding energy:
+CXXFLAGS+=-DSAVE_BINDING_ENERGY
+###
+###load thermal energy (also set SaveSubParticleProperties to 1 in config file if you want to save thermal energy)
+CXXFLAGS+=-DHAS_THERMAL_ENERGY
+###
+
+###for thermal unbinding:
+#CXXFLAGS+=-DUNBIND_WITH_THERMAL_ENERGY
+### alternatively, you can save both the non-thermal binding energy and the thermal energy and do it yourself. see above.
 
 #CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs
 #CXXFLAGS+=-xHost #to get it runnable on cosma-e 

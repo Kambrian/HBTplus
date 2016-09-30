@@ -75,6 +75,9 @@ public:
 //   HBTxyz PhysicalVelocity;
   
   ParticleList_t Particles;
+#ifdef SAVE_BINDING_ENERGY
+  vector <float> Energies;
+#endif
   SubIdList_t NestedSubhalos;//list of sub-in-subs.
   
   Subhalo_t(): Nbound(0), Rank(0), Mbound(0)
