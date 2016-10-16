@@ -261,32 +261,49 @@ FortranBlock <dtype> block(fp, n_read, n_skip, NeedByteSwap);\
 	  NewParticles[i].Attr[j]=pblock[i][j];\
 }
 
-
-#define ReadMassBlock(dtype) {\
-size_t n_read_mass=0;\
-vector <HBTInt> offset_mass(TypeMax);\
-for(int itype=0;itype<TypeMax;itype++)\
-	  if(MassDataPresent(itype))\
-	  {\
-		offset_mass[itype]=n_read_mass;\
-		n_read_mass+=header.npart[itype];\
-	  }\
-FortranBlock <dtype> block(fp, n_read_mass, n_skip, NeedByteSwap);\
+#ifndef DM_ONLY
+  #define ReadMassBlock(dtype) {\
+  size_t n_read_mass=0;\
+  vector <HBTInt> offset_mass(TypeMax);\
   for(int itype=0;itype<TypeMax;itype++)\
+	    if(MassDataPresent(itype))\
+	    {\
+		  offset_mass[itype]=n_read_mass;\
+		  n_read_mass+=header.npart[itype];\
+	    }\
+  FortranBlock <dtype> block(fp, n_read_mass, n_skip, NeedByteSwap);\
+    for(int itype=0;itype<TypeMax;itype++)\
+    {\
+	  auto p=NewParticles+offset[itype];\
+	  const dtype * pblock=block.data()+offset_mass[itype];\
+	  if(MassDataPresent(itype))\
+	    for(HBTInt i=0;i<header.npart[itype];i++)\
+		  p[i].Mass=pblock[i];\
+	  else\
+	  {\
+	    auto m=header.mass[itype];\
+	    for(HBTInt i=0;i<header.npart[itype];i++)\
+		  p[i].Mass=m;\
+	  }\
+    }\
+  }
+#else
+  #define ReadMassBlock(dtype) {\
+  if(MassDataPresent(TypeDM))\
   {\
-	auto p=NewParticles+offset[itype];\
-	const dtype * pblock=block.data()+offset_mass[itype];\
-	if(MassDataPresent(itype))\
-	  for(HBTInt i=0;i<header.npart[itype];i++)\
-		p[i].Mass=pblock[i];\
-	else\
-	{\
-	  auto m=header.mass[itype];\
-	  for(HBTInt i=0;i<header.npart[itype];i++)\
-		p[i].Mass=m;\
-	}\
+    size_t offset_mass=0;\
+    for(int itype=0;itype<TypeDM;itype++)\
+      if(MassDataPresent(itype)) offset_mass+=header.npart[itype];\
+    FortranBlock <dtype> block(fp, n_read, offset_mass, NeedByteSwap);\
+    for(HBTInt i=0;i<n_read;i++) NewParticles[i].Mass=block[i];\
   }\
-}
+  else\
+  {\
+    auto m=header.mass[TypeDM];\
+    for(HBTInt i=0;i<n_read;i++) NewParticles[i].Mass=m;\
+  }\
+  }
+#endif
 
 #define ReadEnergyBlock(dtype) {\
 FortranBlock <dtype> block(fp, header.npart[0], 0, NeedByteSwap);\
@@ -362,7 +379,7 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 		NewParticles[i].Id=id_now+i;
 	}
  
-  #define MassDataPresent(i) ((0==header.mass[i])&&(header.npartTotal[i]))
+#define MassDataPresent(i) ((0==header.mass[i])&&(header.npartTotal[i]))
   if(RealTypeSize==4)
 	ReadMassBlock(float)
   else
