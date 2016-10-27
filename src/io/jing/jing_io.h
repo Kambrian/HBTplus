@@ -3,16 +3,17 @@
 
 #include "../../halo.h"
 
+typedef float JingReal_t;
 struct JingHeader_t
 {
    HBTInt Np;   //number of particles in the simulation
    HBTInt ips;  //time step number, or snapshot num
-   HBTReal Redshift; // current redshift
-   HBTReal Omegat;  // current omega_m, mass density
-   HBTReal Lambdat; // current Omega_lambda, dark energy density
-   HBTReal BoxSize;  // boxsize in unit of Mpc/h
-   HBTReal xscale;
-   HBTReal vscale;
+   JingReal_t Redshift; // current redshift
+   JingReal_t Omegat;  // current omega_m, mass density
+   JingReal_t Lambdat; // current Omega_lambda, dark energy density
+   JingReal_t BoxSize;  // boxsize in unit of Mpc/h
+   JingReal_t xscale;
+   JingReal_t vscale;
    HBTReal Hz; //Hubble Param at ztp
    HBTReal vunit; //velocity unit to get physical peculiar velocity in km/s
    //extra parameters not written in snapshotfile
