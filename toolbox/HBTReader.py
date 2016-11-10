@@ -64,7 +64,10 @@ class HBTReader:
 	self.BoxSize=float(self.Options['BoxSize'])
 	self.Softening=float(self.Options['SofteningHalo'])
 
-	lastfile=sorted(glob.glob(self.rootdir+'/'+'SubSnap_*.hdf5'))[-1]
+	try:
+	  lastfile=sorted(glob.glob(self.rootdir+'/SubSnap_*.hdf5'))[-1]
+	except:
+	  lastfile=sorted(glob.glob(self.rootdir+'/*/SubSnap_*.hdf5'))[-1]
 	extension=lastfile.rsplit('SubSnap_')[1].split('.')
 	MaxSnap=int(extension[0])
 	if MaxSnap!=self.MaxSnap:
@@ -73,7 +76,7 @@ class HBTReader:
 
 	self.nfiles=0
 	if len(extension)==3:
-	  self.nfiles=len(glob.glob(self.rootdir+'/'+'SubSnap_%03d.*.hdf5'%MaxSnap))
+	  self.nfiles=len(glob.glob(self.rootdir+'/%03d'%MaxSnap+'/SubSnap_%03d.*.hdf5'%MaxSnap))
 	  print self.nfiles, "subfiles per snapshot"
 
 	if 'MinSnapshotIndex' in self.Options:
@@ -88,7 +91,7 @@ class HBTReader:
 	if isnap<0:
 	  isnap=self.MaxSnap+1+isnap
 	if self.nfiles:
-	  return self.rootdir+'/'+filetype+'Snap_%03d.%d.hdf5'%(isnap, ifile)
+	  return self.rootdir+'/%03d/'%isnap+filetype+'Snap_%03d.%d.hdf5'%(isnap, ifile)
 	else:
 	  return self.rootdir+'/'+filetype+'Snap_%03d.hdf5'%(isnap)
 

@@ -1,5 +1,6 @@
 #HDFINC=-I/usr/include/hdf5/serial/
 #HDFLIB=-L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_hl -lhdf5
+#or set CPATH and LIBRARY_PATH variable locally 
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5 
 HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header

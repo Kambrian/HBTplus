@@ -194,8 +194,8 @@ public:
 	H5Tclose(H5T_SubhaloInMem);
 	MPI_Type_free(&MPI_HBT_SubhaloShell_t);
   }
-  void GetSubFileName(string &filename, int iFile);
-  void GetSrcFileName(string &filename, int iFile);
+  string GetSubDir();
+  void GetSubFileName(string &filename, int iFile, const string &ftype="Sub");
   void Load(MpiWorker_t &world, int snapshot_index, bool load_src=false);
   void Save(MpiWorker_t &world);
   void Clear()

@@ -91,16 +91,16 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   H5Tclose(H5T_FloatVec3);
   H5Tclose(H5T_HBTxyz);
 }
-void SubhaloSnapshot_t::GetSubFileName(string &filename, int iFile)
+string SubhaloSnapshot_t::GetSubDir()
 {
   stringstream formater;
-  formater<<HBTConfig.SubhaloPath<<"/SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
-  filename=formater.str();
+  formater<<HBTConfig.SubhaloPath<<"/"<<setw(3)<<setfill('0')<<SnapshotIndex;
+  return formater.str();
 }
-void SubhaloSnapshot_t::GetSrcFileName(string &filename, int iFile)
+void SubhaloSnapshot_t::GetSubFileName(string &filename, int iFile, const string &ftype)
 {
   stringstream formater;
-  formater<<HBTConfig.SubhaloPath<<"/SrcSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
+  formater<<GetSubDir()<<"/"+ftype+"Snap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
   filename=formater.str();
 }
 void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_src)
@@ -208,7 +208,7 @@ void SubhaloSnapshot_t::ReadFile(int iFile, bool load_src)
   }
   else
   {
-	GetSrcFileName(filename, iFile);
+	GetSubFileName(filename, iFile, "Src");
 	hid_t file2=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 	dset=H5Dopen2(file2,"SrchaloParticles", H5P_DEFAULT);
 	GetDatasetDims(dset, dims);
@@ -264,6 +264,7 @@ void SubhaloSnapshot_t::ReadFile(int iFile, bool load_src)
 
 void SubhaloSnapshot_t::Save(MpiWorker_t &world)
 {
+  mkdir(GetSubDir().c_str(), 0755);
   HBTInt NumSubsAll=0, NumSubs=Subhalos.size();
   MPI_Allreduce(&NumSubs, &NumSubsAll, 1, MPI_HBT_INT, MPI_SUM, world.Communicator);
   for(int i=0, ireader=0;i<world.size();i++, ireader++)
@@ -281,9 +282,8 @@ void SubhaloSnapshot_t::Save(MpiWorker_t &world)
 }
 void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 {
-  stringstream formater;
-  formater<<HBTConfig.SubhaloPath<<"/SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
-  string filename(formater.str());
+  string filename;
+  GetSubFileName(filename, iFile);
   cout<<"Saving "<<Subhalos.size()<<" subhaloes to "<<filename<<"..."<<endl;
   hid_t file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -385,10 +385,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 
   H5Fclose(file);
   
-  formater.str("");
-  formater.clear();
-  formater<<HBTConfig.SubhaloPath<<"/SrcSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
-  filename=formater.str();
+  GetSubFileName(filename, iFile, "Src");
   cout<<"Saving "<<Subhalos.size()<<" subhaloes to "<<filename<<"..."<<endl;
   file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5T_NATIVE_INT);
