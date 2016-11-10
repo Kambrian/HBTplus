@@ -108,7 +108,7 @@ class HBTReader:
 	    nests.extend(subfile['NestedSubhalos'][...])
 	return np.array(nests)
 	
-  def LoadSubhalos(self, isnap=-1, selection=None):
+  def LoadSubhalos(self, isnap=-1, selection=None, show_progress=False):
 	'''load subhalos from snapshot isnap (default =-1, means final snapshot; isnap<0 will count backward from final snapshot)
 	
 	`selection` can be a single field, a list of the field names or a single subhalo index. e.g., selection=('Rank', 'Nbound') will load only the Rank and Nbound fields of subhaloes. selection=3 will only load subhalo with subindex 3. Default will load all fields of all subhaloes.
@@ -130,6 +130,9 @@ class HBTReader:
 	  selection=tuple(selection)
 	
 	for i in xrange(max(self.nfiles,1)):
+	  if show_progress:
+	    sys.stdout.write(".")
+	    sys.stdout.flush()
 	  with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
 		nsub=subfile['Subhalos'].shape[0]
 		if nsub==0:
@@ -145,6 +148,8 @@ class HBTReader:
 	  subhalos=np.hstack(subhalos)
 	else:
 	  subhalos=np.array(subhalos)
+	if show_progress:
+	  print ""
 	#subhalos.sort(order=['HostHaloId','Nbound'])
 	return subhalos
 
