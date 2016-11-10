@@ -56,8 +56,9 @@ class ConfigReader:
 class HBTReader:
   ''' class to read HBT2 catalogue '''
   
-  def __init__(self, config_file):
-	''' initialize HBTReader according to parameters in the HBT configuration file, which is the file with which HBT was called. The config file can also be found inside the subhalo directory as VER***.param '''
+  def __init__(self, subhalo_path):
+	''' initialize HBTReader to read data in subhalo_path. A parameter file must exist there (Parameters.log dumped by HBT during runtime).'''
+	config_file=subhalo_path+'/Parameters.log'
 	self.Options=ConfigReader(config_file).Options
 	self.rootdir=self.Options['SubhaloPath']
 	self.MaxSnap=int(self.Options['MaxSnapshotIndex'])
