@@ -56,15 +56,19 @@ class ConfigReader:
 class HBTReader:
   ''' class to read HBT2 catalogue '''
   
-  def __init__(self, config_file):
-	''' initialize HBTReader according to parameters in the HBT configuration file, which is the file with which HBT was called. The config file can also be found inside the subhalo directory as VER***.param '''
+  def __init__(self, subhalo_path):
+	''' initialize HBTReader to read data in subhalo_path. A parameter file must exist there (Parameters.log dumped by HBT during runtime).'''
+	config_file=subhalo_path+'/Parameters.log'
 	self.Options=ConfigReader(config_file).Options
 	self.rootdir=self.Options['SubhaloPath']
 	self.MaxSnap=int(self.Options['MaxSnapshotIndex'])
 	self.BoxSize=float(self.Options['BoxSize'])
 	self.Softening=float(self.Options['SofteningHalo'])
 
-	lastfile=sorted(glob.glob(self.rootdir+'/'+'SubSnap_*.hdf5'))[-1]
+	try:
+	  lastfile=sorted(glob.glob(self.rootdir+'/SubSnap_*.hdf5'))[-1]
+	except:
+	  lastfile=sorted(glob.glob(self.rootdir+'/*/SubSnap_*.hdf5'))[-1]
 	extension=lastfile.rsplit('SubSnap_')[1].split('.')
 	MaxSnap=int(extension[0])
 	if MaxSnap!=self.MaxSnap:
@@ -73,7 +77,7 @@ class HBTReader:
 
 	self.nfiles=0
 	if len(extension)==3:
-	  self.nfiles=len(glob.glob(self.rootdir+'/'+'SubSnap_%03d.*.hdf5'%MaxSnap))
+	  self.nfiles=len(glob.glob(self.rootdir+'/%03d'%MaxSnap+'/SubSnap_%03d.*.hdf5'%MaxSnap))
 	  print self.nfiles, "subfiles per snapshot"
 
 	if 'MinSnapshotIndex' in self.Options:
@@ -88,7 +92,7 @@ class HBTReader:
 	if isnap<0:
 	  isnap=self.MaxSnap+1+isnap
 	if self.nfiles:
-	  return self.rootdir+'/'+filetype+'Snap_%03d.%d.hdf5'%(isnap, ifile)
+	  return self.rootdir+'/%03d/'%isnap+filetype+'Snap_%03d.%d.hdf5'%(isnap, ifile)
 	else:
 	  return self.rootdir+'/'+filetype+'Snap_%03d.hdf5'%(isnap)
 
@@ -104,7 +108,7 @@ class HBTReader:
 	    nests.extend(subfile['NestedSubhalos'][...])
 	return np.array(nests)
 	
-  def LoadSubhalos(self, isnap=-1, selection=None):
+  def LoadSubhalos(self, isnap=-1, selection=None, show_progress=False):
 	'''load subhalos from snapshot isnap (default =-1, means final snapshot; isnap<0 will count backward from final snapshot)
 	
 	`selection` can be a single field, a list of the field names or a single subhalo index. e.g., selection=('Rank', 'Nbound') will load only the Rank and Nbound fields of subhaloes. selection=3 will only load subhalo with subindex 3. Default will load all fields of all subhaloes.
@@ -126,6 +130,9 @@ class HBTReader:
 	  selection=tuple(selection)
 	
 	for i in xrange(max(self.nfiles,1)):
+	  if show_progress:
+	    sys.stdout.write(".")
+	    sys.stdout.flush()
 	  with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
 		nsub=subfile['Subhalos'].shape[0]
 		if nsub==0:
@@ -141,6 +148,8 @@ class HBTReader:
 	  subhalos=np.hstack(subhalos)
 	else:
 	  subhalos=np.array(subhalos)
+	if show_progress:
+	  print ""
 	#subhalos.sort(order=['HostHaloId','Nbound'])
 	return subhalos
 
