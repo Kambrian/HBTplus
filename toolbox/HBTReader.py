@@ -84,6 +84,12 @@ class HBTReader:
 	  self.MinSnap=int(self.Options['MinSnapshotIndex'])
 	else:
 	  self.MinSnap=0
+	  
+	try:
+	  with self.Open(-1) as f:
+	    self.ParticleMass=f['/Cosmology/ParticleMass'][0]
+	except:
+	  print "Info: fail to get ParticleMass."
 
   def Snapshots(self):
 	return np.arange(self.MinSnap, self.MaxSnap+1)
