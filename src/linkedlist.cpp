@@ -12,26 +12,6 @@ public:
   }*/
   virtual size_t size() const=0;
 };
-class PositionSample_t: public PositionData_t
-{
-public:
-  int ThreadId, NumThreads;
-  PositionData_t &Data;
-  HBTInt np;
-  PositionSample_t(PositionData_t &data, int nthread, int ithread): Data(data), ThreadId(ithread), NumThreads(nthread)
-  {
-    HBTInt n0=data.size();
-    np=n0/nthread+((n0%nthread)>ithread);
-  }
-  const HBTxyz & operator [](HBTInt i) const
-  {
-    return Data[i*NumThreads+ThreadId];
-  }
-  size_t size() const
-  {
-    return np;
-  }
-};
 class Linkedlist_t
 {
 private:
@@ -43,7 +23,7 @@ private:
   vector <HBTInt> List;
   HBTReal Range[3][2];
   HBTReal Step[3];
-  PositionData_t &Particles;
+  PositionData_t *Particles;
   int RoundGridId(int i)
   //to correct for rounding error near boundary
   {
@@ -92,8 +72,20 @@ private:
 	  return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
   }
 public:
-  Linkedlist_t(HBTInt np, int ndiv, PositionData_t &data, HBTReal boxsize=0., bool periodic=false): NumPart(np), NDiv(ndiv), Particles(data), BoxSize(boxsize), PeriodicBoundary(periodic), HOC(ndiv*ndiv*ndiv), List(np)
+  Linkedlist_t(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false)
   {
+    init(ndiv, data, boxsize, periodic);
+  }
+  init(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false) 
+  {
+    NumPart=data->size();
+    NDiv=ndiv;
+    Particles=data;
+    PositionData_t &particles=*Particles;
+    HOC.resize(ndiv*ndiv*ndiv);
+    List.resize(data->size());
+    BoxSize=boxsize;
+    PeriodicBoundary=periodic;
     if(BoxSize==0.) PeriodicBoundary=false; //only effective when boxsize is specified
     BoxHalf=BoxSize/2.;
     
@@ -117,11 +109,11 @@ public:
     {
       for(i=0;i<3;i++)
 	for(j=0;j<2;j++)
-	  Range[i][j]=Particles[0][j];
+	  Range[i][j]=particles[0][j];
       for(i=1;i<np;i++)
 	for(j=0;j<3;j++)
 	{
-	  auto x=Particles[i][j];
+	  auto x=particles[i][j];
 	  if(x<Range[j][0])
 	    Range[j][0]=x;
 	  else if(x>Range[j][1])
@@ -139,7 +131,7 @@ public:
     {
 	    for(j=0;j<3;j++)
 	    {
-		    grid[j]=floor((Particles[i][j]-Range[j][0])/Step[j]);
+		    grid[j]=floor((particles[i][j]-Range[j][0])/Step[j]);
 		    grid[j]=FixGridId(grid[j]);
 	    }
 	    ind=Sub2Ind(grid[0],grid[1],grid[2]);
@@ -148,8 +140,9 @@ public:
 								    store last ll index, and finally the head*/
     }
   }
-  HBTInt * SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8)
+  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8)
   {//nmax_guess: initial guess for the max number of particles to be found. for memory allocation optimization purpose.
+	PositionData_t &particles=*Particles;
 	HBTReal dr;
 	int i,j,k,subbox_grid[3][2];
 	
@@ -173,7 +166,7 @@ public:
 	      HBTInt pid=GetHOCSafe(i,j,k); //in case the grid-id is out of box, in the periodic case
 	      while(pid>=0)
 	      {
-		dr=Distance(Particles[pid],searchcenter);
+		dr=Distance(particles[pid],searchcenter);
 		if(dr<radius)  found_ids.push_back(pid);
 		pid=List[pid];
 	      }
