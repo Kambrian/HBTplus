@@ -10,7 +10,28 @@ public:
   {
     return (*this)[i][j];
   }*/
-}
+  virtual size_t size() const=0;
+};
+class PositionSample_t: public PositionData_t
+{
+public:
+  int ThreadId, NumThreads;
+  PositionData_t &Data;
+  HBTInt np;
+  PositionSample_t(PositionData_t &data, int nthread, int ithread): Data(data), ThreadId(ithread), NumThreads(nthread)
+  {
+    HBTInt n0=data.size();
+    np=n0/nthread+((n0%nthread)>ithread);
+  }
+  const HBTxyz & operator [](HBTInt i) const
+  {
+    return Data[i*NumThreads+ThreadId];
+  }
+  size_t size() const
+  {
+    return np;
+  }
+};
 class Linkedlist_t
 {
 private:
