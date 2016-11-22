@@ -26,21 +26,25 @@ public:
   }
 };
 
-Linkedlist_t ThreadLL;
-PositionSample_t ThreadSample;
-#pragma omp thread_private(ThreadLL, ThreadSample)
-
 class LinkedlistPara_t
 {
 private:
+  vector<Linkedlist_t> LLs;
+  vector <PositionSample_t> Samples;
+public:
   LinkedlistPara_t(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false): 
   {
     #pragma omp parallel
     {
       int thread_id=omp_get_thread_num();
       int thread_num=omp_get_num_threads();
-      ThreadSample.init(thread_id, thread_num, data);
-      ThreadLL.init(ndiv, &ThreadSample, boxsize, periodic);
+      #pragma omp single
+      {
+	LLs.resize(thread_num);
+	Samples.resize(thread_num);
+      }
+      Samples[thread_id].init(thread_id, thread_num, data);
+      LLs[thread_id].init(ndiv, &(Samples[thread_id]), boxsize, periodic);
     }
   }
   void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8)
@@ -48,8 +52,9 @@ private:
     found_ids.clear();
 #pragma omp parallel
     {
+      int thread_id=omp_get_thread_num();
       vector <HBTInt> thread_founds(nmax_guess);
-      ThreadLL.SearchSphere(radius, searchcenter, thread_founds);
+      LLs[thread_id].SearchSphere(radius, searchcenter, thread_founds);
       #pragma omp critical
       {
 	found_ids.insert(found_ids.end(), thread_founds.begin(), thread_founds.end());
