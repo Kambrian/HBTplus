@@ -16,6 +16,7 @@
 #include "gadget_group_io.h"
 #include "apostle_io.h"
 #include "jing/jing_io.h"
+#include "custom_io.h"
 
 void HaloSnapshot_t::Load(int snapshot_index)
 {
@@ -30,11 +31,8 @@ void HaloSnapshot_t::Load(int snapshot_index)
   else if(JingGroup::IsJingGroup(HBTConfig.GroupFileFormat))
 	TotNumberOfParticles=JingGroup::LoadGroup(SnapshotId, Halos);
   else if(GroupFileFormat=="my_group_format")
-  {/*extend your own group reader here, fill Halos and return TotNumberOfParticles, e.g.:
-	
-	TotNumberOfParticles=MyGroupReader(SnapshotId, Halos)
-	
-	*/
+  {/*extend your own group reader here, fill Halos and return TotNumberOfParticles, e.g.:*/
+	TotNumberOfParticles=MyGroupReader(SnapshotId, Halos);
   }
   else
 	throw(runtime_error("unknown GroupFileFormat "+GroupFileFormat));
