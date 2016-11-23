@@ -1,4 +1,4 @@
-SRC_COMM=$(wildcard src/*.cpp) $(wildcard src/io/*.cpp)
+SRC_COMM=$(wildcard src/io/*.cpp) $(wildcard src/*.cpp)
 OBJS_COMM=$(SRC_COMM:%.cpp=%.o)
 
 SRC=$(wildcard *.cpp)
