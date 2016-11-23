@@ -30,7 +30,7 @@ private:
 	HBTInt sons[8];		/*!< temporary pointers to daughter nodes */
 	struct
 	{
-	HBTReal s[3];               /*!< center of mass of node */
+	HBTReal s[3];               /*!< center of mass of node (gravity tree) or geometric centre (geometric tree) */
 	HBTReal len;		/*!< sidelength of treenode */
 	HBTReal mass;            /*!< mass of node */
 	HBTInt sibling;         /*!< this gives the next node in the walk in case the current node can be used */
@@ -48,11 +48,12 @@ private:
   HBTInt NumberOfParticles; //alias to Snapshot->GetSize().
   void UpdateInternalNodes(HBTInt no,HBTInt sib,double len);
 public:
-  OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0)
+  bool IsGravityTree;
+  OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0), IsGravityTree(true)
   {
   }
   void Reserve(const size_t max_num_part);
-  HBTInt Build(const Snapshot_t &snapshot, HBTInt num_part=0);
+  HBTInt Build(const Snapshot_t &snapshot, HBTInt num_part=0, bool ForGravity=true);
   void Clear();
   double EvaluatePotential(const HBTxyz targetPos, const HBTReal targetMass=0.);
   double BindingEnergy(const HBTxyz &targetPos, const HBTxyz &targetVel, const HBTxyz &refPos, const HBTxyz &refVel, const HBTReal targetMass=0.);

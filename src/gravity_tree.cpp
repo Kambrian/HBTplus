@@ -83,10 +83,11 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 		Nodes[no].way.s[2]=s[2]/mass;
 }
 
-HBTInt OctTree_t::Build(const Snapshot_t &snapshot, HBTInt num_part)
+HBTInt OctTree_t::Build(const Snapshot_t &snapshot, HBTInt num_part, bool ForGravity)
 /* build tree for a snapshot (or SnapshotView); automatically resize memory if necessary.
   * if num_part>0 is given, then only use the first num_part particles in the snapshot*/
 {
+  IsGravityTree=ForGravity;
 	HBTInt NumNids,numnodes;
 	HBTInt sub,subid,i,j,nodeid;
 	double center[3], lenhalf;
