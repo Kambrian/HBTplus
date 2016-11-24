@@ -26,16 +26,25 @@ void shift_center(const double oldcenter[3], int son, double delta, double newce
       newcenter[dim]=oldcenter[dim]-delta;
   }
 }
-void OctTree_t::UpdateSubnode(HBTInt son, HBTInt sib, double len)
+void OctTree_t::UpdateSubnode(HBTInt son, HBTInt sib, double len, const double center[3])
 {
-  if(len>=HBTConfig.TreeNodeResolution)
-    UpdateInternalNodes(son, sib, len/2.);//only divide if above resolution; 
+  if(len>=HBTConfig.TreeNodeResolution)//only divide if above resolution;
+  {
+    if(IsGravityTree)//center is never used for gravity tree.
+      UpdateInternalNodes(son, sib, len/2., center); 
+    else
+    {
+      double newcenter[3];
+      shift_center(center, son, len/4., newcenter);
+      UpdateInternalNodes(son, sib, len/2., newcenter);
+    }
+  }
   else
-    UpdateInternalNodes(son,sib,len);//otherwise 
+    UpdateInternalNodes(son,sib,len,center);//otherwise 
     //we don't divide the node seriouly so we don't have finer node length
 }
 
-void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
+void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const double center[3])
 {
   HBTInt j,jj,p,pp,sons[8];
   double mass=0., thismass;
@@ -64,7 +73,7 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
       }
       else
       {
-	UpdateSubnode(p, pp, len);
+	UpdateSubnode(p, pp, len, center);
 	thismass=Nodes[p].way.mass;
 	mass+=thismass;
 	if(IsGravityTree)
@@ -82,7 +91,7 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
   }
   else
   {
-    UpdateSubnode(pp, sib, len);
+    UpdateSubnode(pp, sib, len, center);
     thismass=Nodes[pp].way.mass;
     mass+=thismass;
     if(IsGravityTree)
@@ -95,6 +104,8 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
     Nodes[no].way.s[1]=CoM[1]/mass;
     Nodes[no].way.s[2]=CoM[2]/mass;
   }
+  else
+    copyXYZ(Nodes[no].way.s, center);
 }
 
 HBTInt OctTree_t::Build(const Snapshot_t &snapshot, HBTInt num_part, bool ForGravity)
@@ -209,7 +220,7 @@ Cells->sons[i] = -1;
 			}
 			for(sub=0;sub<8;sub++)//initialize new node
 				Nodes[nodeid].sons[sub]=-1;
-			copyXYZ(Nodes[nodeid].way.s, center);
+// 			copyXYZ(Nodes[nodeid].way.s, center);//DO NOT DO IT HERE: corrupting the union data
 			/*insert that subid into this new node*/
 			//what if the two particles are too near? 
 			//unnecessary to divide too fine, just get rid of one by random insertion. 
@@ -248,7 +259,7 @@ Cells->sons[i] = -1;
 	//~ fprintf(logfile,"used %d nodes out of allocated %d. (filled fraction %g)\n",
 	 //~ numnodes, MaxNumberOfCells, (double)numnodes / MaxNumberOfCells);	
 	/* finished inserting, now update for walk*/
-	UpdateInternalNodes(NumberOfParticles , -1, Len);/*insert sibling and next infomation*/
+	UpdateInternalNodes(NumberOfParticles , -1, Len, Center);/*insert sibling and next infomation*/
 	
 	return numnodes; 
 }

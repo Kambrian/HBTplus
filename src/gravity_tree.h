@@ -31,7 +31,7 @@ private:
 	HBTInt sons[8];		/*!< temporary pointers to daughter nodes */
 	struct
 	{
-	HBTReal s[3];               /*!< center of mass of node (gravity tree) or geometric centre (geometric tree) */
+	HBTReal s[3];               /*!< center of mass of node (gravity tree)*/
 	HBTReal len;		/*!< sidelength of treenode */
 	HBTReal mass;            /*!< mass of node */
 	HBTInt sibling;         /*!< this gives the next node in the walk in case the current node can be used */
@@ -47,8 +47,8 @@ private:
   HBTInt MaxNodeId;
   const Snapshot_t * Snapshot;
   HBTInt NumberOfParticles; //alias to Snapshot->GetSize().
-  void UpdateInternalNodes(HBTInt no,HBTInt sib,double len);
-  void UpdateSubnode(HBTInt son, HBTInt sib, double len);
+  void UpdateInternalNodes(HBTInt no,HBTInt sib,double len, const double center[3]);
+  void UpdateSubnode(HBTInt son, HBTInt sib, double len, const double center[3]);
 public:
   bool IsGravityTree;
   OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0), IsGravityTree(true)
