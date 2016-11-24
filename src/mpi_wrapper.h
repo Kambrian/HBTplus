@@ -6,6 +6,7 @@
 #include <vector>
 #include <stdexcept>
 #include <climits>
+#include <numeric>
 
 #include "datatypes.h"
 #include "mymath.h"
