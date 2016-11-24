@@ -11,15 +11,15 @@ GSLLIB=-lgsl -lgslcblas
 ###comment up to here to disable GSL.
 
 ###for Dark Matter only simulations
-#CXXFLAGS+=-DDM_ONLY
+CXXFLAGS+=-DDM_ONLY
 ###
 
 ##enable these if you want to obtain (thermal) binding energy for each particle
 ###save binding energy:
-CXXFLAGS+=-DSAVE_BINDING_ENERGY
+#CXXFLAGS+=-DSAVE_BINDING_ENERGY
 ###
 ###load thermal energy (also set SaveSubParticleProperties to 1 in config file if you want to save thermal energy)
-CXXFLAGS+=-DHAS_THERMAL_ENERGY
+#CXXFLAGS+=-DHAS_THERMAL_ENERGY
 ###
 
 ###for thermal unbinding:

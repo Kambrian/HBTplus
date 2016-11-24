@@ -1,7 +1,7 @@
 #include <omp.h>
 #include "linkedlist_parallel.h"
 
-LinkedlistPara_t::LinkedlistPara_t(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false)
+LinkedlistPara_t::LinkedlistPara_t(int ndiv, PositionData_t *data, HBTReal boxsize, bool periodic)
 {
   #pragma omp parallel
   {
@@ -16,7 +16,7 @@ LinkedlistPara_t::LinkedlistPara_t(int ndiv, PositionData_t *data, HBTReal boxsi
     LLs[thread_id].build(ndiv, &(Samples[thread_id]), boxsize, periodic);
   }
 }
-void LinkedlistPara_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8)
+void LinkedlistPara_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess)
 {
   found_ids.clear();
 #pragma omp parallel

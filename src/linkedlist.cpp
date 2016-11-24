@@ -18,20 +18,21 @@ HBTReal Linkedlist_t::Distance(const HBTxyz &x, const HBTxyz &y)
   return sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
 }
   
-void Linkedlist_t::build(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false) 
+void Linkedlist_t::build(int ndiv, PositionData_t *data, HBTReal boxsize, bool periodic) 
 {
-  NumPart=data->size();
   NDiv=ndiv;
+  NDiv2=NDiv*NDiv;
   Particles=data;
   PositionData_t &particles=*Particles;
-  HOC.resize(ndiv*ndiv*ndiv);
-  List.resize(data->size());
+  HBTInt np=particles.size();
+  HOC.assign(NDiv2*NDiv, -1);
+  List.resize(np);
   BoxSize=boxsize;
   PeriodicBoundary=periodic;
   if(BoxSize==0.) PeriodicBoundary=false; //only effective when boxsize is specified
   BoxHalf=BoxSize/2.;
   
-  NDiv2=NDiv*NDiv;
+  
   HBTInt i,j,grid[3];
   HBTInt ind;
   //~ float range[3][2],step[3];
@@ -64,10 +65,6 @@ void Linkedlist_t::build(int ndiv, PositionData_t *data, HBTReal boxsize=0., boo
     for(j=0;j<3;j++)
       Step[j]=(Range[j][1]-Range[j][0])/NDiv;
   }
-  /*initialize hoc*/
-  HBTInt *phoc=HOC;
-  for(i=0;i<NDiv*NDiv*NDiv;i++,phoc++)
-	  *phoc=-1;
 	  
   for(i=0;i<np;i++)
   {
@@ -82,7 +79,7 @@ void Linkedlist_t::build(int ndiv, PositionData_t *data, HBTReal boxsize=0., boo
 								  store last ll index, and finally the head*/
   }
 }
-void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8)
+void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess)
 {//nmax_guess: initial guess for the max number of particles to be found. for memory allocation optimization purpose.
   PositionData_t &particles=*Particles;
   HBTReal dr;
@@ -97,8 +94,8 @@ void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vect
     subbox_grid[i][1]=floor((searchcenter[i]+radius-Range[i][0])/Step[i]);
     if(!PeriodicBoundary)
     {//do not fix if periodic, since the search sphere is allowed to overflow the box in periodic case.
-      subbox_grid[i][0]=FixGridId(subbox_grid[i][0],ll);
-      subbox_grid[i][1]=FixGridId(subbox_grid[i][1],ll);
+      subbox_grid[i][0]=FixGridId(subbox_grid[i][0]);
+      subbox_grid[i][1]=FixGridId(subbox_grid[i][1]);
     }	
   }
   for(i=subbox_grid[0][0];i<subbox_grid[0][1]+1;i++)
