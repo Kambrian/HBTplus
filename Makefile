@@ -1,4 +1,4 @@
-SRC_COMM=$(wildcard src/io/*.cpp) $(wildcard src/*.cpp)
+SRC_COMM=$(wildcard src/*.cpp) $(wildcard src/io/*.cpp) 
 OBJS_COMM=$(SRC_COMM:%.cpp=%.o)
 
 SRC=$(wildcard *.cpp)
@@ -19,8 +19,7 @@ HBTdouble: CXXFLAGS+=-DHBT_INT8 -DHBT_REAL8
 HBTi8: CXXFLAGS+=-DHBT_INT8
 HBT_majormerger_test: CXXFLAGS+=-DMAJOR_MERGER_PATCH #-DALLOW_BINARY_SYSTEM
 $(EXE_HBT): HBT.o
-	$(CXX) -Wl,--start-group $^ -Wl,--end-group $(LDFLAGS) $(LDLIBS) -o $@
-#the -Wl,--start-group option is to solve possible dependency issue with the object files for some picky linker
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 depend:
 	makedepend --$(CXXFLAGS)-- -Y $(SRC) $(SRC_COMM)

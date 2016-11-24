@@ -255,6 +255,7 @@ void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, doubl
   gsl_vector_free (eigen_values);
   gsl_matrix_free (eigen_vecs);
 }
+#endif
 
 size_t SkipFortranBlock(FILE *fp, bool NeedByteSwap)
 {
@@ -267,4 +268,3 @@ size_t SkipFortranBlock(FILE *fp, bool NeedByteSwap)
   return blocksize;
 #undef ReadBlockSize
 }
-#endif
