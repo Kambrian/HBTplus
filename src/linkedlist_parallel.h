@@ -13,7 +13,7 @@ public:
     Data=data;
     ThreadId=ithread;
     NumThreads=nthread;
-    HBTInt n0=Data.size();
+    HBTInt n0=Data->size();
     np=n0/nthread+((n0%nthread)>ithread);
   }
   const HBTxyz & operator [](HBTInt i) const

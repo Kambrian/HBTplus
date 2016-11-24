@@ -8,79 +8,93 @@
 #include "gravity_tree.h"
 #include "config_parser.h"
 
+template <class T>
+inline void VectorAdd(double x[3], const T &y, double weight)
+{
+  x[0]+=y[0]*weight;
+  x[1]+=y[1]*weight;
+  x[2]+=y[2]*weight;
+}
+void shift_center(const double oldcenter[3], int son, double delta, double newcenter[3])
+{
+  for(int dim=0;dim<3;dim++)
+  {
+    int bit=get_bit(son, dim);
+    if(bit)
+      newcenter[dim]=oldcenter[dim]+delta;
+    else
+      newcenter[dim]=oldcenter[dim]-delta;
+  }
+}
+void OctTree_t::UpdateSubnode(HBTInt son, HBTInt sib, double len)
+{
+  if(len>=HBTConfig.TreeNodeResolution)
+    UpdateInternalNodes(son, sib, len/2.);//only divide if above resolution; 
+  else
+    UpdateInternalNodes(son,sib,len);//otherwise 
+    //we don't divide the node seriouly so we don't have finer node length
+}
+
 void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
 {
-	HBTInt j,jj,p,pp,sons[8];
-	double mass, thismass;
-	double s[3];
-	
-		mass=0;
-		s[0]=0;
-		s[1]=0;
-		s[2]=0;
-		for(j=0;j<8;j++)
-			sons[j]=Nodes[no].sons[j];//backup sons
-		Nodes[no].way.len=len;
-		Nodes[no].way.sibling=sib;
-		for(j=0;sons[j]<0;j++);//find first son
-		pp=sons[j];
-		Nodes[no].way.nextnode=pp;
-		for(jj=j+1;jj<8;jj++)//find sons in pairs,ie. find sibling
-		{
-			if(sons[jj]>=0)//ok, found a sibling
-			{
-				p=pp;
-				pp=sons[jj];
-				if(p<NumberOfParticles)
-				{
-					thismass=Snapshot->GetMass(p);
-					mass+=thismass;
-					s[0]+=Snapshot->GetComovingPosition(p)[0]*thismass;
-					s[1]+=Snapshot->GetComovingPosition(p)[1]*thismass;
-					s[2]+=Snapshot->GetComovingPosition(p)[2]*thismass;
-					NextnodeFromParticle[p]=pp;
-				}
-				else
-				{
-				if(len>=HBTConfig.TreeNodeResolution) 
-					UpdateInternalNodes(p,pp,0.5*len);//only divide if above resolution; otherwise 
-				//we didn't divide the node seriouly so we don't have finer node length
-				else
-					UpdateInternalNodes(p,pp,len);//get internal node info
-				thismass=Nodes[p].way.mass;
-				mass+=thismass;
-				s[0]+=Nodes[p].way.s[0]*thismass;
-				s[1]+=Nodes[p].way.s[1]*thismass;
-				s[2]+=Nodes[p].way.s[2]*thismass;
-				}
-			}
-		}
-		if(pp<NumberOfParticles)//the last son
-		{			
-			thismass=Snapshot->GetMass(pp);
-			mass+=thismass;
-			s[0]+=Snapshot->GetComovingPosition(pp)[0]*thismass;
-			s[1]+=Snapshot->GetComovingPosition(pp)[1]*thismass;
-			s[2]+=Snapshot->GetComovingPosition(pp)[2]*thismass;
-			NextnodeFromParticle[pp]=sib;
-		}
-		else
-		{
-			if(len>=HBTConfig.TreeNodeResolution) 
-				UpdateInternalNodes(pp,sib,0.5*len);//only divide if above resolution; otherwise 
-			//we didn't divide the node seriouly so we don't have finer node length
-			else
-				UpdateInternalNodes(pp,sib,len);
-			thismass=Nodes[pp].way.mass;
-			mass+=thismass;
-			s[0]+=Nodes[pp].way.s[0]*thismass;
-			s[1]+=Nodes[pp].way.s[1]*thismass;
-			s[2]+=Nodes[pp].way.s[2]*thismass;
-		}
-		Nodes[no].way.mass=mass;
-		Nodes[no].way.s[0]=s[0]/mass;
-		Nodes[no].way.s[1]=s[1]/mass;
-		Nodes[no].way.s[2]=s[2]/mass;
+  HBTInt j,jj,p,pp,sons[8];
+  double mass=0., thismass;
+  double CoM[3]={0.};
+  
+  for(j=0;j<8;j++)
+    sons[j]=Nodes[no].sons[j];//backup sons
+    Nodes[no].way.len=len;
+  Nodes[no].way.sibling=sib;
+  for(j=0;sons[j]<0;j++);//find first son
+  pp=sons[j];
+  Nodes[no].way.nextnode=pp;
+  for(jj=j+1;jj<8;jj++)//find sons in pairs,ie. find sibling
+  {
+    if(sons[jj]>=0)//ok, found a sibling
+    {
+      p=pp;
+      pp=sons[jj];
+      if(p<NumberOfParticles)
+      {
+	thismass=Snapshot->GetMass(p);
+	mass+=thismass;
+	if(IsGravityTree)
+	  VectorAdd(CoM, Snapshot->GetComovingPosition(p), thismass);
+	NextnodeFromParticle[p]=pp;
+      }
+      else
+      {
+	UpdateSubnode(p, pp, len);
+	thismass=Nodes[p].way.mass;
+	mass+=thismass;
+	if(IsGravityTree)
+	  VectorAdd(CoM, Nodes[p].way.s, thismass);
+      }
+    }
+  }
+  if(pp<NumberOfParticles)//the last son
+  {			
+    thismass=Snapshot->GetMass(pp);
+    mass+=thismass;
+    if(IsGravityTree)
+      VectorAdd(CoM, Snapshot->GetComovingPosition(pp), thismass);
+    NextnodeFromParticle[pp]=sib;
+  }
+  else
+  {
+    UpdateSubnode(pp, sib, len);
+    thismass=Nodes[pp].way.mass;
+    mass+=thismass;
+    if(IsGravityTree)
+      VectorAdd(CoM, Nodes[pp].way.s, thismass);
+  }
+  Nodes[no].way.mass=mass;
+  if(IsGravityTree)
+  {
+    Nodes[no].way.s[0]=CoM[0]/mass;
+    Nodes[no].way.s[1]=CoM[1]/mass;
+    Nodes[no].way.s[2]=CoM[2]/mass;
+  }
 }
 
 HBTInt OctTree_t::Build(const Snapshot_t &snapshot, HBTInt num_part, bool ForGravity)
@@ -195,6 +209,7 @@ Cells->sons[i] = -1;
 			}
 			for(sub=0;sub<8;sub++)//initialize new node
 				Nodes[nodeid].sons[sub]=-1;
+			copyXYZ(Nodes[nodeid].way.s, center);
 			/*insert that subid into this new node*/
 			//what if the two particles are too near? 
 			//unnecessary to divide too fine, just get rid of one by random insertion. 

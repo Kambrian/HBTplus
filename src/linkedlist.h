@@ -16,7 +16,6 @@ class Linkedlist_t
 {
 private:
   int NDiv, NDiv2;
-  HBTInt NumPart;
   bool PeriodicBoundary;
   HBTReal BoxSize, BoxHalf;
   vector <HBTInt> HOC;
@@ -32,6 +31,7 @@ private:
   HBTInt GetHOCSafe(int i, int j, int k);
   HBTReal Distance(const HBTxyz &x, const HBTxyz &y);
 public:
+  Linkedlist_t()=default;
   Linkedlist_t(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false)
   {
     build(ndiv, data, boxsize, periodic);
@@ -45,7 +45,7 @@ inline int Linkedlist_t::RoundGridId(int i)
 {
   return i<0?0:(i>=NDiv?NDiv-1:i);
 }
-int Linkedlist_t::ShiftGridId(int i)
+inline int Linkedlist_t::ShiftGridId(int i)
 /*to correct for periodic conditions; 
 only applicable when def PERIODIC_BDR and ll.UseFullBox=1 */
 {

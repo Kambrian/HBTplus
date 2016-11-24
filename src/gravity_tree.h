@@ -1,4 +1,5 @@
 /* this oct-tree code is adopted from SUBFIND with minor modifications for HBT */
+//ToDo: separate GravityTree and SpatialTree class; add searching and density functions; neareast neighbour search by inserting into the nodes?
 #ifndef TREE_H_INCLUDED
 #define TREE_H_INCLUDED
 #include <exception>
@@ -47,6 +48,7 @@ private:
   const Snapshot_t * Snapshot;
   HBTInt NumberOfParticles; //alias to Snapshot->GetSize().
   void UpdateInternalNodes(HBTInt no,HBTInt sib,double len);
+  void UpdateSubnode(HBTInt son, HBTInt sib, double len);
 public:
   bool IsGravityTree;
   OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0), IsGravityTree(true)
@@ -63,6 +65,12 @@ public:
   }
 };
 
+/*
+class GravityTree_t: public OctTree_t
+{
+  //you can override the UpdateInternalNodes function (set to virtual in base class first).
+}
+*/
 
 #endif	
 
