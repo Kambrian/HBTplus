@@ -37,7 +37,7 @@ public:
     build(ndiv, data, boxsize, periodic);
   }
   void build(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false);
-  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8);
+  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8, HBTReal rmin=-1.);
 };
 
 inline int Linkedlist_t::RoundGridId(int i)
