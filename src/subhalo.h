@@ -10,6 +10,13 @@
 #include "halo.h"
 #include "hdf_wrapper.h"
 
+enum class SubReaderDepth_t
+{
+  SubTable,
+  SubParticles,
+  SrcParticles
+};
+
 class Subhalo_t;
 typedef vector <Subhalo_t> SubhaloList_t;
 
@@ -181,6 +188,9 @@ private:
   void ExtendCentralNest();
   void NestSubhalos();
   void MaskSubhalos();
+  void ReadFile(int iFile, const SubReaderDepth_t depth);
+  void LoadSubDir(int snapshot_index, const SubReaderDepth_t depth);
+  void LoadSingle(int snapshot_index, const SubReaderDepth_t depth);
 public:
   const ParticleSnapshot_t * SnapshotPointer;
   SubhaloList_t Subhalos;
@@ -189,13 +199,14 @@ public:
   {
 	BuildHDFDataType();
   }
-  SubhaloSnapshot_t(int snapshot_index, bool load_src=false): SubhaloSnapshot_t()
+  SubhaloSnapshot_t(int snapshot_index, const SubReaderDepth_t depth=SubReaderDepth_t::SubParticles): SubhaloSnapshot_t()
   {
-	Load(snapshot_index, load_src);
+	Load(snapshot_index, depth);
   }
-  void GetSubFileName(string &filename);
-  void GetSrcFileName(string &filename);
-  void Load(int snapshot_index, bool load_src=false);
+  string GetSubDir();
+  void GetSubFileName(string &filename, int iFile, const string &filetype="Sub");  
+  void GetSubFileName(string &filename, const string &filetype="Sub");
+  void Load(int snapshot_index, const SubReaderDepth_t depth=SubReaderDepth_t::SubParticles);
   void Save();
   ~SubhaloSnapshot_t();
   void Clear()

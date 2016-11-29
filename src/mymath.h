@@ -106,7 +106,7 @@ inline size_t fread_swap(void *buf,const size_t member_size, const size_t member
 	swap_Nbyte(buf,member_count,member_size);
 	return Nread;
 }
-inline bool file_exist(char * filename)
+inline bool file_exist(const char * filename)
 { struct stat buffer;   
   return (stat(filename, &buffer) == 0); 
 }

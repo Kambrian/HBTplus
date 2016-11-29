@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 	
   SubhaloSnapshot_t subsnap;
   
-  subsnap.Load(snapshot_start-1, true);
+  subsnap.Load(snapshot_start-1, SubReaderDepth_t::SrcParticles);
   
   Timer_t timer;
   ofstream time_log(HBTConfig.SubhaloPath+"/timing.log", fstream::out|fstream::app);

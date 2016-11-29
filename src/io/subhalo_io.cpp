@@ -95,19 +95,13 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   H5Tclose(H5T_FloatVec3);
   H5Tclose(H5T_HBTxyz);
 }
-void SubhaloSnapshot_t::GetSubFileName(string &filename)
+void SubhaloSnapshot_t::GetSubFileName(string &filename, const string &filetype)
 {
   stringstream formater;
-  formater<<HBTConfig.SubhaloPath<<"/SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
+  formater<<HBTConfig.SubhaloPath<<"/"<<filetype<<"Snap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
   filename=formater.str();
 }
-void SubhaloSnapshot_t::GetSrcFileName(string &filename)
-{
-  stringstream formater;
-  formater<<HBTConfig.SubhaloPath<<"/SrcSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
-  filename=formater.str();
-}
-void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
+void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t depth)
 {
   if(snapshot_index<HBTConfig.MinSnapshotIndex)
   {
@@ -118,7 +112,12 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
   
   SetSnapshotIndex(snapshot_index);
   string filename;
-  GetSubFileName(filename);
+  GetSubFileName(filename, "Sub");
+  if(!file_exist(filename.c_str())) 
+  {
+    throw ifstream::failure("fail to open"+filename);
+    return;
+  }
   hid_t dset, file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   HBTInt snapshot_id;
   ReadDataset(file, "SnapshotId", H5T_HBTInt, &snapshot_id);
@@ -169,36 +168,32 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
   if(0==nsubhalos) return;
 
   vl.resize(nsubhalos);
-  if(!load_src)
+  if(depth==SubReaderDepth_t::SubParticles||depth==SubReaderDepth_t::SrcParticles)
   {
+    hid_t file2;
+    switch(depth)
+    {
+      case SubReaderDepth_t::SubParticles:
 	dset=H5Dopen2(file, "SubhaloParticles", H5P_DEFAULT);
-	GetDatasetDims(dset, dims);
-	assert(dims[0]==nsubhalos);
-	H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-	for(HBTInt i=0;i<nsubhalos;i++)
-	{
-	  Subhalos[i].Particles.resize(vl[i].len);
-	  memcpy(Subhalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
-	}
-	ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
-	H5Dclose(dset);
-  }
-  else
-  {
-	GetSrcFileName(filename);
-	hid_t file2=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+	break;
+      case SubReaderDepth_t::SrcParticles:
+	GetSubFileName(filename, "Src");
+	file2=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 	dset=H5Dopen2(file2,"SrchaloParticles", H5P_DEFAULT);
-	GetDatasetDims(dset, dims);
-	assert(dims[0]==nsubhalos);
-	H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-	for(HBTInt i=0;i<nsubhalos;i++)
-	{
-	  Subhalos[i].Particles.resize(vl[i].len);
-	  memcpy(Subhalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
-	}
-	ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
-	H5Dclose(dset);
-	H5Fclose(file2);
+	break;
+    }
+    GetDatasetDims(dset, dims);
+    assert(dims[0]==nsubhalos);
+    H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+    for(HBTInt i=0;i<nsubhalos;i++)
+    {
+      Subhalos[i].Particles.resize(vl[i].len);
+      memcpy(Subhalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+    }
+    ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
+    H5Dclose(dset);
+    if(depth==SubReaderDepth_t::SrcParticles)
+      H5Fclose(file2);
   }
   
   {//read nested subhalos
@@ -240,9 +235,8 @@ void SubhaloSnapshot_t::Load(int snapshot_index, bool load_src)
 
 void SubhaloSnapshot_t::Save()
 {
-  stringstream formater;
-  formater<<HBTConfig.SubhaloPath<<"/SubSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
-  string filename(formater.str());
+  string filename;
+  GetSubFileName(filename, "Sub");
   cout<<"Saving to "<<filename<<"..."<<endl;
   hid_t file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -385,10 +379,7 @@ void SubhaloSnapshot_t::Save()
   
   H5Fclose(file);
   
-  formater.str("");
-  formater.clear();
-  formater<<HBTConfig.SubhaloPath<<"/SrcSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
-  filename=formater.str();
+  GetSubFileName(filename, "Src");
   cout<<"Saving to "<<filename<<"..."<<endl;
   file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5T_NATIVE_INT);
@@ -400,3 +391,14 @@ void SubhaloSnapshot_t::Save()
   cout<<Subhalos.size()<<" subhaloes saved: "<<MemberTable.NBirth<<" birth, "<< MemberTable.NFake<<" fake.\n";
 }
 
+void SubhaloSnapshot_t::Load(int snapshot_index, const SubReaderDepth_t depth)
+{
+  try
+  {
+    LoadSingle(snapshot_index, depth);
+  }
+  catch(ifstream::failure &e)
+  {
+    LoadSubDir(snapshot_index, depth);
+  }
+}
