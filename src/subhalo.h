@@ -12,9 +12,9 @@
 
 enum class SubReaderDepth_t
 {
-  SubTable,
-  SubParticles,
-  SrcParticles
+  SubTable,//read only the properties of subhalos
+  SubParticles,//read sub particle list, plus properties of sub
+  SrcParticles//read src particle list instead of sub particles, plus properties of sub 
 };
 
 class Subhalo_t;
