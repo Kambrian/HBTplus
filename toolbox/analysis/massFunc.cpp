@@ -24,7 +24,6 @@
 #define MSUB Mbound  //or LastMaxMass for unevolved MF
 
 float ParticleMass;
-#define NBOUNDMIN 20
 
 class MassFunc_t
 {
@@ -73,11 +72,19 @@ void logspace(double xmin,double xmax,int N,vector <float> &x);
 // void load_halo_virial_size(float Mvir[][3],float Rvir[][3],float partmass,int Ngroups,int Nsnap);
 int main(int argc,char **argv)
 {
-  int snapshot_start, snapshot_end, isnap;
-  ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
-  isnap=HBTConfig.MaxSnapshotIndex;
-  SubhaloSnapshot_t subsnap(isnap);
-  ParticleMass=subsnap.Cosmology.ParticleMass;
+  if(argc!=3)
+  {
+    cerr<<"Usage: "<<endl;
+    cerr<<" "<<argv[0]<<" [config_file] [snapshot_number]"<<endl;
+    cerr<<"    If snapshot_number<0, then it's counted from final snapshot in reverse order"<<endl; 
+    cerr<<"    (i.e., FinalSnapshot=-1,... FirstSnapshot=-N)"<<endl;
+    return 1;
+  }
+  HBTConfig.ParseConfigFile(argv[1]);
+  int isnap=atoi(argv[2]);
+  if(isnap<0) isnap=HBTConfig.MaxSnapshotIndex+isnap+1;
+  SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);
+  ParticleMass=subsnap.Cosmology.ParticleMass;//if not def DM_ONLY, set it manually here
   
   /* decide host mass bins */  
   vector <float> Mgrpbin={pow(10,2), pow(10, 2.5), pow(10,3), pow(10, 4), pow(10,5)};	  
@@ -93,7 +100,7 @@ int main(int argc,char **argv)
       Mmax=subsnap.Subhalos[subid].MHOST;
   }
   Mmax=Mmax*1.01;
-  float Mmin=1000*subsnap.Cosmology.ParticleMass; //if not def DM_ONLY, set it manually here
+  float Mmin=1000*ParticleMass; 
   logspace(Mmin,Mmax,NFUN+1,Mgrpbin);
   #endif
   
@@ -165,9 +172,9 @@ void MassFunc_t::mass_count()
   vector <double> mass(NBIN, 0.);
   vector <HBTInt> count(NBIN, 0);
   
-  xmin=NBOUNDMIN*ParticleMass;
+  xmin=HBTConfig.MinNumPartOfSub*ParticleMass;
   #ifdef NORM
-  float xmin_rel=NBOUNDMIN*ParticleMass/mfun->Mbin[0];
+  float xmin_rel=HBTConfig.MinNumPartOfSub*ParticleMass/mfun->Mbin[0];
   if(xmin<xmin_rel) xmin=xmin_rel;
   #endif
   xmax=(*max_element(Mlist.begin(), Mlist.end()))*1.001;
@@ -219,7 +226,7 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
   #endif
   auto &cenpos=subsnap.Subhalos[cenid].ComovingMostBoundPosition;
   vector <HBTInt> sublist;
-  ll.SearchSphereSerial(rmax, cenpos, sublist, 8);
+  ll.SearchSphereSerial(rmax, cenpos, sublist);
   Mlist.reserve(Mlist.size()+sublist.size());
   for(HBTInt i=0;i<sublist.size();i++)
   {
