@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 
   SubhaloSnapshot_t subsnap;
   
-  subsnap.Load(world, snapshot_start-1, true);
+  subsnap.Load(world, snapshot_start-1, SubReaderDepth_t::SrcParticles);
   
   Timer_t timer;
   ofstream time_log;

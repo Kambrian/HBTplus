@@ -103,7 +103,7 @@ void SubhaloSnapshot_t::GetSubFileName(string &filename, int iFile, const string
   formater<<GetSubDir()<<"/"+ftype+"Snap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
   filename=formater.str();
 }
-void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_src)
+void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const SubReaderDepth_t depth)
 {
   if(snapshot_index<HBTConfig.MinSnapshotIndex)
   {
@@ -140,7 +140,7 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
 	if(i==world.rank())//read
 	{
 	  for(int iFile=nfiles_skip;iFile<nfiles_end;iFile++)
-		ReadFile(iFile, load_src);
+		ReadFile(iFile, depth);
 	}
   }
 
@@ -158,7 +158,7 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, bool load_s
 	}
   }
 }
-void SubhaloSnapshot_t::ReadFile(int iFile, bool load_src)
+void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
 {//Read iFile for current snapshot. 
   
   string filename;
@@ -190,40 +190,34 @@ void SubhaloSnapshot_t::ReadFile(int iFile, bool load_src)
   vector <hvl_t> vl(dims[0]);
   vl.resize(nsubhalos);
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
-  if(!load_src)
+  if(depth==SubReaderDepth_t::SubParticles||depth==SubReaderDepth_t::SrcParticles)
   {
+    hid_t file2;
+    switch(depth)
+    {
+      case SubReaderDepth_t::SubParticles:
 	dset=H5Dopen2(file, "SubhaloParticles", H5P_DEFAULT);
-	GetDatasetDims(dset, dims);
-	assert(dims[0]==nsubhalos);
-	H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-	for(HBTInt i=0;i<nsubhalos;i++)
-	{
-	  NewSubhalos[i].Particles.resize(vl[i].len);
-	  HBTInt *p=(HBTInt *)(vl[i].p);
-	  for(HBTInt j=0;j<vl[i].len;j++)
-		NewSubhalos[i].Particles[j].Id=p[j];
-	}
-	ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
-	H5Dclose(dset);
-  }
-  else
-  {
+	break;
+      case SubReaderDepth_t::SrcParticles:
 	GetSubFileName(filename, iFile, "Src");
-	hid_t file2=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+	file2=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 	dset=H5Dopen2(file2,"SrchaloParticles", H5P_DEFAULT);
-	GetDatasetDims(dset, dims);
-	assert(dims[0]==nsubhalos);
-	H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-	for(HBTInt i=0;i<nsubhalos;i++)
-	{
-	  NewSubhalos[i].Particles.resize(vl[i].len);
-	  HBTInt *p=(HBTInt *)(vl[i].p);
-	  for(HBTInt j=0;j<vl[i].len;j++)
-		NewSubhalos[i].Particles[j].Id=p[j];
-	}
-	ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
-	H5Dclose(dset);
-	H5Fclose(file2);
+	break;
+    }
+    GetDatasetDims(dset, dims);
+    assert(dims[0]==nsubhalos);
+    H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+    for(HBTInt i=0;i<nsubhalos;i++)
+    {
+      NewSubhalos[i].Particles.resize(vl[i].len);
+      HBTInt *p=(HBTInt *)(vl[i].p);
+      for(HBTInt j=0;j<vl[i].len;j++)
+	NewSubhalos[i].Particles[j].Id=p[j];
+    }
+    ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
+    H5Dclose(dset);
+    if(depth==SubReaderDepth_t::SrcParticles)
+      H5Fclose(file2);
   }
   
   {//read nested subhalos
