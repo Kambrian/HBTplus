@@ -24,6 +24,7 @@ void LinkedlistPara_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, 
   {
     vector <HBTInt> thread_founds;
     LLs[thread_id].SearchSphere(radius, searchcenter, thread_founds, nmax_guess, rmin);
+    Samples[thread_id].restore_id(thread_founds);
     #pragma omp critical(insert_linklist_founds) //this prevents nested parallelization
     {
       found_ids.insert(found_ids.end(), thread_founds.begin(), thread_founds.end());
@@ -37,6 +38,7 @@ void LinkedlistPara_t::SearchSphereSerial(HBTReal radius, const HBTxyz &searchce
   {
     vector <HBTInt> thread_founds;
     LLs[thread_id].SearchSphere(radius, searchcenter, thread_founds, nmax_guess, rmin);
+    Samples[thread_id].restore_id(thread_founds);
     found_ids.insert(found_ids.end(), thread_founds.begin(), thread_founds.end());
   }
 }

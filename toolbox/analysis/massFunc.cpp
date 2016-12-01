@@ -23,6 +23,8 @@
 #define RHOST R200CritComoving
 #define MSUB Mbound  //or LastMaxMass for unevolved MF
 
+//#define PARTICLEMASS 8.6e-2 //millimill
+#define PARTICLEMASS 6.88e-4 //mill2
 float ParticleMass;
 
 class MassFunc_t
@@ -85,13 +87,21 @@ int main(int argc,char **argv)
   if(isnap<0) isnap=HBTConfig.MaxSnapshotIndex+isnap+1;
   SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);
   ParticleMass=subsnap.Cosmology.ParticleMass;//if not def DM_ONLY, set it manually here
+  if(ParticleMass==0)
+  {
+    ParticleMass=PARTICLEMASS;
+    cerr<<"Error: failed to read particle mass in subhalo snapshot. Manually setting it to "
+    <<PARTICLEMASS<<" according to macro."<<endl;
+  }
+  cout<<"data loaded\n";
   
   /* decide host mass bins */  
   vector <float> Mgrpbin={pow(10,2), pow(10, 2.5), pow(10,3), pow(10, 4), pow(10,5)};	  
   #ifndef FIX_HOSTBIN
   float Mmax=0.;
   auto &subgroups=subsnap.MemberTable.SubGroups;
-  HBTInt Ngroups=subgroups.size()-1;
+  HBTInt Ngroups=subgroups.size();
+#pragma omp parallel for reduction(max: Mmax)
   for(HBTInt grpid=0;grpid<Ngroups;grpid++)
   {
     if(subgroups[grpid].size()==0) continue;
@@ -110,10 +120,13 @@ int main(int argc,char **argv)
     
     SubhaloPos_t SubPos(subsnap.Subhalos);
     LinkedlistPara_t ll(200, &SubPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+    cout<<"linked list compiled\n";
+    
     MassFunc_t mfun[NFUN];							
-    #pragma omp parallel for
+//     #pragma omp parallel for
     for(int i=0;i<NFUN;i++)
       mfun[i].build(xrange[i], &Mgrpbin[i], subsnap, ll); 
+    cout<<"mass func computed\n";
     
     string outdir=HBTConfig.SubhaloPath+"/analysis/";
     mkdir(outdir.c_str(),0755);
@@ -147,7 +160,7 @@ void MassFunc_t::mass_list(const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &l
 {
   Mlist.reserve(subsnap.Subhalos.size());
   auto &subgroups=subsnap.MemberTable.SubGroups;
-  for(HBTInt grpid=0;grpid<subgroups.size()-1;grpid++)
+  for(HBTInt grpid=0;grpid<subgroups.size();grpid++)
   {
     if(subgroups[grpid].size()==0) continue;
     HBTInt cenid=subgroups[grpid][0];
@@ -157,6 +170,7 @@ void MassFunc_t::mass_list(const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &l
       collect_submass(grpid,subsnap, ll);
       Nhost++;
       Mhost+=mhost;
+      break; /////////////////////////////////////for debug
     }
   }
 }
@@ -187,7 +201,7 @@ void MassFunc_t::mass_count()
   vector <float> x;
   logspace(xmin,xmax,NBIN+1, x);
   dlnx=logf(x[1]/x[0]);
-  printf("%f,%f\n",xmin,xmax);
+  printf("%f,%f:  %f,%f\n",Mbin[0], Mbin[1], xmin,xmax);
   
   for(auto &&m: Mlist)
   {
@@ -226,12 +240,12 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
   #endif
   auto &cenpos=subsnap.Subhalos[cenid].ComovingMostBoundPosition;
   vector <HBTInt> sublist;
-  ll.SearchSphereSerial(rmax, cenpos, sublist);
+  ll.SearchSphere(rmax, cenpos, sublist);
   Mlist.reserve(Mlist.size()+sublist.size());
-  for(HBTInt i=0;i<sublist.size();i++)
+  for(auto &&subid: sublist)
   {
-    if(sublist[i]!=cenid)
-      Mlist.push_back(subsnap.Subhalos[i].MSUB/mhost);
+    if(subid!=cenid)
+      Mlist.push_back(subsnap.Subhalos[subid].MSUB/mhost);
   }
 }
 

@@ -18,11 +18,20 @@ public:
   }
   const HBTxyz & operator [](HBTInt i) const
   {
-    return (*Data)[i*NumThreads+ThreadId];
+    return (*Data)[restore_id(i)];
   }
   size_t size() const
   {
     return np;
+  }
+  HBTInt restore_id(HBTInt i) const
+  {
+    return i*NumThreads+ThreadId;
+  }
+  void restore_id(vector <HBTInt> &ids) const
+  {
+    for(auto &&i: ids)
+      i=restore_id(i);
   }
 };
 
