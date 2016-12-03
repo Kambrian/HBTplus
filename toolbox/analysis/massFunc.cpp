@@ -170,7 +170,6 @@ void MassFunc_t::mass_list(const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &l
       collect_submass(grpid,subsnap, ll);
       Nhost++;
       Mhost+=mhost;
-      break; /////////////////////////////////////for debug
     }
   }
 }
@@ -219,10 +218,10 @@ void MassFunc_t::mass_count()
     ncum+=count[i];
     XMassLow[i]=x[i];
     XMassMean[i]=mass[i]/count[i];
-    MfunSpecln[i][0]=count[i]/dlnx;//another way: <m>*dN/dm=xmass[i,1]*MfunSpec;
-    MfunSpecln[i][1]=sqrt(count[i])/dlnx;
-    MfunCum[i][0]=ncum;
-    MfunCum[i][1]=sqrt(ncum);
+    MfunSpecln[i][0]=count[i]/dlnx/Mhost;//another way: <m>*dN/dm=xmass[i,1]*MfunSpec;
+    MfunSpecln[i][1]=sqrt(count[i])/dlnx/Mhost;
+    MfunCum[i][0]=ncum/Mhost;
+    MfunCum[i][1]=sqrt(ncum)/Mhost;
   }
 }
 
