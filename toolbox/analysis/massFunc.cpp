@@ -11,7 +11,7 @@
 #include "../../src/mymath.h"
 #include "../../src/linkedlist_parallel.h"
 
-//#define NORM  //produce normalized massfunction (in terms Msub/Mhost rather than Msub)
+#define NORM  //produce normalized massfunction (in terms Msub/Mhost rather than Msub)
 #define RMIN 0
 #define RMAX 1	 //statistics done in RMIN*rvi<r<RMAX*rvir
 #define NBIN 20  //bin number for Msub
@@ -131,10 +131,14 @@ int main(int argc,char **argv)
     string outdir=HBTConfig.SubhaloPath+"/analysis/";
     mkdir(outdir.c_str(),0755);
     #define xstr(s) str(s)
-     #define str(s) #s
+    #define str(s) #s
+    #ifdef NORM
+    string filename=outdir+"massFuncN"+to_string(isnap)+"." xstr(MHOST) "." xstr(MSUB) ".hdf5";
+    #else
     string filename=outdir+"massFunc"+to_string(isnap)+"." xstr(MHOST) "." xstr(MSUB) ".hdf5";
-#undef xstr
-#undef str
+    #endif
+    #undef xstr
+    #undef str
     hid_t file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     for(int i=0;i<NFUN;i++)
     {
@@ -187,8 +191,7 @@ void MassFunc_t::mass_count()
   
   xmin=HBTConfig.MinNumPartOfSub*ParticleMass;
   #ifdef NORM
-  float xmin_rel=HBTConfig.MinNumPartOfSub*ParticleMass/mfun->Mbin[0];
-  if(xmin<xmin_rel) xmin=xmin_rel;
+  xmin=HBTConfig.MinNumPartOfSub*ParticleMass/Mbin[0];
   #endif
   xmax=(*max_element(Mlist.begin(), Mlist.end()))*1.001;
   
