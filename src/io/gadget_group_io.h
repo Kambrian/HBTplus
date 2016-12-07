@@ -23,9 +23,9 @@ struct GroupV4Header_t
   int flag_doubleprecision;//long? no, but padding may exist
 };
 
+extern void GetFileNameFormat(int SnapshotId, string &format, int &FileCounts, bool &IsSubFile, bool &NeedByteSwap);
 extern HBTInt Load(int SnapshotId, vector <Halo_t> &Halos);
 extern bool IsGadgetGroup(const string &GroupFileFormat);
-
 }
 
 #endif
