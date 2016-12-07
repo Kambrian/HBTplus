@@ -14,9 +14,9 @@
 #define NORM  //produce normalized massfunction (in terms Msub/Mhost rather than Msub)
 #define RMIN 0
 #define RMAX 1	 //statistics done in RMIN*rvi<r<RMAX*rvir
-#define NBIN 20  //bin number for Msub
-//#define FIX_HOSTBIN
-//#define FIX_XBIN  //define this to use preset xmass bin
+#define NBIN 25  //bin number for Msub
+#define FIX_HOSTBIN
+// #define FIX_XBIN  //define this to use preset xmass bin
 #define NFUN 5   //bin number for Mhost
 
 #define EXTERN_VIR //whether to use external or internal virial
@@ -112,7 +112,7 @@ int main(int argc,char **argv)
   }
 #endif
   /* decide host mass bins */  
-  vector <float> Mgrpbin={pow(10,2), pow(10, 2.5), pow(10,3), pow(10, 4), pow(10,5)};	  
+  vector <float> Mgrpbin={pow(10, 0), pow(10,1), pow(10,2), pow(10,3), pow(10, 4), pow(10,4.5)};	  
   #ifndef FIX_HOSTBIN
   float Mmax=0.;
   auto &subgroups=subsnap.MemberTable.SubGroups;
@@ -135,9 +135,18 @@ int main(int argc,char **argv)
   logspace(Mmin,Mmax,NFUN+1,Mgrpbin);
   #endif
   
+#ifdef NORM
+  float xrange[NFUN][2]={1e-6,1,
+    1e-6,1,
+    1e-6,1,
+    1e-6,1,
+    1e-6,1
+  };  //this only takes effect when FIX_XBIN is defined
+#else
   float xrange[NFUN][2]={0.620373,50,
     0.620373,500,
-    0.620373,5000};  //this only takes effect when FIX_XBIN is defined
+    0.620373,5000};
+#endif
     
     SubhaloPos_t SubPos(subsnap.Subhalos);
     LinkedlistPara_t ll(200, &SubPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
