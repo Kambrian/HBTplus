@@ -221,8 +221,7 @@ void MassFunc_t::mass_count()
   
   xmin=HBTConfig.MinNumPartOfSub*ParticleMass;
   #ifdef NORM
-  float xmin_rel=HBTConfig.MinNumPartOfSub*ParticleMass/mfun->Mbin[0];
-  if(xmin<xmin_rel) xmin=xmin_rel;
+  xmin/=Mbin[0];
   #endif
   xmax=(*max_element(Mlist.begin(), Mlist.end()))*1.001;
   
