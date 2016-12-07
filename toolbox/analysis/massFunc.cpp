@@ -151,7 +151,7 @@ int main(int argc,char **argv)
     
     string outdir=HBTConfig.SubhaloPath+"/analysis/";
     mkdir(outdir.c_str(),0755);
-#ifdef NROM
+#ifdef NORM
     string funcname="massFuncN";
 #else
     string funcname="massFunc";
