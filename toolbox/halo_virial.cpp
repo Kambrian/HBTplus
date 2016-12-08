@@ -58,7 +58,7 @@ int main(int argc, char **argv)
       init....
       continue;
     }
-    rest=estimate_grp_size();
+    rest=estimate_grp_size();//use b200 as a ref
     vector <LocatedParticle_t> founds;
     ll.SearchSphere(rest*RMAX, subsnap.Subhalos[subgroup[0]], founds, halosnap.Halos[grpid].size());
     vector <HBTReal> d(founds.size());
