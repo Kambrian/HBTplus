@@ -44,7 +44,7 @@ LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPFLAG) #-lmcheck
 # CXXFLAGS+=-xHost #to get it runnable on cosma-e
 #CXXFLAGS+=-g
 #LDFLAGS+=-g
-# LINK.o=$(LINK.cpp) 
+LINK.o=$(LINK.cpp) #invoke c++ linker rather than the default (c) linker.
 
 ifeq ($(CXX), g++)
 OMPFLAG=-fopenmp
