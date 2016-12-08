@@ -17,5 +17,6 @@ ft,fc,fb=virialFactors(a)
 
 plt.loglog(a, ft, 'r')
 plt.loglog(a, np.ones_like(a)*fc, 'g')
-plt.loglog(a, fb, 'b')
-plt.legend(('tophat','200c','200b'))
+plt.loglog(a, fb, 'b--')
+plt.legend(('tophat','200c','200b'),loc=3)
+plt.yscale('linear')
