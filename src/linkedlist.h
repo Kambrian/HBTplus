@@ -1,7 +1,14 @@
 #include "mymath.h"
 
 //TODO:discard the fortran-style ll; use struct or indexed table to parallelize the linklist!
-
+struct LocatedParticle_t
+{
+  HBTInt id;
+  HBTReal d; //distance
+  LocatedParticle_t()=default;
+  LocatedParticle_t(HBTInt id, HBTReal d):id(id),d(d)
+  {}
+};
 class PositionData_t
 {
 public:
@@ -37,7 +44,7 @@ public:
     build(ndiv, data, boxsize, periodic);
   }
   void build(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false);
-  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8, HBTReal rmin=-1.);
+  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds, int nmax_guess=8, HBTReal rmin=-1.);
 };
 
 inline int Linkedlist_t::RoundGridId(int i)

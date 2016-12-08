@@ -79,14 +79,14 @@ void Linkedlist_t::build(int ndiv, PositionData_t *data, HBTReal boxsize, bool p
 								  store last ll index, and finally the head*/
   }
 }
-void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess, HBTReal rmin)
+void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds, int nmax_guess, HBTReal rmin)
 {//nmax_guess: initial guess for the max number of particles to be found. for memory allocation optimization purpose.
   PositionData_t &particles=*Particles;
   HBTReal dr;
   int i,j,k,subbox_grid[3][2];
   
-  found_ids.clear();
-  found_ids.reserve(nmax_guess);
+  founds.clear();
+  founds.reserve(nmax_guess);
 	  
   for(i=0;i<3;i++)
   {
@@ -106,7 +106,7 @@ void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vect
 	while(pid>=0)
 	{
 	  dr=Distance(particles[pid],searchcenter);
-	  if(dr<radius&&dr>rmin)  found_ids.push_back(pid);
+	  if(dr<radius&&dr>rmin)  founds.push_back(LocatedParticle_t(pid,dr));
 	  pid=List[pid];
 	}
       }

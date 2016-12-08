@@ -28,10 +28,10 @@ public:
   {
     return i*NumThreads+ThreadId;
   }
-  void restore_id(vector <HBTInt> &ids) const
+  void restore_id(vector <LocatedParticle_t> &particles) const
   {
-    for(auto &&i: ids)
-      i=restore_id(i);
+    for(auto &&p: particles)
+      p.id=restore_id(p.id);
   }
 };
 
@@ -42,8 +42,8 @@ private:
   vector <PositionSample_t> Samples;
 public:
   LinkedlistPara_t(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false); 
-  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8, HBTReal rmin=-1.);
-  void SearchSphereSerial(HBTReal radius, const HBTxyz &searchcenter, vector <HBTInt> &found_ids, int nmax_guess=8, HBTReal rmin=-1.);
+  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds, int nmax_guess=8, HBTReal rmin=-1.);
+  void SearchSphereSerial(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds, int nmax_guess=8, HBTReal rmin=-1.);
 };
 
 
