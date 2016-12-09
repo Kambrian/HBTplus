@@ -286,9 +286,7 @@ void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cos
 {
   ReadHeader(Header);
   Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
-#ifdef DM_ONLY
   Cosmology.ParticleMass=Header.mass[TypeDM];
-#endif
   Particles.resize(Header.Np);
   
   int nthreads=NumFilesId+NumFilesPos+NumFilesVel;

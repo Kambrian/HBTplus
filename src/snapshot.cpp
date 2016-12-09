@@ -119,18 +119,18 @@ double ParticleSnapshot_t::AverageVelocity(HBTxyz& CoV, const ParticleIndex_t Pa
 }
 
 //TODO: detach these SO functions from snapshot. pass cosmology as parameter
-void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
+void Cosmology_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted) const
 /*
- * find SphericalOverdensitySize from a given list of sorted particle distances.
+ * find SphericalOverdensitySize from a given list of sorted particle distances with default ParticleMass in Comology.
  * all distances comoving.
  * 
  * Brute-force method to scan from most-distant particle.
  * 
- * currently only support constant particle mass.
  */
-{  
+{
+  assert(ParticleMass>0);
   HBTInt i, np=RSorted.size();
-  HBTReal RhoVirial=VirialFactor*Cosmology.Hz*Cosmology.Hz/2.0/PhysicalConst::G/ParticleMass*Cosmology.ScaleFactor*Cosmology.ScaleFactor*Cosmology.ScaleFactor;
+  HBTReal RhoVirial=VirialFactor*Hz*Hz/2.0/PhysicalConst::G/ParticleMass*ScaleFactor*ScaleFactor*ScaleFactor;
   for(i=np;i>0;i--)
   {
 	HBTReal r=RSorted[i-1];
@@ -140,7 +140,7 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
   Rvir=pow(i/RhoVirial, 1.0/3);//comoving
 }
 
-void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector <RadVelMass_t> &prof) const
+void Cosmology_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector <RadVelMass_t> &prof) const
 /*
  * find SphericalOverdensitySize from a given list of sorted particle distances.
  * all distances comoving.
@@ -148,8 +148,8 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
  * Brute-force method to scan from most-distant particle.
  * 
  */
-{  
-  HBTReal RhoVirial=VirialFactor*Cosmology.Hz*Cosmology.Hz/2.0/PhysicalConst::G*Cosmology.ScaleFactor*Cosmology.ScaleFactor*Cosmology.ScaleFactor;
+{ 
+  HBTReal RhoVirial=VirialFactor*Hz*Hz/2.0/PhysicalConst::G*ScaleFactor*ScaleFactor*ScaleFactor;
   
   for(auto p=prof.rbegin();p!=prof.rend();++p)
   {
@@ -164,23 +164,23 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
   }
 }
 
-void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted, HBTReal ParticleMass) const
+void Cosmology_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector< HBTReal >& RSorted) const
 /*
- * find SphericalOverdensitySize from a given list of sorted particle distances.
+ * find SphericalOverdensitySize from a given list of sorted particle distances with default ParticleMass in Comology.
  * all distances comoving.
  * 
  * Iterative method to guess the radius.
  * 
- * currently only support constant particle mass.
  */
 {
+  assert(ParticleMass>0);
   HBTReal tol=1e-5;
   HBTInt i,ndiv, np=RSorted.size();
   HBTReal rvir,rdiv;
   
   ndiv=np;//guess mass
   rdiv=RSorted[ndiv-1];
-  rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Cosmology.Hz/Cosmology.Hz,1.0/3)/Cosmology.ScaleFactor;//guess radius
+  rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//guess radius
   while(true)
   {
 	if(rdiv>rvir)//reduce mass guess
@@ -201,7 +201,7 @@ void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal Vir
 	}
 	
 	rdiv=rvir;
-	rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Cosmology.Hz/Cosmology.Hz,1.0/3)/Cosmology.ScaleFactor;//recalibrate radius
+	rvir=pow(2.0*PhysicalConst::G*ndiv*ParticleMass/VirialFactor/Hz/Hz,1.0/3)/ScaleFactor;//recalibrate radius
 	
 	if(0==ndiv||np==ndiv||fabs((rvir-rdiv)/rvir)<tol) break; //converged
   }
@@ -210,12 +210,13 @@ void Snapshot_t::SphericalOverdensitySize2(float& Mvir, float& Rvir, HBTReal Vir
   Mvir=ndiv*ParticleMass;
 }
 
-void Snapshot_t::HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const
+void Cosmology_t::HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const
+//obtain <Rho_vir>/Rho_cri
 {
 	HBTReal Hratio,x;
-	Hratio=Cosmology.Hz/PhysicalConst::H0;
-	x=Cosmology.OmegaZ-1;
+	Hratio=Hz/PhysicalConst::H0;
+	x=OmegaZ-1;
 	virialF_tophat=18.0*3.1416*3.1416+82.0*x-39.0*x*x;//<Rho_vir>/Rho_cri
 	virialF_c200=200.;
-	virialF_b200=200.*Cosmology.OmegaZ;//virialF w.r.t contemporary critical density 
+	virialF_b200=200.*OmegaZ;//virialF w.r.t contemporary critical density 
 }

@@ -170,9 +170,7 @@ void GadgetReader_t::Load()
   LoadGadgetHeader();
 
   Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);  
-#ifdef DM_ONLY
   Cosmology.ParticleMass=Header.mass[TypeDM];
-#endif
   Particles.resize(NumberOfParticleInFiles.back()+OffsetOfParticleInFiles.back());
   
 #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)

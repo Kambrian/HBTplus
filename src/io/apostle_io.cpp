@@ -242,9 +242,7 @@ void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particle
   
   ReadHeader(0, Header);
   Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
-#ifdef DM_ONLY
   Cosmology.ParticleMass=Header.mass[TypeDM];
-#endif
   HBTInt np=CompileFileOffsets(Header.NumberOfFiles);
   Particles.resize(np);
   

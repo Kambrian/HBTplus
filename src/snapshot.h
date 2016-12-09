@@ -40,9 +40,7 @@ struct Cosmology_t
   HBTReal OmegaM0;
   HBTReal OmegaLambda0;
   HBTReal ScaleFactor;
-#ifdef DM_ONLY
   HBTReal ParticleMass;
-#endif
   
   //derived parameters:
   HBTReal Hz; //current Hubble param in internal units
@@ -60,6 +58,10 @@ struct Cosmology_t
 	HBTReal Hratio=Hz/PhysicalConst::H0;
 	OmegaZ=OmegaM0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
   }
+  void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
+  void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted) const;
+  void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <RadVelMass_t> &prof) const;
+  void SphericalOverdensitySize2(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted) const;
 };
 
 class Snapshot_t: public SnapshotNumber_t
@@ -79,10 +81,6 @@ public:
   {
 	return 0.;
   }
-  void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
-  void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <RadVelMass_t> &prof) const;
-  void SphericalOverdensitySize2(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted, HBTReal ParticleMass) const;
-  void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
   void RelativeVelocity(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, HBTxyz& relativeVel) const;
 };
 

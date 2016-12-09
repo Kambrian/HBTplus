@@ -109,7 +109,8 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 	}
 	return;
   }
-  HBTReal VelocityUnit=PhysicalConst::G/part_snap.Cosmology.ScaleFactor;
+  auto &Cosmology=part_snap.Cosmology;
+  HBTReal VelocityUnit=PhysicalConst::G/Cosmology.ScaleFactor;
   
   const HBTxyz &cen=ComovingMostBoundPosition; //most-bound particle as center.
   
@@ -142,10 +143,10 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
   R2SigmaComoving=prof[(HBTInt)(Nbound*0.955)].r;
   
   HBTReal virialF_tophat, virialF_b200, virialF_c200;
-  part_snap.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
-  part_snap.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
-  part_snap.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, prof);
-  part_snap.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
+  Cosmology.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
+  Cosmology.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
+  Cosmology.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, prof);
+  Cosmology.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
   
   if(VmaxPhysical>=LastMaxVmaxPhysical)
   {
