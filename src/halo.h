@@ -15,6 +15,10 @@ public:
   ParticleList_t Particles;
   HBTxyz ComovingAveragePosition;
   HBTxyz PhysicalAverageVelocity;
+  HBTInt size()
+  {
+    return Particles.size();
+  }
 };
 
 class HaloSnapshot_t: public Snapshot_t
