@@ -20,12 +20,8 @@
 #define NFUN 5   //bin number for Mhost
 
 #define EXTERN_VIR //whether to use external or internal virial
-#ifdef EXTERN_VIR
-#define VirType "Crit200"
-#else
 #define MHOST M200Crit
 #define RHOST R200CritComoving
-#endif
 
 #define MSUB Mbound  //or LastMaxMass for unevolved MF
 
@@ -65,21 +61,24 @@ public:
   SubhaloPos_t(vector <Subhalo_t> &subhalos):Subhalos(subhalos)
   {}
   const HBTxyz & operator [](HBTInt i) const
-  {
-    return Subhalos[i].ComovingMostBoundPosition; 
+  {    return Subhalos[i].ComovingMostBoundPosition; 
   }
   size_t size() const
-  {
-    return Subhalos.size();
+  {    return Subhalos.size();
   }
 };
 
-
 void logspace(double xmin,double xmax,int N,vector <float> &x);
 #ifdef EXTERN_VIR
-vector <float>MVIR, RVIR;
-template <class MyReal>
-void LoadVirial(int SnapshotId, vector <MyReal> &Mvir, vector <MyReal> &Rvir, const string & virtype);
+struct HaloSize_t
+{
+  HBTInt HaloId;
+  HBTxyz CenterComoving;
+  float MVir, M200Crit, M200Mean, RVirComoving, R200CritComoving, R200MeanComoving;
+  float RmaxComoving, VmaxPhysical;
+};
+vector <HaloSize_t> HaloSize;
+void LoadHaloSize(vector<HaloSize_t> &HaloSize, int isnap);
 #endif
 int main(int argc,char **argv)
 {
@@ -104,10 +103,10 @@ int main(int argc,char **argv)
   }
   cout<<"data loaded\n";
 #ifdef EXTERN_VIR
-  LoadVirial(subsnap.GetSnapshotId(), MVIR, RVIR, VirType);
-  if(MVIR.size()!=subsnap.MemberTable.SubGroups.size())
+  LoadHaloSize(HaloSize,isnap);
+  if(HaloSize.size()!=subsnap.MemberTable.SubGroups.size())
   {
-    cerr<<MVIR.size()<<"!="<<subsnap.MemberTable.SubGroups.size()<<endl;
+    cerr<<HaloSize.size()<<"!="<<subsnap.MemberTable.SubGroups.size()<<endl;
     throw(runtime_error("number of halos mismatch\n"));
   }
 #endif
@@ -123,7 +122,7 @@ int main(int argc,char **argv)
     if(subgroups[grpid].size()==0) continue;
     HBTInt cenid=subgroups[grpid][0];
 #ifdef EXTERN_VIR
-    auto &mhost=MVIR[grpid];
+    auto &mhost=HaloSize[grpid].MHOST;
 #else
     auto &mhost=subsnap.Subhalos[cenid].MHOST;
 #endif
@@ -168,7 +167,7 @@ int main(int argc,char **argv)
 #define xstr(s) str(s)
 #define str(s) #s
 #ifdef EXTERN_VIR
-    string filename=outdir+funcname+to_string(isnap)+"." VirType "." xstr(MSUB) ".hdf5";
+    string filename=outdir+funcname+to_string(isnap)+"." xstr(MHOST) "_host." xstr(MSUB) ".hdf5";
 #else
     string filename=outdir+funcname+to_string(isnap)+"." xstr(MHOST) "." xstr(MSUB) ".hdf5";
 #endif
@@ -204,7 +203,7 @@ void MassFunc_t::mass_list(const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &l
     if(subgroups[grpid].size()==0) continue;
     HBTInt cenid=subgroups[grpid][0];
 #ifdef EXTERN_VIR
-    auto &mhost=MVIR[grpid];
+    auto &mhost=HaloSize[grpid].MHOST;
 #else
     auto &mhost=subsnap.Subhalos[cenid].MHOST;
 #endif
@@ -274,13 +273,13 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
   HBTInt cenid=subsnap.MemberTable.SubGroups[grpid][0];
   //     float rmin=RMIN*subsnap.Subhalos[cenid].RHOST;
 #ifdef EXTERN_VIR
-  float rmax=RMAX*RVIR[grpid];
+  float rmax=RMAX*HaloSize[grpid].RHOST;
 #else
   float rmax=RMAX*subsnap.Subhalos[cenid].RHOST;
 #endif
   #ifdef NORM
   #ifdef EXTERN_VIR
-  float mhost=MVIR[grpid];
+  float mhost=HaloSize[grpid].MHOST;
   #else
   float mhost=subsnap.Subhalos[cenid].MHOST;//TODO: try with bound mass??
   #endif
@@ -327,118 +326,44 @@ void logspace(double xmin,double xmax,int N, vector <float> &x)
     x[i]=x[i-1]*dx;
   }
 }
-/*
- v oi*d load_halo_virial_size(float Mvir[][3],float Rvir[][3],float partmass,int Ngroups,int Nsnap)
- {
- char buf[1024];
- FILE *fp;
- int Nvir[3],i,j;
- sprintf(buf,"%s/profile/logbin/halo_size_%03d",SUBCAT_DIR,Nsnap);
- myfopen(fp,buf,"r");
- for(i=0;i<Ngroups;i++)
- {
- fseek(fp,14*4L,SEEK_CUR);
- fread(Nvir,sizeof(int),3,fp);
- for(j=0;j<3;j++)
-   Mvir[i][j]=Nvir[j]*partmass;
- fread(Rvir+i,sizeof(float),3,fp);
- fseek(fp,4*4L,SEEK_CUR);
- }
- fclose(fp);
- }*/
+
 #ifdef EXTERN_VIR
-#include "../../src/io/gadget_group_io.h"
-#define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
-template <class MyReal>
-void LoadVirial(int SnapshotId, vector <MyReal> &Mvir, vector <MyReal> &Rvir, const string & virtype)
+void BuildHDFHaloSize(hid_t &H5T_dtype)
 {
-//   typedef float MyReal;
+  H5T_dtype=H5Tcreate(H5T_COMPOUND, sizeof (HaloSize_t));
+  hsize_t dims[2]={3,3};
+  hid_t H5T_HBTxyz=H5Tarray_create2(H5T_HBTReal, 1, dims);
+
+  #define InsertMember(x,t) H5Tinsert(H5T_dtype, #x, HOFFSET(HaloSize_t, x), t)//;cout<<#x<<": "<<HOFFSET(HaloSize_t, x)<<endl
+  InsertMember(HaloId, H5T_HBTInt);
+  InsertMember(CenterComoving, H5T_HBTxyz);
+  InsertMember(R200CritComoving, H5T_NATIVE_FLOAT);
+  InsertMember(R200MeanComoving, H5T_NATIVE_FLOAT);
+  InsertMember(RVirComoving, H5T_NATIVE_FLOAT);
+  InsertMember(M200Crit, H5T_NATIVE_FLOAT);
+  InsertMember(M200Mean, H5T_NATIVE_FLOAT);
+  InsertMember(MVir, H5T_NATIVE_FLOAT);
+  InsertMember(RmaxComoving, H5T_NATIVE_FLOAT);
+  InsertMember(VmaxPhysical, H5T_NATIVE_FLOAT);
+  #undef InsertMember	
+
+  H5Tclose(H5T_HBTxyz);
+}
+void LoadHaloSize(vector <HaloSize_t> &HaloSize, int isnap)
+{
+  string filename=HBTConfig.SubhaloPath+"/HaloSize/HaloSize_"+to_string(isnap)+".hdf5";
+  hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  hid_t H5T_HaloSize;
+  BuildHDFHaloSize(H5T_HaloSize);
   
-  int itype;
-  if(virtype=="Mean200")
-    itype=0;
-  else if(virtype=="Crit200")
-    itype=1;
-  else if(virtype=="TopHat")
-    itype=2;
-  else
-    throw(runtime_error("unknow virtype"+virtype));
-	
-  FILE *fd;
-  char filename[1024];
-  vector <int> Len;
-  vector <HBTInt> Offset;
-  int Ngroups, TotNgroups, Nids, NFiles;
-  HBTInt NumberOfHaloes;
-  long long TotNids;
-  bool NeedByteSwap;
-  bool IsGroupV3=("gadget3_int"==HBTConfig.GroupFileFormat||"gadget3_long"==HBTConfig.GroupFileFormat);
+  hid_t dset=H5Dopen2(file, "HostHalos", H5P_DEFAULT);
+  hsize_t dims[1];
+  GetDatasetDims(dset, dims);
+  HaloSize.resize(dims[0]);
+  if(dims[0])	H5Dread(dset, H5T_HaloSize, H5S_ALL, H5S_ALL, H5P_DEFAULT, HaloSize.data());
+  H5Dclose(dset);
   
-  string filename_format;
-  bool IsSubFile;
-  int FileCounts;
-  GadgetGroup::GetFileNameFormat(SnapshotId, filename_format, FileCounts, IsSubFile, NeedByteSwap);
-  assert(IsSubFile);
-  
-  long long Nload=0;
-  for(int iFile=0;iFile<FileCounts;iFile++)
-  {
-	if(FileCounts>1)
-	  sprintf(filename, filename_format.c_str(), "tab", iFile);
-	else
-	  sprintf(filename, filename_format.c_str(), "tab");
-		
-	myfopen(fd,filename,"r");
-	myfread(&Ngroups, sizeof(Ngroups), 1, fd);
-	if(IsGroupV3)
-	{
-	  myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
-	  myfread(&Nids, sizeof(Nids), 1, fd);
-	  myfread(&TotNids,sizeof(TotNids),1,fd);
-	}
-	else
-	{
-	  myfread(&Nids, sizeof(Nids), 1, fd);
-	  myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
-	}
-	myfread(&NFiles, sizeof(NFiles), 1, fd);
-	int Nsub,TotNsub;
-	myfread(&Nsub,sizeof(int),1,fd);
-	myfread(&TotNsub,sizeof(int),1,fd);
-	if(FileCounts!=NFiles)
-	{
-	  cout<<"File count mismatch for file "<<filename<<": expect "<<FileCounts<<", got "<<NFiles<<endl;
-	  exit(1);
-	}
-	
-	if(0==iFile)
-	{
-	  NumberOfHaloes=TotNgroups; 	  
-	  Mvir.resize(TotNgroups);
-	  Rvir.resize(TotNgroups);
-	}
-	
-	if(IsGroupV3)
-	fseek(fd, (sizeof(int)*2+sizeof(MyReal)*4)*Ngroups, SEEK_CUR);//skip len,offset,mass,pos
-	else
-	  fseek(fd, sizeof(int)*(2*Ngroups+3*Nsub), SEEK_CUR); 
-	fseek(fd, sizeof(MyReal)*Ngroups*2*itype, SEEK_CUR);
-	myfread(Mvir.data()+Nload, sizeof(MyReal), Ngroups, fd);
-	myfread(Rvir.data()+Nload, sizeof(MyReal), Ngroups, fd);
-	if(feof(fd))
-	{
-	  fprintf(stderr,"error:End-of-File in %s\n",filename);
-	  fflush(stderr);exit(1);  
-	}
-	Nload+=Ngroups;
-	fclose(fd);
-  }
-  if(Nload!=NumberOfHaloes)
-  {
-	cerr<<"error:Num groups loaded not match: "<<Nload<<','<<NumberOfHaloes<<"\n";
-	exit(1);
-  }
-  cout<<"Halo size "<<virtype<<"loaded at snapshot "<<SnapshotId<<", TotNgroups="<<TotNgroups<<" NFiles="<<NFiles<<endl;
-  
+  H5Tclose(H5T_HaloSize);
+  H5Fclose(file);
 }
 #endif
