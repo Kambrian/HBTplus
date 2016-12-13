@@ -1,3 +1,6 @@
+/*read subhalo snapshot from MPI output (multiple files per snapshot)
+ * this file requires HDF5 library with multi-thread support; otherwise please comment out the #pragma omp... near line 76.
+ */
 #include <iostream>
 #include <new>
 #include <algorithm>
@@ -19,6 +22,18 @@ void SubhaloSnapshot_t::GetSubFileName(string &filename, int iFile, const string
   formater<<GetSubDir()<<"/"+ftype+"Snap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<"."<<iFile<<".hdf5"; //or use snapshotid
   filename=formater.str();
 }
+HBTInt SubhaloSnapshot_t::GetNumberOfSubhalos(int iFile)
+{
+  string filename;
+  GetSubFileName(filename, iFile);
+  hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);  
+  hsize_t dims[1];
+  hid_t dset=H5Dopen2(file, "Subhalos", H5P_DEFAULT);
+  GetDatasetDims(dset, dims);
+  H5Dclose(dset);
+  H5Fclose(file);
+  return dims[0];
+}
 void SubhaloSnapshot_t::LoadSubDir(int snapshot_index, const SubReaderDepth_t depth)
 {
   if(snapshot_index<HBTConfig.MinSnapshotIndex)
@@ -33,17 +48,27 @@ void SubhaloSnapshot_t::LoadSubDir(int snapshot_index, const SubReaderDepth_t de
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);  
   ReadDataset(file, "NumberOfFiles", H5T_NATIVE_INT, &NumberOfFiles);
   ReadDataset(file, "NumberOfSubhalosInAllFiles", H5T_HBTInt, &TotNumberOfSubs);
-  
+  H5Fclose(file);
+  FileOffset.resize(NumberOfFiles);
+  HBTInt offset=0;
+  for(int iFile=0;iFile<NumberOfFiles;iFile++)
+  {
+    FileOffset[iFile]=offset;
+    offset+=GetNumberOfSubhalos(iFile);
+  }
+  if(offset!=TotNumberOfSubs)
+  {
+    ostringstream msg;
+    msg<<"Error reading SubSnap "<<snapshot_index<<": total number of subhaloes expected="<<TotNumberOfSubs<<", loaded="<<offset<<endl;
+    throw runtime_error(msg.str().c_str());
+  }
+    
   Subhalos.clear();  
+  Subhalos.resize(TotNumberOfSubs); 
+#pragma omp parallel for
   for(int iFile=0;iFile<NumberOfFiles;iFile++)
       ReadFile(iFile, depth);
   
-  if(Subhalos.size()!=TotNumberOfSubs)
-  {
-    ostringstream msg;
-    msg<<"Error reading SubSnap "<<snapshot_index<<": total number of subhaloes expected="<<TotNumberOfSubs<<", loaded="<<Subhalos.size()<<endl;
-    throw runtime_error(msg.str().c_str());
-  }
   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
   
   //now build membertable
@@ -67,10 +92,13 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
   ReadDataset(file, "SnapshotId", H5T_HBTInt, &snapshot_id);
   assert(snapshot_id==SnapshotId);
   
+  if(iFile==0)
+  {
   ReadDataset(file, "/Cosmology/OmegaM0", H5T_HBTReal, &Cosmology.OmegaM0);
   ReadDataset(file, "/Cosmology/OmegaLambda0", H5T_HBTReal, &Cosmology.OmegaLambda0);
   ReadDataset(file, "/Cosmology/HubbleParam", H5T_HBTReal, &Cosmology.Hz);
   ReadDataset(file, "/Cosmology/ScaleFactor", H5T_HBTReal, &Cosmology.ScaleFactor);
+  }
   
 //   ReadDataset(file, "NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);
 //   ReadDataset(file, "NumberOfFakeHalos", H5T_HBTInt, &MemberTable.NFake);
@@ -78,9 +106,8 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
   hsize_t dims[1];
   dset=H5Dopen2(file, "Subhalos", H5P_DEFAULT);
   GetDatasetDims(dset, dims);
-  HBTInt nsubhalos=dims[0], nsubhalos_old=Subhalos.size();
-  Subhalos.resize(nsubhalos+nsubhalos_old);
-  Subhalo_t * NewSubhalos=&Subhalos[nsubhalos_old];
+  HBTInt nsubhalos=dims[0];
+  Subhalo_t * NewSubhalos=&Subhalos[FileOffset[iFile]];
   if(nsubhalos)	H5Dread(dset, H5T_SubhaloInMem, H5S_ALL, H5S_ALL, H5P_DEFAULT, NewSubhalos);
   H5Dclose(dset);
  

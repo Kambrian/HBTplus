@@ -191,6 +191,8 @@ private:
   void ReadFile(int iFile, const SubReaderDepth_t depth);
   void LoadSubDir(int snapshot_index, const SubReaderDepth_t depth);
   void LoadSingle(int snapshot_index, const SubReaderDepth_t depth);
+  HBTInt GetNumberOfSubhalos(int iFile);
+  vector <HBTInt> FileOffset;
 public:
   const ParticleSnapshot_t * SnapshotPointer;
   SubhaloList_t Subhalos;
