@@ -22,9 +22,9 @@
 #define EXTERN_VIR //whether to use external or internal virial
 #define MHOST M200Crit
 #define RHOST R200CritComoving
-
 #define MSUB Mbound  //or LastMaxMass for unevolved MF
 
+#define LIST_MAINSAT //list most-massive satellite of each host
 //#define PARTICLEMASS 8.6e-2 //millimill
 #define PARTICLEMASS 6.88e-4 //mill2
 float ParticleMass;
@@ -32,7 +32,10 @@ float ParticleMass;
 class MassFunc_t
 {
 private:
-  vector <float> Mlist;  
+  vector <float> Mlist; 
+#ifdef LIST_MAINSAT
+  vector <float> MainSatList;//mass list of most-massive satellites
+#endif
   float XRange[2];
   bool HostInBin(float m)
   {
@@ -46,6 +49,9 @@ public:
   float MfunSpecln[NBIN][2];//[dN/dlnMsub,...]
   float MfunCum[NBIN][2];//[N(>Msub_lower_lim),...]
   MassFunc_t():Mbin(), XRange(), Mlist(), Nhost(0), Mhost(0.), XMassLow{}, XMassMean{}, MfunSpecln{}, MfunCum{}
+#ifdef LIST_MAINSAT
+, MainSatList()
+#endif
   {}
   void build(float xrange[2], float mbin[2], const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &ll);
   void mass_list(const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &ll);
@@ -277,24 +283,32 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
 #else
   float rmax=RMAX*subsnap.Subhalos[cenid].RHOST;
 #endif
+  float mhost=1.;
   #ifdef NORM
   #ifdef EXTERN_VIR
-  float mhost=HaloSize[grpid].MHOST;
+  mhost=HaloSize[grpid].MHOST;
   #else
-  float mhost=subsnap.Subhalos[cenid].MHOST;//TODO: try with bound mass??
+  mhost=subsnap.Subhalos[cenid].MHOST;//TODO: try with bound mass??
   #endif
-  #else
-  float mhost=1.;
   #endif
   auto &cenpos=subsnap.Subhalos[cenid].ComovingMostBoundPosition;
   vector <LocatedParticle_t> sublist;
   ll.SearchSphere(rmax, cenpos, sublist);
   Mlist.reserve(Mlist.size()+sublist.size());
-  for(auto &&sub: sublist)
+  float mmax=0.;
+  for(auto &&subid: sublist)
   {
-    if(sub.id!=cenid)
-      Mlist.push_back(subsnap.Subhalos[sub.id].MSUB/mhost);
+    if(subid.id!=cenid)
+    {
+      float m=subsnap.Subhalos[subid.id].MSUB/mhost;
+      Mlist.push_back(m);
+      if(m>mmax)
+	mmax=m;
+    }
   }
+#ifdef LIST_MAINSAT
+  if(mmax>0) MainSatList.push_back(mmax);
+#endif
 }
 
 
@@ -310,6 +324,10 @@ void MassFunc_t::save(hid_t file)
   writeHDFmatrix(file, XMassLow, "SubMassMean", 1, dims, H5T_NATIVE_FLOAT);
   writeHDFmatrix(file, MfunSpecln, "SpecificMFLn", 2, dims, H5T_NATIVE_FLOAT);
   writeHDFmatrix(file, MfunCum, "CumulativeMF", 2, dims, H5T_NATIVE_FLOAT);
+#ifdef LIST_MAINSAT
+  dims[0]=MainSatList.size();
+  writeHDFmatrix(file, MainSatList.data(), "MainSatList", 1, dims, H5T_NATIVE_FLOAT);
+#endif
 }
 
 void logspace(double xmin,double xmax,int N, vector <float> &x)
