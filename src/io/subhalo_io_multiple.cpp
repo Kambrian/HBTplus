@@ -80,12 +80,12 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
   GetDatasetDims(dset, dims);
   HBTInt nsubhalos=dims[0], nsubhalos_old=Subhalos.size();
   Subhalos.resize(nsubhalos+nsubhalos_old);
-  if(nsubhalos)	H5Dread(dset, H5T_SubhaloInMem, H5S_ALL, H5S_ALL, H5P_DEFAULT, &Subhalos[nsubhalos_old]);
+  Subhalo_t * NewSubhalos=&Subhalos[nsubhalos_old];
+  if(nsubhalos)	H5Dread(dset, H5T_SubhaloInMem, H5S_ALL, H5S_ALL, H5P_DEFAULT, NewSubhalos);
   H5Dclose(dset);
  
   if(0==nsubhalos) return;
   
-  Subhalo_t * NewSubhalos=&Subhalos[nsubhalos_old];
   vector <hvl_t> vl(dims[0]);
   vl.resize(nsubhalos);
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
@@ -126,8 +126,8 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
     H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
     for(HBTInt i=0;i<nsubhalos;i++)
     {
-      Subhalos[i].NestedSubhalos.resize(vl[i].len);
-      memcpy(Subhalos[i].NestedSubhalos.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+      NewSubhalos[i].NestedSubhalos.resize(vl[i].len);
+      memcpy(NewSubhalos[i].NestedSubhalos.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
     }
     ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
     H5Dclose(dset);
@@ -142,8 +142,8 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
     H5Dread(dset, H5T_FloatArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
     for(HBTInt i=0;i<nsubhalos;i++)
     {
-      Subhalos[i].Energies.resize(vl[i].len);
-      memcpy(Subhalos[i].Energies.data(), vl[i].p, sizeof(float)*vl[i].len);
+      NewSubhalos[i].Energies.resize(vl[i].len);
+      memcpy(NewSubhalos[i].Energies.data(), vl[i].p, sizeof(float)*vl[i].len);
     }
     ReclaimVlenData(dset, H5T_FloatArr, vl.data());
 	H5Tclose(H5T_FloatArr);
