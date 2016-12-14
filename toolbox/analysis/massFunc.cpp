@@ -14,15 +14,17 @@
 #define NORM  //produce normalized massfunction (in terms Msub/Mhost rather than Msub)
 #define RMIN 0
 #define RMAX 1	 //statistics done in RMIN*rvi<r<RMAX*rvir
-#define NBIN 25  //bin number for Msub
+#define NBIN 30  //bin number for Msub
 #define FIX_HOSTBIN
-// #define FIX_XBIN  //define this to use preset xmass bin
+#define FIX_XBIN  //define this to use preset xmass bin
 #define NFUN 7   //bin number for Mhost
 
 #define EXTERN_VIR //whether to use external or internal virial
 #define MHOST M200Crit
 #define RHOST R200CritComoving
 #define MSUB Mbound  //or LastMaxMass for unevolved MF
+
+// #define EXCLUDE_EJECTED_HOST //exclude ejected halos from host list
 
 #define LIST_MAINSAT //list most-massive satellite of each host
 //#define PARTICLEMASS 8.6e-2 //millimill
@@ -157,6 +159,8 @@ int main(int argc,char **argv)
     1e-6,1,
     1e-6,1,
     1e-6,1,
+    1e-6,1,
+    1e-6,1,
     1e-6,1
   };  //this only takes effect when FIX_XBIN is defined
 #else
@@ -177,6 +181,11 @@ int main(int argc,char **argv)
     
     string outdir=HBTConfig.SubhaloPath+"/analysis/";
     mkdir(outdir.c_str(),0755);
+#ifdef EXCLUDE_EJECTED_HOST
+    string suffix=".no_eject.hdf5";
+#else
+    string suffix=".hdf5";
+#endif
 #ifdef NORM
     string funcname="massFuncN";
 #else
@@ -185,9 +194,9 @@ int main(int argc,char **argv)
 #define xstr(s) str(s)
 #define str(s) #s
 #ifdef EXTERN_VIR
-    string filename=outdir+funcname+to_string(isnap)+"." xstr(MHOST) "_host." xstr(MSUB) ".hdf5";
+    string filename=outdir+funcname+to_string(isnap)+"." xstr(MHOST) "." xstr(MSUB) +suffix;
 #else
-    string filename=outdir+funcname+to_string(isnap)+"." xstr(MHOST) "." xstr(MSUB) ".hdf5";
+    string filename=outdir+funcname+to_string(isnap)+"." xstr(MHOST) "_bound." xstr(MSUB) +suffix;
 #endif
 #undef xstr
 #undef str
@@ -226,7 +235,10 @@ void MassFunc_t::mass_list(const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &l
     auto &mhost=subsnap.Subhalos[cenid].MHOST;
 #endif
     if(HostInBin(mhost))
-    {	
+    {
+#ifdef EXCLUDE_EJECTED_HOST
+      if(subsnap.Subhalos[cenid].Mbound<subsnap.Subhalos[cenid].LastMaxMass*0.9) continue;
+#endif
       collect_submass(grpid,subsnap, ll);
       Nhost++;
       Mhost+=mhost;
