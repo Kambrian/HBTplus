@@ -17,11 +17,11 @@
 #define NBIN 25  //bin number for Msub
 #define FIX_HOSTBIN
 // #define FIX_XBIN  //define this to use preset xmass bin
-#define NFUN 5   //bin number for Mhost
+#define NFUN 7   //bin number for Mhost
 
 #define EXTERN_VIR //whether to use external or internal virial
-#define MHOST M200Mean
-#define RHOST R200MeanComoving
+#define MHOST M200Crit
+#define RHOST R200CritComoving
 #define MSUB Mbound  //or LastMaxMass for unevolved MF
 
 #define LIST_MAINSAT //list most-massive satellite of each host
@@ -117,7 +117,13 @@ int main(int argc,char **argv)
   }
 #endif
   /* decide host mass bins */  
-  vector <float> Mgrpbin={pow(10, 0), pow(10,1), pow(10,2), pow(10,3), pow(10, 4), pow(10,4.5)};	  
+  float Mgrpbin[NFUN][2]={1e0, 1e1, 
+    1e1, 1e2, 
+    1e2, 1e3, 
+    1e3, 1e4, 
+    1e4, pow(10,4.5), 
+    1e3, pow(10,3.5), 
+    1e2, pow(10,2.5)};
   #ifndef FIX_HOSTBIN
   float Mmax=0.;
   auto &subgroups=subsnap.MemberTable.SubGroups;
@@ -137,7 +143,13 @@ int main(int argc,char **argv)
   }
   Mmax=Mmax*1.01;
   float Mmin=1000*ParticleMass; 
-  logspace(Mmin,Mmax,NFUN+1,Mgrpbin);
+  vector <float> bin_edges(NFUN+1);
+  logspace(Mmin,Mmax,NFUN+1,bin_edges);
+  for(int i=0;i<NFUN;i++)
+  {
+    Mgrpbin[i][0]=bin_edges[i];
+    Mgrpbin[i][1]=bin_edges[i+1];
+  }
   #endif
   
 #ifdef NORM
@@ -160,7 +172,7 @@ int main(int argc,char **argv)
     MassFunc_t mfun[NFUN];							
 //     #pragma omp parallel for
     for(int i=0;i<NFUN;i++)
-      mfun[i].build(xrange[i], &Mgrpbin[i], subsnap, ll); 
+      mfun[i].build(xrange[i], Mgrpbin[i], subsnap, ll); 
     cout<<"mass func computed\n";
     
     string outdir=HBTConfig.SubhaloPath+"/analysis/";
