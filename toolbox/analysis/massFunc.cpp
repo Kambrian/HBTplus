@@ -20,8 +20,8 @@
 #define NFUN 5   //bin number for Mhost
 
 #define EXTERN_VIR //whether to use external or internal virial
-#define MHOST M200Crit
-#define RHOST R200CritComoving
+#define MHOST M200Mean
+#define RHOST R200MeanComoving
 #define MSUB Mbound  //or LastMaxMass for unevolved MF
 
 #define LIST_MAINSAT //list most-massive satellite of each host
@@ -321,7 +321,7 @@ void MassFunc_t::save(hid_t file)
   writeHDFmatrix(file, &Mhost, "HostMassSum", 1, dim_atom, H5T_NATIVE_DOUBLE);
   dims[0]=NBIN;
   writeHDFmatrix(file, XMassLow, "SubMassLow", 1, dims, H5T_NATIVE_FLOAT);
-  writeHDFmatrix(file, XMassLow, "SubMassMean", 1, dims, H5T_NATIVE_FLOAT);
+  writeHDFmatrix(file, XMassMean, "SubMassMean", 1, dims, H5T_NATIVE_FLOAT);
   writeHDFmatrix(file, MfunSpecln, "SpecificMFLn", 2, dims, H5T_NATIVE_FLOAT);
   writeHDFmatrix(file, MfunCum, "CumulativeMF", 2, dims, H5T_NATIVE_FLOAT);
 #ifdef LIST_MAINSAT
