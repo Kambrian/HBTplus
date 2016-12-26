@@ -34,7 +34,7 @@ def PeriodicDistance(x,y, BoxSize, axis=-1):
   d[d<-BoxSize/2]=d[d<-BoxSize/2]+BoxSize
   return np.sqrt(np.sum(d**2, axis=axis))
 
-def distance(x,y, axis=1):
+def distance(x,y, axis=-1):
   return np.sqrt(np.sum((x-y)**2, axis=axis))
 
 class ConfigReader:
