@@ -12,11 +12,11 @@
 #include "../../src/linkedlist_parallel.h"
 
 #define NORM  //produce normalized massfunction (in terms Msub/Mhost rather than Msub)
-#define RMIN 0
+// #define RMIN 0
 #define RMAX 1	 //statistics done in RMIN*rvi<r<RMAX*rvir
-#define NBIN 30  //bin number for Msub
+#define NBIN 25  //bin number for Msub
 #define FIX_HOSTBIN
-#define FIX_XBIN  //define this to use preset xmass bin
+// #define FIX_XBIN  //define this to use preset xmass bin
 #define NFUN 7   //bin number for Mhost
 
 #define EXTERN_VIR //whether to use external or internal virial
@@ -26,9 +26,12 @@
 
 // #define EXCLUDE_EJECTED_HOST //exclude ejected halos from host list
 
+// #define EXCLUDE_SOFTENING //exclude 10*SofteningHalo in the center
+
 #define LIST_MAINSAT //list most-massive satellite of each host
 //#define PARTICLEMASS 8.6e-2 //millimill
 #define PARTICLEMASS 6.88e-4 //mill2
+// #define PARTICLEMASS 0.000229431 #AqA5
 float ParticleMass;
 
 class MassFunc_t
@@ -37,6 +40,7 @@ private:
   vector <float> Mlist; 
 #ifdef LIST_MAINSAT
   vector <float> MainSatList;//mass list of most-massive satellites
+  vector <float> MainSatRList;
 #endif
   float XRange[2];
   bool HostInBin(float m)
@@ -50,9 +54,9 @@ public:
   float XMassLow[NBIN], XMassMean[NBIN];//x coordinates,[Msub_lower_lim,Msub_av] for each Msub mass bin
   float MfunSpecln[NBIN][2];//[dN/dlnMsub,...]
   float MfunCum[NBIN][2];//[N(>Msub_lower_lim),...]
-  MassFunc_t():Mbin(), XRange(), Mlist(), Nhost(0), Mhost(0.), XMassLow{}, XMassMean{}, MfunSpecln{}, MfunCum{}
+  MassFunc_t():Mbin(), XRange(), Mlist(),  Nhost(0), Mhost(0.), XMassLow{}, XMassMean{}, MfunSpecln{}, MfunCum{}
 #ifdef LIST_MAINSAT
-, MainSatList()
+, MainSatList(), MainSatRList()
 #endif
   {}
   void build(float xrange[2], float mbin[2], const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &ll);
@@ -186,6 +190,9 @@ int main(int argc,char **argv)
 #else
     string suffix=".hdf5";
 #endif
+#ifdef EXCLUDE_SOFTENING
+    suffix=".softcut"+suffix;
+#endif
 #ifdef NORM
     string funcname="massFuncN";
 #else
@@ -301,7 +308,12 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
 {
   if(subsnap.MemberTable.SubGroups[grpid].size()==0) return;
   HBTInt cenid=subsnap.MemberTable.SubGroups[grpid][0];
-  //     float rmin=RMIN*subsnap.Subhalos[cenid].RHOST;
+//   float rmin=RMIN*subsnap.Subhalos[cenid].RHOST;
+#ifdef EXCLUDE_SOFTENING
+  float rmin=10*HBTConfig.SofteningHalo;
+#else
+  float rmin=-1;
+#endif
 #ifdef EXTERN_VIR
   float rmax=RMAX*HaloSize[grpid].RHOST;
 #else
@@ -317,9 +329,9 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
   #endif
   auto &cenpos=subsnap.Subhalos[cenid].ComovingMostBoundPosition;
   vector <LocatedParticle_t> sublist;
-  ll.SearchSphere(rmax, cenpos, sublist);
+  ll.SearchSphere(rmax, cenpos, sublist, 8, rmin);
   Mlist.reserve(Mlist.size()+sublist.size());
-  float mmax=0.;
+  float mmax=0., rmmax=0.;
   for(auto &&subid: sublist)
   {
     if(subid.id!=cenid)
@@ -327,11 +339,18 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
       float m=subsnap.Subhalos[subid.id].MSUB/mhost;
       Mlist.push_back(m);
       if(m>mmax)
+      {
 	mmax=m;
+	rmmax=subid.d;
+      }
     }
   }
 #ifdef LIST_MAINSAT
-  if(mmax>0) MainSatList.push_back(mmax);
+  if(mmax>0) 
+  {
+    MainSatList.push_back(mmax);
+    MainSatRList.push_back(rmmax);
+  }
 #endif
 }
 
@@ -351,6 +370,7 @@ void MassFunc_t::save(hid_t file)
 #ifdef LIST_MAINSAT
   dims[0]=MainSatList.size();
   writeHDFmatrix(file, MainSatList.data(), "MainSatList", 1, dims, H5T_NATIVE_FLOAT);
+  writeHDFmatrix(file, MainSatRList.data(), "MainSatRList", 1, dims, H5T_NATIVE_FLOAT);
 #endif
 }
 
