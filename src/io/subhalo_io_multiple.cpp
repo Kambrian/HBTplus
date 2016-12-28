@@ -153,8 +153,11 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
     H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
     for(HBTInt i=0;i<nsubhalos;i++)
     {
-      NewSubhalos[i].NestedSubhalos.resize(vl[i].len);
-      memcpy(NewSubhalos[i].NestedSubhalos.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+      auto &nest=NewSubhalos[i].NestedSubhalos;
+      nest.resize(vl[i].len);
+      HBTInt *p=(HBTInt *)(vl[i].p);
+      for(HBTInt j=0;j<vl[i].len;j++)
+	nest[j]=p[j]+FileOffset[iFile];
     }
     ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
     H5Dclose(dset);
