@@ -210,6 +210,7 @@ public:
   void GetSubFileName(string &filename, const string &filetype="Sub");
   void Load(int snapshot_index, const SubReaderDepth_t depth=SubReaderDepth_t::SubParticles);
   void Save();
+  void Sort();
   ~SubhaloSnapshot_t();
   void Clear()
   {
