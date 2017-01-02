@@ -351,6 +351,7 @@ void SubhaloSnapshot_t::Sort()
       subid=Subhalos[subid].TrackId;
   }
   sort(Subhalos.begin(), Subhalos.end(), CompTrackId);
+#pragma omp parallel
   MemberTable.Build(MemberTable.SubGroups.size(), Subhalos, true); 
 }
 
