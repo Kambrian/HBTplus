@@ -370,7 +370,7 @@ void SubhaloSnapshot_t::Save()
   ParticleIndexToId();
   for(HBTInt i=0;i<vl.size();i++)
   {
-// 	vl[i].len=Subhalos[i].Nbound;
+	vl[i].len=Subhalos[i].Nbound;
 	vl[i].p=Subhalos[i].Particles.data();
   }
   writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);

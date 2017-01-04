@@ -5,8 +5,12 @@ LinkedlistPara_t::LinkedlistPara_t(int ndiv, PositionData_t *data, HBTReal boxsi
 {
   #pragma omp parallel
   {
+#ifdef _OPENMP
     int thread_id=omp_get_thread_num();
     int thread_num=omp_get_num_threads();
+#else
+    int thread_id=0, thread_num=1;
+#endif
     #pragma omp single
     {
       LLs.resize(thread_num);
