@@ -369,7 +369,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	HBTInt offset=0;
 	for(HBTInt i=0;i<Subhalos.size();i++)
 	{
-// 	  vl[i].len=Subhalos[i].Nbound;
+	  vl[i].len=Subhalos[i].Nbound;
 	  vl[i].p=&IdBuffer[offset];
 	  offset+=Subhalos[i].Particles.size();
 	  for(auto && p: Subhalos[i].Particles)
