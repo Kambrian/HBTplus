@@ -11,4 +11,4 @@ $(EXE): $(OBJS_COMM)
 $(EXE): CXXFLAGS+=-I.. -DHBT_INT8 #-DHBT_REAL8
 
 include ../../Makefile.inc
-
+-include .Makefile_sync.inc
