@@ -338,21 +338,5 @@ HBTInt Subhalo_t::ParticleIdToIndex(const ParticleSnapshot_t& part_snap)
 }
 #endif
 
-inline bool CompTrackId(const Subhalo_t &a, const Subhalo_t &b)
-{
-  return a.TrackId<b.TrackId;
-}
-void SubhaloSnapshot_t::Sort()
-{
-#pragma omp parallel for
-  for(HBTInt i=0;i<Subhalos.size();i++)//index to track
-  {
-    for(auto &&subid: Subhalos[i].NestedSubhalos)
-      subid=Subhalos[subid].TrackId;
-  }
-  sort(Subhalos.begin(), Subhalos.end(), CompTrackId);
-#pragma omp parallel
-  MemberTable.Build(MemberTable.SubGroups.size(), Subhalos, true); 
-}
 
 

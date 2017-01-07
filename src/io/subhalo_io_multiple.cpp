@@ -34,6 +34,10 @@ HBTInt SubhaloSnapshot_t::GetNumberOfSubhalos(int iFile)
   H5Fclose(file);
   return dims[0];
 }
+inline bool CompTrackId(const Subhalo_t &a, const Subhalo_t &b)
+{
+  return a.TrackId<b.TrackId;
+}
 void SubhaloSnapshot_t::LoadSubDir(int snapshot_index, const SubReaderDepth_t depth)
 {
   if(snapshot_index<HBTConfig.MinSnapshotIndex)
@@ -71,6 +75,7 @@ void SubhaloSnapshot_t::LoadSubDir(int snapshot_index, const SubReaderDepth_t de
   
   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
   
+  sort(Subhalos.begin(), Subhalos.end(), CompTrackId);//sort so that trackId can be used as index
   //now build membertable
   HBTInt nhost=0;
 #pragma omp parallel for reduction(max:nhost)
@@ -157,7 +162,7 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
       nest.resize(vl[i].len);
       HBTInt *p=(HBTInt *)(vl[i].p);
       for(HBTInt j=0;j<vl[i].len;j++)
-	nest[j]=p[j]+FileOffset[iFile];
+	nest[j]=p[j];
     }
     ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
     H5Dclose(dset);
