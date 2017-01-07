@@ -603,6 +603,7 @@ void SubhaloSnapshot_t::PurgeMostBoundParticles()
 }
 
 void SubhaloSnapshot_t::LocalizeNestedIds(MpiWorker_t &world)
+/*convert TrackIds of NestedSubhalos to local index, and move non-local nestedsubhalos to their host processors as DissociatedTrack*/
 {
   TrackKeyList_t Ids(*this); 
   MappedIndexTable_t<HBTInt, HBTInt> TrackHash;
@@ -651,6 +652,7 @@ void SubhaloSnapshot_t::LocalizeNestedIds(MpiWorker_t &world)
   }
 }
 void SubhaloSnapshot_t::GlobalizeNestedIds()
+/*translate subhalo index to trackIds for nestedsubhalos*/
 {
     for(auto &subhalo: Subhalos)
       for(auto &&subid: subhalo.NestedSubhalos)

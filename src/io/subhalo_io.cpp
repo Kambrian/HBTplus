@@ -347,7 +347,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	vl[i].p=Subhalos[i].NestedSubhalos.data();
   }
   writeHDFmatrix(file, vl.data(), "NestedSubhalos", ndim, dim_sub, H5T_HBTIntArr);
-  H5LTset_attribute_string(file,"/NestedSubhalos","Comment","List of the indices of first-level sub-subhaloes within each subhalo.");
+  H5LTset_attribute_string(file,"/NestedSubhalos","Comment","List of the TrackIds of first-level sub-subhaloes within each subhalo.");
   
   #ifdef SAVE_BINDING_ENERGY
   hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
