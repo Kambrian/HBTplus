@@ -11,7 +11,7 @@
 #include "../../src/mymath.h"
 #include "../../src/linkedlist_parallel.h"
 
-#define RMAX 1	 //statistics done in r<RMAX*rvir
+#define RMAX 1.5	 //statistics done in r<RMAX*rvir
 
 #define MHOST M200Crit
 #define RHOST R200CritComoving
@@ -29,10 +29,11 @@ struct Satellite_t
     float VBoundCoMHost;
     float MHost;
     float RHost;
-    float Mbound;
+    float Mbound, LastMaxMass, LastMaxVmax;
+    float Vmax, VmaxHost;
     HBTInt HostId;
     HBTInt TrackId;
-    int IsCentral;
+    HBTInt CentralTrackId;
 };
 
 class SubhaloPos_t: public PositionData_t
@@ -127,7 +128,7 @@ void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara
         {
             auto &sub=subsnap.Subhalos[subid.id];
             Satellite_t sat;
-	    sat.IsCentral=(subid.id==cenid);
+	    sat.CentralTrackId=central.TrackId;
 	    sat.TrackId=sub.TrackId;
             sat.Mbound=sub.Mbound;
             sat.DBound2HostBound=PeriodicDistance(sub.ComovingMostBoundPosition, central.ComovingMostBoundPosition);
@@ -141,6 +142,10 @@ void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara
             sat.DBoundCoMHost=d0;
             sat.VBoundCoMHost=v0;
             sat.HostId=grpid;
+	    sat.LastMaxMass=sub.LastMaxMass;
+	    sat.LastMaxVmax=sub.LastMaxVmaxPhysical;
+	    sat.Vmax=sub.VmaxPhysical;
+	    sat.VmaxHost=central.VmaxPhysical;
             satellites.push_back(sat);
         }
     }
@@ -166,7 +171,11 @@ void BuildHDFSatellite(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk)
     InsertMember(Mbound, H5T_NATIVE_FLOAT);
     InsertMember(HostId, H5T_HBTInt);
     InsertMember(TrackId, H5T_HBTInt);
-    InsertMember(IsCentral, H5T_NATIVE_INT);
+    InsertMember(CentralTrackId, H5T_HBTInt);
+    InsertMember(LastMaxMass, H5T_NATIVE_FLOAT);
+    InsertMember(LastMaxVmax, H5T_NATIVE_FLOAT);
+    InsertMember(Vmax, H5T_NATIVE_FLOAT);
+    InsertMember(VmaxHost, H5T_NATIVE_FLOAT);
 #undef InsertMember
 
     H5T_dtypeInDisk=H5Tcopy(H5T_dtypeInMem);
