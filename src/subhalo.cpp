@@ -126,7 +126,7 @@ RegisterAttr(MboundType, MPI_HBT_INT, TypeMax)
 #endif
 RegisterAttr(HostHaloId, MPI_HBT_INT, 1)
 RegisterAttr(Rank, MPI_HBT_INT, 1)
-RegisterAttr(LastMaxMass, MPI_HBT_INT, 1)
+RegisterAttr(LastMaxMass, MPI_FLOAT, 1)
 RegisterAttr(SnapshotIndexOfLastMaxMass, MPI_INT, 1)
 RegisterAttr(SnapshotIndexOfLastIsolation, MPI_INT, 1)
 RegisterAttr(SnapshotIndexOfBirth, MPI_INT, 1)
