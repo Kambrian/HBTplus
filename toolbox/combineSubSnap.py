@@ -56,9 +56,9 @@ def combineSubSnap(snapnum):
 def write_vlen_data(data, order, name, outfile):
   data=np.hstack(data)
   dt = h5py.special_dtype(vlen=data[0].dtype)
-  dset=outfile.create_dataset(name, data.shape, dtype=dt)
-  for i in xrange(len(data)):
-	dset[i]=data[order[i]]
+  dset=outfile.create_dataset(name, data.shape, dtype=dt, data=data[order])
+  #for i in xrange(len(data)):
+	#dset[i]=data[order[i]]
 
 combineSubSnap(20)
 #for isnap in xrange(MaxSnap):
