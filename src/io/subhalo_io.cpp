@@ -139,16 +139,20 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
   if(nsubhalos)	H5Dread(dset, H5T_SubhaloInMem, H5S_ALL, H5S_ALL, H5P_DEFAULT, Subhalos.data());
   H5Dclose(dset);
  
-  ReadDataset(file, "/Membership/NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);
-  ReadDataset(file, "/Membership/NumberOfFakeHalos", H5T_HBTInt, &MemberTable.NFake);
-  dset=H5Dopen2(file, "/Membership/GroupedTrackIds", H5P_DEFAULT);
-  GetDatasetDims(dset, dims);
-  HBTInt nhalos=dims[0]-1;
-  vector <hvl_t> vl(dims[0]);
-  
+  vector <hvl_t> vl;
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
-  if(nsubhalos)
+  herr_t MembershipError = H5Gget_objinfo (file, "/Membership", 0, NULL);
+  if(MembershipError==0)//exist
   {
+    ReadDataset(file, "/Membership/NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);
+    ReadDataset(file, "/Membership/NumberOfFakeHalos", H5T_HBTInt, &MemberTable.NFake);
+    dset=H5Dopen2(file, "/Membership/GroupedTrackIds", H5P_DEFAULT);
+    GetDatasetDims(dset, dims);
+    HBTInt nhalos=dims[0]-1;
+    vl.resize(dims[0]);
+    
+    if(nsubhalos)
+    {
 	H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
 	MemberTable.Init(nhalos, nsubhalos);
 	#define FILL_SUBGROUP(vl_id, halo_id, offset) {\
@@ -162,8 +166,9 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
 	#undef FILL_SUBGROUP
 	ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
 	assert(offset==nsubhalos);
+    }
+    H5Dclose(dset);
   }
-  H5Dclose(dset);
   
   if(0==nsubhalos) return;
 
@@ -231,6 +236,19 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
   H5Fclose(file);
   H5Tclose(H5T_HBTIntArr);
   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
+  
+  if(MembershipError)//fail to read, let's build manually
+  {
+    HBTInt nhost=0;
+  #pragma omp parallel for reduction(max:nhost)
+    for(HBTInt i=0;i<Subhalos.size();i++)
+    {
+      if(Subhalos[i].HostHaloId>nhost)
+	nhost=Subhalos[i].HostHaloId;
+    }
+    nhost++;
+    MemberTable.Build(nhost, Subhalos, true); 
+  }
 }
 
 void SubhaloSnapshot_t::Save()
