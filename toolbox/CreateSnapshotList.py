@@ -14,7 +14,7 @@ def redshift(snapname):
 
 def clear_dup(snaps):
   '''clear duplicate redshifts'''
-  return list(np.array(snaps)[np.unique([redshift(s) for s in snaps], return_index=True)[1]])
+  return [snaps[i] for i in sorted(np.unique([redshift(s) for s in snaps], return_index=True)[1])]
 
 def clear_empty(snaps):
   '''clear empty dirs'''
