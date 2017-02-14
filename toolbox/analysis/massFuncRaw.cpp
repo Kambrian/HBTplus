@@ -15,7 +15,6 @@
 
 #define MHOST M200Crit
 #define RHOST R200CritComoving
-#define MSUB Mbound  //or LastMaxMass for unevolved MF
 
 struct Satellite_t
 {
