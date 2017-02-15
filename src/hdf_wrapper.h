@@ -4,6 +4,7 @@
 #include "hdf5.h"
 #include "hdf5_hl.h"	
 // #include "H5Cpp.h"
+#include <iostream>
 
 #ifdef HBT_REAL8
 #define H5T_HBTReal H5T_NATIVE_DOUBLE
@@ -40,7 +41,15 @@ inline herr_t ReadDataset(hid_t file, const char *name, hid_t dtype, void *buf)
   herr_t status;
   hid_t dset=H5Dopen2(file, name, H5P_DEFAULT);
   status=H5Dread(dset, dtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
-  status=H5Dclose(dset);
+  if(status<0)
+  {
+    const int bufsize=1024;
+    char grpname[bufsize],filename[bufsize];
+    H5Iget_name(file, grpname, bufsize);
+    H5Fget_name(file, filename, bufsize);
+    std::cerr<<"####ERROR READING "<<grpname<<"/"<<name<<" from "<<filename<<", error number "<<status<<std::endl<<std::flush;
+  }
+  H5Dclose(dset);
   return status;
 }
 inline herr_t ReadAttribute(hid_t loc_id, const char *obj_name, const char *attr_name, hid_t dtype, void *buf)
