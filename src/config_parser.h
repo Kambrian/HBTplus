@@ -39,13 +39,13 @@ public:
   int MaxConcurrentIO;
   int MinSnapshotIndex;
   int MinNumPartOfSub;
-  long GroupParticleIdMask;
+  long GroupParticleIdMask; //only used for a peculiar gadget format.
   HBTReal MassInMsunh;
   HBTReal LengthInMpch;
   HBTReal VelInKmS;
   bool PeriodicBoundaryOn;
-  bool SnapshotHasIdBlock;
-  bool ParticleIdRankStyle;//load particleId as id ranks
+  bool SnapshotHasIdBlock; //set to False when your snapshot is sorted according to particle id so that no id block is present.
+  bool ParticleIdRankStyle;//performance related; load particleId as id ranks. not implemented yet.
   bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
   bool SaveSubParticleProperties;
@@ -70,7 +70,7 @@ public:
   HBTReal TreeNodeResolution;
   HBTReal TreeNodeResolutionHalf;
   HBTReal BoxHalf; 
-  bool GroupLoadedIndex;
+  bool GroupLoadedIndex; //when adding your own halo format/reader, set HBTConfig.GroupLoadedIndex=true in your read function if your group data contains particle indices rather than particle ids.
   string ConfigFile;
   
   Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries,false),SnapshotIdList(),SnapshotNameList()
