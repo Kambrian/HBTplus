@@ -39,14 +39,14 @@ public:
   int MaxConcurrentIO;
   int MinSnapshotIndex;
   int MinNumPartOfSub;
-  long GroupParticleIdMask;
+  long GroupParticleIdMask; //only used for a peculiar gadget format.
   HBTReal MassInMsunh;
   HBTReal LengthInMpch;
   HBTReal VelInKmS;
   bool PeriodicBoundaryOn;
-  bool SnapshotHasIdBlock;
+  bool SnapshotHasIdBlock;//set to False when your snapshot is sorted according to particle id so that no id block is present.
 //   bool SnapshotNoMassBlock;//to disable checking for presence of mass block, even if some header.mass==0.
-  bool ParticleIdRankStyle;//load particleId as id ranks
+  bool ParticleIdRankStyle;//performance related; load particleId as id ranks. not implemented yet.
   bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
   bool SaveSubParticleProperties;
