@@ -110,8 +110,9 @@ int main(int argc,char **argv)
 void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &ll, vector <Satellite_t> &satellites)
 {
     satellites.clear();
-    float rhost=HaloSize[grpid].RHOST;
-    float mhost=HaloSize[grpid].MHOST;
+    auto &host=HaloSize[grpid];
+    float rhost=host.RHOST;
+    float mhost=host.MHOST;
     if(mhost<=0) return;
     satellites.reserve(subsnap.MemberTable.SubGroups[grpid].size());
 
@@ -144,6 +145,7 @@ void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara
 	    sat.LastMaxMass=sub.LastMaxMass;
 	    sat.LastMaxVmax=sub.LastMaxVmaxPhysical;
 	    sat.Vmax=sub.VmaxPhysical;
+// 	    sat.VmaxHost=host.VmaxPhysical;
 	    sat.VmaxHost=central.VmaxPhysical;
             satellites.push_back(sat);
         }
