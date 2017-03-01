@@ -33,7 +33,7 @@ public:
   float MboundType[TypeMax];
 #endif
   HBTInt HostHaloId;
-  HBTInt Rank;
+  HBTInt Rank; //0 for central and field subs, >0 for satellites
   float LastMaxMass;
   int SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   int SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
