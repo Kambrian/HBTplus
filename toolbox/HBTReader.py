@@ -217,14 +217,17 @@ class HBTReader:
 	''' load an entire track of the given trackId '''
 	track=[];
 	snaps=[]
+	scales=[]
 	snapbirth=self.GetSub(trackId)['SnapshotIndexOfBirth']
 	for isnap in range(snapbirth, self.MaxSnap+1):
 		s=self.GetSub(trackId, isnap)
+		a=self.GetScaleFactor(isnap)
 		if fields is not None:
 		  s=s[fields]
 		track.append(s)
 		snaps.append(isnap)
-	return append_fields(np.array(track), 'Snapshot', np.array(snaps), usemask=False)
+		scales.append(a)
+	return append_fields(np.array(track), ['Snapshot', 'ScaleFactor'], [np.array(snaps),np.array(scales)], usemask=False)
 
   def GetScaleFactor(self, isnap):
 	try:
