@@ -52,10 +52,12 @@ class ConfigReader:
   def __getitem__(self, index):
 	return self.Options[index]
 
-
+def get_hbt_snapnum(snapname):
+      return int(snapname.rsplit('SubSnap_')[1].split('.')[0])
+      
 class HBTReader:
   ''' class to read HBT2 catalogue '''
-  
+    
   def __init__(self, subhalo_path):
 	''' initialize HBTReader to read data in subhalo_path. A parameter file must exist there (Parameters.log dumped by HBT during runtime).'''
 	config_file=subhalo_path+'/Parameters.log'
@@ -66,9 +68,9 @@ class HBTReader:
 	self.Softening=float(self.Options['SofteningHalo'])
 
 	try:
-	  lastfile=sorted(glob.glob(self.rootdir+'/SubSnap_*.hdf5'))[-1]
+	  lastfile=sorted(glob.glob(self.rootdir+'/SubSnap_*.hdf5'), key=get_hbt_snapnum)[-1]
 	except:
-	  lastfile=sorted(glob.glob(self.rootdir+'/*/SubSnap_*.hdf5'))[-1]
+	  lastfile=sorted(glob.glob(self.rootdir+'/*/SubSnap_*.hdf5'), key=get_hbt_snapnum)[-1]
 	extension=lastfile.rsplit('SubSnap_')[1].split('.')
 	MaxSnap=int(extension[0])
 	if MaxSnap!=self.MaxSnap:
