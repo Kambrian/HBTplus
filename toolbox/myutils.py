@@ -352,6 +352,7 @@ def density_of_points(data, bins=100, method='kde', weights=None):
 	  ready to be used for contour plots as contour(X, Y, Z). 
 	  X and Y are mid points of the bins on which Z is calculated.
   '''
+  data=np.array(data)
   if data.shape[0]!=2 and data.shape[1]==2:
 	data=data.T
   l=data.min(axis=1)
