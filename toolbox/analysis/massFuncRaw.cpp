@@ -11,23 +11,20 @@
 #include "../../src/mymath.h"
 #include "../../src/linkedlist_parallel.h"
 
-#define RMAX 1.5	 //statistics done in r<RMAX*rvir
-
-#define MHOST M200Crit
-#define RHOST R200CritComoving
+#define RMAX 10	 //statistics done in r<RMAX*rvir
 
 struct Satellite_t
 {
     float DBound2HostBound;
-    float DCoM2HostCoM;
-    float DBound2HostCoM;
     float VBound2HostBound;
     float VCoM2HostCoM;
-    float VBound2HostCoM;
-    float DBoundCoMHost;
-    float VBoundCoMHost;
-    float MHost;
-    float RHost;
+    float MHostBound;
+    float MHost200Crit;
+    float MHost200Mean;
+    float MHostVir;
+    float RHost200Crit;
+    float RHost200Mean;
+    float RHostVir;
     float Mbound, LastMaxMass, LastMaxVmax;
     float Vmax, VmaxHost;
     HBTInt HostId;
@@ -106,22 +103,24 @@ int main(int argc,char **argv)
 
     return 0;
 }
+float max_rvir(HaloSize_t &halo)
+{
+  return halo.R200MeanComoving;
+//   return max(max(halo.R200CritComoving, halo.RVirComoving), halo.R200MeanComoving);
+}
 
 void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &ll, vector <Satellite_t> &satellites)
 {
     satellites.clear();
     auto &host=HaloSize[grpid];
-    float rhost=host.RHOST;
-    float mhost=host.MHOST;
-    if(mhost<=0) return;
+    float rmax=RMAX*max_rvir(host);
     satellites.reserve(subsnap.MemberTable.SubGroups[grpid].size());
 
     HBTInt cenid=subsnap.MemberTable.SubGroups[grpid][0];
     auto &central=subsnap.Subhalos[cenid];
+    if(central.Nbound<=1) return;
     vector <LocatedParticle_t> sublist;
-    ll.SearchSphereSerial(RMAX*rhost, central.ComovingMostBoundPosition, sublist, 8);
-    float d0=PeriodicDistance(central.ComovingMostBoundPosition, central.ComovingAveragePosition);
-    float v0=Distance(central.PhysicalMostBoundVelocity, central.PhysicalAverageVelocity);
+    ll.SearchSphereSerial(rmax, central.ComovingMostBoundPosition, sublist, 8);
     for(auto &&subid: sublist)
     {
 //         if(subid.id!=cenid)
@@ -132,15 +131,15 @@ void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara
 	    sat.TrackId=sub.TrackId;
             sat.Mbound=sub.Mbound;
             sat.DBound2HostBound=PeriodicDistance(sub.ComovingMostBoundPosition, central.ComovingMostBoundPosition);
-            sat.DBound2HostCoM=PeriodicDistance(sub.ComovingMostBoundPosition, central.ComovingAveragePosition);
-            sat.DCoM2HostCoM=PeriodicDistance(sub.ComovingAveragePosition, central.ComovingAveragePosition);
             sat.VBound2HostBound=Distance(sub.PhysicalMostBoundVelocity, central.PhysicalMostBoundVelocity);
-            sat.VBound2HostCoM=Distance(sub.PhysicalMostBoundVelocity, central.PhysicalAverageVelocity);
             sat.VCoM2HostCoM=Distance(sub.PhysicalAverageVelocity, central.PhysicalAverageVelocity);
-            sat.MHost=mhost;
-            sat.RHost=rhost;
-            sat.DBoundCoMHost=d0;
-            sat.VBoundCoMHost=v0;
+            sat.MHostBound=central.Mbound;
+            sat.MHost200Crit=host.M200Crit;
+	    sat.MHost200Mean=host.M200Mean;
+	    sat.MHostVir=host.MVir;
+	    sat.RHost200Crit=host.R200CritComoving;
+	    sat.RHost200Mean=host.R200MeanComoving;
+	    sat.RHostVir=host.RVirComoving;
             sat.HostId=grpid;
 	    sat.LastMaxMass=sub.LastMaxMass;
 	    sat.LastMaxVmax=sub.LastMaxVmaxPhysical;
@@ -160,15 +159,15 @@ void BuildHDFSatellite(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk)
 
 #define InsertMember(x,t) H5Tinsert(H5T_dtypeInMem, #x, HOFFSET(Satellite_t, x), t)
     InsertMember(DBound2HostBound, H5T_NATIVE_FLOAT);
-    InsertMember(DCoM2HostCoM, H5T_NATIVE_FLOAT);
-    InsertMember(DBound2HostCoM, H5T_NATIVE_FLOAT);
     InsertMember(VBound2HostBound, H5T_NATIVE_FLOAT);
     InsertMember(VCoM2HostCoM, H5T_NATIVE_FLOAT);
-    InsertMember(VBound2HostCoM, H5T_NATIVE_FLOAT);
-    InsertMember(DBoundCoMHost, H5T_NATIVE_FLOAT);
-    InsertMember(VBoundCoMHost, H5T_NATIVE_FLOAT);
-    InsertMember(MHost, H5T_NATIVE_FLOAT);
-    InsertMember(RHost, H5T_NATIVE_FLOAT);
+    InsertMember(MHostBound, H5T_NATIVE_FLOAT);
+    InsertMember(MHost200Crit, H5T_NATIVE_FLOAT);
+    InsertMember(MHost200Mean, H5T_NATIVE_FLOAT);
+    InsertMember(MHostVir, H5T_NATIVE_FLOAT);
+    InsertMember(RHost200Crit, H5T_NATIVE_FLOAT);
+    InsertMember(RHost200Mean, H5T_NATIVE_FLOAT);
+    InsertMember(RHostVir, H5T_NATIVE_FLOAT);
     InsertMember(Mbound, H5T_NATIVE_FLOAT);
     InsertMember(HostId, H5T_HBTInt);
     InsertMember(TrackId, H5T_HBTInt);
@@ -191,7 +190,7 @@ void save(vector <Satellite_t> &Satellites, int isnap)
     mkdir(outdir.c_str(),0755);
 #define xstr(s) str(s)
 #define str(s) #s
-    string filename=outdir+"massList"+to_string(isnap)+"." xstr(MHOST) ".hdf5";
+    string filename=outdir+"massList"+to_string(isnap)+".big.hdf5";
 #undef xstr
 #undef str
     hid_t file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
