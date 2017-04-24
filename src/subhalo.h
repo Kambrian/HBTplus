@@ -34,6 +34,7 @@ public:
 #endif
   HBTInt HostHaloId;
   HBTInt Rank; //0 for central and field subs, >0 for satellites
+  int Depth; //depth of the subhalo: central=0, sub=1, sub-sub=2, ...
   float LastMaxMass;
   int SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   int SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
@@ -77,9 +78,21 @@ public:
   HBTxyz PhysicalAverageVelocity;//default vel of sub
   HBTxyz ComovingMostBoundPosition;//default pos of sub
   HBTxyz PhysicalMostBoundVelocity;
-  
-//   HBTxyz ComovingPosition;
-//   HBTxyz PhysicalVelocity;
+
+  //for merging  
+  HBTxyz ComovingCorePosition;
+  HBTxyz PhysicalCoreVelocity;
+  float ComovingCoreSigmaR;
+  float PhysicalCoreSigmaV;
+  HBTInt HostTrackId; //TrackId of its direct host subhalo
+  HBTInt SinkTrackId; //the trackId it sinked to
+//   int TrackDepthAtSink;//TODO: finish this
+//   int SinkTrackDepthAtSink;
+//   float Delta; //Delta to nearest host before sink; Delta to Sink at and after sink
+//   float DeltaAtSink;
+//   float MboundSink;
+//   float MratSink;
+  int SnapshotIndexOfSink;
   
   ParticleList_t Particles;
 #ifdef SAVE_BINDING_ENERGY
@@ -133,6 +146,14 @@ public:
   HBTInt ParticleIdToIndex(const ParticleSnapshot_t &part_snap);
 //   void SetHostHalo(const vector <HBTInt> &ParticleToHost);
   void LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos);
+  //for merger
+  void CalcPositionCore(const Snapshot_t &snap);
+  void CalcVelocityCore(const Sanpshot_t &snap);
+  bool HasSinked()
+  {
+    return SnapshotIndexOfSink>=0;
+  }
+  void Merge(Subhalos_t &sat);
 };
 
 class MemberShipTable_t
@@ -187,7 +208,10 @@ private:
   void LevelUpDetachedSubhalos();
   void ExtendCentralNest();
   void NestSubhalos();
+  void FillDepthRecursive();
+  void FillDepth();
   void MaskSubhalos();
+  void MergeSubhalos();
   void ReadFile(int iFile, const SubReaderDepth_t depth);
   void LoadSubDir(int snapshot_index, const SubReaderDepth_t depth);
   void LoadSingle(int snapshot_index, const SubReaderDepth_t depth);
