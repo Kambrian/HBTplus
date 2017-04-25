@@ -49,6 +49,7 @@ public:
   bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
   bool SaveSubParticleProperties;
+  bool MergeTrappedSubhalos;
   vector <int> SnapshotIdList;
   vector <string> SnapshotNameList;
   
@@ -90,6 +91,7 @@ public:
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
 	SaveSubParticleProperties=true;
+	MergeTrappedSubhalos=true;
 	MajorProgenitorMassRatio=0.8;
 	BoundMassPrecision=0.995;
 	SourceSubRelaxFactor=3.;

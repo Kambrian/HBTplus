@@ -539,6 +539,7 @@ void SubhaloSnapshot_t::UpdateTracks()
   ExtendCentralNest();
   MemberTable.AssignRanks(Subhalos);
   FillDepth();
+  FillHostTrackIds();
 #ifdef INCLUSIVE_MASS
   PurgeMostBoundParticles();
 #endif

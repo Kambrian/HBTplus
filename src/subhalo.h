@@ -80,20 +80,14 @@ public:
   HBTxyz PhysicalMostBoundVelocity;
 
   //for merging  
-  HBTxyz ComovingCorePosition;
-  HBTxyz PhysicalCoreVelocity;
-  float ComovingCoreSigmaR;
-  float PhysicalCoreSigmaV;
-  HBTInt HostTrackId; //TrackId of its direct host subhalo
-  HBTInt SinkTrackId; //the trackId it sinked to
-//   int TrackDepthAtSink;//TODO: finish this
-//   int SinkTrackDepthAtSink;
+  HBTInt HostTrackId; //TrackId of its direct host subhalo. TODO: remove this
+  HBTInt SinkTrackId; //the trackId it sinked to, or the trackId that is closest in Delta if it has not sunk.
 //   float Delta; //Delta to nearest host before sink; Delta to Sink at and after sink
 //   float DeltaAtSink;
 //   float MboundSink;
 //   float MratSink;
-  int SnapshotIndexOfSink;
   int NumberOfMergers;//number of satellites merged to this subhalo at the current snapshot, including hierarchical mergers
+  short IsTrapped; //is trapped at the center of another subhalo and merged.
   
   ParticleList_t Particles;
 #ifdef SAVE_BINDING_ENERGY
@@ -101,7 +95,7 @@ public:
 #endif
   SubIdList_t NestedSubhalos;//list of sub-in-subs.
   
-  Subhalo_t(): Nbound(0), Rank(0), Mbound(0)
+  Subhalo_t(): Nbound(0), Rank(0), Mbound(0), IsTrapped(0), Depth(0), NumberOfMergers(0), HostTrackId(-1), SinkTrackId(-1)
 #ifndef DM_ONLY
   ,NboundType{0}, MboundType{0.}
 #endif
@@ -148,13 +142,7 @@ public:
 //   void SetHostHalo(const vector <HBTInt> &ParticleToHost);
   void LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos);
   //for merger
-  void CalcPositionCore(const Snapshot_t &snap);
-  void CalcVelocityCore(const Sanpshot_t &snap);
-  bool HasSinked()
-  {
-    return SnapshotIndexOfSink>=0;
-  }
-  void MergeTo(Subhalos_t &host);
+  void MergeTo(Subhalo_t &host);
 };
 
 class MemberShipTable_t
@@ -209,12 +197,11 @@ private:
   void LevelUpDetachedSubhalos();
   void ExtendCentralNest();
   void NestSubhalos();
-  void FillDepthRecursive();
+  void FillDepthRecursive(HBTInt subid, int depth);
   void FillDepth();
+  void FillHostTrackIds();
   void MaskSubhalos();
-  void DetectTraps();
   void MergeRecursive(HBTInt subid);
-  void MergeSubhalos();
   void ReadFile(int iFile, const SubReaderDepth_t depth);
   void LoadSubDir(int snapshot_index, const SubReaderDepth_t depth);
   void LoadSingle(int snapshot_index, const SubReaderDepth_t depth);
@@ -249,6 +236,7 @@ public:
   void AssignHosts(const HaloSnapshot_t &halo_snap);
   void PrepareCentrals(HaloSnapshot_t &halo_snap);
   void RefineParticles();
+  void MergeSubhalos();
   void UpdateTracks();
   HBTInt size() const
   {

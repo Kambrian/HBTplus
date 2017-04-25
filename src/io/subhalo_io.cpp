@@ -37,6 +37,7 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   
   InsertMember(HostHaloId, H5T_HBTInt);
   InsertMember(Rank, H5T_HBTInt);
+  InsertMember(Depth, H5T_NATIVE_INT);
   InsertMember(LastMaxMass, H5T_NATIVE_FLOAT);  
   InsertMember(SnapshotIndexOfLastMaxMass, H5T_NATIVE_INT);
   InsertMember(SnapshotIndexOfLastIsolation, H5T_NATIVE_INT);
@@ -77,6 +78,11 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(PhysicalMostBoundVelocity, H5T_HBTxyz);
   InsertMember(ComovingAveragePosition, H5T_HBTxyz);
   InsertMember(PhysicalAverageVelocity, H5T_HBTxyz);
+  
+  InsertMember(HostTrackId, H5T_HBTInt);
+  InsertMember(SinkTrackId, H5T_HBTInt);
+  InsertMember(NumberOfMergers, H5T_NATIVE_INT);
+  InsertMember(IsTrapped, H5T_NATIVE_SHORT);
   #undef InsertMember	
   H5T_SubhaloInDisk=H5Tcopy(H5T_SubhaloInMem);
   H5Tpack(H5T_SubhaloInDisk); //clear fields not added.
