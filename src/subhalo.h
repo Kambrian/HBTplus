@@ -93,6 +93,7 @@ public:
 //   float MboundSink;
 //   float MratSink;
   int SnapshotIndexOfSink;
+  int NumberOfMergers;//number of satellites merged to this subhalo at the current snapshot, including hierarchical mergers
   
   ParticleList_t Particles;
 #ifdef SAVE_BINDING_ENERGY
@@ -153,7 +154,7 @@ public:
   {
     return SnapshotIndexOfSink>=0;
   }
-  void Merge(Subhalos_t &sat);
+  void MergeTo(Subhalos_t &host);
 };
 
 class MemberShipTable_t
@@ -211,6 +212,8 @@ private:
   void FillDepthRecursive();
   void FillDepth();
   void MaskSubhalos();
+  void DetectTraps();
+  void MergeRecursive(HBTInt subid);
   void MergeSubhalos();
   void ReadFile(int iFile, const SubReaderDepth_t depth);
   void LoadSubDir(int snapshot_index, const SubReaderDepth_t depth);

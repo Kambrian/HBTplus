@@ -53,6 +53,9 @@ int main(int argc, char **argv)
 	subsnap.RefineParticles();
 	timer.Tick();
 	
+	subsnap.MergeSubhalos();
+	timer.Tick();
+
 	subsnap.UpdateTracks();
 // 	subsnap.ParticleIndexToId();//moved inside Save().
 	timer.Tick();

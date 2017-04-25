@@ -120,13 +120,7 @@ float SinkDistance(Subhalo_t &sat, Subhalo_t &cen)
 
 void SubhaloSnapshot_t::DetectTraps()
 {
-  int isnap=GetSnapshotIndex();
-  auto & Satellites=Subhalos;
-
-  auto &SubGroups=MemberTable.SubGroups;
-    
-    #pragma omp parallel
-    {
+      auto & Satellites=Subhalos;
       //reinit host
       #pragma omp for
       for(HBTInt i=0;i<Satellites.size();i++) 
@@ -173,7 +167,7 @@ void SubhaloSnapshot_t::DetectTraps()
 // 	      Satellites[i].DeltaAtSink=delta;
 // 	      Satellites[i].MboundSink=subsnap.Subhalos[i].Mbound;
 // 	      Satellites[i].MratSink=subsnap.Subhalos[i].Mbound/subsnap.Subhalos[HostId].Mbound;
-	      Satellites[i].SnapshotIndexOfSink=isnap;
+	      Satellites[i].SnapshotIndexOfSink=GetSnapshotIndex();
 	      break;
 	    }
 	    HostId=Satellites[HostId].HostTrackId;
@@ -184,25 +178,46 @@ void SubhaloSnapshot_t::DetectTraps()
 	    Satellites[i].SinkTrackId=SinkId;
 	  }
 	}
-    }
-    
 }
 
 void SubhaloSnapshot_t::MergeSubhalos()
 {
-  int isnap=GetSnapshotIndex();
-  for(HBTInt subid=0;subid<Subhalos.size();subid++)
+  #pragma omp parallel
   {
-    auto &sat=Subhalos[subid];
-    if((sat.Nbound>1)&&(sat.SnapshotIndexOfSink==isnap))
-      Subhalos[sat.SinkTrackId].Merge(sat);
+    DetectTraps();
+    #pragma omp for
+    for(HBTInt subid=0;subid<Subhalos.size();subid++)
+      Subhalos[subid].NumberOfMergers=0;
+    #pragma omp for
+    for(HBTInt grpid=0;grpid<MemberTable.SubGroups.size();grpid++)
+      if(MemberTable.SubGroups[grpid].size()
+	MergeRecursive(MemberTable.SubGroups[grpid][0]);
+    #pragma omp for
+    for(HBTInt subid=0;subid<Subhalos.size();subid++)
+      if(Subhalos[subid].NumberOfMergers)
+      {
+	Subhalos[subid].Unbind(*SnapshotPointer);
+	Subhalos[subid].TruncateSource();
+      }
   }
 }
 
-Subhalo_t::Merge(Subhalo_t &sat)
+void SubhaloSnapshot_t::MergeRecursive(HBTInt subid)
 {
-  Particles.insert(Particles.begin()+Nbound, sat.Particles.begin(), sat.Particles.end());
-  Nbound+=sat.Nbound;
-  sat.Particles.resize(1);
-  sat.Nbound=1;
+  auto &sat=Subhalos[subid];
+  for(auto &&nestid: sat.NestedSubhalos)
+    MergeRecursive(nestid);
+  if(sat.SnapshotIndexOfSink==GetSnapshotIndex())
+    sat.MergeTo(Subhalos[sat.SinkTrackId]);
+}
+
+void Subhalo_t::MergeTo(Subhalo_t &host)
+{
+  if(Nbound<=1) return;//skip orphans and nulls
+  host.NumberOfMergers+=NumberOfMergers+1;//including hierarchical (indirect) mergers.
+
+  host.Particles.insert(host.Particles.end(), Particles.begin(), Particles.end());
+  host.Nbound+=Nbound;
+  Particles.resize(1);
+  Nbound=1;
 }
