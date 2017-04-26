@@ -261,8 +261,7 @@ void SubhaloSnapshot_t::MergeRecursive(HBTInt subid)
   if(sat.IsTrapped&&sat.SnapshotIndexOfDeath==SpecialConst::NullSnapshotId)
   {
     sat.MergeTo(Subhalos[sat.SinkTrackId]);
-    if(sat.SnapshotIndexOfDeath==SpecialConst::NullSnapshotId)
-      sat.SnapshotIndexOfDeath=GetSnapshotIndex();
+    sat.SnapshotIndexOfDeath=GetSnapshotIndex();
   }
 }
 
