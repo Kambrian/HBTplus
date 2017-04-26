@@ -258,7 +258,7 @@ void SubhaloSnapshot_t::MergeRecursive(HBTInt subid)
   auto &sat=Subhalos[subid];
   for(auto &&nestid: sat.NestedSubhalos)
     MergeRecursive(nestid);
-  if(sat.IsTrapped)
+  if(sat.IsTrapped&&sat.SnapshotIndexOfDeath==SpecialConst::NullSnapshotId)
   {
     sat.MergeTo(Subhalos[sat.SinkTrackId]);
     if(sat.SnapshotIndexOfDeath==SpecialConst::NullSnapshotId)
@@ -272,7 +272,9 @@ void Subhalo_t::MergeTo(Subhalo_t &host)
   host.NumberOfMergers+=NumberOfMergers+1;//including hierarchical (indirect) mergers.
 
   #ifndef INCLUSIVE_MASS
-  host.Particles.insert(host.Particles.end(), Particles.begin(), Particles.end());
+  unordered_set <HBTInt> UniqueParticles(host.Particles.begin(), host.Particles.end());
+  UniqueParticles.insert(Particles.begin(), Particles.end());
+  host.Particles.assign(UniqueParticles.begin(), UniqueParticles.end());
   host.Nbound+=Nbound;
   #endif
   
