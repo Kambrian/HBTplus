@@ -11,17 +11,22 @@
 #define NumPartCoreMax 20
 #define DeltaCrit 2.
 
-struct SubCore_t
+struct SubHelper_t
 {
+  HBTInt HostTrackId;
+  bool IsMerged;
   HBTxyz ComovingPosition;
   HBTxyz PhysicalVelocity;
   float ComovingSigmaR;
   float PhysicalSigmaV;
   void BuildPosition(const Subhalo_t &sub, const Snapshot_t &snap);
   void BuildVelocity(const Subhalo_t &sub, const Snapshot_t &snap);
+  SubHelper_t(): HostTrackId(-1), IsMerged(false)
+  {
+  }
 };
 
-void SubCore_t::BuildPosition(const Subhalo_t &sub, const Snapshot_t &snap)
+void SubHelper_t::BuildPosition(const Subhalo_t &sub, const Snapshot_t &snap)
 {
   if(0==sub.Nbound)
   {
@@ -74,7 +79,7 @@ void SubCore_t::BuildPosition(const Subhalo_t &sub, const Snapshot_t &snap)
     }
     ComovingSigmaR=sqrt(sx2[0]+sx2[1]+sx2[2]);
 }
-void SubCore_t::BuildVelocity(const Subhalo_t &sub, const Snapshot_t &snap)
+void SubHelper_t::BuildVelocity(const Subhalo_t &sub, const Snapshot_t &snap)
 {
   if(0==sub.Nbound)
   {
@@ -121,136 +126,94 @@ void SubCore_t::BuildVelocity(const Subhalo_t &sub, const Snapshot_t &snap)
   PhysicalSigmaV=sqrt(sx2[0]+sx2[1]+sx2[2]);
 }
 
-float SinkDistance(const Subhalo_t &sat, const SubCore_t &cen)
+float SinkDistance(const Subhalo_t &sat, const SubHelper_t &cen)
 {
   float d=PeriodicDistance(cen.ComovingPosition, sat.ComovingMostBoundPosition);
   float v=Distance(cen.PhysicalVelocity, sat.PhysicalMostBoundVelocity);
   return d/cen.ComovingSigmaR+v/cen.PhysicalSigmaV;
 }
 
-void DetectTraps(vector <Subhalo_t> &Subhalos, const vector <SubCore_t> &Cores, int isnap)
+void DetectTraps(vector <Subhalo_t> &Subhalos, vector <SubHelper_t> &Helpers, int isnap)
 {  
 	#pragma omp  for
 	for(HBTInt i=0;i<Subhalos.size();i++)
 	{
-// 	  if(Subhalos[i].Nbound<=1) continue;//skip orphans
-	  if(Subhalos[i].IsTrapped)
-	  {
-// 	    Subhalos[i].Delta=SinkDistance(Subhalos[i], Subhalos[Subhalos[i].SinkTrackId]);
-	    continue;
-	  }
-	  HBTInt HostId=Subhalos[i].HostTrackId;
-	  float deltaMin=-1.;
-	  HBTInt SinkId=HostId;
+// 	  if(Subhalos[i].Nbound<=1) continue;//skip orphans? no.
+	  if(Subhalos[i].IsTrapped()) continue;
+	  HBTInt HostId=Helpers[i].HostTrackId;
 	  while(HostId>=0)
 	  {
-	    if(Subhalos[HostId].Nbound>1)//skip orphans and nulls
+	    if(Subhalos[HostId].Nbound>1)//avoid orphans or nulls as hosts
 	    {
-	      float delta=SinkDistance(Subhalos[i], Cores[HostId]);
-	      if(delta<deltaMin||deltaMin<0) 
-	      {
-		deltaMin=delta;
-		SinkId=HostId;
-	      } 
+	      float delta=SinkDistance(Subhalos[i], Helpers[HostId]);
 	      if(delta<DeltaCrit)
 	      {
-  // 	      Subhalos[i].Delta=delta;
 		Subhalos[i].SinkTrackId=HostId;
-  // 	      Subhalos[i].TrackDepthAtSink=Subhalos[i].Depth;
-  // 	      Subhalos[i].SinkTrackDepthAtSink=Subhalos[HostId].Depth;
-  // 	      Subhalos[i].DeltaAtSink=delta;
-  // 	      Subhalos[i].MboundSink=Subhalos[i].Mbound;
-  // 	      Subhalos[i].MratSink=Subhalos[i].Mbound/Subhalos[HostId].Mbound;
-		Subhalos[i].IsTrapped=1;
+		Helpers[HostId].IsMerged=true;
 		break;
 	      }
 	    }
-	    HostId=Subhalos[HostId].HostTrackId;
-	  }
-	  if(!Subhalos[i].IsTrapped&&SinkId>=0) //bind to the minimum delta before sink
-	  {
-// 	    Subhalos[i].Delta=deltaMin;
-	    Subhalos[i].SinkTrackId=SinkId;
+	    HostId=Helpers[HostId].HostTrackId;
 	  }
 	}
 }
 
-void SubhaloSnapshot_t::FillHostTrackIds()
+void FillHostTrackIds(vector <SubHelper_t> &Helpers, const vector <Subhalo_t> &Subhalos)
 {
-      #pragma omp for
-      for(HBTInt i=0;i<Subhalos.size();i++) 
-      {
-	Subhalos[i].HostTrackId=-1;
-// 	Subhalos[i].Delta=-1.;//reinit
-      }
-      #pragma omp for
-      for(HBTInt i=0;i<Subhalos.size();i++) 
-      {
-	auto &nest=Subhalos[i].NestedSubhalos;
-	for(auto &&subid: nest)
-	  Subhalos[subid].HostTrackId=i;
-      }
+  #pragma omp for
+  for(HBTInt i=0;i<Subhalos.size();i++) 
+  {
+    auto &nest=Subhalos[i].NestedSubhalos;
+    for(auto &&subid: nest)
+      Helpers[subid].HostTrackId=i;
+  }
 }
-void FillCores(vector <SubCore_t> &Cores, const vector <Subhalo_t> &Subhalos, const Snapshot_t &snap)
+void FillCores(vector <SubHelper_t> &Helpers, const vector <Subhalo_t> &Subhalos, const Snapshot_t &snap)
 {
   #pragma omp for
     for(HBTInt i=0;i<Subhalos.size();i++)
     {
-      Cores[i].BuildPosition(Subhalos[i], snap);
-      Cores[i].BuildVelocity(Subhalos[i], snap);
+      Helpers[i].BuildPosition(Subhalos[i], snap);
+      Helpers[i].BuildVelocity(Subhalos[i], snap);
     }
+}
+void FillHelpers(vector <SubHelper_t> &Helpers, const vector <Subhalo_t> &Subhalos, const Snapshot_t &snap)
+{
+  FillHostTrackIds(Helpers, Subhalos);
+  FillCores(Helpers, Subhalos, snap);
 }
 void SubhaloSnapshot_t::MergeSubhalos()
 {
   HBTInt NumHalos=MemberTable.SubGroups.size();
-  vector <int> membercount(NumHalos, 0);  
-  vector <SubCore_t> Cores(Subhalos.size());
+  vector <SubHelper_t> Helpers(Subhalos.size());
   
   #pragma omp parallel
   {
-    #pragma omp for
-    for(HBTInt haloid=0;haloid<NumHalos;haloid++)
-    {//restore nest to the state during unbinding
-	  auto &subgroup=MemberTable.SubGroups[haloid];
-	  if(subgroup.size()==0) continue;
-	  auto &nests=Subhalos[subgroup[0]].NestedSubhalos;
-	  membercount[haloid]=nests.size();
-	  auto &heads=MemberTable.SubGroupsOfHeads[haloid];
-	  nests.insert(nests.end(), heads.begin()+1, heads.end());
-    }
-    FillHostTrackIds();
+    GlueHeadNests();
+    FillHelpers(Helpers, Subhalos, *SnapshotPointer);
     
-    FillCores(Cores, Subhalos, *SnapshotPointer);
-    DetectTraps(Subhalos, Cores, GetSnapshotIndex());
-    #pragma omp single
-    Cores.clear();
-    
+    DetectTraps(Subhalos, Helpers, GetSnapshotIndex());
+        
     if(HBTConfig.MergeTrappedSubhalos)
     {
-    #pragma omp for
-    for(HBTInt subid=0;subid<Subhalos.size();subid++)
-      Subhalos[subid].NumberOfMergers=0;
     #pragma omp for
     for(HBTInt grpid=0;grpid<NumHalos;grpid++)
       if(MemberTable.SubGroups[grpid].size())
 	MergeRecursive(MemberTable.SubGroups[grpid][0]);
     #pragma omp for
     for(HBTInt subid=0;subid<Subhalos.size();subid++)
-      if(Subhalos[subid].NumberOfMergers)
+      if(Helpers[subid].IsMerged)
       {
 	Subhalos[subid].Unbind(*SnapshotPointer);
 	Subhalos[subid].TruncateSource();
       }
     }
     
-    #pragma omp for
-    for(HBTInt haloid=0;haloid<NumHalos;haloid++)
-    {
-	  auto &subgroup=MemberTable.SubGroups[haloid];
-	  if(subgroup.size()) 
-	    Subhalos[subgroup[0]].NestedSubhalos.resize(membercount[haloid]);//restore old satellite list
-    }
+    #pragma omp single
+    Helpers.clear();
+    UnglueHeadNests();
   }
+  
 }
 
 void SubhaloSnapshot_t::MergeRecursive(HBTInt subid)
@@ -258,7 +221,7 @@ void SubhaloSnapshot_t::MergeRecursive(HBTInt subid)
   auto &sat=Subhalos[subid];
   for(auto &&nestid: sat.NestedSubhalos)
     MergeRecursive(nestid);
-  if(sat.IsTrapped&&sat.SnapshotIndexOfDeath==SpecialConst::NullSnapshotId)
+  if(sat.IsTrapped()&&sat.IsAlive())
   {
     sat.MergeTo(Subhalos[sat.SinkTrackId]);
     sat.SnapshotIndexOfDeath=GetSnapshotIndex();
@@ -267,8 +230,7 @@ void SubhaloSnapshot_t::MergeRecursive(HBTInt subid)
 
 void Subhalo_t::MergeTo(Subhalo_t &host)
 {
-  if(Nbound<=1) return;//skip orphans and nulls
-  host.NumberOfMergers+=NumberOfMergers+1;//including hierarchical (indirect) mergers.
+  if(Nbound<=1) return; //skip orphans and nulls
 
   #ifndef INCLUSIVE_MASS
   unordered_set <HBTInt> UniqueParticles(host.Particles.begin(), host.Particles.end());

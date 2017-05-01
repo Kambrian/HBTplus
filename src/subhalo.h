@@ -34,7 +34,7 @@ public:
 #endif
   HBTInt HostHaloId;
   HBTInt Rank; //0 for central and field subs, >0 for satellites
-  int Depth; //depth of the subhalo: central=0, sub=1, sub-sub=2, ...
+//   int Depth; //depth of the subhalo: central=0, sub=1, sub-sub=2, ...
   float LastMaxMass;
   int SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   int SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
@@ -63,8 +63,8 @@ public:
   float SpecificSelfPotentialEnergy;
   float SpecificSelfKineticEnergy;//<0.5*v^2>
   float SpecificAngularMomentum[3];//<Rphysical x Vphysical>
-  float SpinPeebles[3];
-  float SpinBullock[3];
+//   float SpinPeebles[3];
+//   float SpinBullock[3];
   
   //shapes
 #ifdef HAS_GSL
@@ -80,14 +80,7 @@ public:
   HBTxyz PhysicalMostBoundVelocity;
 
   //for merging  
-  HBTInt HostTrackId; //TrackId of its direct host subhalo. TODO: remove this
-  HBTInt SinkTrackId; //the trackId it sinked to, or the trackId that is closest in Delta if it has not sunk.
-//   float Delta; //Delta to nearest host before sink; Delta to Sink at and after sink
-//   float DeltaAtSink;
-//   float MboundSink;
-//   float MratSink;
-  int NumberOfMergers;//number of satellites merged to this subhalo at the current snapshot, including hierarchical mergers
-  short IsTrapped; //is trapped at the center of another subhalo and merged.
+  HBTInt SinkTrackId; //the trackId it sinked to, -1 if it hasn't sunk.
   
   ParticleList_t Particles;
 #ifdef SAVE_BINDING_ENERGY
@@ -95,7 +88,7 @@ public:
 #endif
   SubIdList_t NestedSubhalos;//list of sub-in-subs.
   
-  Subhalo_t(): Nbound(0), Rank(0), Mbound(0), IsTrapped(0), Depth(0), NumberOfMergers(0), HostTrackId(-1), SinkTrackId(-1)
+  Subhalo_t(): Nbound(0), Rank(0), Mbound(0)
 #ifndef DM_ONLY
   ,NboundType{0}, MboundType{0.}
 #endif
@@ -108,6 +101,8 @@ public:
 	SnapshotIndexOfLastMaxVmax=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
+	SinkTrackId=SpecialConst::NullTrackId;
+// 	Depth=0;
   }
   /*void MoveTo(Subhalo_t & dest)
   {//override dest with this, leaving this unspecified.
@@ -143,6 +138,14 @@ public:
   void LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos);
   //for merger
   void MergeTo(Subhalo_t &host);
+  bool IsTrapped()
+  {
+    return SinkTrackId!=SpecialConst::NullTrackId;
+  }
+  bool IsAlive()
+  {
+    return SnapshotIndexOfDeath==SpecialConst::NullSnapshotId;
+  }
 };
 
 class MemberShipTable_t
@@ -167,7 +170,7 @@ public:
   HBTInt NBirth; //newly born halos, excluding fake halos
   HBTInt NFake; //Fake (unbound) halos with no progenitors
   vector < vector<HBTInt> > SubGroupsOfHeads; //list of top-level subhaloes in each halo
-  
+    
   MemberShipTable_t(): Mem_SubGroups(), AllMembers(), SubGroups(), SubGroupsOfHeads(), NBirth(0), NFake(0)
   {
   }
@@ -197,9 +200,11 @@ private:
   void LevelUpDetachedSubhalos();
   void ExtendCentralNest();
   void NestSubhalos();
-  void FillDepthRecursive(HBTInt subid, int depth);
-  void FillDepth();
-  void FillHostTrackIds();
+  vector <int> RootNestSize;//buffer variable for temporary use.
+  void GlueHeadNests();
+  void UnglueHeadNests();
+//   void FillDepthRecursive(HBTInt subid, int depth);
+//   void FillDepth();
   void MaskSubhalos();
   void MergeRecursive(HBTInt subid);
   void ReadFile(int iFile, const SubReaderDepth_t depth);

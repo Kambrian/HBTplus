@@ -102,11 +102,13 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 	M200Crit=0.;
 	M200Mean=0.;
 	MVir=0.;
+	/*
 	for(int i=0;i<3;i++)
 	{
 	  SpinPeebles[i]=0.;
 	  SpinBullock[i]=0.;
 	}
+	*/
 	return;
   }
   auto &Cosmology=part_snap.Cosmology;
@@ -155,12 +157,14 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
   }
 
   /*the spin parameters are kind of ambiguous. do not provide*/
+  /*
   for(int i=0;i<3;i++)
   {
 	SpinPeebles[i]=SpecificAngularMomentum[i]*
 	  sqrt(fabs(SpecificSelfPotentialEnergy+SpecificSelfKineticEnergy))/PhysicalConst::G/Mbound;
 	SpinBullock[i]=SpecificAngularMomentum[i]/sqrt(2.*PhysicalConst::G*Mbound*R2SigmaComoving);
   }
+  */
 }
 
 void Subhalo_t::CalculateShape(const ParticleSnapshot_t& part_snap)
