@@ -149,7 +149,8 @@ void DetectTraps(vector <Subhalo_t> &Subhalos, vector <SubHelper_t> &Helpers)
 	      if(delta<DeltaCrit)
 	      {
 		Subhalos[i].SinkTrackId=HostId;//these are local ids for the merging tracks. Those already merged ones retain their global ids.
-		Helpers[HostId].IsMerged=true;
+		if(Subhalos[i].Nbound>1) //only need to unbind if a real sub sinks
+		  Helpers[HostId].IsMerged=true;
 		break;
 	      }
 	    }
