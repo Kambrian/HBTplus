@@ -60,6 +60,10 @@ struct Particle_t
   Particle_t(HBTInt id): Id(id)
   {
   }
+  bool operator==(const Particle_t &other) const
+  { 
+    return Id==other.Id;
+  }
 };
 extern ostream& operator << (ostream& o, Particle_t &p);
 

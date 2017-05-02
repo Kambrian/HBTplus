@@ -65,6 +65,9 @@ int main(int argc, char **argv)
 	subsnap.RefineParticles();
 	
 	timer.Tick(world.Communicator);
+	subsnap.MergeSubhalos();
+	
+	timer.Tick(world.Communicator);
 	subsnap.UpdateTracks(world, halosnap);
 	
 	cout<<" start to save "<<subsnap.Subhalos.size()<<" subs on thread "<<world.rank()<<endl;

@@ -126,6 +126,7 @@ RegisterAttr(MboundType, MPI_HBT_INT, TypeMax)
 #endif
 RegisterAttr(HostHaloId, MPI_HBT_INT, 1)
 RegisterAttr(Rank, MPI_HBT_INT, 1)
+RegisterAttr(Depth, MPI_INT, 1)
 RegisterAttr(LastMaxMass, MPI_FLOAT, 1)
 RegisterAttr(SnapshotIndexOfLastMaxMass, MPI_INT, 1)
 RegisterAttr(SnapshotIndexOfLastIsolation, MPI_INT, 1)
@@ -146,8 +147,8 @@ RegisterAttr(MVir, MPI_FLOAT, 1)
 RegisterAttr(SpecificSelfPotentialEnergy, MPI_FLOAT, 1)
 RegisterAttr(SpecificSelfKineticEnergy, MPI_FLOAT, 1)
 RegisterAttr(SpecificAngularMomentum[0], MPI_FLOAT, 3)
-RegisterAttr(SpinPeebles[0], MPI_FLOAT, 3)
-RegisterAttr(SpinBullock[0], MPI_FLOAT, 3)
+// RegisterAttr(SpinPeebles[0], MPI_FLOAT, 3)
+// RegisterAttr(SpinBullock[0], MPI_FLOAT, 3)
 #ifdef HAS_GSL
 RegisterAttr(InertialEigenVector[0], MPI_FLOAT, 9)
 RegisterAttr(InertialEigenVectorWeighted[0], MPI_FLOAT, 9)
@@ -159,6 +160,8 @@ RegisterAttr(ComovingAveragePosition[0], MPI_HBT_REAL, 3)
 RegisterAttr(PhysicalAverageVelocity[0], MPI_HBT_REAL, 3)
 RegisterAttr(ComovingMostBoundPosition[0], MPI_HBT_REAL, 3)
 RegisterAttr(PhysicalMostBoundVelocity[0], MPI_HBT_REAL, 3)
+
+RegisterAttr(SinkTrackId, MPI_HBT_INT, 1)
 assert(offsets[NumAttr-1]-offsets[NumAttr-2]==sizeof(HBTReal)*3);//to make sure HBTxyz is stored locally.
 #undef RegisterAttr
 assert(NumAttr<=MaxNumAttr);
@@ -256,11 +259,13 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
 	M200Crit=0.;
 	M200Mean=0.;
 	MVir=0.;
+	/*
 	for(int i=0;i<3;i++)
 	{
 	  SpinPeebles[i]=0.;
 	  SpinBullock[i]=0.;
 	}
+	*/
 	return;
   }
   HBTReal VelocityUnit=PhysicalConst::G/epoch.Cosmology.ScaleFactor;
@@ -308,12 +313,14 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
   }
 
   /*the spin parameters are kind of ambiguous. do not provide*/
+  /*
   for(int i=0;i<3;i++)
   {
 	SpinPeebles[i]=SpecificAngularMomentum[i]*
 	  sqrt(fabs(SpecificSelfPotentialEnergy+SpecificSelfKineticEnergy))/PhysicalConst::G/Mbound;
 	SpinBullock[i]=SpecificAngularMomentum[i]/sqrt(2.*PhysicalConst::G*Mbound*R2SigmaComoving);
   }
+  */
 }
 
 void Subhalo_t::CalculateShape()

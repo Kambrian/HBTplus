@@ -32,6 +32,7 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   
   InsertMember(HostHaloId, H5T_HBTInt);
   InsertMember(Rank, H5T_HBTInt);
+  InsertMember(Depth, H5T_NATIVE_INT);
   InsertMember(LastMaxMass, H5T_NATIVE_FLOAT);  
   InsertMember(SnapshotIndexOfLastMaxMass, H5T_NATIVE_INT);
   InsertMember(SnapshotIndexOfLastIsolation, H5T_NATIVE_INT);
@@ -52,8 +53,8 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(SpecificSelfPotentialEnergy, H5T_NATIVE_FLOAT);
   InsertMember(SpecificSelfKineticEnergy, H5T_NATIVE_FLOAT);
   InsertMember(SpecificAngularMomentum, H5T_FloatVec3);
-  InsertMember(SpinPeebles, H5T_FloatVec3);
-  InsertMember(SpinBullock, H5T_FloatVec3);
+//   InsertMember(SpinPeebles, H5T_FloatVec3);
+//   InsertMember(SpinBullock, H5T_FloatVec3);
 #ifdef HAS_GSL
   dims[0]=3;
   dims[1]=3;
@@ -72,6 +73,8 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(PhysicalMostBoundVelocity, H5T_HBTxyz);
   InsertMember(ComovingAveragePosition, H5T_HBTxyz);
   InsertMember(PhysicalAverageVelocity, H5T_HBTxyz);
+  
+  InsertMember(SinkTrackId, H5T_HBTInt);
   #undef InsertMember	
   H5T_SubhaloInDisk=H5Tcopy(H5T_SubhaloInMem);
   H5Tpack(H5T_SubhaloInDisk); //clear fields not added.
