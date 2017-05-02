@@ -376,7 +376,7 @@ void SubhaloSnapshot_t::NestSubhalos()
     }
   }  
 }
-/*
+
 void SubhaloSnapshot_t::FillDepthRecursive(HBTInt subid, int depth)
 {
   Subhalos[subid].Depth=depth;
@@ -393,7 +393,7 @@ void SubhaloSnapshot_t::FillDepth()
   for(HBTInt grpid=0;grpid<MemberTable.SubGroups.size();grpid++)
       if(MemberTable.SubGroups[grpid].size()) FillDepthRecursive(MemberTable.SubGroups[grpid][0], 0);
 }
-*/
+
 
 void SubhaloSnapshot_t::ExtendCentralNest()
 {
@@ -572,7 +572,7 @@ void SubhaloSnapshot_t::UpdateTracks()
   MemberTable.SortMemberLists(Subhalos);//reorder
   ExtendCentralNest();
   MemberTable.AssignRanks(Subhalos);
-//   FillDepth();
+  FillDepth();
 #ifdef INCLUSIVE_MASS
   PurgeMostBoundParticles();
 #endif

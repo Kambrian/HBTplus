@@ -34,7 +34,7 @@ public:
 #endif
   HBTInt HostHaloId;
   HBTInt Rank; //0 for central and field subs, >0 for satellites
-//   int Depth; //depth of the subhalo: central=0, sub=1, sub-sub=2, ...
+  int Depth; //depth of the subhalo: central=0, sub=1, sub-sub=2, ...
   float LastMaxMass;
   int SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   int SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
@@ -88,7 +88,7 @@ public:
 #endif
   SubIdList_t NestedSubhalos;//list of sub-in-subs.
   
-  Subhalo_t(): Nbound(0), Rank(0), Mbound(0)
+  Subhalo_t(): Nbound(0), Rank(0), Mbound(0), Depth(0)
 #ifndef DM_ONLY
   ,NboundType{0}, MboundType{0.}
 #endif
@@ -102,7 +102,6 @@ public:
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
 	SinkTrackId=SpecialConst::NullTrackId;
-// 	Depth=0;
   }
   /*void MoveTo(Subhalo_t & dest)
   {//override dest with this, leaving this unspecified.
@@ -203,8 +202,8 @@ private:
   vector <int> RootNestSize;//buffer variable for temporary use.
   void GlueHeadNests();
   void UnglueHeadNests();
-//   void FillDepthRecursive(HBTInt subid, int depth);
-//   void FillDepth();
+  void FillDepthRecursive(HBTInt subid, int depth);
+  void FillDepth();
   void MaskSubhalos();
   void MergeRecursive(HBTInt subid);
   void ReadFile(int iFile, const SubReaderDepth_t depth);
