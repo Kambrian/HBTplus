@@ -228,54 +228,28 @@ void SubhaloSnapshot_t::MergeRecursive(HBTInt subid)
   }
 }
 
+
 /*
-class SubhaloCombiner_t
-{
-  unordered_set <HBTInt> ExclusionList;
-public:
-  SubhaloCombiner_t(HBTInt np_guess)
-  {
-    ExclusionList.reserve(np_guess);
-  }
-  void Insert(vector <Particle_t> &Particles, vector <Particle_t> NewParticles)
-  {
-    auto &subhalo=Subhalos[subid];
-    for(auto nestedid: subhalo.NestedSubhalos)//TODO: do we have to do it recursively? satellites are already masked among themselves?
-      Mask(nestedid, Subhalos);
-	
-	if(subhalo.Nbound<=1) return; //skip orphans
-    
-    auto it_begin=subhalo.Particles.begin(), it_save=it_begin;
-    for(auto it=it_begin;it!=subhalo.Particles.end();++it)
-    {
-      auto insert_status=ExclusionList.insert(it->Id);
-      if(insert_status.second)//inserted, meaning not excluded
-      {
-	if(it!=it_save)
-	  *it_save=move(*it);
-	++it_save;
-      }
-    }
-    subhalo.Particles.resize(it_save-it_begin);
-  }
-};
-*/
-struct ParticleHasher_t
+struct ParticleHasher_t //to be passed as a template parameter to unordered_set
 {
   size_t operator()(const Particle_t& p) const
   {
     return p.Id;
   }
 };
-
+*/
 void Subhalo_t::MergeTo(Subhalo_t &host)
 {
   if(Nbound<=1) return; //skip orphans and nulls
-
+  
   #ifndef INCLUSIVE_MASS
-  unordered_set <Particle_t, ParticleHasher_t> UniqueParticles(host.Particles.begin(), host.Particles.end());
-  UniqueParticles.insert(Particles.begin(), Particles.end());
-  host.Particles.assign(UniqueParticles.begin(), UniqueParticles.end());
+  HBTInt np_max=host.Particles.size()+Particles.size();
+  unordered_set <HBTInt> UniqueIds(np_max);
+  for(auto &&p: host.Particles)   UniqueIds.insert(p.Id);
+  host.Particles.reserve(np_max);
+  for(auto &&p: Particles)
+    if(UniqueIds.insert(p.Id).second)//inserted, meaning not excluded
+      host.Particles.push_back(p);
   host.Nbound+=Nbound;
   #endif
   
