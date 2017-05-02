@@ -133,7 +133,7 @@ float SinkDistance(const Subhalo_t &sat, const SubHelper_t &cen)
   return d/cen.ComovingSigmaR+v/cen.PhysicalSigmaV;
 }
 
-void DetectTraps(vector <Subhalo_t> &Subhalos, vector <SubHelper_t> &Helpers, int isnap)
+void DetectTraps(vector <Subhalo_t> &Subhalos, vector <SubHelper_t> &Helpers)
 {  
 	#pragma omp  for
 	for(HBTInt i=0;i<Subhalos.size();i++)
@@ -192,7 +192,7 @@ void SubhaloSnapshot_t::MergeSubhalos()
     GlueHeadNests();
     FillHelpers(Helpers, Subhalos, *SnapshotPointer);
     
-    DetectTraps(Subhalos, Helpers, GetSnapshotIndex());
+    DetectTraps(Subhalos, Helpers);
         
     if(HBTConfig.MergeTrappedSubhalos)
     {
