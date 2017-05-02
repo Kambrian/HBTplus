@@ -362,7 +362,8 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		{
 		  Nbound=1;
 		  Nlast=1;
-		  SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
+		  if(IsAlive())
+		    SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
 		  for(auto &&p: Particles)
 		  {
 			if(p==OldMostboundParticle)
@@ -394,6 +395,10 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
 		  ESnap.AveragePosition(ComovingAveragePosition, Nbound);
 		  if(Nbound>=Nlast*BoundMassPrecision)//converge
 		  {
+			if(!IsAlive())
+			  SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;//clear death snapshot
+			if(IsTrapped())
+			  SinkTrackId=SpecialConst::NullTrackId;//clear sinktrack as well
 			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
 			if(RefineMostboundParticle&&Nbound>MaxSampleSize)//refine most-bound particle, not necessary usually..
 			  RefineBindingEnergyOrder(ESnap, MaxSampleSize, tree, RefPos, RefVel);
