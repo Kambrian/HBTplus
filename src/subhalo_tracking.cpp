@@ -658,7 +658,7 @@ void SubhaloSnapshot_t::GlobalizeTrackReferences()
   for(HBTInt i=0;i<Subhalos.size();i++)
   {
     auto &subhalo=Subhalos[i];
-    if(subhalo.SinkTrackId!=SpecialConst::NullTrackId)
+    if(subhalo.SinkTrackId!=SpecialConst::NullTrackId&&subhalo.SnapshotIndexOfDeath==GetSnapshotIndex())//only do this for freshly merged tracks; the old ones are already global.
       subhalo.SinkTrackId=Subhalos[subhalo.SinkTrackId].TrackId;
     for(auto &&subid: subhalo.NestedSubhalos)
       subid=Subhalos[subid].TrackId;
