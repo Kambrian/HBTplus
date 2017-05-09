@@ -5,10 +5,10 @@ HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5 
 HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header
 
-###comment out the following lines if you do not have GSL
-GSLINC=
-GSLINC+=-DHAS_GSL 
-GSLLIB=-lgsl -lgslcblas
+###comment out the following lines if you do not have GSL (for eigenvalue decomposition of inertial tensors)
+#GSLINC=
+#GSLINC+=-DHAS_GSL 
+#GSLLIB=-lgsl -lgslcblas
 ###comment up to here to disable GSL.
 
 #CC=mpicc

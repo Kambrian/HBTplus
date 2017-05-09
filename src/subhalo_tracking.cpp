@@ -651,13 +651,20 @@ void SubhaloSnapshot_t::LocalizeNestedIds(MpiWorker_t &world)
     }
   }
 }
-void SubhaloSnapshot_t::GlobalizeNestedIds()
-/*translate subhalo index to trackIds for nestedsubhalos*/
+void SubhaloSnapshot_t::GlobalizeTrackReferences()
+/*translate subhalo references from index to trackIds*/
 {
-    for(auto &subhalo: Subhalos)
-      for(auto &&subid: subhalo.NestedSubhalos)
-	subid=Subhalos[subid].TrackId;
+  #pragma omp for
+  for(HBTInt i=0;i<Subhalos.size();i++)
+  {
+    auto &subhalo=Subhalos[i];
+    if(subhalo.SinkTrackId!=SpecialConst::NullTrackId&&subhalo.SnapshotIndexOfDeath==GetSnapshotIndex())//only do this for freshly merged tracks; the old ones are already global.
+      subhalo.SinkTrackId=Subhalos[subhalo.SinkTrackId].TrackId;
+    for(auto &&subid: subhalo.NestedSubhalos)
+      subid=Subhalos[subid].TrackId;
+  }
 }
+
 void SubhaloSnapshot_t::NestSubhalos(MpiWorker_t &world)
 {
   LocalizeNestedIds(world);
@@ -678,6 +685,24 @@ void SubhaloSnapshot_t::NestSubhalos(MpiWorker_t &world)
     }
   }  
 }
+
+void SubhaloSnapshot_t::FillDepthRecursive(HBTInt subid, int depth)
+{
+  Subhalos[subid].Depth=depth;
+  depth++;
+  for(auto &&nestid: Subhalos[subid].NestedSubhalos)
+  {
+    FillDepthRecursive(nestid, depth);
+  }
+}
+
+void SubhaloSnapshot_t::FillDepth()
+{
+  #pragma omp for
+  for(HBTInt grpid=0;grpid<MemberTable.SubGroups.size();grpid++)
+      if(MemberTable.SubGroups[grpid].size()) FillDepthRecursive(MemberTable.SubGroups[grpid][0], 0);
+}
+
 
 void SubhaloSnapshot_t::ExtendCentralNest()
 {
@@ -814,6 +839,39 @@ void SubhaloSnapshot_t::MaskSubhalos()
   }
 }
 
+void SubhaloSnapshot_t::GlueHeadNests()
+{
+#pragma omp single
+  RootNestSize.resize(MemberTable.SubGroups.size());
+ #pragma omp for
+    for(HBTInt haloid=0;haloid<RootNestSize.size();haloid++)
+    {//restore nest to the state during unbinding
+	  auto &subgroup=MemberTable.SubGroups[haloid];
+	  if(subgroup.size()==0)
+	  {
+	    RootNestSize[haloid]=0;
+	    continue;
+	  }
+	  auto &nests=Subhalos[subgroup[0]].NestedSubhalos;
+	  RootNestSize[haloid]=nests.size();//backup the original size
+	  auto &heads=MemberTable.SubGroupsOfHeads[haloid];
+	  nests.insert(nests.end(), heads.begin()+1, heads.end());
+    }
+}
+
+void SubhaloSnapshot_t::UnglueHeadNests()
+{
+  #pragma omp for
+    for(HBTInt haloid=0;haloid<RootNestSize.size();haloid++)
+    {
+	  auto &subgroup=MemberTable.SubGroups[haloid];
+	  if(subgroup.size()) 
+	    Subhalos[subgroup[0]].NestedSubhalos.resize(RootNestSize[haloid]);//restore old satellite list
+    }
+#pragma omp single
+    RootNestSize.clear();
+}
+
 void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap)
 {
   /*renew ranks after unbinding*/
@@ -823,6 +881,7 @@ void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &h
   MemberTable.SortMemberLists(Subhalos);//reorder, so the central might change if necessary
   ExtendCentralNest();
   MemberTable.AssignRanks(Subhalos);
+  FillDepth();
 #ifdef INCLUSIVE_MASS
   PurgeMostBoundParticles();
 #endif
@@ -836,8 +895,8 @@ void SubhaloSnapshot_t::UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &h
 	else
 	  Subhalos[i].HostHaloId=halo_snap.Halos[HostId].HaloId;//restore global haloid
   }
+  GlobalizeTrackReferences();
   }
-  GlobalizeNestedIds();
   #pragma omp parallel for if(ParallelizeHaloes)
   for(HBTInt i=0;i<Subhalos.size();i++)
   {

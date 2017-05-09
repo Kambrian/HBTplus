@@ -46,6 +46,7 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(ParticleIdNeedHash)
   else TrySetPar(SnapshotIdUnsigned)
   else TrySetPar(SaveSubParticleProperties)
+  else TrySetPar(MergeTrappedSubhalos)
   else TrySetPar(MajorProgenitorMassRatio)
   else TrySetPar(BoundMassPrecision)
   else TrySetPar(SourceSubRelaxFactor)
@@ -211,6 +212,7 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   _SyncBool(ParticleIdNeedHash);
   _SyncBool(SnapshotIdUnsigned);
   _SyncBool(SaveSubParticleProperties);
+  _SyncBool(MergeTrappedSubhalos);
   _SyncVec(SnapshotIdList, MPI_INT);
   world.SyncVectorString(SnapshotNameList, root);
   
@@ -288,6 +290,7 @@ void Parameter_t::DumpParameters()
   DumpPar(ParticleIdNeedHash)
   DumpPar(SnapshotIdUnsigned)
   DumpPar(SaveSubParticleProperties)
+  DumpPar(MergeTrappedSubhalos)
   if(SnapshotIdList.size())
   {
   version_file<<"SnapshotIdList";

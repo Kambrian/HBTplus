@@ -10,7 +10,7 @@
 #include "datatypes.h"
 #include "mpi_wrapper.h"
 
-#define HBT_VERSION "1.13.0.MPI"
+#define HBT_VERSION "1.14.0.MPI"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
@@ -50,6 +50,7 @@ public:
   bool ParticleIdNeedHash;//performance related; disabled if ParticleIdRankStyle is true
   bool SnapshotIdUnsigned;
   bool SaveSubParticleProperties;
+  bool MergeTrappedSubhalos;//whether to MergeTrappedSubhalos, see code paper for more info.
   vector <int> SnapshotIdList;
   vector <string> SnapshotNameList;
   
@@ -90,6 +91,7 @@ public:
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
 	SaveSubParticleProperties=true;
+	MergeTrappedSubhalos=true;
 	MajorProgenitorMassRatio=0.8;
 	BoundMassPrecision=0.995;
 	SourceSubRelaxFactor=3.;

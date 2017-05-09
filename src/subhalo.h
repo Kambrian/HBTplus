@@ -34,6 +34,7 @@ public:
 #endif  
   HBTInt HostHaloId;
   HBTInt Rank; //0 for central and field subs, >0 for satellites
+  int Depth; //depth of the subhalo: central=0, sub=1, sub-sub=2, ...
   float LastMaxMass;
   int SnapshotIndexOfLastMaxMass; //the snapshot when it has the maximum subhalo mass, only considering past snapshots.
   int SnapshotIndexOfLastIsolation; //the last snapshot when it was a central, only considering past snapshots.
@@ -62,8 +63,8 @@ public:
   float SpecificSelfPotentialEnergy;
   float SpecificSelfKineticEnergy;//<0.5*v^2>
   float SpecificAngularMomentum[3];//<Rphysical x Vphysical>
-  float SpinPeebles[3];
-  float SpinBullock[3];
+//   float SpinPeebles[3];
+//   float SpinBullock[3];
   
   //shapes
 #ifdef HAS_GSL
@@ -77,9 +78,9 @@ public:
   HBTxyz PhysicalAverageVelocity;//default vel of sub
   HBTxyz ComovingMostBoundPosition;//default pos of sub
   HBTxyz PhysicalMostBoundVelocity;
-  
-//   HBTxyz ComovingPosition;
-//   HBTxyz PhysicalVelocity;
+
+  //for merging  
+  HBTInt SinkTrackId; //the trackId it sinked to, -1 if it hasn't sunk.
   
   ParticleList_t Particles;
 #ifdef SAVE_BINDING_ENERGY
@@ -87,7 +88,7 @@ public:
 #endif
   SubIdList_t NestedSubhalos;//list of sub-in-subs.
   
-  Subhalo_t(): Nbound(0), Rank(0), Mbound(0)
+  Subhalo_t(): Nbound(0), Rank(0), Mbound(0), Depth(0)
 #ifndef DM_ONLY
   ,NboundType{0}, MboundType{0.}
 #endif
@@ -100,6 +101,7 @@ public:
 	SnapshotIndexOfLastMaxVmax=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
+	SinkTrackId=SpecialConst::NullTrackId;
   }
   void Unbind(const Snapshot_t &epoch);
   void RecursiveUnbind(SubhaloList_t &Subhalos, const Snapshot_t &snap);
@@ -121,6 +123,16 @@ public:
   HBTInt KickNullParticles();
   void CountParticles();
   void LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos);
+  //for merger
+  void MergeTo(Subhalo_t &host);
+  bool IsTrapped()
+  {
+    return SinkTrackId!=SpecialConst::NullTrackId;
+  }
+  bool IsAlive()
+  {
+    return SnapshotIndexOfDeath==SpecialConst::NullSnapshotId;
+  }
 };
 
 class MemberShipTable_t
@@ -145,7 +157,7 @@ public:
   HBTInt NBirth; //newly born halos, excluding fake halos
   HBTInt NFake; //Fake (unbound) halos with no progenitors
   vector < vector<HBTInt> > SubGroupsOfHeads; //list of top-level subhaloes in each halo
-  
+    
   MemberShipTable_t(): Mem_SubGroups(), AllMembers(), SubGroups(), SubGroupsOfHeads(), NBirth(0), NFake(0)
   {
   }
@@ -179,9 +191,15 @@ private:
   void LevelUpDetachedSubhalos();
   void ExtendCentralNest();
   void LocalizeNestedIds(MpiWorker_t &world);
-  void GlobalizeNestedIds();
+  void GlobalizeTrackReferences();
   void NestSubhalos(MpiWorker_t &world);
   void MaskSubhalos();
+  vector <int> RootNestSize;//buffer variable for temporary use.
+  void GlueHeadNests();
+  void UnglueHeadNests();
+  void FillDepthRecursive(HBTInt subid, int depth);
+  void FillDepth();
+  void MergeRecursive(HBTInt subid);
 public:
   SubhaloList_t Subhalos;
   MemberShipTable_t MemberTable;
@@ -216,6 +234,7 @@ public:
   void PrepareCentrals(MpiWorker_t &world, HaloSnapshot_t &halo_snap);
   void RefineParticles();
   void UpdateTracks(MpiWorker_t &world, const HaloSnapshot_t &halo_snap);
+  void MergeSubhalos();
   HBTInt size() const
   {
 	return Subhalos.size();
