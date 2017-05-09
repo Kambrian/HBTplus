@@ -133,7 +133,7 @@ float SinkDistance(const Subhalo_t &sat, const SubHelper_t &cen)
   return d/cen.ComovingSigmaR+v/cen.PhysicalSigmaV;
 }
 
-void DetectTraps(vector <Subhalo_t> &Subhalos, vector <SubHelper_t> &Helpers, int isnap)
+void DetectTraps(vector <Subhalo_t> &Subhalos, vector <SubHelper_t> &Helpers)
 {  
 	#pragma omp  for
 	for(HBTInt i=0;i<Subhalos.size();i++)
@@ -148,8 +148,9 @@ void DetectTraps(vector <Subhalo_t> &Subhalos, vector <SubHelper_t> &Helpers, in
 	      float delta=SinkDistance(Subhalos[i], Helpers[HostId]);
 	      if(delta<DeltaCrit)
 	      {
-		Subhalos[i].SinkTrackId=HostId;
-		Helpers[HostId].IsMerged=true;
+		Subhalos[i].SinkTrackId=HostId;//these are local ids for the merging tracks. Those already merged ones retain their global ids.
+		if(Subhalos[i].Nbound>1) //only need to unbind if a real sub sinks
+		  Helpers[HostId].IsMerged=true;
 		break;
 	      }
 	    }
@@ -192,7 +193,7 @@ void SubhaloSnapshot_t::MergeSubhalos()
     GlueHeadNests();
     FillHelpers(Helpers, Subhalos, *SnapshotPointer);
     
-    DetectTraps(Subhalos, Helpers, GetSnapshotIndex());
+    DetectTraps(Subhalos, Helpers);
         
     if(HBTConfig.MergeTrappedSubhalos)
     {
