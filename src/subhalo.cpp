@@ -137,12 +137,12 @@ RegisterAttr(LastMaxVmaxPhysical, MPI_FLOAT, 1)
 RegisterAttr(SnapshotIndexOfLastMaxVmax, MPI_INT, 1)
 RegisterAttr(R2SigmaComoving, MPI_FLOAT, 1)
 RegisterAttr(RHalfComoving, MPI_FLOAT, 1)
-RegisterAttr(R200CritComoving, MPI_FLOAT, 1)
-RegisterAttr(R200MeanComoving, MPI_FLOAT, 1)
-RegisterAttr(RVirComoving, MPI_FLOAT, 1)
-RegisterAttr(M200Crit, MPI_FLOAT, 1)
-RegisterAttr(M200Mean, MPI_FLOAT, 1)
-RegisterAttr(MVir, MPI_FLOAT, 1)
+RegisterAttr(BoundR200CritComoving, MPI_FLOAT, 1)
+// RegisterAttr(R200MeanComoving, MPI_FLOAT, 1)
+// RegisterAttr(RVirComoving, MPI_FLOAT, 1)
+RegisterAttr(BoundM200Crit, MPI_FLOAT, 1)
+// RegisterAttr(M200Mean, MPI_FLOAT, 1)
+// RegisterAttr(MVir, MPI_FLOAT, 1)
 RegisterAttr(SpecificSelfPotentialEnergy, MPI_FLOAT, 1)
 RegisterAttr(SpecificSelfKineticEnergy, MPI_FLOAT, 1)
 RegisterAttr(SpecificAngularMomentum[0], MPI_FLOAT, 3)
@@ -250,12 +250,12 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
 	VmaxPhysical=0.;
 	R2SigmaComoving=0.;
 	RHalfComoving=0.;
-	R200CritComoving=0.;
-	R200MeanComoving=0.;
-	RVirComoving=0.;
-	M200Crit=0.;
-	M200Mean=0.;
-	MVir=0.;
+	BoundR200CritComoving=0.;
+// 	R200MeanComoving=0.;
+// 	RVirComoving=0.;
+	BoundM200Crit=0.;
+// 	M200Mean=0.;
+// 	MVir=0.;
 	for(int i=0;i<3;i++)
 	{
 	  SpinPeebles[i]=0.;
@@ -297,9 +297,9 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
   
   HBTReal virialF_tophat, virialF_b200, virialF_c200;
   epoch.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
-  epoch.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
-  epoch.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, prof);
-  epoch.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
+//   epoch.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
+  epoch.SphericalOverdensitySize(BoundM200Crit, BoundR200CritComoving, virialF_c200, prof);
+//   epoch.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
   
   if(VmaxPhysical>=LastMaxVmaxPhysical)
   {
