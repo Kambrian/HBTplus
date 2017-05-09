@@ -16,9 +16,16 @@ def clear_dup(snaps):
   '''clear duplicate redshifts'''
   return [snaps[i] for i in sorted(np.unique([redshift(s) for s in snaps], return_index=True)[1])]
 
+def test_dir(path):
+  '''test if a directory is readable and non-empty'''
+  if not os.access(path, os.R_OK):
+    sys.stderr.write("Warning: unable to read "+path+"\n")
+    return False
+  return os.listdir(path)!=[]
+
 def clear_empty(snaps):
   '''clear empty dirs'''
-  return [x for x in snaps if os.listdir(x)!=[]]
+  return [x for x in snaps if test_dir(x)]
 
 os.chdir(rootdir)
 snaplist=clear_empty(sorted(glob.glob('snapshot_*')))
