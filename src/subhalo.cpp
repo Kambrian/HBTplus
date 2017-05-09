@@ -96,12 +96,12 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
 	VmaxPhysical=0.;
 	R2SigmaComoving=0.;
 	RHalfComoving=0.;
-	R200CritComoving=0.;
-	R200MeanComoving=0.;
-	RVirComoving=0.;
-	M200Crit=0.;
-	M200Mean=0.;
-	MVir=0.;
+	BoundR200CritComoving=0.;
+// 	R200MeanComoving=0.;
+// 	RVirComoving=0.;
+	BoundM200Crit=0.;
+// 	M200Mean=0.;
+// 	MVir=0.;
 	/*
 	for(int i=0;i<3;i++)
 	{
@@ -146,9 +146,9 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
   
   HBTReal virialF_tophat, virialF_b200, virialF_c200;
   Cosmology.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
-  Cosmology.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
-  Cosmology.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, prof);
-  Cosmology.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
+//   Cosmology.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
+  Cosmology.SphericalOverdensitySize(BoundM200Crit, BoundR200CritComoving, virialF_c200, prof);
+//   Cosmology.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
   
   if(VmaxPhysical>=LastMaxVmaxPhysical)
   {

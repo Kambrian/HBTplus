@@ -51,13 +51,13 @@ public:
   float R2SigmaComoving; //95.5% containment radius, close to tidal radius?
   float RHalfComoving;
   
-  //SO properties using subhalo particles alone
-  float R200CritComoving;
-  float R200MeanComoving;
-  float RVirComoving;
-  float M200Crit;
-  float M200Mean;
-  float MVir;
+  //SO properties using subhalo particles alone, meant for quick and dirty analysis 
+  float BoundR200CritComoving;
+//   float R200MeanComoving;
+//   float RVirComoving;
+  float BoundM200Crit;
+//   float M200Mean;
+//   float MVir;
   
   //kinetic properties
   float SpecificSelfPotentialEnergy;
