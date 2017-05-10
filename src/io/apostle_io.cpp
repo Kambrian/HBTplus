@@ -382,7 +382,10 @@ void ApostleReader_t::LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <P
 	if(i==world.rank())//read
 	{
 	  for(int iFile=nfiles_skip; iFile<nfiles_end; iFile++)
+	  {
+// 	        cout<<"("<<world.rank()<<","<<iFile<<")"<<flush;
 		ReadSnapshot(iFile, Particles.data()+offset_file[iFile]-offset_file[nfiles_skip]);
+	  }
 	}
   }
     
