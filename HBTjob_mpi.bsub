@@ -1,7 +1,7 @@
 #!/bin/bash
 # this file is intended to be used with bsub, for job submition
 ##BSUB -L /bin/bash       # script shell language (/bin/tcsh, /bin/ksh etc.) NOTE: this cause problem on SHAO cluster of missing libimf.so
-#BSUB -n 720             # number of cores required
+#BSUB -n 360             # number of cores required
 ##BSUB -M 100000        #max (MB)
 ##BSUB -m "cosma-f"
 ##BSUB -R "rusage[mem=3000]"  #reserve 3gb
@@ -22,9 +22,11 @@ ulimit -s unlimited
 
 #~ source /etc/profile.d/modules.csh
 
-# export OMP_NUM_THREADS=20
+# by default, openmp is not enabled in the MPI version of HBT+. If you want to enable it, uncomment the openmp flags in Makefile.inc and rebuild.
+# export OMP_NUM_THREADS=20 
 
-snapstart=56
-snapend=67
+# specify the first and last snapshot to process. useful for restarting from a specific snapshot. if not specified, then snapstart=0 and snapend=MaxSnapshotIndex. 
+#snapstart=56 
+#snapend=67
 
-mpirun -np $LSB_DJOB_NUMPROC HBTi8 configs/Millennium2.conf $snapstart $snapend
+mpirun -np $LSB_DJOB_NUMPROC HBT.apostle configs/EagleL100N1504.conf $snapstart $snapend
