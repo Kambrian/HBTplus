@@ -137,7 +137,10 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	
 	{//velocity
 	  vector <HBTxyz> v(np);
-	  ReadDataset(particle_data, "Velocities", H5T_HBTReal, v.data());
+	  if(H5Lexists(particle_data, "Velocities", H5P_DEFAULT))
+	    ReadDataset(particle_data, "Velocities", H5T_HBTReal, v.data());
+	  else
+	    ReadDataset(particle_data, "Velocity", H5T_HBTReal, v.data());
 	  for(int i=0;i<np;i++)
 		for(int j=0;j<3;j++)
 		  ParticlesThisType[i].PhysicalVelocity[j]=v[i][j]*vunit;
@@ -155,7 +158,10 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	if(Header.mass[itype]==0)
 	{
 	  vector <HBTReal> m(np);
-	  ReadDataset(particle_data, "Masses", H5T_HBTReal, m.data());
+	  if(H5Lexists(particle_data, "Masses", H5P_DEFAULT))
+	    ReadDataset(particle_data, "Masses", H5T_HBTReal, m.data());
+	  else
+	    ReadDataset(particle_data, "Mass", H5T_HBTReal, m.data());
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].Mass=m[i];
 	}
