@@ -106,7 +106,7 @@ void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vect
 	while(pid>=0)
 	{
 	  dr=Distance(particles[pid],searchcenter);
-	  if(dr<radius&&dr>rmin)  founds.push_back(LocatedParticle_t(pid,dr));
+	  if(dr<radius&&dr>rmin)  founds.emplace_back(pid,dr);
 	  pid=List[pid];
 	}
       }

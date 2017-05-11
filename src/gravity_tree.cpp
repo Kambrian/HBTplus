@@ -1,4 +1,4 @@
-/* this oct-tree code is adopted from SUBFIND with minor modifications for HBT */
+/* this oct-tree code is adopted from SUBFIND and modified for HBT */
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
@@ -264,12 +264,13 @@ Cells->sons[i] = -1;
 	return numnodes; 
 }
 
-double OctTree_t::EvaluatePotential(const HBTxyz targetPos, const HBTReal targetMass)
+double OctTree_t::EvaluatePotential(const HBTxyz &targetPos, const HBTReal targetMass)
 /*return specific physical potential, GM/Rphysical. 
  * targetPos[] is comoving.
  * if targetMass!=0, then the self-potential from targetMass is excluded. 
  * do not set targetMass (i.e., keep to 0.) if target is outside the particlelist of tree*/
 {
+  bool IsPeriodic=HBTConfig.PeriodicBoundaryOn;
   OctTreeCell_t *nop = 0;
   HBTInt no;
   double r2, dx, dy, dz, mass, r, u, h, h_inv, wp;
@@ -290,10 +291,11 @@ double OctTree_t::EvaluatePotential(const HBTxyz targetPos, const HBTReal target
     {
       if(no < NumberOfParticles)		/* single particle */
 	{
-	  dx = Snapshot->GetComovingPosition(no)[0] - pos_x;
-	  dy = Snapshot->GetComovingPosition(no)[1] - pos_y;
-	  dz = Snapshot->GetComovingPosition(no)[2] - pos_z;
-	  if(HBTConfig.PeriodicBoundaryOn)
+	  auto &pos=Snapshot->GetComovingPosition(no);
+	  dx = pos[0] - pos_x;
+	  dy = pos[1] - pos_y;
+	  dz = pos[2] - pos_z;
+	  if(IsPeriodic)
 	  {
 	  dx=NEAREST(dx);
 	  dy=NEAREST(dy);

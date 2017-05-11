@@ -1,4 +1,4 @@
-/* this oct-tree code is adopted from SUBFIND with minor modifications for HBT */
+/* this oct-tree code is adopted from SUBFIND and modified for HBT */
 //ToDo: separate GravityTree and SpatialTree class; add searching and density functions; neareast neighbour search by inserting into the nodes?
 #ifndef TREE_H_INCLUDED
 #define TREE_H_INCLUDED
@@ -47,18 +47,22 @@ private:
   HBTInt MaxNodeId;
   const Snapshot_t * Snapshot;
   HBTInt NumberOfParticles; //alias to Snapshot->GetSize().
+  HBTInt & RootNodeId; //alias to NumberOfParticles
   void UpdateInternalNodes(HBTInt no,HBTInt sib,double len, const double center[3]);
   void UpdateSubnode(HBTInt son, HBTInt sib, double len, const double center[3]);
 public:
   bool IsGravityTree;
-  OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0), IsGravityTree(true)
+  OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0), RootNodeId(NumberOfParticles), IsGravityTree(true)
   {
   }
   void Reserve(const size_t max_num_part);
   HBTInt Build(const Snapshot_t &snapshot, HBTInt num_part=0, bool ForGravity=true);
   void Clear();
-  double EvaluatePotential(const HBTxyz targetPos, const HBTReal targetMass=0.);
+  double EvaluatePotential(const HBTxyz &targetPos, const HBTReal targetMass=0.);
   double BindingEnergy(const HBTxyz &targetPos, const HBTxyz &targetVel, const HBTxyz &refPos, const HBTxyz &refVel, const HBTReal targetMass=0.);
+  void Search(const HBTxyz &searchcenter, HBTReal radius, vector <LocateParticle_t> &founds);
+  HBTInt NearestNeighbour(const HBTxyz &searchcenter, HBTReal rguess);
+  double SphDensity(const HBTxyz &cen, HBTReal & rguess);
   ~OctTree_t()
   {
 	Clear();
