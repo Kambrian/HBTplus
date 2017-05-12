@@ -151,11 +151,11 @@ HBTInt treesearch_linkgrp(HBTReal radius, HBTInt PIndex[], struct GroupData *Grp
 HBTInt i,grpid;
 
 //==init
-GrpData->GrpTags=mymalloc(sizeof(struct ParticleGroup)*GrpData->Np);
+GrpData->group_tags=mymalloc(sizeof(struct ParticleGroup)*GrpData->Np);
 for(i=0;i<GrpData->Np;i++) 
 {
-	GrpData->GrpTags[i].PIndex=PIndex[i];
-	GrpData->GrpTags[i].GrpID=-1;
+	GrpData->group_tags[i].PIndex=PIndex[i];
+	GrpData->group_tags[i].GrpID=-1;
 }
 GrpData->GrpLen=mymalloc(sizeof(HBTInt)*GrpData->Np);	
 
@@ -175,14 +175,14 @@ HBTInt j,jj=1; j=NumPart/100;
 fprintf(logfile,"00%%");fflush(logfile);
 for(i=0;i<NumPart;i++)
 {
-	if(GrpData->GrpTags[i].GrpID<0)
+	if(GrpData->group_tags[i].GrpID<0)
 	{
 		//~ int j;
 		//~ for(j=0;j<19;j++) printf("\b");
 		//~ printf("P%08d PhysicalConst::G%08d",i,grpid);fflush(stdout);
 		if(i>=j){fprintf(logfile,"\b\b\b%02d%%",(int)jj);fflush(logfile);jj++;j=(NumPart/100.)*jj;}
-		GrpData->GrpTags[i].GrpID=grpid; //infect the seed particle
-		GrpData->GrpLen[grpid]=1+treesearch_infect_particles(i,grpid, GrpData->GrpTags, Pdat.Pos);
+		GrpData->group_tags[i].GrpID=grpid; //infect the seed particle
+		GrpData->GrpLen[grpid]=1+treesearch_infect_particles(i,grpid, GrpData->group_tags, Pdat.Pos);
 		grpid++;
 		
 	}
@@ -205,34 +205,33 @@ return grpid;
 }
 
 HBTInt OctTree_t::InfectParticles(HBTInt seed, HBTInt grpid,
-		ParticleGroup_t &GrpTags)
+		ParticleGroup_t &group_tags)
 {
 /*tag all the particles that are linked to seed with grpid
  * Note if system stack size is too small, this recursive routine may crash
  * in that case you should set:  ulimit -s unlimited  (bash) before running.
 **/
- HBTInt numngb, totnumngb, no, p;
+ HBTInt numngb, totnumngb, p;
   double dx, dy, dz, r2, h2;
   union NODE *this;
   HBTReal *searchcenter;
 
-  searchcenter=PPos[GrpTags[seed].PIndex];
+  searchcenter=Snapshot->GetComovingPosition(group_tags[seed].ParticleId);
   //~ h2 = radius * radius;
 
   numngb = 0; 
-  no = NumPart;
+  HBTInt node_id = RootNodeId;
 
-  while(no >= 0)//infect neighbours
+  while(node_id >= 0)//infect neighbours
     {
-		
-      if(no < NumPart)		/* single particle */
+      if(node_id < NumberOfParticles)		/* single particle */
 	  {
-		  *pInfected = no;
-		  no = Nextnode[*pInfected];
-		  if(GrpTags[*pInfected].GrpID>=0) //already tagged
+		  *pInfected = node_id;
+		  node_id = NextnodeFromParticle[*pInfected];
+		  if(group_tags[*pInfected].GrpID>=0) //already tagged
 			continue;  
 		  
-		  p = GrpTags[*pInfected].PIndex;
+		  p = group_tags[*pInfected].PIndex;
 
 		  dx = PPos[p][0] - searchcenter[0];
 		  #ifdef PERIODIC_BDR
@@ -265,16 +264,16 @@ HBTInt OctTree_t::InfectParticles(HBTInt seed, HBTInt grpid,
 
 		  if(r2 < LinkLength2) //confirm the infection (fill the stack)
 			{
-			  GrpTags[*pInfected].GrpID=grpid;
+			  group_tags[*pInfected].GrpID=grpid;
 			  numngb++;
 			  pInfected++;
 			}
 	  }
       else
 	  {
-	  this = &Nodes[no];
+	  this = &Nodes[node_id];
 
-	  no = Nodes[no].way.sibling;	/* in case the node can be discarded */
+	  node_id = Nodes[node_id].way.sibling;	/* in case the node can be discarded */
 	//since way.s[3] is CoM rather than center of cube,compare with Len rather than Lenhalf to allow for misaligned CoM
 	  if((NEAREST(this->way.s[0] - searchcenter[0]) + this->way.len) < -LinkLength)
 	    continue;
@@ -289,7 +288,7 @@ HBTInt OctTree_t::InfectParticles(HBTInt seed, HBTInt grpid,
 	  if((NEAREST(this->way.s[2] - searchcenter[2]) - this->way.len) > LinkLength)
 	    continue;
 
-	  no = this->way.nextnode;	/* ok, we need to open the node */
+	  node_id = this->way.nextnode;	/* ok, we need to open the node */
 	  }
     }
 	
@@ -298,7 +297,7 @@ HBTInt OctTree_t::InfectParticles(HBTInt seed, HBTInt grpid,
 	while(numngb>0)//pop the stack
 	{
 		pInfected--;
-		totnumngb+=treesearch_infect_particles(*pInfected,grpid, GrpTags, PPos);
+		totnumngb+=treesearch_infect_particles(*pInfected,grpid, group_tags, PPos);
 		numngb--;
 	}
 	return totnumngb; //total number of infected particles (excluding the seed particle)

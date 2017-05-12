@@ -63,6 +63,7 @@ public:
   void Search(const HBTxyz &searchcenter, HBTReal radius, vector <LocateParticle_t> &founds);
   HBTInt NearestNeighbour(const HBTxyz &searchcenter, HBTReal rguess);
   double SphDensity(const HBTxyz &cen, HBTReal & rguess);
+  HBTInt InfectParticles(HBTInt seed, HBTInt grpid, ParticleGroup_t &GroupTags);
   ~OctTree_t()
   {
 	Clear();
