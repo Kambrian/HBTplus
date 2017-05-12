@@ -35,12 +35,6 @@ struct Particle_t
 #endif
 };
 
-struct ParticleGroup_t
-{
-  HBTInt ParticleId;
-  HBTInt GroupId;
-};
-
 struct Cosmology_t
 {
   HBTReal OmegaM0;

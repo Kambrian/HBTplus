@@ -60,10 +60,10 @@ public:
   void Clear();
   double EvaluatePotential(const HBTxyz &targetPos, const HBTReal targetMass=0.);
   double BindingEnergy(const HBTxyz &targetPos, const HBTxyz &targetVel, const HBTxyz &refPos, const HBTxyz &refVel, const HBTReal targetMass=0.);
-  void Search(const HBTxyz &searchcenter, HBTReal radius, vector <LocateParticle_t> &founds);
+  void Search(const HBTxyz &searchcenter, HBTReal radius, vector <LocatedParticle_t> &founds);
   HBTInt NearestNeighbour(const HBTxyz &searchcenter, HBTReal rguess);
   double SphDensity(const HBTxyz &cen, HBTReal & rguess);
-  HBTInt InfectParticles(HBTInt seed, HBTInt grpid, ParticleGroup_t &GroupTags);
+  HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTInt> &GroupTags);
   ~OctTree_t()
   {
 	Clear();
