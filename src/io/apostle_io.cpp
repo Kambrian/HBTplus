@@ -442,8 +442,11 @@ void ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< Hal
   
   const int NullGroupId=1<<30; //1073741824
   sort(ParticleHosts.begin(), ParticleHosts.end(), CompParticleHost);
-  assert(ParticleHosts.back().HostId<=NullGroupId);//max haloid==NullGroupId
-  assert(ParticleHosts.front().HostId>=0);//min haloid>=0
+  if(!ParticleHosts.empty())
+  {
+    assert(ParticleHosts.back().HostId<=NullGroupId);//max haloid==NullGroupId
+    assert(ParticleHosts.front().HostId>=0);//min haloid>=0
+  }
   
   struct HaloLen_t
   {
