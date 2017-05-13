@@ -77,6 +77,8 @@ class GravityTree_t: public OctTree_t
 }
 */
 
+extern void treesearch_linkgrp(HBTReal radius, const Snapshot_t &snapshot, vector <HBTInt> &GrpLen, vector <HBTInt> &GrpTags);
+
 #endif	
 
 

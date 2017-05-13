@@ -60,7 +60,7 @@ void OctTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
 	  double r2 = dx * dx + dy * dy + dz * dz;
 
 	  if(r2 < h2)
-	      founds.emplace_back(Snapshot->GetMemberId(pid), sqrt(r2));
+	      founds.emplace_back(Snapshot->GetMemberId(pid), r2);
 	}
       else
 	{
@@ -95,9 +95,6 @@ void OctTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
 #define SPH_DENS_NGB 64
 double OctTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
 {
-  HBTInt i, n;
-  double h, hinv3;
-  
   vector <LocatedParticle_t> founds;
   Search(cen, hguess, founds);
   int numngb=founds.size();
@@ -115,15 +112,15 @@ double OctTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
   
   auto pivot_particle=founds.begin()+SPH_DENS_NGB-1;
   nth_element(founds.begin(), founds.end(), pivot_particle, CompLocatedDistance);
-  h=pivot_particle->d;
+  double h=sqrt(pivot_particle->d);
   // 	h=sqrtf(h);
   hguess=h*1.01;
-  hinv3 = 1.0 / (h * h * h);
+  double hinv3 = 1.0 / (h * h * h);
   
   double rho=0.;
   for(auto it=founds.begin(); it <=pivot_particle; ++it)
   {
-    double r = it->d;
+    double r = sqrt(it->d);
     double u = r / h, wk;
     
     if(u < 0.5)

@@ -108,6 +108,7 @@ public:
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
   void CheckUnsetParameters();
+  void DumpParameters(const string &path);
   void DumpParameters();
 };
 
