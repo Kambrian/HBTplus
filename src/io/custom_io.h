@@ -4,6 +4,6 @@
 #include "../datatypes.h"
 #include "../halo.h"
 
-extern HBTInt MyGroupReader(int SnapshotId, vector <Halo_t> Halos);
+extern HBTInt MyGroupReader(int SnapshotId, vector <Halo_t> &Halos);
 
 #endif

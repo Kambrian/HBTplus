@@ -11,7 +11,7 @@
 #include "../mymath.h"
 #include "custom_io.h"
 
-HBTInt MyGroupReader(int SnapshotId, vector <Halo_t> Halos)
+HBTInt MyGroupReader(int SnapshotId, vector <Halo_t> &Halos)
 {
   HBTInt NumberOfGroups;
   HBTInt *NumberOfParticlesInGroup;
