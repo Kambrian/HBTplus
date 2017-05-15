@@ -4,7 +4,7 @@ OBJS_COMM=$(patsubst %.f90,%.f.o, $(SRC_COMM:%.cpp=%.o))
 
 SRC=$(wildcard *.cpp)
 EXE_HBT=HBT HBTdouble  HBT_majormerger_test  HBTi8 HBT.apostle HBT.apostle_thermal
-EXE=$(EXE_HBT)
+EXE=$(EXE_HBT) FoF
 
 default: HBT
 include Makefile.inc

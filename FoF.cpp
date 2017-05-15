@@ -11,6 +11,8 @@ using namespace std;
 #include "src/subhalo.h"
 #include "src/mymath.h"
 #include "src/gravity_tree.h"
+#include "src/io/hbt_group_io.h"
+
 
 #define GRPLENMIN 20
 
@@ -27,7 +29,7 @@ ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
 mkdir(HBTConfig.HaloPath.c_str(), 0755);
 HBTConfig.DumpParameters(HBTConfig.HaloPath);
  
-HaloSnapshot_t halos;
+// HaloSnapshot_t halos;
 HBTReal b,r;
 //b=atof(argv[2]);
 b=0.2; //linking length
@@ -47,9 +49,13 @@ r=b*pow(ParticleMass/mean_density,1.0/3.0);
 vector <halo_t> halos;
 build_group_catalogue(r, snapshot, halos);
 
-load_particle_data_bypart(Nsnap,SNAPSHOT_DIR,FLAG_LOAD_ID);//only load id
-save_group_catalogue_HBT(Nsnap,&Cat,GRPCAT_DIR);
-free_particle_data();
+// load_particle_data_bypart(Nsnap,SNAPSHOT_DIR,FLAG_LOAD_ID);//only load id
+/*for(auto &&h: halos)//has been converted in build_group_catalogue
+{
+  for(auto &&p: h)
+    p=snapshot.GetParticleId(p);
+}*/
+HBTGroupIO::SaveHDFGroups(isnap, snapshot.GetSnapshotId(), halos);
 
 return 0;
 }
@@ -60,17 +66,6 @@ static int comp_int(const void *a, const void *b)//in descending order
     return -1;
 
   if(*((HBTInt *) a) < *((HBTInt *)b))
-    return +1;
-
-  return 0;
-}
-static HBTInt *TagLen;
-static int comp_grplen(const void *a, const void *b)//in descending order
-{
-  if(TagLen[((struct ParticleGroup *) a)->GrpID] > TagLen[((struct ParticleGroup *) b)->GrpID])
-    return -1;
-
-  if(TagLen[((struct ParticleGroup *) a)->GrpID] < TagLen[((struct ParticleGroup *) b)->GrpID])
     return +1;
 
   return 0;
@@ -87,7 +82,7 @@ struct GrpIDCompor_t
   }
 };
 
-void build_group_catalogue(HBTReal linklength, Snapshot_t &snapshot, vector <halo_t> halos)
+void build_group_catalogue(HBTReal linklength, Snapshot_t &snapshot, vector <halo_t> &halos)
 {
 vector <HBTInt> TagLen, ParticleTags;
 treesearch_linkgrp(linklength, snapshot, TagLen, ParticleTags);
@@ -117,7 +112,7 @@ for(HBTInt i=0;i<ParticleTags.size();i++)
 {
   auto id=tag2id[ParticleTags[i]];
   if(id<ngrp)
-    halos[id].push_back(i);//these are particle indices
+    halos[id].push_back(snapshot.GetMemberId(i));//these are particle ids
 }
 halos.resize(ngrp);
 
