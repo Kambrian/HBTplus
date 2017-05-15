@@ -71,7 +71,7 @@ namespace HBTGroupIO
     hsize_t ndim=1, dim_atom[]={1};
     writeHDFmatrix(file, &snapshot_id, "SnapshotId", ndim, dim_atom, H5T_NATIVE_INT);
     HBTInt Ngroups=halos.size();
-    hsize_t dim_grp[]={Ngroups};
+    hsize_t dim_grp[]={halos.size()};
     
     #ifdef UNSIGNED_LONG_ID_OUTPUT  
     hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_NATIVE_ULONG);//this does not affect anything inside the code, but the presentation in the hdf file
