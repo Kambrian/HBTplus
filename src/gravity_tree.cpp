@@ -114,7 +114,10 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const dou
 
 HBTInt OctTree_t::Build(const Snapshot_t &snapshot, HBTInt num_part, bool ForGravity)
 /* build tree for a snapshot (or SnapshotView); automatically resize memory if necessary.
-  * if num_part>0 is given, then only use the first num_part particles in the snapshot*/
+  * if num_part>0 is given, then only use the first num_part particles in the snapshot
+  * if ForGravity, then record center of mass of node for gravity calculation; 
+  * otherwise record geometric center which is optimal for spatial search (a few times faster than gravity_tree).
+  */
 {
   IsGravityTree=ForGravity;
 	HBTInt NumNids,numnodes;

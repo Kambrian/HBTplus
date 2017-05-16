@@ -13,9 +13,6 @@ using namespace std;
 #include "src/gravity_tree.h"
 #include "src/io/hbt_group_io.h"
 
-
-#define GRPLENMIN 20
-
 typedef vector <HBTInt> halo_t;
 void build_group_catalogue(HBTReal linklength, Snapshot_t &snapshot, vector <halo_t> & halos);
 
@@ -29,10 +26,7 @@ ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
 mkdir(HBTConfig.HaloPath.c_str(), 0755);
 HBTConfig.DumpParameters(HBTConfig.HaloPath);
  
-// HaloSnapshot_t halos;
-HBTReal b,r;
-//b=atof(argv[2]);
-b=0.2; //linking length
+HBTReal r;
 
 isnap=snapshot_start;
 ParticleSnapshot_t snapshot(isnap, false);
@@ -44,11 +38,14 @@ double ParticleMass=snapshot.Cosmology.ParticleMass;
 #else
 double ParticleMass=0.; //define your particle mass here, which will be divided by the mean matter density to get particle size. so this has to be the particle mass of all species
 #endif
-r=b*pow(ParticleMass/mean_density,1.0/3.0);
+r=HBTConfig.FoFLinkParam*pow(ParticleMass/mean_density,1.0/3.0);
 // cout<<"Linking with length "<<r<<endl;
-
+Timer_t timer;
+timer.Tick();
 vector <halo_t> halos;
 build_group_catalogue(r, snapshot, halos);
+timer.Tick();
+cout<<timer.GetSeconds(1)<<" seconds\n";
 
 // load_particle_data_bypart(Nsnap,SNAPSHOT_DIR,FLAG_LOAD_ID);//only load id
 /*for(auto &&h: halos)//has been converted in build_group_catalogue
@@ -61,16 +58,6 @@ HBTGroupIO::SaveHDFGroups(isnap, snapshot.GetSnapshotId(), halos);
 return 0;
 }
 
-static int comp_int(const void *a, const void *b)//in descending order
-{
-  if(*((HBTInt *) a) > *((HBTInt *)b))
-    return -1;
-
-  if(*((HBTInt *) a) < *((HBTInt *)b))
-    return +1;
-
-  return 0;
-}
 struct GrpIDCompor_t
 {
   vector<HBTInt> &TagLen;
@@ -100,11 +87,11 @@ for(HBTInt i=0;i<SortedTags.size();i++)
   tag2id[SortedTags[i]]=i;
 
 halos.resize(TagLen.size());
-HBTInt ngrp;
+HBTInt ngrp, grplen_min=HBTConfig.FoFSizeMin;
 for(ngrp=0;ngrp<SortedTags.size();ngrp++)
 {
   auto n=TagLen[SortedTags[ngrp]];
-  if(n<GRPLENMIN) break;
+  if(n<grplen_min) break;
   halos[ngrp].reserve(n);
 }
 
@@ -116,7 +103,7 @@ for(HBTInt i=0;i<ParticleTags.size();i++)
 }
 halos.resize(ngrp);
 
-cout<<halos.size()<<" good groups found: ";
+cout<<halos.size()<<" groups above mass limit: ";
 for(int i=0;i<3;i++)
 {
   if(i<halos.size())

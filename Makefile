@@ -23,6 +23,9 @@ HBT_majormerger_test: CXXFLAGS+=-DMAJOR_MERGER_PATCH #-DALLOW_BINARY_SYSTEM
 $(EXE_HBT): HBT.o
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
+FoF: OMPFLAG=
+FoF: CXXFLAGS+=-DDM_ONLY
+	
 depend:
 	makedepend --$(CXXFLAGS)-- -Y $(SRC) $(SRC_COMM)
 

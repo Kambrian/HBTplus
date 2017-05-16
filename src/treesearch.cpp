@@ -133,17 +133,12 @@ double OctTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
   return rho;
 }
 
-static double LinkLength, LinkLength2;
-#pragma omp threadprivate(LinkLength,LinkLength2)
-
 void treesearch_linkgrp(HBTReal radius, const Snapshot_t &snapshot, vector <HBTInt> &GrpLen, vector <HBTInt> &GrpTags)
 /* link particles in the given snapshot into groups.
  * Output: filled GrpLen and GrpTags (0~Ngroups-1), down to mass=1 (diffuse particles)
  * */
 {
 GrpTags.assign(snapshot.size(), -1);
-LinkLength=radius;
-LinkLength2=radius*radius;
 
 cout<<"Building tree...\n"<<flush;
 OctTree_t tree;
@@ -163,7 +158,7 @@ for(HBTInt i=0;i<snapshot.size();i++)
 		  progress+=printstep;
 		}
 		GrpTags[i]=grpid; //infect the seed particle
-		HBTInt grplen=1+tree.TagFriendsOfFriends(i,grpid, GrpTags);
+		HBTInt grplen=1+tree.TagFriendsOfFriends(i,grpid, GrpTags, radius);
 		GrpLen.push_back(grplen);
 		grpid++;
 	}
@@ -173,7 +168,7 @@ cout<<"Found "<<GrpLen.size()<<" Groups\n";
 }
 
 HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
-				      vector <HBTInt> &group_tags)
+				      vector <HBTInt> &group_tags, double LinkLength)
 /*tag all the particles that are linked to seed with grpid
    * Note if system stack size is too small, this recursive routine may crash
    * in that case you should set:  ulimit -s unlimited  (bash) before running.
@@ -182,6 +177,7 @@ HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
   bool IsPeriodic=HBTConfig.PeriodicBoundaryOn;
   auto &searchcenter=Snapshot->GetComovingPosition(seed);
   double x0=searchcenter[0], y0=searchcenter[1], z0=searchcenter[2];
+  double LinkLength2=LinkLength*LinkLength;
   
   HBTInt node_id = RootNodeId;
   
@@ -251,7 +247,7 @@ HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
   
   HBTInt nfriends=friends.size();
   for(auto &&pid: friends)
-    nfriends+=TagFriendsOfFriends(pid, grpid, group_tags);
+    nfriends+=TagFriendsOfFriends(pid, grpid, group_tags, LinkLength);
   
   return nfriends; //excluding the seed particle
 }

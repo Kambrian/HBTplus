@@ -63,7 +63,7 @@ public:
   void Search(const HBTxyz &searchcenter, HBTReal radius, vector <LocatedParticle_t> &founds);
   HBTInt NearestNeighbour(const HBTxyz &searchcenter, HBTReal rguess);
   double SphDensity(const HBTxyz &cen, HBTReal & rguess);
-  HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTInt> &GroupTags);
+  HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTInt> &GroupTags, double LinkLength);
   ~OctTree_t()
   {
 	Clear();
