@@ -152,14 +152,14 @@ tree.Build(snapshot, 0, false);
 cout<<"Linking Groups...\n"<<flush;
 HBTInt grpid=0;
 HBTInt printstep=snapshot.size()/100, progress=printstep;
-cout<<"00%%"<<flush;
+cout<<"00%"<<flush;
 for(HBTInt i=0;i<snapshot.size();i++)
 {
 	if(GrpTags[i]<0)
 	{
 		if(i>=progress)
 		{
-		  cout<<"\b\b\b"<<setw(2)<<progress/printstep<<"%%"<<flush;
+		  cout<<"\b\b\b"<<setw(2)<<progress/printstep<<"%"<<flush;
 		  progress+=printstep;
 		}
 		GrpTags[i]=grpid; //infect the seed particle

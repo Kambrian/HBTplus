@@ -45,6 +45,7 @@ double ParticleMass=snapshot.Cosmology.ParticleMass;
 double ParticleMass=0.; //define your particle mass here, which will be divided by the mean matter density to get particle size. so this has to be the particle mass of all species
 #endif
 r=b*pow(ParticleMass/mean_density,1.0/3.0);
+// cout<<"Linking with length "<<r<<endl;
 
 vector <halo_t> halos;
 build_group_catalogue(r, snapshot, halos);
@@ -107,7 +108,6 @@ for(ngrp=0;ngrp<SortedTags.size();ngrp++)
   halos[ngrp].reserve(n);
 }
 
-
 for(HBTInt i=0;i<ParticleTags.size();i++)
 {
   auto id=tag2id[ParticleTags[i]];
@@ -116,7 +116,7 @@ for(HBTInt i=0;i<ParticleTags.size();i++)
 }
 halos.resize(ngrp);
 
-cout<<halos.size()<<" groups found: ";
+cout<<halos.size()<<" good groups found: ";
 for(int i=0;i<3;i++)
 {
   if(i<halos.size())
