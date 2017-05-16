@@ -49,7 +49,7 @@ private:
   HBTInt NumberOfParticles; //alias to Snapshot->GetSize().
   HBTInt & RootNodeId; //alias to NumberOfParticles
   void UpdateInternalNodes(HBTInt no,HBTInt sib,double len, const double center[3]);
-  void UpdateSubnode(HBTInt son, HBTInt sib, double len, const double center[3]);
+  void UpdateSubnode(HBTInt son, HBTInt sib, double len, const double center[3], int subindex);
 public:
   bool IsGravityTree;
   OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0), RootNodeId(NumberOfParticles), IsGravityTree(true)

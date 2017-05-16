@@ -26,7 +26,7 @@ void shift_center(const double oldcenter[3], int son, double delta, double newce
       newcenter[dim]=oldcenter[dim]-delta;
   }
 }
-void OctTree_t::UpdateSubnode(HBTInt son, HBTInt sib, double len, const double center[3])
+void OctTree_t::UpdateSubnode(HBTInt son, HBTInt sib, double len, const double center[3], int subindex)
 {
   if(len>=HBTConfig.TreeNodeResolution)//only divide if above resolution;
   {
@@ -35,7 +35,7 @@ void OctTree_t::UpdateSubnode(HBTInt son, HBTInt sib, double len, const double c
     else
     {
       double newcenter[3];
-      shift_center(center, son, len/4., newcenter);
+      shift_center(center, subindex, len/4., newcenter);
       UpdateInternalNodes(son, sib, len/2., newcenter);
     }
   }
@@ -46,22 +46,26 @@ void OctTree_t::UpdateSubnode(HBTInt son, HBTInt sib, double len, const double c
 
 void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const double center[3])
 {
-  HBTInt j,jj,p,pp,sons[8];
+  HBTInt p,pp,sons[8];
+  int j,jj,i;
   double mass=0., thismass;
   double CoM[3]={0.};
   
   for(j=0;j<8;j++)
     sons[j]=Nodes[no].sons[j];//backup sons
-    Nodes[no].way.len=len;
+  Nodes[no].way.len=len;
   Nodes[no].way.sibling=sib;
-  for(j=0;sons[j]<0;j++);//find first son
-  pp=sons[j];
+  for(i=0;sons[i]<0;i++);//find first son
+  jj=i;
+  pp=sons[jj];
   Nodes[no].way.nextnode=pp;
-  for(jj=j+1;jj<8;jj++)//find sons in pairs,ie. find sibling
+  for(i++;i<8;i++)//find sons in pairs,ie. find sibling
   {
-    if(sons[jj]>=0)//ok, found a sibling
+    if(sons[i]>=0)//ok, found a sibling
     {
+      j=jj;
       p=pp;
+      jj=i;
       pp=sons[jj];
       if(p<NumberOfParticles)
       {
@@ -73,7 +77,7 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const dou
       }
       else
       {
-	UpdateSubnode(p, pp, len, center);
+	UpdateSubnode(p, pp, len, center, j);
 	thismass=Nodes[p].way.mass;
 	mass+=thismass;
 	if(IsGravityTree)
@@ -91,7 +95,7 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const dou
   }
   else
   {
-    UpdateSubnode(pp, sib, len, center);
+    UpdateSubnode(pp, sib, len, center, jj);
     thismass=Nodes[pp].way.mass;
     mass+=thismass;
     if(IsGravityTree)
