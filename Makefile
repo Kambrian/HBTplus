@@ -4,7 +4,8 @@ OBJS_COMM=$(patsubst %.f90,%.f.o, $(SRC_COMM:%.cpp=%.o))
 
 SRC=$(wildcard *.cpp)
 EXE_HBT=HBT HBTdouble  HBT_majormerger_test  HBTi8 HBT.apostle HBT.apostle_thermal
-EXE=$(EXE_HBT) FoF
+EXE_FOF=FoF.tree FoF.ll
+EXE=$(EXE_HBT) $(EXE_FOF)
 
 default: HBT
 include Makefile.inc
@@ -23,9 +24,14 @@ HBT_majormerger_test: CXXFLAGS+=-DMAJOR_MERGER_PATCH #-DALLOW_BINARY_SYSTEM
 $(EXE_HBT): HBT.o
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
-FoF: OMPFLAG=
-FoF: CXXFLAGS+=-DDM_ONLY
-	
+$(EXE_FOF): OMPFLAG=
+$(EXE_FOF): CXXFLAGS+=-DDM_ONLY 
+$(EXE_FOF): FoF.o
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
+
+FoF.ll: CXXFLAGS+=-DFOF_METHOD=2
+FoF.tree: CXXFLAGS+=-DFOF_METHOD=1
+
 depend:
 	makedepend --$(CXXFLAGS)-- -Y $(SRC) $(SRC_COMM)
 

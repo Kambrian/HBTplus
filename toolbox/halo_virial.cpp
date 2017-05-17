@@ -95,7 +95,8 @@ void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_
 {
     copyHBTxyz(CenterComoving, cen);
     vector <LocatedParticle_t> founds;
-    ll.SearchSphereSerial(rmax, cen, founds, nguess);
+    founds.reserve(nguess);
+    ll.SearchSphereSerial(rmax, cen, founds);
     HBTInt np=founds.size();
     vector <RadVelMass_t> prof(np);
     for(HBTInt i=0;i<np;i++)

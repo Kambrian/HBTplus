@@ -10,8 +10,15 @@ using namespace std;
 #include "src/halo.h"
 #include "src/subhalo.h"
 #include "src/mymath.h"
-#include "src/gravity_tree.h"
 #include "src/io/hbt_group_io.h"
+#include "src/gravity_tree.h"
+#include "src/linkedlist.h"
+
+#define TREE_FOF 1
+#define LL_FOF 2
+#ifndef FOF_METHOD 
+#define FOF_METHOD LL_FOF
+#endif
 
 typedef vector <HBTInt> halo_t;
 void build_group_catalogue(HBTReal linklength, Snapshot_t &snapshot, vector <halo_t> & halos);
@@ -73,8 +80,13 @@ struct GrpIDCompor_t
 void build_group_catalogue(HBTReal linklength, Snapshot_t &snapshot, vector <halo_t> &halos)
 {
 vector <HBTInt> TagLen, ParticleTags;
+#if FOF_METHOD==TREE_FOF
 treesearch_linkgrp(linklength, snapshot, TagLen, ParticleTags);
-
+#endif
+#if FOF_METHOD==LL_FOF
+int ndiv=256;
+LinkedlistLinkGroup(linklength, snapshot, TagLen, ParticleTags, ndiv);
+#endif
 //sort tags according to taglen
 vector <HBTInt> SortedTags(TagLen.size());
 for(HBTInt i=0;i<SortedTags.size();i++)
