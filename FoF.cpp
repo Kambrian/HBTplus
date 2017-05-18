@@ -16,8 +16,15 @@ using namespace std;
 
 #define TREE_FOF 1
 #define LL_FOF 2
+/*Notes on fof performance:
+ * Tree search scales better than LinkedList as clustering increases.
+ * LinkedList search is faster when the cell size is smaller, maybe saturates when each cell contains ~1 particle. 
+ * For weakly clustered data (high redshift), linkedlist can be faster than tree search; but this is useless, since tree search is already fast enough at high redshift as well.
+ * In highly clustered region, the spatial complexity (memory consumption) can be quite high when trying to reach 1 particle cell size. While the tree code spatial complexity is acceptable (~2times particles).
+ * This means tree search is perferred over LL.
+*/
 #ifndef FOF_METHOD 
-#define FOF_METHOD LL_FOF
+#define FOF_METHOD TREE_FOF
 #endif
 
 typedef vector <HBTInt> halo_t;
