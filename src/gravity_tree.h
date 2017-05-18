@@ -31,9 +31,9 @@ private:
 	HBTInt sons[8];		/*!< temporary pointers to daughter nodes */
 	struct
 	{
-	HBTReal s[3];               /*!< center of mass of node (gravity tree)*/
+	HBTReal s[3];               /*!< center of mass of node (gravity tree); geocenter for geotree*/
 	HBTReal len;		/*!< sidelength of treenode */
-	HBTReal mass;            /*!< mass of node */
+	HBTReal mass;            /*!< mass of node (gravity tree); counts of particles for geotree */
 	HBTInt sibling;         /*!< this gives the next node in the walk in case the current node can be used */
 	HBTInt nextnode;        /*!< this gives the next node in case the current node needs to be opened */
 	}way;

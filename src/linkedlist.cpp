@@ -147,17 +147,17 @@ void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vect
 	  auto &pos=particles[p];
 	  HBTReal dx = pos[0] - x0;
 	  if(PeriodicBoundary) dx=NEAREST(dx);
-	  if(dx < -radius || dx > radius)
+	  if(dx > radius || dx < -radius)
 	    continue;
 	  
 	  HBTReal dy = pos[1] - y0;
 	  if(PeriodicBoundary) dy=NEAREST(dy);
-	  if(dy < -radius || dy > radius)
+	  if(dy > radius || dy < -radius)
 	    continue;
 	  
 	  HBTReal dz = pos[2] - z0;
 	  if(PeriodicBoundary) dz=NEAREST(dz);
-	  if(dz < -radius || dz > radius)
+	  if(dz > radius || dz < -radius)
 	    continue;
 	  
 	  HBTReal r2 = dx * dx + dy * dy + dz * dz;
@@ -259,17 +259,17 @@ HBTInt Linkedlist_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTI
 	  auto &pos=particles[p];
 	  HBTReal dx = pos[0] - x0;
 	  if(PeriodicBoundary) dx=NEAREST(dx);
-	  if(dx < -LinkLength || dx > LinkLength)
+	  if(dx > LinkLength || dx < -LinkLength)
 	    continue;
 	  
 	  HBTReal dy = pos[1] - y0;
 	  if(PeriodicBoundary) dy=NEAREST(dy);
-	  if(dy < -LinkLength || dy > LinkLength)
+	  if(dy > LinkLength || dy < -LinkLength)
 	    continue;
 	  
 	  HBTReal dz = pos[2] - z0;
 	  if(PeriodicBoundary) dz=NEAREST(dz);
-	  if(dz < -LinkLength || dz > LinkLength)
+	  if(dz > LinkLength || dz < -LinkLength)
 	    continue;
 	  
 	  HBTReal r2 = dx * dx + dy * dy + dz * dz;

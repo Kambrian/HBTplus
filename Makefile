@@ -29,6 +29,7 @@ $(EXE_FOF): OMPFLAG=
 $(EXE_FOF): CXXFLAGS+=-DDM_ONLY -DHBT_INT8
 $(EXE_FOF): FoF.o
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
+	rm FoF.o
 
 
 depend:

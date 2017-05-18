@@ -44,17 +44,17 @@ void OctTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
 	  auto &pos=Snapshot->GetComovingPosition(pid);
 	  double dx = pos[0] - x0;
 	  if(IsPeriodic) dx=NEAREST(dx);
-	  if(dx < -radius || dx > radius)
+	  if(dx > radius || dx < -radius)
 	    continue;
 	  
 	  double dy = pos[1] - y0;
 	  if(IsPeriodic) dy=NEAREST(dy);
-	  if(dy < -radius || dy > radius)
+	  if(dy > radius || dy < -radius)
 	    continue;
 
 	  double dz = pos[2] - z0;
 	  if(IsPeriodic) dz=NEAREST(dz);
-	  if(dz < -radius || dz > radius)
+	  if(dz > radius || dz < -radius)
 	    continue;
 
 	  double r2 = dx * dx + dy * dy + dz * dz;
@@ -74,17 +74,17 @@ void OctTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
 	  auto &pos=node.way.s;
 	  double dx = pos[0] - x0;
 	  if(IsPeriodic) dx=NEAREST(dx);
-	  if(dx < -rmax || dx > rmax)
+	  if(dx > rmax || dx < -rmax)
 	    continue;
 	  
 	  double dy = pos[1] - y0;
 	  if(IsPeriodic) dy=NEAREST(dy);
-	  if(dy < -rmax || dy > rmax)
+	  if(dy > rmax || dy < -rmax)
 	    continue;
 
 	  double dz = pos[2] - z0;
 	  if(IsPeriodic) dz=NEAREST(dz);
-	  if(dz < -rmax || dz > rmax)
+	  if(dz > rmax || dz < -rmax)
 	    continue;
 
 	  node_id = node.way.nextnode;	/* ok, we need to open the node */
@@ -167,7 +167,7 @@ for(HBTInt i=0;i<snapshot.size();i++)
 cout<<"Found "<<GrpLen.size()<<" Groups\n";
 }
 
-void OctTree_t::TagNode(OctTreeCell_t &node, HBTInt grpid, vector <HBTInt> &group_tags, vector <HBTInt> &friends)
+inline void OctTree_t::TagNode(OctTreeCell_t &node, HBTInt grpid, vector <HBTInt> &group_tags, vector <HBTInt> &friends)
 {
   HBTInt end_node_id=node.way.sibling;
   HBTInt node_id=node.way.nextnode;
@@ -194,12 +194,13 @@ HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
 /*tag all the particles that are linked to seed with grpid
    * Note if system stack size is too small, this recursive routine may crash
    * in that case you should set:  ulimit -s unlimited  (bash) before running.
+   * this function should only be used with a geometric tree (ie, IsGravityTree=false)
    **/
 {
   bool IsPeriodic=HBTConfig.PeriodicBoundaryOn;
   auto &searchcenter=Snapshot->GetComovingPosition(seed);
   double x0=searchcenter[0], y0=searchcenter[1], z0=searchcenter[2];
-  double LinkLength2=LinkLength*LinkLength;
+  double LinkLength2=LinkLength*LinkLength, LinkLengthNode=LinkLength/1.74; //sqrt(3)
   
   HBTInt node_id = RootNodeId;
   
@@ -216,18 +217,15 @@ HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
       auto &pos=Snapshot->GetComovingPosition(pid);
       double dx = pos[0] - x0;
       if(IsPeriodic) dx=NEAREST(dx);
-      if(dx < -LinkLength || dx > LinkLength)
-	continue;
+      if(dx >LinkLength || dx <-LinkLength)	continue;
       
       double dy = pos[1] - y0;
       if(IsPeriodic) dy=NEAREST(dy);
-      if(dy < -LinkLength || dy > LinkLength)
-	continue;
+      if(dy >LinkLength || dy <-LinkLength)	continue;
       
       double dz = pos[2] - z0;
       if(IsPeriodic) dz=NEAREST(dz);
-      if(dz < -LinkLength || dz > LinkLength)
-	continue;
+      if(dz >LinkLength || dz <-LinkLength)	continue;
       
       double r2 = dx * dx + dy * dy + dz * dz;
       
@@ -244,27 +242,23 @@ HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
       if(node_id==node.way.nextnode)//closed node
 	continue;
       
-      double lenhalf=node.way.len;
-      if(!IsGravityTree) lenhalf/=2;
+      double lenhalf=node.way.len/2.;
       double rmax=lenhalf+LinkLength;
       
       auto &pos=node.way.s;
       double dx = pos[0] - x0;
       if(IsPeriodic) dx=NEAREST(dx);
-      if(dx < -rmax || dx > rmax)
-	continue;
+      if(dx > rmax || dx <-rmax)	continue;
       
       double dy = pos[1] - y0;
       if(IsPeriodic) dy=NEAREST(dy);
-      if(dy < -rmax || dy > rmax)
-	continue;
+      if(dy > rmax || dy <-rmax)	continue;
       
       double dz = pos[2] - z0;
       if(IsPeriodic) dz=NEAREST(dz);
-      if(dz < -rmax || dz > rmax)
-	continue;
+      if(dz > rmax || dz <-rmax)	continue;
       
-      if(node.way.len<LinkLength)//a tiny node, check if it fits entirely
+      if(lenhalf<LinkLengthNode)//a small node (max lenhalf=LinkLength/sqrt(3)), check if it fits entirely
       {
 	dx=dx>0?lenhalf+dx:lenhalf-dx;
 	dy=dy>0?lenhalf+dy:lenhalf-dy;
