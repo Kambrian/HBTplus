@@ -167,6 +167,28 @@ for(HBTInt i=0;i<snapshot.size();i++)
 cout<<"Found "<<GrpLen.size()<<" Groups\n";
 }
 
+void OctTree_t::TagNode(OctTreeCell_t &node, HBTInt grpid, vector <HBTInt> &group_tags, vector <HBTInt> &friends)
+{
+  HBTInt end_node_id=node.way.sibling;
+  HBTInt node_id=node.way.nextnode;
+  while(node_id!=end_node_id)
+  {
+    if(node_id<NumberOfParticles)
+    {
+      if(group_tags[node_id]<0)
+      {
+	group_tags[node_id]=grpid;
+	friends.push_back(node_id);
+      }
+      node_id=NextnodeFromParticle[node_id];
+    }
+    else
+      node_id=Nodes[node_id].way.nextnode;//open it straight-away
+  }
+  //short-circuit this node
+  node.way.nextnode=node.way.sibling;
+}
+
 HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
 				      vector <HBTInt> &group_tags, double LinkLength)
 /*tag all the particles that are linked to seed with grpid
@@ -218,11 +240,13 @@ HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
     else
     {
       auto & node = Nodes[node_id];
-      
       node_id = node.way.sibling;	/* in case the node can be discarded */
-      double rmax=node.way.len;
-      if(!IsGravityTree) rmax/=2;
-      rmax+=LinkLength;
+      if(node_id==node.way.nextnode)//closed node
+	continue;
+      
+      double lenhalf=node.way.len;
+      if(!IsGravityTree) lenhalf/=2;
+      double rmax=lenhalf+LinkLength;
       
       auto &pos=node.way.s;
       double dx = pos[0] - x0;
@@ -239,6 +263,19 @@ HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
       if(IsPeriodic) dz=NEAREST(dz);
       if(dz < -rmax || dz > rmax)
 	continue;
+      
+      if(node.way.len<LinkLength)//a tiny node, check if it fits entirely
+      {
+	dx=dx>0?lenhalf+dx:lenhalf-dx;
+	dy=dy>0?lenhalf+dy:lenhalf-dy;
+	dz=dz>0?lenhalf+dz:lenhalf-dz;
+	double r2 = dx*dx+dy*dy+dz*dz;
+	if(r2 < LinkLength2) //entire node can be used
+	{
+	  TagNode(node, grpid, group_tags, friends);
+	  continue;
+	}
+      }
       
       node_id = node.way.nextnode;	/* ok, we need to open the node */
     }

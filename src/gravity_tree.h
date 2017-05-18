@@ -64,6 +64,7 @@ public:
   HBTInt NearestNeighbour(const HBTxyz &searchcenter, HBTReal rguess);
   double SphDensity(const HBTxyz &cen, HBTReal & rguess);
   HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTInt> &GroupTags, double LinkLength);
+  void TagNode(OctTreeCell_t & node, HBTInt grpid, vector <HBTInt> &GroupTags, vector <HBTInt> &friends);
   ~OctTree_t()
   {
 	Clear();
