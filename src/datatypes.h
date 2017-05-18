@@ -176,7 +176,7 @@ typedef enum
 struct LocatedParticle_t
 {
   HBTInt id;
-  HBTReal d; //distance
+  HBTReal d; //distance**2
   LocatedParticle_t()=default;
   LocatedParticle_t(HBTInt id, HBTReal d):id(id),d(d)
   {}

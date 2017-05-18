@@ -341,7 +341,7 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
       if(m>mmax)
       {
 	mmax=m;
-	rmmax=subid.d;
+	rmmax=sqrt(subid.d);
       }
     }
   }
