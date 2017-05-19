@@ -13,6 +13,7 @@ using namespace std;
 #include "src/io/hbt_group_io.h"
 #include "src/gravity_tree.h"
 #include "src/linkedlist.h"
+#include "src/fof_builder.h"
 
 #define TREE_FOF 1
 #define LL_FOF 2
@@ -86,11 +87,14 @@ struct GrpIDCompor_t
 
 void build_group_catalogue(HBTReal linklength, Snapshot_t &snapshot, vector <halo_t> &halos)
 {
-vector <HBTInt> TagLen, ParticleTags;
 #if FOF_METHOD==TREE_FOF
-treesearch_linkgrp(linklength, snapshot, TagLen, ParticleTags);
+FoFBuilder_t builder(linklength, snapshot);
+builder.Link();
+auto &TagLen=builder.GrpLen;
+auto &ParticleTags=builder.GrpTags;
 #endif
 #if FOF_METHOD==LL_FOF
+vector <HBTInt> TagLen, ParticleTags;
 int ndiv=256;
 LinkedlistLinkGroup(linklength, snapshot, TagLen, ParticleTags, ndiv);
 #endif

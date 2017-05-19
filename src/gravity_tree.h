@@ -25,7 +25,7 @@ public:
 };
 class OctTree_t
 {
-private:  
+protected:  
   union OctTreeCell_t
   {
 	HBTInt sons[8];		/*!< temporary pointers to daughter nodes */
@@ -48,6 +48,7 @@ private:
   const Snapshot_t * Snapshot;
   HBTInt NumberOfParticles; //alias to Snapshot->GetSize().
   HBTInt & RootNodeId; //alias to NumberOfParticles
+private:
   void UpdateInternalNodes(HBTInt no,HBTInt sib,double len, const double center[3]);
   void UpdateSubnode(HBTInt son, HBTInt sib, double len, const double center[3], int subindex);
 public:
