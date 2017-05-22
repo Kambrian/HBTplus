@@ -76,16 +76,17 @@ void FoFBuilder_t::PullFriends(OctTreeCell_t &rootnode, const HBTxyz &searchcent
       if(GrpTags[pid]>=0) //already tagged 
 	continue;  
       
-      auto &pos=Snapshot->GetComovingPosition(pid);
-      double dx = pos[0] - x0;
+      auto &ppos=Snapshot->GetComovingPosition(pid);
+      double px=ppos[0], py=ppos[1], pz=ppos[2];
+      double dx = px - x0;
       if(IsPeriodic) dx=NEAREST(dx);
       if(dx >LinkLength || dx <-LinkLength)	continue;
       
-      double dy = pos[1] - y0;
+      double dy = py - y0;
       if(IsPeriodic) dy=NEAREST(dy);
       if(dy >LinkLength || dy <-LinkLength)	continue;
       
-      double dz = pos[2] - z0;
+      double dz = pz - z0;
       if(IsPeriodic) dz=NEAREST(dz);
       if(dz >LinkLength || dz <-LinkLength)	continue;
       
@@ -108,20 +109,21 @@ void FoFBuilder_t::PullFriends(OctTreeCell_t &rootnode, const HBTxyz &searchcent
       double rmax=lenhalf+LinkLength;
       
       auto &pos=node.way.s;
-      double dx = pos[0] - x0;
+      double px=pos[0], py=pos[1], pz=pos[2];
+      double dx = px - x0;
       if(IsPeriodic) dx=NEAREST(dx);
       if(dx > rmax || dx <-rmax)	continue;
       
-      double dy = pos[1] - y0;
+      double dy = py - y0;
       if(IsPeriodic) dy=NEAREST(dy);
       if(dy > rmax || dy <-rmax)	continue;
       
-      double dz = pos[2] - z0;
+      double dz = pz - z0;
       if(IsPeriodic) dz=NEAREST(dz);
       if(dz > rmax || dz <-rmax)	continue;
       
       //this small-node optimization does not appear to help much
-      if(node.way.mass>10&&lenhalf<LinkLengthNode)//a small node (max lenhalf=LinkLength/sqrt(3)), check if it fits entirely
+      if(node.way.mass>3&&lenhalf<LinkLengthNode)//a small node (max lenhalf=LinkLength/sqrt(3)), check if it fits entirely
       {
 	dx=dx>0?lenhalf+dx:lenhalf-dx;
 	dy=dy>0?lenhalf+dy:lenhalf-dy;
