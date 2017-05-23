@@ -123,7 +123,7 @@ void FoFBuilder_t::PullFriends(OctTreeCell_t &rootnode, const HBTxyz &searchcent
       if(dz > rmax || dz <-rmax)	continue;
       
       //this small-node optimization does not appear to help much
-      if(node.way.mass>3&&lenhalf<LinkLengthNode)//a small node (max lenhalf=LinkLength/sqrt(3)), check if it fits entirely
+      if(node.way.mass>5&&lenhalf<LinkLengthNode)//a small node (max lenhalf=LinkLength/sqrt(3)), check if it fits entirely
       {
 	dx=dx>0?lenhalf+dx:lenhalf-dx;
 	dy=dy>0?lenhalf+dy:lenhalf-dy;
