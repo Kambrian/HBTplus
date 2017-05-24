@@ -25,7 +25,7 @@ int main(int argc, char **argv)
   ofstream outfile;
   outfile.open(filename.str(), fstream::out|fstream::app);
   for(auto &&p: subsnap.Subhalos[subid].Particles)
-    outfile<<p.Id<<endl;
+    outfile<<p<<endl;
 //   FILE *fp;
 //   myfopen(fp, filename.str().c_str(), "w");
 //   fwrite(subsnap.Subhalos[subid].Particles.data(), sizeof(HBTInt), subsnap.Subhalos[subid].Particles.size(), fp);
