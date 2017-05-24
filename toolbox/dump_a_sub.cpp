@@ -18,13 +18,18 @@ int main(int argc, char **argv)
   SubhaloSnapshot_t subsnap;
   subsnap.Load(isnap, true);
 
-  FILE *fp;
+  cout<<subsnap.Subhalos[subid].Particles.size()<<endl;
+  
   stringstream filename;
   filename<<HBTConfig.SubhaloPath<<"/postproc/Subhalo_"<<isnap<<"."<<subid;
-  myfopen(fp, filename.str().c_str(), "w");
-  cout<<subsnap.Subhalos[subid].Particles.size()<<endl;
-  fwrite(subsnap.Subhalos[subid].Particles.data(), sizeof(HBTInt), subsnap.Subhalos[subid].Particles.size(), fp);
-  fclose(fp);
+  ofstream outfile;
+  outfile.open(filename.str(), fstream::out|fstream::app);
+  for(auto &&p: subsnap.Subhalos[subid].Particles)
+    outfile<<p.Id<<endl;
+//   FILE *fp;
+//   myfopen(fp, filename.str().c_str(), "w");
+//   fwrite(subsnap.Subhalos[subid].Particles.data(), sizeof(HBTInt), subsnap.Subhalos[subid].Particles.size(), fp);
+//   fclose(fp);
   
   return 0;
 }
