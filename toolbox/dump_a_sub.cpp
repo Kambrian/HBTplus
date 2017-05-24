@@ -13,15 +13,17 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-  int isnap=32, subid=22;
   HBTConfig.ParseConfigFile(argv[1]);
+  int isnap=atoi(argv[2]), subid=atoi(argv[3]);
   SubhaloSnapshot_t subsnap;
   subsnap.Load(isnap);
 
   cout<<subsnap.Subhalos[subid].Particles.size()<<endl;
   
   stringstream filename;
-  filename<<HBTConfig.SubhaloPath<<"/postproc/Subhalo_"<<isnap<<"."<<subid;
+  filename<<HBTConfig.SubhaloPath<<"/postproc";
+  mkdir(filename.str().c_str(), 0755);
+  filename<<"/Subhalo_"<<isnap<<"."<<subid;
   ofstream outfile;
   outfile.open(filename.str(), fstream::out|fstream::app);
   for(auto &&p: subsnap.Subhalos[subid].Particles)
