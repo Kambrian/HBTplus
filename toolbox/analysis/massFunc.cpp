@@ -329,7 +329,7 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
   #endif
   auto &cenpos=subsnap.Subhalos[cenid].ComovingMostBoundPosition;
   vector <LocatedParticle_t> sublist;
-  ll.SearchSphere(rmax, cenpos, sublist, 8, rmin);
+  ll.SearchShell(rmin, rmax, cenpos, sublist);
   Mlist.reserve(Mlist.size()+sublist.size());
   float mmax=0., rmmax=0.;
   for(auto &&subid: sublist)
@@ -341,7 +341,7 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
       if(m>mmax)
       {
 	mmax=m;
-	rmmax=subid.d;
+	rmmax=sqrt(subid.d);
       }
     }
   }

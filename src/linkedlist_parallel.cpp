@@ -20,14 +20,13 @@ LinkedlistPara_t::LinkedlistPara_t(int ndiv, PositionData_t *data, HBTReal boxsi
     LLs[thread_id].build(ndiv, &(Samples[thread_id]), boxsize, periodic);
   }
 }
-void LinkedlistPara_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds, int nmax_guess, HBTReal rmin)
+void LinkedlistPara_t::SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds)
 {//parallel version. not suitable for use inside another parallel region.
-  founds.clear();
 #pragma omp parallel for
   for(int thread_id=0;thread_id<LLs.size();thread_id++)
   {
     vector <LocatedParticle_t> thread_founds;
-    LLs[thread_id].SearchSphere(radius, searchcenter, thread_founds, nmax_guess, rmin);
+    LLs[thread_id].SearchShell(rmin, rmax, searchcenter, thread_founds);
     Samples[thread_id].restore_id(thread_founds);
     #pragma omp critical(insert_linklist_founds) //this prevents nested parallelization
     {
@@ -35,13 +34,12 @@ void LinkedlistPara_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, 
     }
   }
 }
-void LinkedlistPara_t::SearchSphereSerial(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds, int nmax_guess, HBTReal rmin)
+void LinkedlistPara_t::SearchShellSerial(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds)
 {//serial version, which can be safely run inside another parallel region
-  founds.clear();
   for(int thread_id=0;thread_id<LLs.size();thread_id++)
   {
     vector <LocatedParticle_t> thread_founds;
-    LLs[thread_id].SearchSphere(radius, searchcenter, thread_founds, nmax_guess, rmin);
+    LLs[thread_id].SearchShell(rmin, rmax, searchcenter, thread_founds);
     Samples[thread_id].restore_id(thread_founds);
     founds.insert(founds.end(), thread_founds.begin(), thread_founds.end());
   }

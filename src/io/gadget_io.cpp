@@ -170,12 +170,13 @@ void GadgetReader_t::Load()
   LoadGadgetHeader();
 
   Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);  
-  Cosmology.ParticleMass=Header.mass[TypeDM];
   Particles.resize(NumberOfParticleInFiles.back()+OffsetOfParticleInFiles.back());
   
 #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<Header.num_files; iFile++)
 	ReadGadgetFile(iFile);
+  
+  Cosmology.ParticleMass=Header.mass[TypeDM];//set after ReadGadgetFile() to fix non-confirming header
   
   cout<<" ( "<<Header.num_files<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 }
@@ -194,7 +195,20 @@ FortranBlock <dtype> block(fp, n_read, n_skip, NeedByteSwap);\
 	  NewParticles[i].Attr[j]=pblock[i][j];\
 }
 
-
+#ifdef DM_ONLY
+//read dm mass from block, to fix non-conforming header.
+#define ReadMassBlock(dtype) {\
+if((OffsetOfParticleInFiles[iFile]==0)&&MassDataPresent(TypeDM))\
+{\
+size_t n_skip_dm=0;\
+for(int itype=0;itype<TypeDM;itype++)\
+	  if(MassDataPresent(itype)) n_skip_dm+=header.npart[itype];\
+FortranBlock <dtype> block(fp, 1, n_skip_dm, NeedByteSwap);\
+Header.mass[TypeDM]=block[0];\
+cerr<<"WARNING: header has no DM particles mass recorded. set to first value from DM mass block: "<<block[0]<<endl;\
+}\
+}
+#else
 #define ReadMassBlock(dtype) {\
 size_t n_read_mass=0;\
 vector <HBTInt> offset_mass(TypeMax);\
@@ -220,6 +234,7 @@ FortranBlock <dtype> block(fp, n_read_mass, n_skip, NeedByteSwap);\
 	}\
   }\
 }
+#endif
 
 #define ReadEnergyBlock(dtype) {\
 FortranBlock <dtype> block(fp, header.npart[0], 0, NeedByteSwap);\
@@ -293,15 +308,15 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 	  for(HBTInt i=0;i<n_read;i++)
 		NewParticles[i].Id=id_now+i;
 	}
- 
-#ifndef DM_ONLY
-  #define MassDataPresent(i) ((0==header.mass[i])&&(header.npartTotal[i]))
+
+#define MassDataPresent(i) ((0==header.mass[i])&&(header.npart[i]))
   if(RealTypeSize==4)
 	ReadMassBlock(float)
   else
 	ReadMassBlock(double)
-#undef MassDataPresent
-
+#undef MassDataPresent	
+	
+#ifndef DM_ONLY	
 #ifdef HAS_THERMAL_ENERGY
   if(RealTypeSize==4)
 	ReadEnergyBlock(float)
@@ -316,6 +331,7 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 	  p[i].Type=static_cast<ParticleType_t>(itype);
   }
 #endif
+
 
   if(feof(fp))
   {

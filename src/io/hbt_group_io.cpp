@@ -17,7 +17,7 @@ namespace HBTGroupIO
   void GetHDFFileName(string &filename, int SnapshotIndex)
   {
     stringstream formater;
-    formater<<HBTConfig.SubhaloPath<<"/"<<"HaloSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
+    formater<<HBTConfig.HaloPath<<"/"<<"HaloSnap_"<<setw(3)<<setfill('0')<<SnapshotIndex<<".hdf5"; //or use snapshotid
     filename=formater.str();
   }
   

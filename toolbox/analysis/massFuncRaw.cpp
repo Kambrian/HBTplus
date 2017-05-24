@@ -120,7 +120,7 @@ void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara
     auto &central=subsnap.Subhalos[cenid];
     if(central.Nbound<=1) return;
     vector <LocatedParticle_t> sublist;
-    ll.SearchSphereSerial(rmax, central.ComovingMostBoundPosition, sublist, 8);
+    ll.SearchSphereSerial(rmax, central.ComovingMostBoundPosition, sublist);
     for(auto &&subid: sublist)
     {
 //         if(subid.id!=cenid)

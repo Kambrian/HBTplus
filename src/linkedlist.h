@@ -1,4 +1,5 @@
 #include "mymath.h"
+#include "snapshot.h"
 
 //TODO:discard the fortran-style ll; use struct or indexed table to parallelize the linklist!
 class PositionData_t
@@ -28,7 +29,7 @@ private:
   HBTInt Sub2Ind(int i, int j, int k);
   HBTInt GetHOC(int i, int j, int k);
   HBTInt GetHOCSafe(int i, int j, int k);
-  HBTReal Distance(const HBTxyz &x, const HBTxyz &y);
+  HBTReal Distance2(const HBTxyz &x, const HBTxyz &y);
 public:
   Linkedlist_t()=default;
   Linkedlist_t(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false)
@@ -36,7 +37,9 @@ public:
     build(ndiv, data, boxsize, periodic);
   }
   void build(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false);
-  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds, int nmax_guess=8, HBTReal rmin=-1.);
+  void SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds);
+  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds);
+  HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTInt> &group_tags, HBTReal LinkLength);
 };
 
 inline int Linkedlist_t::RoundGridId(int i)
@@ -70,3 +73,5 @@ inline HBTInt Linkedlist_t::GetHOCSafe(int i, int j, int k)
 {
   return HOC[Sub2Ind(FixGridId(i), FixGridId(j), FixGridId(k))];
 }
+
+extern void LinkedlistLinkGroup(HBTReal radius, const Snapshot_t &snapshot, vector <HBTInt> &GrpLen, vector <HBTInt> &GrpTags, int ndiv=256);
