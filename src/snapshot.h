@@ -40,7 +40,7 @@ struct Cosmology_t
   HBTReal OmegaM0;
   HBTReal OmegaLambda0;
   HBTReal ScaleFactor;
-  HBTReal ParticleMass;
+  HBTReal ParticleMass;//DM particle mass if available.
   
   //derived parameters:
   HBTReal Hz; //current Hubble param in internal units

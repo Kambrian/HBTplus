@@ -52,6 +52,8 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(SourceSubRelaxFactor)
   else TrySetPar(SubCoreSizeFactor)
   else TrySetPar(SubCoreSizeMin)
+  else TrySetPar(FoFLinkParam)
+  else TrySetPar(FoFSizeMin)
   else TrySetPar(TreeAllocFactor)
   else TrySetPar(TreeNodeOpenAngle)
   else TrySetPar(TreeMinNumOfCells)
@@ -184,14 +186,17 @@ void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_st
   }
   cout<<"Running "<<argv[0]<<" from snapshot "<<snapshot_start<<" to "<<snapshot_end<<" using configuration file "<<argv[1]<<endl;
 }
-
 void Parameter_t::DumpParameters()
+{
+  DumpParameters(SubhaloPath);
+}
+void Parameter_t::DumpParameters(const string &path)
 {
 #ifndef HBT_VERSION
   #define HBT_VERSION "unknown"
   cout<<"Warning: HBT_VERSION not set. Better write down which version you are using.\n";
 #endif
-  string filename=SubhaloPath+"/Parameters.log";
+  string filename=path+"/Parameters.log";
   ofstream version_file(filename, ios::out|ios::trunc);
   if(!version_file.is_open())
   {
@@ -248,6 +253,9 @@ void Parameter_t::DumpParameters()
   DumpPar(SourceSubRelaxFactor)
   DumpPar(SubCoreSizeFactor) 
   DumpPar(SubCoreSizeMin)
+  
+  DumpPar(FoFLinkParam)
+  DumpPar(FoFSizeMin)
   
   DumpPar(TreeAllocFactor)
   DumpPar(TreeNodeOpenAngle)

@@ -1,14 +1,6 @@
 #include "mymath.h"
 
 //TODO:discard the fortran-style ll; use struct or indexed table to parallelize the linklist!
-struct LocatedParticle_t
-{
-  HBTInt id;
-  HBTReal d; //distance
-  LocatedParticle_t()=default;
-  LocatedParticle_t(HBTInt id, HBTReal d):id(id),d(d)
-  {}
-};
 class PositionData_t
 {
 public:

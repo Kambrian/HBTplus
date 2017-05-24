@@ -173,5 +173,18 @@ typedef enum
   TypeMax
 } ParticleType_t;
 
+struct LocatedParticle_t
+{
+  HBTInt id;
+  HBTReal d; //distance
+  LocatedParticle_t()=default;
+  LocatedParticle_t(HBTInt id, HBTReal d):id(id),d(d)
+  {}
+};
+inline bool CompLocatedDistance(const LocatedParticle_t &a, const LocatedParticle_t &b)
+{
+  return a.d<b.d;
+}
+
 #define DATATYPES_INCLUDED
 #endif

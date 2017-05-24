@@ -122,8 +122,8 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
     return;
   }
   hid_t dset, file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  HBTInt snapshot_id;
-  ReadDataset(file, "SnapshotId", H5T_HBTInt, &snapshot_id);
+  int snapshot_id;
+  ReadDataset(file, "SnapshotId", H5T_NATIVE_INT, &snapshot_id);
   assert(snapshot_id==SnapshotId);
   
   ReadDataset(file, "/Cosmology/OmegaM0", H5T_HBTReal, &Cosmology.OmegaM0);

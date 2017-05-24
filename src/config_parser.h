@@ -59,6 +59,10 @@ public:
   HBTReal SubCoreSizeFactor; //coresize=Nbound*CoreSizeFactor, to get center coordinates for the KineticDistance test.
   HBTInt SubCoreSizeMin; //Minimum coresize
   
+  //only relevant if you use the FoF code shipped with HBT
+  float FoFLinkParam; //dimensionless linking length b.
+  int FoFSizeMin;
+  
   HBTReal TreeAllocFactor;
   HBTReal TreeNodeOpenAngle;
   HBTInt TreeMinNumOfCells;
@@ -97,6 +101,8 @@ public:
 	SourceSubRelaxFactor=3.;
 	SubCoreSizeFactor=0.25;
 	SubCoreSizeMin=20;
+	FoFLinkParam=0.2;
+	FoFSizeMin=20;
 	TreeAllocFactor=1.; /* a value of 2 should be more than sufficient*/
 	TreeNodeOpenAngle=0.45;
 	TreeMinNumOfCells=500;
@@ -108,6 +114,7 @@ public:
   void ParseConfigFile(const char * param_file);
   void SetParameterValue(const string &line);
   void CheckUnsetParameters();
+  void DumpParameters(const string &path);
   void DumpParameters();
 };
 
