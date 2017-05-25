@@ -452,8 +452,11 @@ HBTInt Subhalo_t::KickNullParticles()
   it_end=Particles.end();
   for(;it!=it_end;++it)//unbound particles
   {
-	if(it!=it_save)  *it_save=move(*it);
+	if(it->Id!=SpecialConst::NullParticleId)//there will be consumed particles
+	{
+	  if(it!=it_save)  *it_save=move(*it);
 	  ++it_save;
+	}
   }
   Particles.resize(it_save-it_begin);
   
