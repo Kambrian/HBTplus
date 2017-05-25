@@ -161,7 +161,7 @@ class ParticleSnapshot_t: public Snapshot_t
 public:
   vector <Particle_t> Particles;
   HBTInt NumberOfParticlesOnAllNodes;
-  vector <HBTInt> ProcessIdRanges;
+  vector <HBTInt> ProcessIdRanges; //IdRange on each processor is [ProcessIdRanges[i], ProcessIdRanges[i+1]).
   
   ParticleSnapshot_t(): Snapshot_t(), Particles(), ParticleHash(), MappedHash(), FlatHash(), NumberOfParticlesOnAllNodes(0)
   {

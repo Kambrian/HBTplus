@@ -159,12 +159,14 @@ void ParticleExchanger_t<Halo_T>::SendParticles()
   for(auto it=LocalParticles.begin(); it!=LocalParticles.end();++it)
   {
 	while(it->Id>=snap.ProcessIdRanges[rank])
+	{
+	  if(rank==world.size()) //no particle id should exceed ProcessIdRange.back()
+	  {    
+	    cerr<<"Error: invalid particle id: "<<it->Id<<endl;
+	    exit(1);
+	  }
 	  LocalIterators[rank++]=it;
-  }
-  if(rank>world.size())//no particle id should exceed ProcessIdRange.back()
-  {
-	cerr<<"Error: invalid particle id: "<<LocalParticles.back().Id<<endl;
-	exit(1);
+	}
   }
   while(rank<world.size())
 	LocalIterators[rank++]=LocalParticles.end();
