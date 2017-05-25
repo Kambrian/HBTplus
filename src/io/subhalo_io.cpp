@@ -147,7 +147,7 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const SubRe
 	}
   }
 
-  cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
+//   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
   
   HBTInt NumSubs=Subhalos.size(), NumSubsAll_loaded=0;
   MPI_Reduce(&NumSubs, &NumSubsAll_loaded, 1, MPI_HBT_INT, MPI_SUM, 0, world.Communicator);
@@ -159,6 +159,7 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const SubRe
 	  msg<<"Error reading SubSnap "<<snapshot_index<<": total number of subhaloes expected="<<TotNumberOfSubs<<", loaded="<<NumSubsAll_loaded<<endl;
 	  throw runtime_error(msg.str().c_str());
 	}
+	cout<<TotNumberOfSubs<<" subhalos loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
   }
 }
 void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
@@ -261,9 +262,13 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
 
 void SubhaloSnapshot_t::Save(MpiWorker_t &world)
 {
-  mkdir(GetSubDir().c_str(), 0755);
+  string subdir=GetSubDir();
+  mkdir(subdir.c_str(), 0755);
+    
   HBTInt NumSubsAll=0, NumSubs=Subhalos.size();
   MPI_Allreduce(&NumSubs, &NumSubsAll, 1, MPI_HBT_INT, MPI_SUM, world.Communicator);
+  
+  if(world.rank()==0) cout<<"saving "<<NumSubsAll<<" subhalos to "<<subdir<<endl;
   for(int i=0, ireader=0;i<world.size();i++, ireader++)
   {
 	if(ireader==HBTConfig.MaxConcurrentIO) 
@@ -281,7 +286,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 {
   string filename;
   GetSubFileName(filename, iFile);
-  cout<<"Saving "<<Subhalos.size()<<" subhaloes to "<<filename<<"..."<<endl;
+//   cout<<"Saving "<<Subhalos.size()<<" subhaloes to "<<filename<<"..."<<endl;
   hid_t file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   hsize_t ndim=1, dim_atom[]={1};
@@ -383,7 +388,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
   H5Fclose(file);
   
   GetSubFileName(filename, iFile, "Src");
-  cout<<"Saving "<<Subhalos.size()<<" subhaloes to "<<filename<<"..."<<endl;
+//   cout<<"Saving "<<Subhalos.size()<<" subhaloes to "<<filename<<"..."<<endl;
   file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5T_NATIVE_INT);
   for(HBTInt i=0;i<vl.size();i++)
@@ -391,6 +396,6 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
   writeHDFmatrix(file, vl.data(), "SrchaloParticles", ndim, dim_sub, H5T_HBTIntArr);
   H5Fclose(file);
   H5Tclose(H5T_HBTIntArr);
-  cout<<Subhalos.size()<<" subhaloes saved: "<<MemberTable.NBirth<<" birth, "<< MemberTable.NFake<<" fake.\n";
+//   cout<<Subhalos.size()<<" subhaloes saved: "<<MemberTable.NBirth<<" birth, "<< MemberTable.NFake<<" fake.\n";
 }
 

@@ -185,5 +185,5 @@ void ParticleSnapshot_t::ExchangeParticles(MpiWorker_t &world)
   ProcessIdRanges.back()=IdMax+1;
   MPI_Bcast(&ProcessIdRanges.back(), 1, MPI_HBT_INT, world.size()-1, world.Communicator);
   
-  cout<<Particles.size()<<" particles received on node "<<world.rank()<<": IdRange=("<<IdMin<<","<<IdMax<<") "<<endl;
+//   cout<<Particles.size()<<" particles received on node "<<world.rank()<<": IdRange=("<<IdMin<<","<<IdMax<<") "<<endl;
 }

@@ -48,6 +48,8 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
   
   if(fill_particle_hash)
 	FillParticleHash();
+  
+  if(world.rank()==0) cout<<NumberOfParticlesOnAllNodes<<" particles loaded at Snapshot "<<snapshot_index<<"("<<SnapshotId<<")"<<endl;
 }
 
 #ifdef TEST_snapshot_io

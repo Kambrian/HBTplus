@@ -244,7 +244,7 @@ void GadgetReader_t::Load(MpiWorker_t &world)
 	}
   }
   
-  cout<<" ( "<<Header.num_files<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
+//   cout<<" ( "<<Header.num_files<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 }
 
 #define ReadScalarBlock(dtype, Attr) {\

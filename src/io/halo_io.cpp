@@ -44,6 +44,11 @@ void HaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index)
     TotNumberOfParticles+=np;
     if(np>NumPartOfLargestHalo) NumPartOfLargestHalo=np;
   }
+  
+  HBTInt NumHalos=Halos.size(), NumHalosAll=0;
+  MPI_Reduce(&NumHalos, &NumHalosAll, 1, MPI_HBT_INT, MPI_SUM, 0, world.Communicator);
+  if(world.rank()==0)
+    cout<<NumHalosAll<<" groups loaded at snapshot "<<snapshot_index<<"("<<SnapshotId<<")"<<endl;
 }
 
 #ifdef TEST_halo_io

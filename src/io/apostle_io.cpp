@@ -389,8 +389,8 @@ void ApostleReader_t::LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <P
 	}
   }
     
-  cout<<endl;
-  cout<<" ( "<<Header.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
+//   cout<<endl;
+//   cout<<" ( "<<Header.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 //   cout<<" Particle[0]: x="<<Particles[0].ComovingPosition<<", v="<<Particles[0].PhysicalVelocity<<", m="<<Particles[0].Mass<<endl;
 //   cout<<" Particle[2]: x="<<Particles[2].ComovingPosition<<", v="<<Particles[2].PhysicalVelocity<<", m="<<Particles[2].Mass<<endl;
 //   cout<<" Particle[end]: x="<<Particles.back().ComovingPosition<<", v="<<Particles.back().PhysicalVelocity<<", m="<<Particles.back().Mass<<endl;
@@ -425,7 +425,6 @@ void ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< Hal
   }
   bool FlagReadId=true; //!HBTConfig.GroupLoadedIndex;
   
-  cout<<"reading group files: ";
   for(int i=0, ireader=0;i<world.size();i++, ireader++)
   {
 	if(ireader==HBTConfig.MaxConcurrentIO) 
@@ -491,10 +490,10 @@ void ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< Hal
   
   ExchangeAndMerge(world, Halos);
   
-  cout<<Halos.size()<<" groups loaded";
-  if(Halos.size()) cout<<" : "<<Halos[0].Particles.size();
-  if(Halos.size()>1) cout<<","<<Halos[1].Particles.size()<<"...";
-  cout<<endl;
+//   cout<<Halos.size()<<" groups loaded";
+//   if(Halos.size()) cout<<" : "<<Halos[0].Particles.size();
+//   if(Halos.size()>1) cout<<","<<Halos[1].Particles.size()<<"...";
+//   cout<<endl;
   
 //   HBTInt np=0;
 //   for(auto &&h: Halos)

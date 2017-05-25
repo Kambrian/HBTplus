@@ -62,6 +62,7 @@ int main(int argc, char **argv)
 	subsnap.PrepareCentrals(world, halosnap);
 	
 	timer.Tick(world.Communicator);
+	if(world.rank()==0) cout<<"unbinding...\n";
 	subsnap.RefineParticles();
 	
 	timer.Tick(world.Communicator);
@@ -69,8 +70,6 @@ int main(int argc, char **argv)
 	
 	timer.Tick(world.Communicator);
 	subsnap.UpdateTracks(world, halosnap);
-	
-	cout<<" start to save "<<subsnap.Subhalos.size()<<" subs on thread "<<world.rank()<<endl;
 	
 	timer.Tick(world.Communicator);
 	subsnap.Save(world);

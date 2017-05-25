@@ -448,12 +448,13 @@ void Subhalo_t::TruncateSource()
 void SubhaloSnapshot_t::RefineParticles()
 {//it's more expensive to build an exclusive list. so do inclusive here. 
   //TODO: ensure the inclusive unbinding is stable (contaminating particles from big subhaloes may hurdle the unbinding
-#ifdef _OPENMP
+  
+/*#ifdef _OPENMP
  if(ParallelizeHaloes) cout<<"Unbinding with HaloPara...\n";
  else cout<<"Unbinding with ParticlePara...\n";
 #else
  cout<<"Unbinding..."<<endl;
-#endif
+#endif*/
 #ifdef INCLUSIVE_MASS
   #pragma omp parallel for schedule(dynamic,1) if(ParallelizeHaloes)
   for(HBTInt subid=0;subid<Subhalos.size();subid++)

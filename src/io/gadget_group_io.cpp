@@ -452,9 +452,9 @@ void Load(MpiWorker_t & world, int SnapshotId, vector <Halo_t> &Halos)
   ParticleIdBuffer_t().swap(ParticleBuffer);
   CountBuffer_t().swap(HaloLenBuffer);
     
-  cout<<"Finished reading "<<Halos.size()<<" groups ("<<thistask.npart<<" particles) from file "<<thistask.ifile_begin<<" to "<<thistask.ifile_end-1<<" (total "<<FileCounts<<" files) on thread "<<world.rank()<<endl;  
-  if(Halos.size())
-	cout<<"Halos loaded: "<<Halos.front().HaloId<<"-"<<Halos.back().HaloId<<endl; 
+//   cout<<"Finished reading "<<Halos.size()<<" groups ("<<thistask.npart<<" particles) from file "<<thistask.ifile_begin<<" to "<<thistask.ifile_end-1<<" (total "<<FileCounts<<" files) on thread "<<world.rank()<<endl;  
+//   if(Halos.size())
+// 	cout<<"Halos loaded: "<<Halos.front().HaloId<<"-"<<Halos.back().HaloId<<endl; 
 }
 
 bool IsGadgetGroup(const string &GroupFileFormat)
