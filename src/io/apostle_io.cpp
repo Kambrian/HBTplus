@@ -615,7 +615,7 @@ static void DecideTargetProcessor(MpiWorker_t& world, vector< Halo_t >& Halos, v
   HBTInt MaxHaloId=0; 
   if(Halos.size()) MaxHaloId=Halos.back().HaloId;
   MPI_Allreduce(MPI_IN_PLACE, &MaxHaloId, 1, MPI_HBT_INT, MPI_MAX, world.Communicator);
-  HBTInt ndiv=MaxHaloId/world.size();
+  HBTInt ndiv=(++MaxHaloId)/world.size();
   if(MaxHaloId%world.size()) ndiv++;
   vector <int> SendSizes(world.size(),0), SendOffsets(world.size()), RecvSizes(world.size()), RecvOffsets(world.size());
   for(HBTInt i=0;i<Halos.size();i++)
