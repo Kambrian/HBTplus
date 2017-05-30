@@ -62,6 +62,7 @@ public:
   //only relevant if you use the FoF code shipped with HBT
   float FoFLinkParam; //dimensionless linking length b.
   int FoFSizeMin;
+  float FoFDarkMatterMassFraction; 
   
   HBTReal TreeAllocFactor;
   HBTReal TreeNodeOpenAngle;
@@ -103,6 +104,7 @@ public:
 	SubCoreSizeMin=20;
 	FoFLinkParam=0.2;
 	FoFSizeMin=20;
+	FoFDarkMatterMassFraction=1.0;
 	TreeAllocFactor=1.; /* a value of 2 should be more than sufficient*/
 	TreeNodeOpenAngle=0.45;
 	TreeMinNumOfCells=500;

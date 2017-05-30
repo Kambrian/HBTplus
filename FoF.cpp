@@ -45,7 +45,7 @@ HBTReal r;
 
 isnap=snapshot_start;
 ParticleSnapshot_t snapshot(isnap, false);
-double mean_density=snapshot.Cosmology.OmegaM0*3.*PhysicalConst::H0*PhysicalConst::H0/8./M_PI/PhysicalConst::G;
+double mean_density=HBTConfig.FoFDarkMatterMassFraction*snapshot.Cosmology.OmegaM0*3.*PhysicalConst::H0*PhysicalConst::H0/8./M_PI/PhysicalConst::G;
 
 
 #ifdef DM_ONLY
