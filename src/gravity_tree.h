@@ -25,15 +25,15 @@ public:
 };
 class OctTree_t
 {
-private:  
+protected:  
   union OctTreeCell_t
   {
 	HBTInt sons[8];		/*!< temporary pointers to daughter nodes */
 	struct
 	{
-	HBTReal s[3];               /*!< center of mass of node (gravity tree)*/
+	HBTReal s[3];               /*!< center of mass of node (gravity tree); geocenter for geotree*/
 	HBTReal len;		/*!< sidelength of treenode */
-	HBTReal mass;            /*!< mass of node */
+	HBTReal mass;            /*!< mass of node (gravity tree); counts of particles for geotree */
 	HBTInt sibling;         /*!< this gives the next node in the walk in case the current node can be used */
 	HBTInt nextnode;        /*!< this gives the next node in case the current node needs to be opened */
 	}way;
@@ -48,6 +48,7 @@ private:
   const Snapshot_t * Snapshot;
   HBTInt NumberOfParticles; //alias to Snapshot->GetSize().
   HBTInt & RootNodeId; //alias to NumberOfParticles
+private:
   void UpdateInternalNodes(HBTInt no,HBTInt sib,double len, const double center[3]);
   void UpdateSubnode(HBTInt son, HBTInt sib, double len, const double center[3], int subindex);
 public:
@@ -64,6 +65,7 @@ public:
   HBTInt NearestNeighbour(const HBTxyz &searchcenter, HBTReal rguess);
   double SphDensity(const HBTxyz &cen, HBTReal & rguess);
   HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTInt> &GroupTags, double LinkLength);
+  void TagNode(OctTreeCell_t & node, HBTInt grpid, vector <HBTInt> &GroupTags, vector <HBTInt> &friends);
   ~OctTree_t()
   {
 	Clear();

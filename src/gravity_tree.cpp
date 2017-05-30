@@ -69,10 +69,14 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const dou
       pp=sons[jj];
       if(p<NumberOfParticles)
       {
-	thismass=Snapshot->GetMass(p);
-	mass+=thismass;
 	if(IsGravityTree)
+	{
+	  thismass=Snapshot->GetMass(p);
+	  mass+=thismass;
 	  VectorAdd(CoM, Snapshot->GetComovingPosition(p), thismass);
+	}
+	else
+	  mass++;
 	NextnodeFromParticle[p]=pp;
       }
       else
@@ -87,10 +91,14 @@ void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const dou
   }
   if(pp<NumberOfParticles)//the last son
   {			
-    thismass=Snapshot->GetMass(pp);
-    mass+=thismass;
     if(IsGravityTree)
+    {
+      thismass=Snapshot->GetMass(pp);
+      mass+=thismass;
       VectorAdd(CoM, Snapshot->GetComovingPosition(pp), thismass);
+    }
+    else
+      mass++;
     NextnodeFromParticle[pp]=sib;
   }
   else

@@ -42,8 +42,16 @@ private:
   vector <PositionSample_t> Samples;
 public:
   LinkedlistPara_t(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false); 
-  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds, int nmax_guess=8, HBTReal rmin=-1.);
-  void SearchSphereSerial(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds, int nmax_guess=8, HBTReal rmin=-1.);
+  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds)
+  {
+    SearchShell(-1., radius, searchcenter, founds);
+  }
+  void SearchSphereSerial(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds)
+  {
+    SearchShellSerial(-1., radius, searchcenter, founds);
+  }
+  void SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds);
+  void SearchShellSerial(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds);
 };
 
 

@@ -10,8 +10,23 @@ using namespace std;
 #include "src/halo.h"
 #include "src/subhalo.h"
 #include "src/mymath.h"
-#include "src/gravity_tree.h"
 #include "src/io/hbt_group_io.h"
+#include "src/gravity_tree.h"
+#include "src/linkedlist.h"
+#include "src/fof_builder.h"
+
+#define TREE_FOF 1
+#define LL_FOF 2
+/*Notes on fof performance:
+ * Tree search scales better than LinkedList as clustering increases.
+ * LinkedList search is faster when the cell size is smaller, maybe saturates when each cell contains ~1 particle. 
+ * For weakly clustered data (high redshift), linkedlist can be faster than tree search; but this is useless, since tree search is already fast enough at high redshift as well.
+ * In highly clustered region, the spatial complexity (memory consumption) can be quite high when trying to reach 1 particle cell size. While the tree code spatial complexity is acceptable (~2times particles).
+ * This means tree search is perferred over LL.
+*/
+#ifndef FOF_METHOD 
+#define FOF_METHOD TREE_FOF
+#endif
 
 typedef vector <HBTInt> halo_t;
 void build_group_catalogue(HBTReal linklength, Snapshot_t &snapshot, vector <halo_t> & halos);
@@ -72,9 +87,17 @@ struct GrpIDCompor_t
 
 void build_group_catalogue(HBTReal linklength, Snapshot_t &snapshot, vector <halo_t> &halos)
 {
+#if FOF_METHOD==TREE_FOF
+FoFBuilder_t builder(linklength, snapshot);
+builder.Link();
+auto &TagLen=builder.GrpLen;
+auto &ParticleTags=builder.GrpTags;
+#endif
+#if FOF_METHOD==LL_FOF
 vector <HBTInt> TagLen, ParticleTags;
-treesearch_linkgrp(linklength, snapshot, TagLen, ParticleTags);
-
+int ndiv=256;
+LinkedlistLinkGroup(linklength, snapshot, TagLen, ParticleTags, ndiv);
+#endif
 //sort tags according to taglen
 vector <HBTInt> SortedTags(TagLen.size());
 for(HBTInt i=0;i<SortedTags.size();i++)
