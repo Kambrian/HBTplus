@@ -3,9 +3,9 @@
 #define FOF_BUILDER_H_INCLUDED
 #include <exception>
 
-#include "gravity_tree.h"
+#include "geometric_tree.h"
 
-class FoFBuilder_t: public OctTree_t
+class FoFBuilder_t: public GeoTree_t
 {
 private:
   double LinkLength2, LinkLengthNode;
@@ -13,14 +13,14 @@ private:
 public:
   vector <HBTInt> GrpLen, GrpTags;
   HBTReal LinkLength;
-  FoFBuilder_t(HBTReal linklength, const Snapshot_t &snapshot): LinkLength(linklength), OctTree_t()
+  FoFBuilder_t(HBTReal linklength, const Snapshot_t &snapshot): LinkLength(linklength), GeoTree_t()
   {
     IsPeriodic=HBTConfig.PeriodicBoundaryOn;
     
     LinkLength2=LinkLength*LinkLength;
     LinkLengthNode=LinkLength/3.;//check for node entirely when nodesize is small enough
     cout<<"Building tree...\n"<<flush;
-    Build(snapshot, 0, false);
+    Build(snapshot);
     GrpTags.assign(snapshot.size(), -1);
   }
   void Link();

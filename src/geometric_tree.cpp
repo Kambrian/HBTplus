@@ -1,18 +1,87 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
-#include <time.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cmath>
+#include <cstring>
 
-#include "datatypes.h"
-#include "gravity_tree.h"
+#include "mymath.h"
+#include "config_parser.h"
+#include "geometric_tree.h"
 
-HBTReal GuessNeighbourRange(HBTInt n_neighbours, HBTReal number_density_guess)
+inline void shift_center(const double oldcenter[3], int son, double delta, double newcenter[3])
+{
+  for(int dim=0;dim<3;dim++)
+  {
+    int bit=get_bit(son, dim);
+    if(bit)
+      newcenter[dim]=oldcenter[dim]+delta;
+    else
+      newcenter[dim]=oldcenter[dim]-delta;
+  }
+}
+
+void GeoTree_t::ProcessNode(HBTInt nodeid, HBTInt nextid, int sonid, HBTInt &mass, double len, const double center[3])
+{     
+      if(nodeid<NumberOfParticles)
+      {
+	mass++;
+	NextnodeFromParticle[nodeid]=nextid;
+      }
+      else
+      {
+	mass+=Nodes[nodeid].way.mass;
+	
+	if(len>=HBTConfig.TreeNodeResolution)//only divide if above resolution;
+	{
+	  double newcenter[3];
+	  shift_center(center, sonid, len/4., newcenter);
+	  UpdateInternalNodes(nodeid, nextid, len/2., newcenter);
+	}
+	else
+	  UpdateInternalNodes(nodeid, nextid, len, center);//otherwise we don't divide the node seriouly so we don't have finer node length
+      }
+}
+
+inline void GeoTree_t::FillNodeCenter(HBTInt nodeid, const double center[3])
+{
+  copyXYZ(Nodes[nodeid].way.s, center);
+}
+
+void GeoTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const double center[3])
+{
+  HBTInt p,pp,sons[8];
+  int j,jj,i;
+  HBTInt mass=0;
+  
+  for(j=0;j<8;j++)
+    sons[j]=Nodes[no].sons[j];//backup sons
+  Nodes[no].way.len=len;
+  Nodes[no].way.sibling=sib;
+  for(i=0;sons[i]<0;i++);//find first son
+  jj=i;
+  pp=sons[jj];
+  Nodes[no].way.nextnode=pp;
+  for(i++;i<8;i++)//find sons in pairs,ie. find sibling
+  {
+    if(sons[i]>=0)//ok, found a sibling
+    {
+      j=jj;
+      p=pp;
+      jj=i;
+      pp=sons[jj];
+      ProcessNode(p, pp, j, mass, len, center);
+    }
+  }
+  ProcessNode(pp, sib, jj, mass, len, center);
+  Nodes[no].way.mass=mass;
+  FillNodeCenter(no, center);
+}
+
+inline HBTReal GuessNeighbourRange(HBTInt n_neighbours, HBTReal number_density_guess)
 {
   return pow(3 * n_neighbours / (4 * 3.141593) / number_density_guess, 1.0 / 3);
 }
 
-HBTInt OctTree_t::NearestNeighbour(const HBTxyz & cen, HBTReal rguess)
+HBTInt GeoTree_t::NearestNeighbour(const HBTxyz & cen, HBTReal rguess)
 {
   vector <LocatedParticle_t> founds;
   Search(cen, rguess, founds);
@@ -24,7 +93,7 @@ HBTInt OctTree_t::NearestNeighbour(const HBTxyz & cen, HBTReal rguess)
   return min_element(founds.begin(), founds.end(), CompLocatedDistance)->id;	
 }
 
-void OctTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <LocatedParticle_t> &founds)
+void GeoTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <LocatedParticle_t> &founds)
 {/*find a list of particles from the tree, located within radius around searchcenter,
   * and APPEND their particle_id and distance^2 to founds */
   bool IsPeriodic=HBTConfig.PeriodicBoundaryOn;
@@ -67,8 +136,7 @@ void OctTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
 	  auto &node = Nodes[node_id];
 
 	  node_id = node.way.sibling;	/* in case the node can be discarded */
-	  double rmax=node.way.len;
-	  if(!IsGravityTree) rmax/=2;
+	  double rmax=node.way.len/2.;
 	  rmax+=radius;
 	  
 	  auto &pos=node.way.s;
@@ -93,7 +161,7 @@ void OctTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
 }
 
 #define SPH_DENS_NGB 64
-double OctTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
+double GeoTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
 {
   vector <LocatedParticle_t> founds;
   Search(cen, hguess, founds);
@@ -141,8 +209,8 @@ void treesearch_linkgrp(HBTReal radius, const Snapshot_t &snapshot, vector <HBTI
 GrpTags.assign(snapshot.size(), -1);
 
 cout<<"Building tree...\n"<<flush;
-OctTree_t tree;
-tree.Build(snapshot, 0, false);
+GeoTree_t tree;
+tree.Build(snapshot);
 
 cout<<"Linking Groups...\n"<<flush;
 HBTInt grpid=0;
@@ -167,7 +235,7 @@ for(HBTInt i=0;i<snapshot.size();i++)
 cout<<"Found "<<GrpLen.size()<<" Groups\n";
 }
 
-inline void OctTree_t::TagNode(OctTreeCell_t &node, HBTInt grpid, vector <HBTInt> &group_tags, vector <HBTInt> &friends)
+inline void GeoTree_t::TagNode(OctTreeCell_t &node, HBTInt grpid, vector <HBTInt> &group_tags, vector <HBTInt> &friends)
 {
   HBTInt end_node_id=node.way.sibling;
   HBTInt node_id=node.way.nextnode;
@@ -189,12 +257,12 @@ inline void OctTree_t::TagNode(OctTreeCell_t &node, HBTInt grpid, vector <HBTInt
   node.way.nextnode=node.way.sibling;
 }
 
-HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
+HBTInt GeoTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
 				      vector <HBTInt> &group_tags, double LinkLength)
 /*tag all the particles that are linked to seed with grpid
    * Note if system stack size is too small, this recursive routine may crash
    * in that case you should set:  ulimit -s unlimited  (bash) before running.
-   * this function should only be used with a geometric tree (ie, IsGravityTree=false)
+   * this function should only be used with a geometric tree 
    **/
 {
   bool IsPeriodic=HBTConfig.PeriodicBoundaryOn;
@@ -282,3 +350,5 @@ HBTInt OctTree_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid,
   
   return nfriends; //excluding the seed particle
 }
+
+template class OctTree_t<GeoTreeCell_t>;//to wake up the functions for this type; trick!
