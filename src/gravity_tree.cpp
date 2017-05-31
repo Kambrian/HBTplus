@@ -33,15 +33,15 @@ void GravityTree_t::ProcessNode(HBTInt nodeid, HBTInt nextid, int sonid, double 
 	NextnodeFromParticle[nodeid]=nextid;
       }
       else
-      {
-	double thismass=Nodes[nodeid].way.mass;
-	mass+=thismass;
-	VectorAdd(CoM, Nodes[nodeid].way.s, thismass);
-	
+      {	
 	if(len>=HBTConfig.TreeNodeResolution)//only divide if above resolution;
 	  UpdateInternalNodes(nodeid, nextid, len/2., center); 
 	else
 	  UpdateInternalNodes(nodeid, nextid, len, center);//otherwise we don't divide the node seriouly so we don't have finer node length
+	
+	double thismass=Nodes[nodeid].way.mass;//get mass after updating internal nodes
+	mass+=thismass;
+	VectorAdd(CoM, Nodes[nodeid].way.s, thismass);
       }
 }
 

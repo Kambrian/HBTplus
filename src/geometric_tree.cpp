@@ -27,9 +27,7 @@ void GeoTree_t::ProcessNode(HBTInt nodeid, HBTInt nextid, int sonid, HBTInt &mas
 	NextnodeFromParticle[nodeid]=nextid;
       }
       else
-      {
-	mass+=Nodes[nodeid].way.mass;
-	
+      {	
 	if(len>=HBTConfig.TreeNodeResolution)//only divide if above resolution;
 	{
 	  double newcenter[3];
@@ -38,6 +36,8 @@ void GeoTree_t::ProcessNode(HBTInt nodeid, HBTInt nextid, int sonid, HBTInt &mas
 	}
 	else
 	  UpdateInternalNodes(nodeid, nextid, len, center);//otherwise we don't divide the node seriouly so we don't have finer node length
+
+	mass+=Nodes[nodeid].way.mass;//update mass after updating internal nodes
       }
 }
 
