@@ -38,13 +38,13 @@ namespace HBTGroupIO
     hsize_t dims[1];
     GetDatasetDims(dset, dims);
     HBTInt nhalos=dims[0];
+    Halos.resize(nhalos);
     vector <hvl_t> vl(nhalos);
     HBTInt ntotal=0;
     if(nhalos)
     {
       hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
       H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-      H5Tclose(H5T_HBTIntArr);
       for(HBTInt i=0;i<nhalos;i++)
       {
 	Halos[i].Particles.resize(vl[i].len);
