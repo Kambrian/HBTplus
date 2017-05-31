@@ -10,6 +10,9 @@ class FoFBuilder_t: public GeoTree_t
 private:
   double LinkLength2, LinkLengthNode;
   bool IsPeriodic;
+  HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid);
+  void PullFriends(OctTree_t::OctTreeCell_t& rootnode, const HBTxyz& searchcenter, HBTInt grpid, vector< HBTInt >& friends);
+  void PullNode(OctTreeCell_t &node, HBTInt grpid, vector <HBTInt> &friends);
 public:
   vector <HBTInt> GrpLen, GrpTags;
   HBTReal LinkLength;
@@ -24,9 +27,6 @@ public:
     GrpTags.assign(snapshot.size(), -1);
   }
   void Link();
-  HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid);
-  void PullFriends(OctTree_t::OctTreeCell_t& rootnode, const HBTxyz& searchcenter, HBTInt grpid, vector< HBTInt >& friends);
-  void PullNode(OctTreeCell_t &node, HBTInt grpid, vector <HBTInt> &friends);
 };
 
 #endif	
