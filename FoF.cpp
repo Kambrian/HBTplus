@@ -7,11 +7,7 @@ using namespace std;
 #include "src/datatypes.h"
 #include "src/config_parser.h"
 #include "src/snapshot.h"
-#include "src/halo.h"
-#include "src/subhalo.h"
-#include "src/mymath.h"
 #include "src/io/hbt_group_io.h"
-#include "src/gravity_tree.h"
 #include "src/linkedlist.h"
 #include "src/fof_builder.h"
 
@@ -28,6 +24,10 @@ using namespace std;
 #define FOF_METHOD TREE_FOF
 #endif
 
+#ifndef DM_ONLY
+  #error "fof currently only works on a single particle type"
+#endif
+
 typedef vector <HBTInt> halo_t;
 void build_group_catalogue(HBTReal linklength, Snapshot_t &snapshot, vector <halo_t> & halos);
 
@@ -40,35 +40,28 @@ int snapshot_start, snapshot_end, isnap;
 ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
 mkdir(HBTConfig.HaloPath.c_str(), 0755);
 HBTConfig.DumpParameters(HBTConfig.HaloPath);
- 
-HBTReal r;
 
-isnap=snapshot_start;
-ParticleSnapshot_t snapshot(isnap, false);
-double mean_density=HBTConfig.FoFDarkMatterMassFraction*snapshot.Cosmology.OmegaM0*3.*PhysicalConst::H0*PhysicalConst::H0/8./M_PI/PhysicalConst::G;
-
-
-#ifdef DM_ONLY
-double ParticleMass=snapshot.Cosmology.ParticleMass;
-#else
-double ParticleMass=0.; //define your particle mass here, which will be divided by the mean matter density to get particle size. so this has to be the particle mass of all species
-#endif
-r=HBTConfig.FoFLinkParam*pow(ParticleMass/mean_density,1.0/3.0);
-// cout<<"Linking with length "<<r<<endl;
-Timer_t timer;
-timer.Tick();
-vector <halo_t> halos;
-build_group_catalogue(r, snapshot, halos);
-timer.Tick();
-cout<<timer.GetSeconds(1)<<" seconds\n";
-
-// load_particle_data_bypart(Nsnap,SNAPSHOT_DIR,FLAG_LOAD_ID);//only load id
-/*for(auto &&h: halos)//has been converted in build_group_catalogue
+for(isnap=snapshot_start; isnap<=snapshot_end; ++isnap)
 {
-  for(auto &&p: h)
-    p=snapshot.GetParticleId(p);
-}*/
-HBTGroupIO::SaveHDFGroups(isnap, snapshot.GetSnapshotId(), halos);
+  ParticleSnapshot_t snapshot(isnap, false);
+  double mean_density=HBTConfig.FoFDarkMatterMassFraction*snapshot.Cosmology.OmegaM0*3.*PhysicalConst::H0*PhysicalConst::H0/8./M_PI/PhysicalConst::G;
+  double ParticleMass=snapshot.Cosmology.ParticleMass;
+  HBTReal r=HBTConfig.FoFLinkParam*pow(ParticleMass/mean_density,1.0/3.0);
+  Timer_t timer;
+  timer.Tick();
+  vector <halo_t> halos;
+  build_group_catalogue(r, snapshot, halos);
+  timer.Tick();
+  cout<<timer.GetSeconds(1)<<" seconds for snapshot"<<isnap<<endl;
+
+  // load_particle_data_bypart(Nsnap,SNAPSHOT_DIR,FLAG_LOAD_ID);//only load id
+  /*for(auto &&h: halos)//has been converted in build_group_catalogue
+  {
+    for(auto &&p: h)
+      p=snapshot.GetParticleId(p);
+  }*/
+  HBTGroupIO::SaveHDFGroups(isnap, snapshot.GetSnapshotId(), halos);
+}
 
 return 0;
 }
