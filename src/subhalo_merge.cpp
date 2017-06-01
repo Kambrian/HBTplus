@@ -135,7 +135,7 @@ float SinkDistance(const Subhalo_t &sat, const SubHelper_t &cen)
 
 void DetectTraps(vector <Subhalo_t> &Subhalos, vector <SubHelper_t> &Helpers)
 {  
-	#pragma omp  for
+	#pragma omp  for schedule(dynamic,1)
 	for(HBTInt i=0;i<Subhalos.size();i++)
 	{
 // 	  if(Subhalos[i].Nbound<=1) continue;//skip orphans? no.
@@ -161,7 +161,7 @@ void DetectTraps(vector <Subhalo_t> &Subhalos, vector <SubHelper_t> &Helpers)
 
 void FillHostTrackIds(vector <SubHelper_t> &Helpers, const vector <Subhalo_t> &Subhalos)
 {
-  #pragma omp for
+  #pragma omp for schedule(dynamic,1)
   for(HBTInt i=0;i<Subhalos.size();i++) 
   {
     auto &nest=Subhalos[i].NestedSubhalos;
@@ -171,7 +171,7 @@ void FillHostTrackIds(vector <SubHelper_t> &Helpers, const vector <Subhalo_t> &S
 }
 void FillCores(vector <SubHelper_t> &Helpers, const vector <Subhalo_t> &Subhalos)
 {
-  #pragma omp for
+  #pragma omp for schedule(dynamic,1) 
     for(HBTInt i=0;i<Subhalos.size();i++)
     {
       Helpers[i].BuildPosition(Subhalos[i]);
@@ -194,27 +194,27 @@ void SubhaloSnapshot_t::MergeSubhalos()
     FillHelpers(Helpers, Subhalos);
     
     DetectTraps(Subhalos, Helpers);
-        
-    if(HBTConfig.MergeTrappedSubhalos)
-    {
-    #pragma omp for
+  }
+  
+  if(HBTConfig.MergeTrappedSubhalos)
+  {
+    #pragma omp parallel for schedule(dynamic,1)
     for(HBTInt grpid=0;grpid<NumHalos;grpid++)
       if(MemberTable.SubGroups[grpid].size())
 	MergeRecursive(MemberTable.SubGroups[grpid][0]);
-    #pragma omp for
+    #pragma omp parallel for schedule(dynamic,1) if(ParallelizeHaloes)
     for(HBTInt subid=0;subid<Subhalos.size();subid++)
       if(Helpers[subid].IsMerged)
-      {
 	Subhalos[subid].Unbind(*this);
+    #pragma omp parallel for
+    for(HBTInt subid=0;subid<Subhalos.size();subid++)
+      if(Helpers[subid].IsMerged)
 	Subhalos[subid].TruncateSource();
-      }
-    }
-    
-    #pragma omp single
-    Helpers.clear();
-    UnglueHeadNests();
   }
   
+  Helpers.clear();
+  #pragma omp parallel
+  UnglueHeadNests();
 }
 
 void SubhaloSnapshot_t::MergeRecursive(HBTInt subid)
