@@ -13,18 +13,6 @@
 
 #define RMAX 2.
 
-class ParticlePos_t: public PositionData_t
-{
-  const ParticleSnapshot_t &Snap;
-public:
-  ParticlePos_t(const ParticleSnapshot_t &snap):Snap(snap)
-    {}
-  const HBTxyz & operator [](HBTInt i) const
-    {  return Snap.GetComovingPosition(i);  }
-  size_t size() const
-    {  return Snap.size();  }
-};
-
 struct HaloSize_t
 {
   HBTInt HaloId;
@@ -71,7 +59,7 @@ int main(int argc, char **argv)
   Cosmology.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
   VelocityUnit=PhysicalConst::G/partsnap.Cosmology.ScaleFactor;
  
-  ParticlePos_t PartPos(partsnap);
+  SnapshotPos_t PartPos(partsnap);
   LinkedlistPara_t ll(128, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
   cout<<"linked list compiled\n";
   

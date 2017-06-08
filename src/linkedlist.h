@@ -12,6 +12,17 @@ public:
   }*/
   virtual size_t size() const=0;
 };
+class SnapshotPos_t: public PositionData_t
+{
+  const Snapshot_t &Snap;
+public:
+  SnapshotPos_t(const Snapshot_t &snap):Snap(snap)
+    {}
+  const HBTxyz & operator [](HBTInt i) const
+    {  return Snap.GetComovingPosition(i);  }
+  size_t size() const
+    {  return Snap.size();  }
+};
 class Linkedlist_t
 {
 private:
