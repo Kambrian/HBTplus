@@ -130,9 +130,9 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
   ReadDataset(file, "/Cosmology/OmegaLambda0", H5T_HBTReal, &Cosmology.OmegaLambda0);
   ReadDataset(file, "/Cosmology/HubbleParam", H5T_HBTReal, &Cosmology.Hz);
   ReadDataset(file, "/Cosmology/ScaleFactor", H5T_HBTReal, &Cosmology.ScaleFactor);
-#ifdef DM_ONLY
-  ReadDataset(file, "/Cosmology/ParticleMass", H5T_HBTReal, &Cosmology.ParticleMass);
-#endif
+  Cosmology.ParticleMass=0;
+  if(H5Gget_objinfo (file, "/Cosmology/ParticleMass", 0, NULL)==0)
+    ReadDataset(file, "/Cosmology/ParticleMass", H5T_HBTReal, &Cosmology.ParticleMass);
   
   hsize_t dims[1];
   dset=H5Dopen2(file, "Subhalos", H5P_DEFAULT);
