@@ -585,8 +585,13 @@ double ReduceHaloPosition(vector <HaloInfo_t>::iterator it_begin, vector <HaloIn
   for(j=0;j<3;j++)
   {
 	  sx[j]/=msum;
-	  if(HBTConfig.PeriodicBoundaryOn) sx[j]+=origin[j];
-	  x[j]=sx[j];
+	  if(HBTConfig.PeriodicBoundaryOn) 
+	  {
+	    sx[j]+=origin[j];
+	    x[j]=position_modulus(sx[j], HBTConfig.BoxSize);
+	  }
+	  else
+	    x[j]=sx[j];
   }
   return msum;
 }
@@ -602,7 +607,7 @@ static void DecideTargetProcessor(MpiWorker_t& world, vector< Halo_t >& Halos, v
 {
   int this_rank=world.rank();
   for(auto &&h: Halos)
-    AveragePosition(h.ComovingAveragePosition, h.Particles.data(), h.Particles.size());
+    h.Mass=AveragePosition(h.ComovingAveragePosition, h.Particles.data(), h.Particles.size());
    
   vector <HaloInfo_t> HaloInfoSend(Halos.size()), HaloInfoRecv;
   for(HBTInt i=0;i<Halos.size();i++)
