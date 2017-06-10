@@ -76,13 +76,13 @@ int main(int argc, char **argv)
 	
 	timer.Tick(world.Communicator);
 	if(world.rank()==0)
-  {
+	{
 	time_log<<isnap;
 	for(int i=1;i<timer.Size();i++)
 	  time_log<<"\t"<<timer.GetSeconds(i);
 	time_log<<endl;
+	}
 	timer.Reset();
-  }
   }
   
   MPI_Finalize();
