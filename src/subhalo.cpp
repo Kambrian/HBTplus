@@ -32,6 +32,13 @@ void ExchangeSubHalos(MpiWorker_t& world, vector <Subhalo_t>& InHalos, vector<Su
 	Exchanger.Exchange();
   }
   
+  {//do not need to distribute subhalos now. will do it during host-finding anyway.
+  #pragma omp parallel for
+  for(HBTInt i=0;i<InHalos.size();i++)
+	InHalos[i].AverageCoordinates();
+  InHalos.swap(OutHalos);
+  }
+  /*
   vector <IdRank_t>TargetRank(InHalos.size());
   DecideTargetProcessor(world.size(), InHalos, TargetRank);
 
@@ -100,6 +107,7 @@ void ExchangeSubHalos(MpiWorker_t& world, vector <Subhalo_t>& InHalos, vector<Su
 	
 	MyAllToAll<HBTInt, NestIterator_t, NestIterator_t>(world, InNestIterator, InNestCount, OutNestIterator, MPI_HBT_INT);
 	}
+	*/
 }
   
 void SubhaloSnapshot_t::BuildMPIDataType()
