@@ -131,7 +131,7 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
   ReadDataset(file, "/Cosmology/HubbleParam", H5T_HBTReal, &Cosmology.Hz);
   ReadDataset(file, "/Cosmology/ScaleFactor", H5T_HBTReal, &Cosmology.ScaleFactor);
   Cosmology.ParticleMass=0;
-  if(H5Gget_objinfo (file, "/Cosmology/ParticleMass", 0, NULL)==0)
+  if(H5Lexists (file, "/Cosmology/ParticleMass", H5P_DEFAULT)>0)
     ReadDataset(file, "/Cosmology/ParticleMass", H5T_HBTReal, &Cosmology.ParticleMass);
   
   hsize_t dims[1];
@@ -144,8 +144,8 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
  
   vector <hvl_t> vl;
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
-  herr_t MembershipError = H5Gget_objinfo (file, "/Membership", 0, NULL);
-  if(MembershipError==0)//exist
+  bool MembershipError = (H5Lexists (file, "/Membership", H5P_DEFAULT)>0);
+  if(!MembershipError)//exist
   {
     ReadDataset(file, "/Membership/NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);
     ReadDataset(file, "/Membership/NumberOfFakeHalos", H5T_HBTInt, &MemberTable.NFake);

@@ -104,7 +104,7 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
   ReadDataset(file, "/Cosmology/HubbleParam", H5T_HBTReal, &Cosmology.Hz);
   ReadDataset(file, "/Cosmology/ScaleFactor", H5T_HBTReal, &Cosmology.ScaleFactor);
   Cosmology.ParticleMass=0;
-  if(H5Gget_objinfo (file, "/Cosmology/ParticleMass", 0, NULL)==0)
+  if(H5Lexists (file, "/Cosmology/ParticleMass", H5P_DEFAULT)>0)
     ReadDataset(file, "/Cosmology/ParticleMass", H5T_HBTReal, &Cosmology.ParticleMass);
   }
   
