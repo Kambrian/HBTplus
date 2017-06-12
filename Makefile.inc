@@ -21,10 +21,10 @@ CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g
 
 ##enable these if you want to obtain (thermal) binding energy for each particle
 ###save binding energy:
-CXXFLAGS+=-DSAVE_BINDING_ENERGY
+#CXXFLAGS+=-DSAVE_BINDING_ENERGY
 ###
 ###load thermal energy (also set SaveSubParticleProperties to 1 in config file if you want to save thermal energy)
-CXXFLAGS+=-DHAS_THERMAL_ENERGY
+#CXXFLAGS+=-DHAS_THERMAL_ENERGY
 ###
 
 ###for thermal unbinding:
