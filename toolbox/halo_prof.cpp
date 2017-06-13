@@ -72,7 +72,7 @@ int main(int argc, char **argv)
   
   
   vector <HaloSize_t> HaloSize; 
-  const int nfiles=256; //do it in blocks to save memory
+  const int nfiles=1; //do it in blocks to save memory
   HBTInt nmax=subsnap.MemberTable.SubGroups.size();
   HBTInt blocksize=nmax/nfiles+1;
   for(int ifile=0;ifile<nfiles;ifile++)
