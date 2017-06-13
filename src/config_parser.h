@@ -95,7 +95,7 @@ public:
 	ParticleIdRankStyle=false;
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
-	SaveSubParticleProperties=true;
+	SaveSubParticleProperties=false;
 	MergeTrappedSubhalos=true;
 	MajorProgenitorMassRatio=0.8;
 	BoundMassPrecision=0.995;
