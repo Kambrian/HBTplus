@@ -165,7 +165,7 @@ private:
   vector <MemberList_t> Mem_SubGroups; //list of subhaloes inside each host halo, with the storage of each subgroup mapped to a location in AllMembers 
 public:
   vector <HBTInt> AllMembers; //the complete list of all the subhaloes in SubGroups. do not resize this vector manually. resize only with ResizeAllMembers() function.
-  VectorView_t <MemberList_t> SubGroups; //list of subhaloes inside each host halo. contain one more group than halo catalogue, to hold field subhaloes. It is properly offseted so that SubGroup[hostid=-1] gives field subhaloes, and hostid>=0 for the normal groups.
+  VectorView_t <MemberList_t> SubGroups; //list of subhaloes inside each host halo. contain one more group than halo catalogue, to hold field subhaloes. It is properly offseted so that SubGroup[hostid=-1] gives field subhaloes, and hostid>=0 for the normal groups. size()==number of groups (excluding -1).
   HBTInt NBirth; //newly born halos, excluding fake halos
   HBTInt NFake; //Fake (unbound) halos with no progenitors
   vector < vector<HBTInt> > SubGroupsOfHeads; //list of top-level subhaloes in each halo
