@@ -36,7 +36,7 @@ void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
 
 vector <float> rbin, rbin2;
 void logspace(double xmin,double xmax,int N, vector <float> &x);
-void save(vector <HaloSize_t> HaloSize, int isnap);
+void save(vector <HaloSize_t> HaloSize, int isnap, int ifile, int nfiles);
 int main(int argc, char **argv)
 {
   if(argc!=3)
@@ -70,31 +70,41 @@ int main(int argc, char **argv)
   for(int i=0;i<rbin.size();i++)
     rbin2[i]=rbin[i]*rbin[i];
   
-  vector <HaloSize_t> HaloSize;
-  HaloSize.resize(subsnap.MemberTable.SubGroups.size());
-  #pragma omp parallel for schedule(dynamic,1)
-  for(HBTInt grpid=0;grpid<subsnap.MemberTable.SubGroups.size();grpid++)
-  {
-    HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
-    auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
-    if(subgroup.size()==0||subsnap.Subhalos[subgroup[0]].Nbound<1000) 
-      continue;
-    HaloSize[grpid].TrackId=subgroup[0];
-    HaloSize[grpid].Compute(subsnap.Subhalos[subgroup[0]].ComovingMostBoundPosition, searcher); 
-  }
-  auto it=HaloSize.begin(), it_save=HaloSize.begin();
-  for(;it!=HaloSize.end();++it)
-  {
-    if(it->TrackId>=0)
-    {
-      if(it!=it_save)
-	*it_save=move(*it);
-      ++it_save;
-    }
-  }
-  HaloSize.resize(it_save-HaloSize.begin());
   
-  save(HaloSize, isnap);
+  vector <HaloSize_t> HaloSize; 
+  const int nfiles=256; //do it in blocks to save memory
+  HBTInt nmax=subsnap.MemberTable.SubGroups.size();
+  HBTInt blocksize=nmax/nfiles+1;
+  for(int ifile=0;ifile<nfiles;ifile++)
+  {
+    HBTInt grpidmin=blocksize*ifile;
+    HBTInt grpidmax=min(grpidmin+blocksize, nmax);
+    HaloSize.resize(blocksize);
+    #pragma omp parallel for schedule(dynamic,1)
+    for(HBTInt grpid=grpidmin;grpid<grpidmax;grpid++)
+    {
+      HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
+      auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
+      if(subgroup.size()==0||subsnap.Subhalos[subgroup[0]].Nbound<1000) 
+	continue;
+      HaloSize[grpid].TrackId=subgroup[0];
+      HaloSize[grpid].Compute(subsnap.Subhalos[subgroup[0]].ComovingMostBoundPosition, searcher); 
+    }
+    auto it=HaloSize.begin(), it_save=HaloSize.begin();
+    for(;it!=HaloSize.end();++it)
+    {
+      if(it->TrackId>=0)
+      {
+	if(it!=it_save)
+	  *it_save=move(*it);
+	++it_save;
+      }
+    }
+    HaloSize.resize(it_save-HaloSize.begin());
+    
+    save(HaloSize, isnap, ifile, nfiles);
+  }
+
 }
 
 void HaloSize_t::Compute(HBTxyz &cen, LinkedlistPara_t &ll)
@@ -133,15 +143,19 @@ void HaloSize_t::Compute(HBTxyz &cen, GeoTree_t &tree)
     }
 }
 
-void save(vector <HaloSize_t> HaloSize, int isnap)
+void save(vector <HaloSize_t> HaloSize, int isnap, int ifile, int nfiles)
 {
   string filename=HBTConfig.SubhaloPath+"/HaloSize";
   mkdir(filename.c_str(), 0755);
-  filename=filename+"/HaloProf_"+to_string(isnap)+".hdf5";
+  if(ifile==0&&nfiles==0)
+    filename=filename+"/HaloProf_"+to_string(isnap)+".hdf5";
+  else
+    filename=filename+"/HaloProf_"+to_string(isnap)+"."+to_string(ifile)+".hdf5";
   hid_t file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   hsize_t dim_atom[]={1}, dims[]={HaloSize.size()};
   hid_t H5T_HaloSizeInMem, H5T_HaloSizeInDisk;
   BuildHDFHaloSize(H5T_HaloSizeInMem, H5T_HaloSizeInDisk);
+  writeHDFmatrix(file, &nfiles, "NumberOfFiles", 1, dim_atom, H5T_NATIVE_INT);
   writeHDFmatrix(file, HaloSize.data(), "HostHalos", 1, dims, H5T_HaloSizeInMem, H5T_HaloSizeInDisk);
   dims[0]=rbin.size();
   writeHDFmatrix(file, rbin.data(), "RadialBins", 1, dims, H5T_NATIVE_FLOAT);
