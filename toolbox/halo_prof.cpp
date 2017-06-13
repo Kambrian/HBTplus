@@ -1,5 +1,5 @@
 /*to compute the density profile of each halo (or halo-matter correlation) out to RMAX in logrithmic bins. 
- * the bins are generated as logspace(RMIN, RMAX, NBIN), with the innermost bin edge replaced by 0.
+ * the bins are generated as logspace(RMIN, RMAX, NBIN+1), with the innermost bin edge replaced by 0.
  * output the count in each bin for each halo.
  */
 
