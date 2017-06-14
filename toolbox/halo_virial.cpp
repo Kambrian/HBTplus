@@ -60,7 +60,7 @@ int main(int argc, char **argv)
   VelocityUnit=PhysicalConst::G/partsnap.Cosmology.ScaleFactor;
  
   SnapshotPos_t PartPos(partsnap);
-  LinkedlistPara_t ll(128, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+  LinkedlistPara_t ll(256, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
   cout<<"linked list compiled\n";
   
   vector <HaloSize_t> HaloSize(halosnap.size());
