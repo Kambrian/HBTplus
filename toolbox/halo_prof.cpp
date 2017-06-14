@@ -57,10 +57,10 @@ int main(int argc, char **argv)
  
 #ifdef USE_LL
   SnapshotPos_t PartPos(partsnap);
-  LinkedlistPara_t searcher(128, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+  LinkedlistPara_t searcher(256, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);//memory consumption by ll is much lighter, even with 256**3 grids and 24 threads (abount 3GB of HoC, plus np ints)
   cout<<"linked list compiled\n";
 #else
-  GeoTree_t searcher;
+  GeoTree_t searcher;//memory consumption can be heavy, HBTInt[8]*Np, bigger than snapshot!
   searcher.Build(partsnap);
   cout<<"tree built\n";
 #endif
