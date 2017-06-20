@@ -19,7 +19,43 @@
 #define RMIN 1e-2 //only for deciding binwidth; not used to set the innermost bin edge.
 #define RMAX 20.
 #define NBIN 20
-//#define USE_LL //algorithm: whether to use linkedlist or geotree for spatial search.
+// #define USE_LL //algorithm: whether to use linkedlist or geotree for spatial search.
+
+class SnapshotOffset_t: public Snapshot_t
+{
+public:
+  HBTInt Offset;
+  HBTInt N;
+  Snapshot_t & Snapshot;
+  SnapshotOffset_t(HBTInt offset, Snapshot_t & fullsnapshot): Offset(offset), Snapshot(fullsnapshot), Snapshot_t(fullsnapshot)
+  {
+    N=Snapshot.size()-Offset;
+  }
+  HBTInt ReSize(HBTInt n)
+  {
+    N=n;
+  }
+  HBTInt size() const
+  {
+	return N;
+  }
+  HBTInt GetMemberId(const HBTInt i) const
+  {
+	return i+Offset;
+  }
+  HBTReal GetMass(const HBTInt i) const
+  {
+	return Snapshot.GetMass(GetMemberId(i));
+  }
+  const HBTxyz & GetPhysicalVelocity(const HBTInt i) const
+  {
+	return Snapshot.GetPhysicalVelocity(GetMemberId(i));
+  }
+  const HBTxyz & GetComovingPosition(const HBTInt i) const
+  {
+	return Snapshot.GetComovingPosition(GetMemberId(i));
+  }
+};
 
 struct HaloSize_t
 {
@@ -36,7 +72,7 @@ void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
 
 vector <float> rbin, rbin2;
 void logspace(double xmin,double xmax,int N, vector <float> &x);
-void save(vector <HaloSize_t> HaloSize, int isnap, int ifile, int nfiles);
+void save(vector <HaloSize_t> HaloSize, int isnap, int ifile=0, int nfiles=0);
 int main(int argc, char **argv)
 {
   if(argc!=3)
@@ -54,16 +90,6 @@ int main(int argc, char **argv)
   SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
   ParticleSnapshot_t partsnap(isnap);
   auto &Cosmology=partsnap.Cosmology;
- 
-#ifdef USE_LL
-  SnapshotPos_t PartPos(partsnap);
-  LinkedlistPara_t searcher(16, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);//memory consumption by ll is much lighter, even with 256**3 grids and 24 threads (abount 3GB of HoC, plus np ints)
-  cout<<"linked list compiled\n";
-#else
-  GeoTree_t searcher;//memory consumption can be heavy, HBTInt[8]*Np, bigger than snapshot!
-  searcher.Build(partsnap);
-  cout<<"tree built\n";
-#endif
   
   logspace(RMIN, RMAX, NBIN+1, rbin);
   rbin2.resize(rbin.size());
@@ -71,25 +97,46 @@ int main(int argc, char **argv)
     rbin2[i]=rbin[i]*rbin[i];
   
   
-  vector <HaloSize_t> HaloSize; 
-  const int nfiles=1; //do it in blocks to save memory
-  HBTInt nmax=subsnap.MemberTable.SubGroups.size();
-  HBTInt blocksize=nmax/nfiles+1;
-  for(int ifile=0;ifile<nfiles;ifile++)
+  vector <HaloSize_t> HaloSize(subsnap.MemberTable.SubGroups.size()); 
+  #pragma omp parallel for
+  for(HBTInt grpid=0;grpid<HaloSize.size();grpid++)
   {
-    HBTInt grpidmin=blocksize*ifile;
-    HBTInt grpidmax=min(grpidmin+blocksize, nmax);
-    HaloSize.resize(blocksize);
+    HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
+    auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
+    if(subgroup.size()==0||subsnap.Subhalos[subgroup[0]].Nbound<1000) 
+      continue;
+    HaloSize[grpid].TrackId=subgroup[0];
+  }
+  
+  const int nloop=256; //do it in blocks to save memory
+  HBTInt nmax=partsnap.size();
+  HBTInt blocksize=nmax/nloop+1;
+  for(HBTInt offset=0,iloop=0;offset<nmax;offset+=blocksize, iloop++)
+  {
+    HBTInt np=min(blocksize, nmax-offset);
+    SnapshotOffset_t snapslice(offset, partsnap);//split the snapshot and do it piece by piece
+    snapslice.ReSize(np);
+    cout<<"i="<<iloop<<endl;
+    
+  #ifdef USE_LL
+    SnapshotPos_t PartPos(snapslice);
+    LinkedlistPara_t searcher(16, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+    cout<<"linked list compiled\n";
+  #else
+    GeoTree_t searcher;
+    searcher.Build(snapslice);
+    cout<<"tree built\n";
+  #endif
+    
     #pragma omp parallel for schedule(dynamic,1)
-    for(HBTInt grpid=grpidmin;grpid<grpidmax;grpid++)
+    for(HBTInt grpid=0;grpid<HaloSize.size();grpid++)
     {
-      HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
+      if(HaloSize[grpid].TrackId<0) continue;
       auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
-      if(subgroup.size()==0||subsnap.Subhalos[subgroup[0]].Nbound<1000) 
-	continue;
-      HaloSize[grpid].TrackId=subgroup[0];
       HaloSize[grpid].Compute(subsnap.Subhalos[subgroup[0]].ComovingMostBoundPosition, searcher); 
     }
+  }
+  
     auto it=HaloSize.begin(), it_save=HaloSize.begin();
     for(;it!=HaloSize.end();++it)
     {
@@ -102,9 +149,7 @@ int main(int argc, char **argv)
     }
     HaloSize.resize(it_save-HaloSize.begin());
     
-    save(HaloSize, isnap, ifile, nfiles);
-  }
-
+    save(HaloSize, isnap);
 }
 
 void HaloSize_t::Compute(HBTxyz &cen, LinkedlistPara_t &ll)
