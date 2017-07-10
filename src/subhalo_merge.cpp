@@ -256,4 +256,5 @@ void Subhalo_t::MergeTo(Subhalo_t &host)
   
   Particles.resize(1);
   Nbound=1;
+  CountParticles();
 }

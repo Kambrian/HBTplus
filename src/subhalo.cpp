@@ -184,8 +184,9 @@ void SubhaloSnapshot_t::UpdateParticles(MpiWorker_t& world, const ParticleSnapsh
   SubhaloList_t LocalSubhalos;
   ExchangeSubHalos(world, Subhalos, LocalSubhalos, MPI_HBT_SubhaloShell_t, snapshot);
   Subhalos.swap(LocalSubhalos);
-  for(auto &&h: Subhalos)
-    h.CountParticles();
+#pragma omp parallel for
+  for(HBTInt i=0;i<Subhalos.size();i++)
+    Subhalos[i].CountParticles();
 }
 /*
 void SubhaloSnapshot_t::ParticleIdToIndex(const ParticleSnapshot_t& snapshot)
