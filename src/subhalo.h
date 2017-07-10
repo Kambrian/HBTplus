@@ -79,6 +79,7 @@ public:
   HBTxyz PhysicalAverageVelocity;//default vel of sub
   HBTxyz ComovingMostBoundPosition;//default pos of sub
   HBTxyz PhysicalMostBoundVelocity;
+  HBTInt MostBoundParticleID;
 
   //for merging  
   HBTInt SinkTrackId; //the trackId it sinked to, -1 if it hasn't sunk.
@@ -103,6 +104,7 @@ public:
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
 	SinkTrackId=SpecialConst::NullTrackId;
+	MostBoundParticleID=SpecialConst::NullParticleId;
   }
   void Unbind(const Snapshot_t &epoch);
   void RecursiveUnbind(SubhaloList_t &Subhalos, const Snapshot_t &snap);
