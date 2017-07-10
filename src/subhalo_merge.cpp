@@ -224,12 +224,12 @@ void SubhaloSnapshot_t::MergeRecursive(HBTInt subid)
     MergeRecursive(nestid);
   if(sat.IsTrapped()&&sat.IsAlive())
   {
-    sat.MergeTo(Subhalos[sat.SinkTrackId]);
+    sat.MergeTo(Subhalos[sat.SinkTrackId], SnapshotPointer);
     sat.SnapshotIndexOfDeath=GetSnapshotIndex();
   }
 }
 
-void Subhalo_t::MergeTo(Subhalo_t &host)
+void Subhalo_t::MergeTo(Subhalo_t &host, const ParticleSnapshot_t *snap)
 {
   if(Nbound<=1) return; //skip orphans and nulls
 
@@ -242,4 +242,10 @@ void Subhalo_t::MergeTo(Subhalo_t &host)
   
   Particles.resize(1);
   Nbound=1;
+  #ifndef DM_ONLY
+  CountParticleTypes(*snap);
+  Mbound=accumulate(begin(MboundType), end(MboundType), (HBTReal)0.);
+  #else
+  Mbound=snap->GetMass(Particles[0]);
+  #endif
 }

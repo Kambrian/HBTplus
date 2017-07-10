@@ -136,7 +136,7 @@ public:
 //   void SetHostHalo(const vector <HBTInt> &ParticleToHost);
   void LevelUpDetachedMembers(vector <Subhalo_t> &Subhalos);
   //for merger
-  void MergeTo(Subhalo_t &host);
+  void MergeTo(Subhalo_t &host, const ParticleSnapshot_t *snap);
   bool IsTrapped()
   {
     return SinkTrackId!=SpecialConst::NullTrackId;
