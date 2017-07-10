@@ -41,6 +41,7 @@ public:
   
   int SnapshotIndexOfBirth;//when the subhalo first becomes resolved
   int SnapshotIndexOfDeath;//when the subhalo first becomes un-resolved; only set if currentsnapshot>=SnapshotIndexOfDeath.
+  int SnapshotIndexOfSink;//when the subhalo sinks
   
   //profile properties
   float RmaxComoving;
