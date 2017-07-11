@@ -278,6 +278,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   {
     Nbound=0;
     Mbound=0.;
+    CountParticleTypes(snapshot);
 #ifdef SAVE_BINDING_ENERGY
 	Energies.clear();
 #endif
@@ -287,6 +288,7 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   {
 	Nbound=1;
 	Mbound=snapshot.GetMass(Particles[0]);
+	CountParticleTypes(snapshot);
 #ifdef SAVE_BINDING_ENERGY
 	Energies.resize(1);
 	Energies[0]=0.;
