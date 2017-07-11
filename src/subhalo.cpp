@@ -476,7 +476,9 @@ HBTInt Subhalo_t::KickNullParticles()
 }
 
 void Subhalo_t::CountParticles()
-/*update Nbound, Mbound, NboundType, MboundType */
+/*update Nbound, Mbound, NboundType, MboundType *
+ * this function is called during unbinding, merger and BH consumption(UpdateParticles)*
+ */
 {
 #ifdef DM_ONLY
   Mbound=0.;

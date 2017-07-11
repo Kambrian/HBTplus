@@ -269,7 +269,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
   if(Particles.size()==0)
   {
     Nbound=0;
-    Mbound=0.;
+    CountParticles();
 #ifdef SAVE_BINDING_ENERGY
 	Energies.clear();
 #endif
@@ -278,7 +278,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
   if(Particles.size()==1) 
   {
 	Nbound=1;
-	Mbound=Particles[0].Mass;
+	CountParticles();
 #ifdef SAVE_BINDING_ENERGY
 	Energies.resize(1);
 	Energies[0]=0.;
