@@ -476,11 +476,13 @@ HBTInt Subhalo_t::KickNullParticles()
 }
 
 void Subhalo_t::CountParticles()
-/*update Nbound, Mbound, NboundType, MboundType */
+/*update Nbound, Mbound, NboundType, MboundType *
+ * this function is called during unbinding, merger and BH consumption(UpdateParticles)*
+ */
 {
 #ifdef DM_ONLY
   Mbound=0.;
-  for(auto &&p: Particles) Mbound+=p.Mass;
+  for(HBTInt i=0;i<Nbound;i++) Mbound+=Particles[i].Mass;
 #else
   for(auto & n: NboundType) n=0;
   for(auto & m: MboundType) m=0.;
