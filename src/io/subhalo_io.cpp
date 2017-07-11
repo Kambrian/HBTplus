@@ -74,7 +74,7 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(PhysicalAverageVelocity, H5T_HBTxyz);
   InsertMember(ComovingMostBoundPosition, H5T_HBTxyz);
   InsertMember(PhysicalMostBoundVelocity, H5T_HBTxyz);
-  InsertMember(MostBoundParticleID, H5T_HBTInt);
+  InsertMember(MostBoundParticleId, H5T_HBTInt);
   
   InsertMember(SinkTrackId, H5T_HBTInt);
   #undef InsertMember	

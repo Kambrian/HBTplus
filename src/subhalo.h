@@ -79,7 +79,7 @@ public:
   HBTxyz PhysicalAverageVelocity;//default vel of sub
   HBTxyz ComovingMostBoundPosition;//default pos of sub
   HBTxyz PhysicalMostBoundVelocity;
-  HBTInt MostBoundParticleID;
+  HBTInt MostBoundParticleId; //a shortcut to the first particle in Particles, for easier IO in GALFORM
 
   //for merging  
   HBTInt SinkTrackId; //the trackId it sinked to, -1 if it hasn't sunk.
@@ -103,8 +103,9 @@ public:
 	SnapshotIndexOfLastMaxVmax=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
+	SnapshotIndexOfSink=SpecialConst::NullSnapshotId;
 	SinkTrackId=SpecialConst::NullTrackId;
-	MostBoundParticleID=SpecialConst::NullParticleId;
+	MostBoundParticleId=SpecialConst::NullParticleId;
   }
   void Unbind(const Snapshot_t &epoch);
   void RecursiveUnbind(SubhaloList_t &Subhalos, const Snapshot_t &snap);
