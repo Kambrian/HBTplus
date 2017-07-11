@@ -79,7 +79,8 @@ public:
   HBTxyz PhysicalAverageVelocity;//default vel of sub
   HBTxyz ComovingMostBoundPosition;//default pos of sub
   HBTxyz PhysicalMostBoundVelocity;
-
+  HBTInt MostBoundParticleId;//for easier access in GALFORM. note this is not switched to particle_index during the execution of the code, unlike the particles.
+  
   //for merging  
   HBTInt SinkTrackId; //the trackId it sinked to, -1 if it hasn't sunk.
   
@@ -103,6 +104,7 @@ public:
 	SnapshotIndexOfBirth=SpecialConst::NullSnapshotId;
 	SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;
 	SinkTrackId=SpecialConst::NullTrackId;
+	MostBoundParticleId=SpecialConst::NullParticleId;
   }
   /*void MoveTo(Subhalo_t & dest)
   {//override dest with this, leaving this unspecified.
