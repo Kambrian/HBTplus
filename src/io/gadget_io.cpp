@@ -208,7 +208,7 @@ Header.mass[TypeDM]=block[0];\
 cerr<<"WARNING: header has no DM particles mass recorded. set to first value from DM mass block: "<<block[0]<<endl;\
 }\
 }
-#else
+#else //only read if there is variable mass block.
 #define ReadMassBlock(dtype) {\
 size_t n_read_mass=0;\
 vector <HBTInt> offset_mass(TypeMax);\
@@ -218,7 +218,7 @@ for(int itype=0;itype<TypeMax;itype++)\
 		offset_mass[itype]=n_read_mass;\
 		n_read_mass+=header.npart[itype];\
 	  }\
-FortranBlock <dtype> block(fp, n_read_mass, n_skip, NeedByteSwap);\
+if(n_read_mass) FortranBlock <dtype> block(fp, n_read_mass, n_skip, NeedByteSwap);\
   for(int itype=0;itype<TypeMax;itype++)\
   {\
 	auto p=NewParticles+offset[itype];\
