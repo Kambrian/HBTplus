@@ -262,6 +262,7 @@ FortranBlock <dtype> block(fp, n_read, n_skip, NeedByteSwap);\
 }
 
 #ifndef DM_ONLY
+//only read when there is such a block
   #define ReadMassBlock(dtype) {\
   size_t n_read_mass=0;\
   vector <HBTInt> offset_mass(TypeMax);\
@@ -271,7 +272,7 @@ FortranBlock <dtype> block(fp, n_read, n_skip, NeedByteSwap);\
 		  offset_mass[itype]=n_read_mass;\
 		  n_read_mass+=header.npart[itype];\
 	    }\
-  FortranBlock <dtype> block(fp, n_read_mass, n_skip, NeedByteSwap);\
+  if(n_read_mass) FortranBlock <dtype> block(fp, n_read_mass, n_skip, NeedByteSwap);\
     for(int itype=0;itype<TypeMax;itype++)\
     {\
 	  auto p=NewParticles+offset[itype];\
