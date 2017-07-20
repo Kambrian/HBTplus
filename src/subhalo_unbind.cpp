@@ -349,6 +349,9 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 		ESnap.SetMassUnit(1.);//reset, no necessary
 	  }
 		Nbound=PartitionBindingEnergy(Elist, Nlast);//TODO: parallelize this.
+#ifdef NO_STRIPPING
+		Nbound=Nlast;
+#endif
 		if(Nbound<HBTConfig.MinNumPartOfSub)//disruption
 		{
 		  Nbound=1;
