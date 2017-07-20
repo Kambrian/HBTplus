@@ -256,6 +256,13 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
   }
 }
 
+inline void Subhalo_t::DuplicateMostBoundParticleId()
+{//duplicate the id into subhalo field to save to the disk, for easy access in galform.
+  if(Particles.size())
+    MostBoundParticleId=Particles[0];
+  else
+    MostBoundParticleId=SpecialConst::NullParticleId;
+}
 void SubhaloSnapshot_t::Save()
 {
   string filename;
@@ -395,9 +402,10 @@ void SubhaloSnapshot_t::Save()
   {
 	vl[i].len=Subhalos[i].Nbound;
 	vl[i].p=Subhalos[i].Particles.data();
+	Subhalos[i].DuplicateMostBoundParticleId();//save it for galform
   }
   writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);
-    
+      
   writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); //write after calling ParticleIndexToId, for MostBoundParticleId
   
   H5Fclose(file);

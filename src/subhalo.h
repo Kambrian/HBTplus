@@ -149,6 +149,7 @@ public:
   {
     return SnapshotIndexOfDeath==SpecialConst::NullSnapshotId;
   }
+  void DuplicateMostBoundParticleId();
 };
 
 class MemberShipTable_t
