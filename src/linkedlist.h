@@ -24,6 +24,7 @@ public:
     {  return Snap.size();  }
 };
 class Linkedlist_t
+/*the particle ids used and returned refer to the index of particles in the input position data*/
 {
 private:
   int NDiv, NDiv2;
