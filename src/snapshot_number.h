@@ -55,7 +55,7 @@ inline void SnapshotNumber_t::FormatSnapshotId(stringstream& ss)
 }
 inline void SnapshotNumber_t::SetSnapshotIndex(int snapshot_index)
 {
-  assert(snapshot_index>=HBTConfig.MinSnapshotIndex&&snapshot_index<=HBTConfig.MaxSnapshotIndex);
+//   assert(snapshot_index>=HBTConfig.MinSnapshotIndex&&snapshot_index<=HBTConfig.MaxSnapshotIndex);
 //   assert(SpecialConst::NullSnapshotId!=snapshot_index);
   SnapshotIndex=snapshot_index; 
   if(HBTConfig.SnapshotIdList.empty())
