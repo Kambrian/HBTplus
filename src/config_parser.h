@@ -96,7 +96,11 @@ public:
 	ParticleIdNeedHash=true;
 	SnapshotIdUnsigned=false;
 	SaveSubParticleProperties=false;
+#ifdef NO_STRIPPING
+	MergeTrappedSubhalos=false;
+#else
 	MergeTrappedSubhalos=true;
+#endif
 	MajorProgenitorMassRatio=0.8;
 	BoundMassPrecision=0.995;
 	SourceSubRelaxFactor=3.;

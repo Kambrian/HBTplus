@@ -218,7 +218,8 @@ for(int itype=0;itype<TypeMax;itype++)\
 		offset_mass[itype]=n_read_mass;\
 		n_read_mass+=header.npart[itype];\
 	  }\
-if(n_read_mass) FortranBlock <dtype> block(fp, n_read_mass, n_skip, NeedByteSwap);\
+FortranBlock <dtype> block;\
+if(n_read_mass) block.Read(fp, n_read_mass, n_skip, NeedByteSwap);\
   for(int itype=0;itype<TypeMax;itype++)\
   {\
 	auto p=NewParticles+offset[itype];\
