@@ -391,7 +391,10 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
 			if(!IsAlive())
 			  SnapshotIndexOfDeath=SpecialConst::NullSnapshotId;//clear death snapshot
 			if(IsTrapped())
+			{
+			  SnapshotIndexOfSink=SpecialConst::NullSnapshotId;
 			  SinkTrackId=SpecialConst::NullTrackId;//clear sinktrack as well
+			}
 			//update particle list
 			sort(Elist.begin(), Elist.begin()+Nbound, CompEnergy); //sort the self-bound part
 			if(RefineMostboundParticle&&Nbound>MaxSampleSize)//refine most-bound particle, not necessary usually..
