@@ -197,11 +197,17 @@ inline HBTReal Distance(const HBTReal x[3], const HBTxyz &y)
 template <class T>
 class FortranBlock
 {
-  const size_t N;
-  T *Data;
+  vector <T> Data;
   typedef T Txyz[3];
 public:
-  FortranBlock(FILE *fp, const size_t n_read, const size_t n_skip, bool NeedByteSwap=false):N(n_read)
+  FortranBlock(): Data()
+  {
+  }
+  FortranBlock(FILE *fp, const size_t n_read, const size_t n_skip, bool NeedByteSwap=false): Data(n_read)
+  {
+    Read(fp, n_read, n_skip, NeedByteSwap);
+  }
+  void Read(FILE *fp, const size_t n_read, const size_t n_skip, bool NeedByteSwap=false)
 /*read n_read members from the current block of fp. 
  * skip n_skip elements before reading. 
  * T specify the input datatype. if T and U has the same size, read directly into outbuffer; otherwise the elements are converted from type U to type T in a temporary buffer and then copied to outbuffer.
@@ -212,42 +218,38 @@ public:
 	  int blocksize,blocksize2;
 	  ReadBlockSize(blocksize);
 	  size_t block_member_size=sizeof(T);
-	  Data=new T[n_read];
+	  Data.resize(n_read);
 	  fseek(fp, n_skip*block_member_size, SEEK_CUR);
-	  myfread(Data, block_member_size, n_read, fp);
+	  myfread(Data.data(), block_member_size, n_read, fp);
 	  fseek(fp, blocksize-(n_skip+n_read)*block_member_size, SEEK_CUR);
 	  ReadBlockSize(blocksize2);
 	  assert(blocksize==blocksize2);
   #undef ReadBlockSize
   #undef myfread
   }
-  ~FortranBlock()
-  {
-	delete [] Data;
-  }
   const T * data()
   {
-	return Data;
+	return Data.data();
   }
-  T & operator [](const size_t index) const
+  const T & operator [](const size_t index)
   {
 	return Data[index];
   }
   HBTInt size() const
   {
-	return N;
+	return Data.size();
   }
   T * begin()
   {
-	return Data;
+	return Data.data();
   }
   T* end()
   {
-	return Data+N;
+	return Data.data()+Data.size();
   }
   Txyz * data_reshape()
   {
-	return (Txyz *)Data;
+	return (Txyz *)Data.data();
   }
 };
 
