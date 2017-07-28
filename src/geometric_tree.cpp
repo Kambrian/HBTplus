@@ -82,6 +82,7 @@ inline HBTReal GuessNeighbourRange(HBTInt n_neighbours, HBTReal number_density_g
 }
 
 HBTInt GeoTree_t::NearestNeighbour(const HBTxyz & cen, HBTReal rguess)
+//return the particle_index of the nearest neighbour
 {
   vector <LocatedParticle_t> founds;
   Search(cen, rguess, founds);
@@ -90,12 +91,12 @@ HBTInt GeoTree_t::NearestNeighbour(const HBTxyz & cen, HBTReal rguess)
     rguess *= 1.26;//double the guess volume
     Search(cen, rguess, founds);
   }
-  return min_element(founds.begin(), founds.end(), CompLocatedDistance)->id;	
+  return min_element(founds.begin(), founds.end(), CompLocatedDistance)->index;	
 }
 
 void GeoTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <LocatedParticle_t> &founds)
 {/*find a list of particles from the tree, located within radius around searchcenter,
-  * and APPEND their particle_id and distance^2 to founds */
+  * and APPEND their particle_index and distance^2 to founds */
   bool IsPeriodic=HBTConfig.PeriodicBoundaryOn;
   double x0=searchcenter[0], y0=searchcenter[1], z0=searchcenter[2];
   double h2 = radius * radius;
@@ -129,7 +130,7 @@ void GeoTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
 	  double r2 = dx * dx + dy * dy + dz * dz;
 
 	  if(r2 < h2)
-	      founds.emplace_back(Snapshot->GetId(pid), r2);
+	      founds.emplace_back(pid, r2);
 	}
       else
 	{
@@ -180,7 +181,7 @@ double GeoTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
   
   auto pivot_particle=founds.begin()+SPH_DENS_NGB-1;
   nth_element(founds.begin(), founds.end(), pivot_particle, CompLocatedDistance);
-  double h=sqrt(pivot_particle->d);
+  double h=sqrt(pivot_particle->d2);
   // 	h=sqrtf(h);
   hguess=h*1.01;
   double hinv3 = 1.0 / (h * h * h);
@@ -188,7 +189,7 @@ double GeoTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
   double rho=0.;
   for(auto it=founds.begin(); it <=pivot_particle; ++it)
   {
-    double r = sqrt(it->d);
+    double r = sqrt(it->d2);
     double u = r / h, wk;
     
     if(u < 0.5)

@@ -188,15 +188,15 @@ enum ParticleType_t:int
 
 struct LocatedParticle_t
 {
-  HBTInt id;
-  HBTReal d; //distance**2
+  HBTInt index;
+  HBTReal d2; //distance**2
   LocatedParticle_t()=default;
-  LocatedParticle_t(HBTInt id, HBTReal d):id(id),d(d)
+  LocatedParticle_t(HBTInt index, HBTReal d2):index(index),d2(d2)
   {}
 };
 inline bool CompLocatedDistance(const LocatedParticle_t &a, const LocatedParticle_t &b)
 {
-  return a.d<b.d;
+  return a.d2<b.d2;
 }
 
 #define DATATYPES_INCLUDED

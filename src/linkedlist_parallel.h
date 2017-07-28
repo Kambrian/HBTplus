@@ -31,7 +31,7 @@ public:
   void restore_id(vector <LocatedParticle_t> &particles) const
   {
     for(auto &&p: particles)
-      p.id=restore_id(p.id);
+      p.index=restore_id(p.index);
   }
 };
 
