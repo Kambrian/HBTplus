@@ -334,14 +334,14 @@ void MassFunc_t::collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Li
   float mmax=0., rmmax=0.;
   for(auto &&subid: sublist)
   {
-    if(subid.id!=cenid)
+    if(subid.index!=cenid)
     {
-      float m=subsnap.Subhalos[subid.id].MSUB/mhost;
+      float m=subsnap.Subhalos[subid.index].MSUB/mhost;
       Mlist.push_back(m);
       if(m>mmax)
       {
 	mmax=m;
-	rmmax=sqrt(subid.d);
+	rmmax=sqrt(subid.d2);
       }
     }
   }

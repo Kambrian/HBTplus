@@ -125,7 +125,7 @@ void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara
     {
 //         if(subid.id!=cenid)
         {
-            auto &sub=subsnap.Subhalos[subid.id];
+            auto &sub=subsnap.Subhalos[subid.index];
             Satellite_t sat;
 	    sat.CentralTrackId=central.TrackId;
 	    sat.TrackId=sub.TrackId;

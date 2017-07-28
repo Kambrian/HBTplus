@@ -161,7 +161,7 @@ void HaloSize_t::Compute(HBTxyz &cen, LinkedlistPara_t &ll)
     {
       for(int i=NBIN-1;i>=0;i--)
       {
-	if(p.d>rbin2[i])
+	if(p.d2>rbin2[i])
 	{
 	  n[i]++;
 	  break;
@@ -179,7 +179,7 @@ void HaloSize_t::Compute(HBTxyz &cen, GeoTree_t &tree)
     {
       for(int i=NBIN-1;i>=0;i--)
       {
-	if(p.d>rbin2[i])
+	if(p.d2>rbin2[i])
 	{
 	  n[i]++;
 	  break;

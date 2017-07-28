@@ -89,8 +89,8 @@ void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_
     vector <RadVelMass_t> prof(np);
     for(HBTInt i=0;i<np;i++)
     {
-	prof[i].r=sqrt(founds[i].d);
-	prof[i].m=partsnap.GetMass(founds[i].id);
+	prof[i].r=sqrt(founds[i].d2);
+	prof[i].m=partsnap.GetMass(founds[i].index);
     }
     sort(prof.begin(), prof.end(), CompProfRadius);
     double m_cum=0.;
