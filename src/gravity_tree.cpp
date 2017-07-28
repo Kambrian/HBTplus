@@ -1,248 +1,88 @@
-/* this oct-tree code is adopted from SUBFIND with minor modifications for HBT */
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
 #include <cstring>
 
 #include "mymath.h"
-#include "gravity_tree.h"
 #include "config_parser.h"
+#include "gravity_tree.h"
 
-void OctTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len)
+template <class T>
+inline void VectorAdd(double x[3], const T &y, double weight)
 {
-	HBTInt j,jj,p,pp,sons[8];
-	double mass, thismass;
-	double s[3];
-	
-		mass=0;
-		s[0]=0;
-		s[1]=0;
-		s[2]=0;
-		for(j=0;j<8;j++)
-			sons[j]=Nodes[no].sons[j];//backup sons
-		Nodes[no].way.len=len;
-		Nodes[no].way.sibling=sib;
-		for(j=0;sons[j]<0;j++);//find first son
-		pp=sons[j];
-		Nodes[no].way.nextnode=pp;
-		for(jj=j+1;jj<8;jj++)//find sons in pairs,ie. find sibling
-		{
-			if(sons[jj]>=0)//ok, found a sibling
-			{
-				p=pp;
-				pp=sons[jj];
-				if(p<NumberOfParticles)
-				{
-					thismass=Snapshot->GetMass(p);
-					mass+=thismass;
-					s[0]+=Snapshot->GetComovingPosition(p)[0]*thismass;
-					s[1]+=Snapshot->GetComovingPosition(p)[1]*thismass;
-					s[2]+=Snapshot->GetComovingPosition(p)[2]*thismass;
-					NextnodeFromParticle[p]=pp;
-				}
-				else
-				{
-				if(len>=HBTConfig.TreeNodeResolution) 
-					UpdateInternalNodes(p,pp,0.5*len);//only divide if above resolution; otherwise 
-				//we didn't divide the node seriouly so we don't have finer node length
-				else
-					UpdateInternalNodes(p,pp,len);//get internal node info
-				thismass=Nodes[p].way.mass;
-				mass+=thismass;
-				s[0]+=Nodes[p].way.s[0]*thismass;
-				s[1]+=Nodes[p].way.s[1]*thismass;
-				s[2]+=Nodes[p].way.s[2]*thismass;
-				}
-			}
-		}
-		if(pp<NumberOfParticles)//the last son
-		{			
-			thismass=Snapshot->GetMass(pp);
-			mass+=thismass;
-			s[0]+=Snapshot->GetComovingPosition(pp)[0]*thismass;
-			s[1]+=Snapshot->GetComovingPosition(pp)[1]*thismass;
-			s[2]+=Snapshot->GetComovingPosition(pp)[2]*thismass;
-			NextnodeFromParticle[pp]=sib;
-		}
-		else
-		{
-			if(len>=HBTConfig.TreeNodeResolution) 
-				UpdateInternalNodes(pp,sib,0.5*len);//only divide if above resolution; otherwise 
-			//we didn't divide the node seriouly so we don't have finer node length
-			else
-				UpdateInternalNodes(pp,sib,len);
-			thismass=Nodes[pp].way.mass;
-			mass+=thismass;
-			s[0]+=Nodes[pp].way.s[0]*thismass;
-			s[1]+=Nodes[pp].way.s[1]*thismass;
-			s[2]+=Nodes[pp].way.s[2]*thismass;
-		}
-		Nodes[no].way.mass=mass;
-		Nodes[no].way.s[0]=s[0]/mass;
-		Nodes[no].way.s[1]=s[1]/mass;
-		Nodes[no].way.s[2]=s[2]/mass;
+  x[0]+=y[0]*weight;
+  x[1]+=y[1]*weight;
+  x[2]+=y[2]*weight;
 }
 
-HBTInt OctTree_t::Build(const Snapshot_t &snapshot, HBTInt num_part)
-/* build tree for a snapshot (or SnapshotView); automatically resize memory if necessary.
-  * if num_part>0 is given, then only use the first num_part particles in the snapshot*/
+inline void GravityTree_t::FillNodeCenter(HBTInt nodeid, const double center[3], double CoM[3], double mass)
 {
-	HBTInt NumNids,numnodes;
-	HBTInt sub,subid,i,j,nodeid;
-	double center[3], lenhalf;
-	double xmin[3], xmax[3],Center[3], Len,Lenhalf;
+    Nodes[nodeid].way.s[0]=CoM[0]/mass;
+    Nodes[nodeid].way.s[1]=CoM[1]/mass;
+    Nodes[nodeid].way.s[2]=CoM[2]/mass;
+}
 
-	if(!num_part) num_part=snapshot.size();
-	if(num_part>MaxNumberOfParticles)
-	{
-	  Clear();
-	  Reserve(num_part);
-	}
-	
-	NumberOfParticles=num_part;
-	Snapshot=&snapshot;
-	
-	/* find enclosing rectangle */
-  for(j = 0; j < 3; j++)
-    xmin[j] = xmax[j] = Snapshot->GetComovingPosition(0)[j];
-
-  for(i = 1; i < NumberOfParticles; i++)
-    for(j = 0; j < 3; j++)
+void GravityTree_t::ProcessNode(HBTInt nodeid, HBTInt nextid, int sonid, double &mass, double CoM[3], double len, const double center[3])
+{
+  if(nodeid<NumberOfParticles)
       {
-	if(Snapshot->GetComovingPosition(i)[j] > xmax[j])
-	  xmax[j] = Snapshot->GetComovingPosition(i)[j];
-	else if(Snapshot->GetComovingPosition(i)[j] < xmin[j])
-	  xmin[j] = Snapshot->GetComovingPosition(i)[j];
+	double thismass=Snapshot->GetMass(nodeid);
+	mass+=thismass;
+	VectorAdd(CoM, Snapshot->GetComovingPosition(nodeid), thismass);
+	
+	NextnodeFromParticle[nodeid]=nextid;
       }
-
-  /* determine maxmimum extension */
-  for(j = 1, Len = xmax[0] - xmin[0]; j < 3; j++)
-    if((xmax[j] - xmin[j]) > Len)
-      Len = xmax[j] - xmin[j];
-
-  for(j = 0; j < 3; j++)
-    Center[j] = 0.5 * (xmax[j] + xmin[j]);
-  
-  Lenhalf=0.5*Len;
-MaxNodeId=MaxNumberOfCells+NumberOfParticles;
-
-Nodes= Cells-NumberOfParticles;	/* select first node */
-
-
-nodeid = NumberOfParticles;	/* id used to distinguish whether it's internal node or particle*/
-NumNids=NumberOfParticles+1;	
-	/* create an empty  root node  */
-  for(i = 0; i < 8; i++)
-Cells->sons[i] = -1;
-
-  for(i = 0; i < NumberOfParticles; i++)	/* insert all  particles */
-	{
-	  nodeid = NumberOfParticles ;	/* select index of first node in tree */
-	    lenhalf = Lenhalf;
-	  for(j = 0; j < 3; j++)
-	    center[j] = Center[j];
-
-	  while(1)
-		{
-			  //len = lenhalf;
-			//fprintf(logfile,"%f\n",len);
-			  lenhalf *= 0.5;//halflen for the to-be-found subnode
-			  sub = 0;
-	      if(Snapshot->GetComovingPosition(i)[0] > center[0])
-		{
-		  center[0] += lenhalf;//subcenter
-		  sub += 1;//sub index
-		}
-	      else
-		{
-		  center[0] -= lenhalf;
-		}
-	      if(Snapshot->GetComovingPosition(i)[1] > center[1])
-		{
-		  center[1] += lenhalf;
-		  sub += 2;
-		}
-	      else
-		{
-		  center[1] -= lenhalf;
-		}
-	      if(Snapshot->GetComovingPosition(i)[2] > center[2])
-		{
-		  center[2] += lenhalf;
-		  sub += 4;
-		}
-	      else
-		{
-		  center[2] -= lenhalf;
-		}
-		
-		subid=Nodes[nodeid].sons[sub];
-		if(subid<0)//an empty node, insert particle as leaf
-			{
-			Nodes[nodeid].sons[sub]=i;
-			break;//finished for this particle, begin to insert a new particle
-			}
-		else if(subid<NumberOfParticles)//a particle node, upgrade the node to internal
-			{
-			Nodes[nodeid].sons[sub]=NumNids;//create a new node;
-			nodeid=NumNids;//take over the new nodeid
-			NumNids++;
-			if(NumNids >= MaxNodeId)
-			{
-			  cerr<<"maximum number "<<MaxNumberOfCells<<" of tree-nodes reached for particle "<<i<<endl;
-			  exit(1);
-			}
-			for(sub=0;sub<8;sub++)//initialize new node
-				Nodes[nodeid].sons[sub]=-1;
-			/*insert that subid into this new node*/
-			//what if the two particles are too near? 
-			//unnecessary to divide too fine, just get rid of one by random insertion. 
-			 if(lenhalf < HBTConfig.TreeNodeResolutionHalf)
-				{
-				/* seems like we're dealing with particles   
-				* at identical locations. randomize 
-				* sub index (well below gravitational softening scale).
-				* to introduce some ambiguity so that we don't get jammed!*/
-				sub = (HBTInt) (8.0 * drand48());
-				if(sub >= 8)
-				sub = 7;
-				//~ fprintf(logfile,"len=%g Len=%g sub=%d  i=%d (%g|%g|%g)\n",
-					//~ lenhalf*2, Len, sub, i, Snapshot->GetComovingPosition(i][0], Snapshot->GetComovingPosition(i][1], Snapshot->GetComovingPosition(i][2]);
-				}
-			 else
-				{
-				sub=0;
-				if(Snapshot->GetComovingPosition(subid)[0] > center[0])
-					sub += 1;
-				if(Snapshot->GetComovingPosition(subid)[1] > center[1])
-					sub += 2;
-				if(Snapshot->GetComovingPosition(subid)[2] > center[2])
-					sub += 4;
-				}	
-			Nodes[nodeid].sons[sub]=subid;//the disturbing particle inserted
-			}
-		else nodeid=subid;//an internal node,take over it;
-		}
-	}
+      else
+      {	
+	if(len>=HBTConfig.TreeNodeResolution)//only divide if above resolution;
+	  UpdateInternalNodes(nodeid, nextid, len/2., center); 
+	else
+	  UpdateInternalNodes(nodeid, nextid, len, center);//otherwise we don't divide the node seriouly so we don't have finer node length
 	
-	numnodes=NumNids-NumberOfParticles;
-	//~ FilledFraction=(HBTReal)numnodes/MaxNumberOfCells;
-	//~ #pragma omp critical
-	//~ if(FilledFraction>MaxNodeFilledFraction) MaxNodeFilledFraction=FilledFraction;
-	//~ fprintf(logfile,"used %d nodes out of allocated %d. (filled fraction %g)\n",
-	 //~ numnodes, MaxNumberOfCells, (double)numnodes / MaxNumberOfCells);	
-	/* finished inserting, now update for walk*/
-	UpdateInternalNodes(NumberOfParticles , -1, Len);/*insert sibling and next infomation*/
-	
-	return numnodes; 
+	double thismass=Nodes[nodeid].way.mass;//get mass after updating internal nodes
+	mass+=thismass;
+	VectorAdd(CoM, Nodes[nodeid].way.s, thismass);
+      }
 }
 
-double OctTree_t::EvaluatePotential(const HBTxyz &targetPos, const HBTReal targetMass)
+void GravityTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const double center[3])
+{
+  HBTInt p,pp,sons[8];
+  int j,jj,i;
+  double mass=0., thismass;
+  double CoM[3]={0.};
+  
+  for(j=0;j<8;j++)
+    sons[j]=Nodes[no].sons[j];//backup sons
+  Nodes[no].way.len=len;
+  Nodes[no].way.sibling=sib;
+  for(i=0;sons[i]<0;i++);//find first son
+  jj=i;
+  pp=sons[jj];
+  Nodes[no].way.nextnode=pp;
+  for(i++;i<8;i++)//find sons in pairs,ie. find sibling
+  {
+    if(sons[i]>=0)//ok, found a sibling
+    {
+      j=jj;
+      p=pp;
+      jj=i;
+      pp=sons[jj];
+      ProcessNode(p, pp, j, mass, CoM, len, center);
+    }
+  }
+  ProcessNode(pp, sib, jj, mass, CoM, len, center);
+  Nodes[no].way.mass=mass;
+  FillNodeCenter(no, center, CoM, mass);
+}
+
+double GravityTree_t::EvaluatePotential(const HBTxyz &targetPos, const HBTReal targetMass)
 /*return specific physical potential, GM/Rphysical. 
  * targetPos[] is comoving.
  * if targetMass!=0, then the self-potential from targetMass is excluded. 
  * do not set targetMass (i.e., keep to 0.) if target is outside the particlelist of tree*/
 {
+  bool IsPeriodic=HBTConfig.PeriodicBoundaryOn;
   OctTreeCell_t *nop = 0;
   HBTInt no;
   double r2, dx, dy, dz, mass, r, u, h, h_inv, wp;
@@ -263,10 +103,11 @@ double OctTree_t::EvaluatePotential(const HBTxyz &targetPos, const HBTReal targe
     {
       if(no < NumberOfParticles)		/* single particle */
 	{
-	  dx = Snapshot->GetComovingPosition(no)[0] - pos_x;
-	  dy = Snapshot->GetComovingPosition(no)[1] - pos_y;
-	  dz = Snapshot->GetComovingPosition(no)[2] - pos_z;
-	  if(HBTConfig.PeriodicBoundaryOn)
+	  auto &pos=Snapshot->GetComovingPosition(no);
+	  dx = pos[0] - pos_x;
+	  dy = pos[1] - pos_y;
+	  dz = pos[2] - pos_z;
+	  if(IsPeriodic)
 	  {
 	  dx=NEAREST(dx);
 	  dy=NEAREST(dy);
@@ -282,7 +123,7 @@ double OctTree_t::EvaluatePotential(const HBTxyz &targetPos, const HBTReal targe
 	  dx = nop->way.s[0] - pos_x;
 	  dy = nop->way.s[1] - pos_y;
 	  dz = nop->way.s[2] - pos_z;
-	  if(HBTConfig.PeriodicBoundaryOn)
+	  if(IsPeriodic)
 	  {
 	  dx=NEAREST(dx);
 	  dy=NEAREST(dy);
@@ -322,50 +163,18 @@ double OctTree_t::EvaluatePotential(const HBTxyz &targetPos, const HBTReal targe
   return pot*PhysicalConst::G/Snapshot->Cosmology.ScaleFactor;
 }
 
-double OctTree_t::BindingEnergy(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, const HBTReal targetMass)
+double GravityTree_t::BindingEnergy(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, const HBTReal targetMass)
 /* return specific binding energy 
  * input Pos comoving, Vel physical
  * targetMass optional, can be set to exclude self-potential if target is contained in the tree*/
 {
 	  double pot=EvaluatePotential(targetPos, targetMass);
-	  double dv[3],dx[3], E=0.;
-	  for(int j=0;j<3;j++)
-	  {
-		dx[j]=targetPos[j]-refPos[j];
-		if(HBTConfig.PeriodicBoundaryOn)  dx[j]=NEAREST(dx[j]);
-		dv[j]=targetVel[j]-refVel[j];
-		dv[j]+=Snapshot->Cosmology.Hz*Snapshot->Cosmology.ScaleFactor*dx[j];
-		E+=dv[j]*dv[j];
-	  }
-	  E=E*0.5+pot;
-	  return E;
+	  HBTxyz dv;
+	  Snapshot->RelativeVelocity(targetPos, targetVel, refPos, refVel, dv);
+	  return VecNorm(dv)*0.5+pot;
 }
 
-void OctTree_t::Reserve(const size_t max_num_part)
-/* allocate tree memory to hold a maximum of max_num_part particles */
-{
-  MaxNumberOfParticles=max_num_part;
-  MaxNumberOfCells =HBTConfig.TreeAllocFactor*MaxNumberOfParticles;
-  if(MaxNumberOfCells<HBTConfig.TreeMinNumOfCells) MaxNumberOfCells=HBTConfig.TreeMinNumOfCells;
-  Cells=new OctTreeCell_t[MaxNumberOfCells+1];
-
-  NextnodeFromParticle=new HBTInt[MaxNumberOfParticles];
-}
-void OctTree_t::Clear()
-{
-  if(MaxNumberOfParticles)
-  {
-	delete [] NextnodeFromParticle;
-	MaxNumberOfParticles=0;
-	NumberOfParticles=0;
-  }
-  if(MaxNumberOfCells)
-  {
-	delete [] Cells;
-	MaxNumberOfCells=0;
-	MaxNodeId=0;
-  }
-}
+template class OctTree_t<GravityTreeCell_t>;//to wake up the functions for this type; trick!
 
 #ifdef TEST_gravity_tree
 #include "snapshot.h"

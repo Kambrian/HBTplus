@@ -66,6 +66,20 @@ inline void copyHBTxyz(HBTxyz &dest, const HBTxyz &src)
   /*copy for std:arr implementation*/
   dest=src;
 }
+template <class T>
+inline void copyHBTxyz(HBTxyz &dest, const T src[3])
+{
+  dest[0]=src[0];
+  dest[1]=src[1];
+  dest[2]=src[2];
+}
+template <class T1, class T2>
+inline void copyXYZ(T1 dest[3], const T2 src[3])
+{
+  dest[0]=src[0];
+  dest[1]=src[1];
+  dest[2]=src[2];
+}
 
 namespace SpecialConst
 {
@@ -171,5 +185,19 @@ enum ParticleType_t:int
   TypeBndry,
   TypeMax
 };
+
+struct LocatedParticle_t
+{
+  HBTInt id;
+  HBTReal d; //distance**2
+  LocatedParticle_t()=default;
+  LocatedParticle_t(HBTInt id, HBTReal d):id(id),d(d)
+  {}
+};
+inline bool CompLocatedDistance(const LocatedParticle_t &a, const LocatedParticle_t &b)
+{
+  return a.d<b.d;
+}
+
 #define DATATYPES_INCLUDED
 #endif

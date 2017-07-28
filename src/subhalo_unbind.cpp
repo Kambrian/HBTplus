@@ -231,7 +231,7 @@ public:
 	SpecificAngularMomentum[2]=AMz/M;
   }
 };
-inline void RefineBindingEnergyOrder(EnergySnapshot_t &ESnap, HBTInt Size, OctTree_t &tree, HBTxyz &RefPos, HBTxyz &RefVel)
+inline void RefineBindingEnergyOrder(EnergySnapshot_t &ESnap, HBTInt Size, GravityTree_t &tree, HBTxyz &RefPos, HBTxyz &RefVel)
 {//reorder the first Size particles according to their self-binding energy
   auto &Elist=ESnap.Elist;
   auto &Particles=ESnap.Particles;
@@ -290,7 +290,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
   auto &RefVel=PhysicalAverageVelocity;
   
   auto OldMostboundParticle=Particles[0];//backup 
-  OctTree_t tree;
+  GravityTree_t tree;
   tree.Reserve(Particles.size());
   Nbound=Particles.size(); //start from full set
   if(MaxSampleSize>0&&Nbound>MaxSampleSize) random_shuffle(Particles.begin(), Particles.end()); //shuffle for easy resampling later.
