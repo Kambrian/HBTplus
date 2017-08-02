@@ -1,5 +1,5 @@
 /*to compute the density profile of each halo (or halo-matter correlation) out to RMAX in logrithmic bins. 
- * the bins are generated as logspace(RMIN, RMAX, NBIN+1), with the innermost bin edge replaced by 0.
+ * the bin edges are [0, r1, r2, ...rn) where (r1, ...rn) are generated as logspace(RMIN, RMAX, NBIN).
  * output the count in each bin for each halo.
  */
 
@@ -16,6 +16,7 @@
 #include "../src/linkedlist_parallel.h"
 #include "../src/geometric_tree.h"
 
+#define NBOUND_MIN 10000 //min number of host bound particles to consider.
 #define RMIN 1e-2 //only for deciding binwidth; not used to set the innermost bin edge.
 #define RMAX 20.
 #define NBIN 20
@@ -70,7 +71,7 @@ struct HaloSize_t
 };
 void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
 
-vector <float> rbin, rbin2;
+float DlnX=logf(RMAX/RMIN)/(NBIN-1)*2; //spacing in ln-space for r**2
 void logspace(double xmin,double xmax,int N, vector <float> &x);
 void save(vector <HaloSize_t> HaloSize, int isnap, int ifile=0, int nfiles=0);
 int main(int argc, char **argv)
@@ -90,20 +91,14 @@ int main(int argc, char **argv)
   SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
   ParticleSnapshot_t partsnap(isnap);
   auto &Cosmology=partsnap.Cosmology;
-  
-  logspace(RMIN, RMAX, NBIN+1, rbin);
-  rbin2.resize(rbin.size());
-  for(int i=0;i<rbin.size();i++)
-    rbin2[i]=rbin[i]*rbin[i];
-  
-  
+    
   vector <HaloSize_t> HaloSize(subsnap.MemberTable.SubGroups.size()); 
   #pragma omp parallel for
   for(HBTInt grpid=0;grpid<HaloSize.size();grpid++)
   {
     HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
     auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
-    if(subgroup.size()==0||subsnap.Subhalos[subgroup[0]].Nbound<1000) 
+    if(subgroup.size()==0||subsnap.Subhalos[subgroup[0]].Nbound<NBOUND_MIN) 
       continue;
     HaloSize[grpid].TrackId=subgroup[0];
   }
@@ -159,14 +154,9 @@ void HaloSize_t::Compute(HBTxyz &cen, LinkedlistPara_t &ll)
     ll.SearchSphereSerial(RMAX, cen, founds);
     for(auto &&p: founds)
     {
-      for(int i=NBIN-1;i>=0;i--)
-      {
-	if(p.d2>rbin2[i])
-	{
-	  n[i]++;
-	  break;
-	}
-      }
+	int ibin=floor(logf(p.d2)/DlnX);
+	if(ibin>=NBIN) ibin=NBIN-1;
+	n[ibin]++;
     }
 }
 
@@ -177,14 +167,9 @@ void HaloSize_t::Compute(HBTxyz &cen, GeoTree_t &tree)
     tree.Search(cen, RMAX, founds);
     for(auto &&p: founds)
     {
-      for(int i=NBIN-1;i>=0;i--)
-      {
-	if(p.d2>rbin2[i])
-	{
-	  n[i]++;
-	  break;
-	}
-      }
+	int ibin=floor(logf(p.d2)/DlnX);
+	if(ibin>=NBIN) ibin=NBIN-1;
+	n[ibin]++;
     }
 }
 
@@ -202,6 +187,8 @@ void save(vector <HaloSize_t> HaloSize, int isnap, int ifile, int nfiles)
   BuildHDFHaloSize(H5T_HaloSizeInMem, H5T_HaloSizeInDisk);
   writeHDFmatrix(file, &nfiles, "NumberOfFiles", 1, dim_atom, H5T_NATIVE_INT);
   writeHDFmatrix(file, HaloSize.data(), "HostHalos", 1, dims, H5T_HaloSizeInMem, H5T_HaloSizeInDisk);
+  vector <float> rbin;
+  logspace(RMIN, RMAX, NBIN, rbin);
   dims[0]=rbin.size();
   writeHDFmatrix(file, rbin.data(), "RadialBins", 1, dims, H5T_NATIVE_FLOAT);
   H5Tclose(H5T_HaloSizeInDisk);
