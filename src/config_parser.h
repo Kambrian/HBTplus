@@ -83,7 +83,7 @@ public:
   {
 	SnapshotFormat="gadget";
 	GroupFileFormat="gadget3_int";
-	MaxConcurrentIO=4;
+	MaxConcurrentIO=10;
 	MinSnapshotIndex=0;
 	MinNumPartOfSub=20;
 	GroupParticleIdMask=0;
