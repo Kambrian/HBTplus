@@ -13,12 +13,22 @@
 
 #define RMAX 2.
 
+#define NBIN 10  //define this to also compute a count profile; the first bin is [0, 1e-2)*Rvir and the remaining bins are logspaced between [1e-2,1)*Rvir
 struct HaloSize_t
 {
   HBTInt HaloId;
   HBTxyz CenterComoving;
   float MVir, M200Crit, M200Mean, RVirComoving, R200CritComoving, R200MeanComoving;
   float RmaxComoving, VmaxPhysical;
+#ifdef NBIN
+  HBTInt Profile[NBIN];
+#endif
+  HaloSize_t(): HaloId(-1), CenterComoving{0.}, MVir(0), M200Crit(0), M200Mean(0), RVirComoving(0), R200CritComoving(0), R200MeanComoving(0), RmaxComoving(0), VmaxPhysical(0)
+#ifdef NBIN
+  , Profile{0}
+#endif
+  {
+  }
   void Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, ParticleSnapshot_t &partsnap);
 };
 void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
@@ -78,7 +88,20 @@ int main(int argc, char **argv)
   save(HaloSize, isnap);
 }
 
-
+void logspace(double xmin,double xmax,int N, vector <float> &x)
+{
+  x.resize(N);
+  int i;
+  double dx;
+  x[0]=xmin;x[N-1]=xmax;
+  xmin=log(xmin);
+  xmax=log(xmax);
+  dx=exp((xmax-xmin)/(N-1));
+  for(i=1;i<N-1;i++)
+  {
+    x[i]=x[i-1]*dx;
+  }
+}
 void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, ParticleSnapshot_t &partsnap)
 {
     copyHBTxyz(CenterComoving, cen);
@@ -107,6 +130,19 @@ void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_
     partsnap.Cosmology.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
     partsnap.Cosmology.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, prof);
     partsnap.Cosmology.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
+#ifdef NBIN
+    float dx=(0-(-2.))/(NBIN-1); //1e-2 to 1, logspace
+    for(auto &&p: prof)
+    {
+      if(p.r<RVirComoving)
+      {
+	float logr=log10f(p.r/RVirComoving);
+	int ibin=floor(logr/dx);
+	if(ibin>=NBIN) ibin=NBIN-1;
+	Profile[ibin]++;
+      }
+    }
+#endif
 }
 
 void save(vector <HaloSize_t> HaloSize, int isnap)
@@ -142,6 +178,12 @@ void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk)
   InsertMember(MVir, H5T_NATIVE_FLOAT);
   InsertMember(RmaxComoving, H5T_NATIVE_FLOAT);
   InsertMember(VmaxPhysical, H5T_NATIVE_FLOAT);
+#ifdef NBIN
+  dims[0]=NBIN;
+  hid_t H5T_HBTIntVec=H5Tarray_create2(H5T_HBTInt, 1, dims);
+  InsertMember(Profile, H5T_HBTIntVec);
+  H5Tclose(H5T_HBTIntVec);
+#endif
   #undef InsertMember	
 
   H5T_dtypeInDisk=H5Tcopy(H5T_dtypeInMem);
