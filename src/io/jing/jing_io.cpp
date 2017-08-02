@@ -189,7 +189,6 @@ int JingReader_t::CountFiles(const char *filetype)
   char filename[1024], pattern[1024], basefmt[1024], fmt[1024];
   const int ifile=1;
   sprintf(basefmt,"%s/%%s%s.%04d",HBTConfig.SnapshotPath.c_str(), HBTConfig.SnapshotFileBase.c_str(), SnapshotId);
-  sprintf(basefmt, "%s/groups_%03d/subhalo_%%s_%03d",HBTConfig.HaloPath.c_str(),SnapshotId,SnapshotId);
   sprintf(fmt, "%s.%%02d", basefmt);
   sprintf(filename, fmt, filetype, ifile);
   int nfiles=1;
