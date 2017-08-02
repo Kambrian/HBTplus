@@ -57,7 +57,7 @@ void JingReader_t::CheckIdRange(vector <Particle_t>&Particles)
 }
 void JingReader_t::ReadPosFileSingle(int ifile, vector< Particle_t >& Particles)
 {
-  long int nread=Header.Np/NumFilesId;
+  long int nread=Header.Np/NumFilesPos;
   string filename=GetFileName("pos", ifile);
   auto curr_particles=Particles.data()+nread*ifile;
   
@@ -91,7 +91,7 @@ void JingReader_t::ReadPosFileSingle(int ifile, vector< Particle_t >& Particles)
 }
 void JingReader_t::ReadVelFileSingle(int ifile, vector< Particle_t >& Particles)
 {
-  long int nread=Header.Np/NumFilesId;
+  long int nread=Header.Np/NumFilesVel;
   string filename=GetFileName("vel", ifile);
   auto curr_particles=Particles.data()+nread*ifile;
   
