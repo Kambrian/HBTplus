@@ -1,6 +1,7 @@
 #include <iostream>
 #include <new>
 #include <algorithm>
+#include <numeric>
 #include <omp.h>
 
 #include "datatypes.h"

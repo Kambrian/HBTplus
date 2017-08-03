@@ -1,6 +1,7 @@
 #ifndef PARTICLE_EXCHANGER_H_INCLUDED
 #define PARTICLE_EXCHANGER_H_INCLUDED
 
+#include <numeric>
 #include <assert.h>
 #include <cstdlib>
 #include <cstdio>

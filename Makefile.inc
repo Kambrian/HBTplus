@@ -48,6 +48,7 @@ ifeq ($(BASECXX), g++)
 #OMPFLAG=-fopenmp
 else
 #OMPFLAG=-openmp
+#OMPFLAG=-qopenmp
 endif
   
 %.test.o: %.cpp

@@ -1,5 +1,6 @@
 using namespace std;
 #include <iostream>
+#include <numeric>
 // #include <iomanip>
 #include <sstream>
 #include <string>
