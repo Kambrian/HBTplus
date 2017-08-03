@@ -1,5 +1,6 @@
 #include <iostream>
 #include <new>
+#include <numeric>
 #include <algorithm>
 #include <omp.h>
 

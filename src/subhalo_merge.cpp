@@ -2,6 +2,7 @@
 #include <new>
 #include <algorithm>
 #include <unordered_set>
+#include <numeric>
 #include <omp.h>
 
 #include "datatypes.h"
