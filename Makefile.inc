@@ -50,6 +50,7 @@ ifeq ($(CXX), g++)
 OMPFLAG=-fopenmp
 else
 OMPFLAG=-openmp
+#OMPFLAG=-qopenmp
 endif
 
 %.f.o: %.f90
