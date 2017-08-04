@@ -30,12 +30,6 @@ CXXFLAGS+=-DDM_ONLY
 #CXXFLAGS+=-DINCLUSIVE_MASS
 ###
 
-FC=gfortran
-FTNLIB=-lgfortran
-#FC=ifort
-#FTNLIB=-lifport -lifcore
-
-
 CXX=g++
 CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -g #-lmcheck
 
@@ -54,8 +48,15 @@ OMPFLAG=-openmp
 #OMPFLAG=-qopenmp
 endif
 
+FC=gfortran
+FTNLIB=-lgfortran
+FFLAGS+=-fopenmp
+#FC=ifort
+#FTNLIB=-lifport -lifcore
+#FFLAGS+=-openmp
+
 %.f.o: %.f90
-	$(FC) $^ -c -o $@ 
+	$(FC) $^ $(FFLAGS) -c -o $@ 
 
 %.test.o: %.cpp
 	$(CXX) $^ -DTEST_$(basename $<) $(CXXFLAGS) -c -o $@
