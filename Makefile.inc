@@ -30,10 +30,10 @@ CXXFLAGS+=-DDM_ONLY
 #CXXFLAGS+=-DINCLUSIVE_MASS
 ###
 
-#FC=gfortran
-#FTNLIB=-lgfortran
-FC=ifort
-FTNLIB=-lifport -lifcore
+FC=gfortran
+FTNLIB=-lgfortran
+#FC=ifort
+#FTNLIB=-lifport -lifcore
 
 
 CXX=g++
