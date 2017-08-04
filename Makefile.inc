@@ -37,16 +37,15 @@ CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPCFLAG) -O3 -g #-lmcheck
 #CXXFLAGS+=-g
 #LDFLAGS+=-g
 LINK.o=$(LINK.cpp) #invoke c++ linker rather than the default (c) linker.
-LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPCFLAG) #-lmcheck
+LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPLIB) #-lmcheck
 
 ifeq ($(CXX), g++)
 OMPCFLAG=-fopenmp
 endif
 ifeq ($(CXX), icpc)
 #new intel compilers accept only -qopenmp and -fopenmp; old intel only accept -openmp
-OMPCFLAG=-openmp
+OMPCFLAG=-qopenmp
 endif
-
 
 #this is only needed for jing_io so far
 #FC=gfortran
@@ -54,11 +53,13 @@ FC=ifort
 
 ifeq ($(FC), gfortran)
 OMPFFLAG=-fopenmp
+OMPLIB=-fopenmp
 FTNLIB=-lgfortran
 endif
 ifeq ($(FC), ifort)
-OMPFFLAG=-openmp
-FTNLIB=-lifport -lifcore -liomp5
+OMPFFLAG=-qopenmp
+OMPLIB=-liomp5 #newest intel omp is compatible with gcc, but not vice versa
+FTNLIB=-lifport -lifcore
 endif
 
 FFLAGS+=$(OMPFFLAG)
