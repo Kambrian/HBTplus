@@ -30,10 +30,10 @@ CXXFLAGS+=-DDM_ONLY
 #CXXFLAGS+=-DINCLUSIVE_MASS
 ###
 
-FC=gfortran
-FTNLIB=-lgfortran
-#FC=ifort
-#FTNLIB=-lifport -lifcore
+#FC=gfortran
+#FTNLIB=-lgfortran
+FC=ifort
+FTNLIB=-lifport -lifcore
 
 
 CXX=g++
@@ -49,6 +49,7 @@ LINK.o=$(LINK.cpp) #invoke c++ linker rather than the default (c) linker.
 ifeq ($(CXX), g++)
 OMPFLAG=-fopenmp
 else
+# new intel compilers accept -qopenmp and -fopenmp, while old intel only accept -openmp
 OMPFLAG=-openmp
 #OMPFLAG=-qopenmp
 endif

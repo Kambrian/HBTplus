@@ -1,3 +1,10 @@
 - There could be significant performance degradation on an overloaded system. (OpenMP version)
 
   This is probably caused by the compiler (g++) failing to optimize the code well in case of system overload. Have to rely on resource allocation from a batch job scheduler (e.g., LSF). Or make sure the cpus are not overloaded if you are running on an interactive machine. 
+  
+- Very poor parallel performance of jing_io when compiled with gcc on uv35. 
+
+  Using intel fortran instead of gfortran solves the problem, i.e., by setting 
+    FC=ifort
+    FTNLIB=-lifport -lifcore
+  in Makefile.inc. The old intel c++ compiler (2013) was not built with full c++11 support while the newest intel c++ compiler (2017) seems to have a bug in parallelizing the IO. Fortunately we can use ifort together with g++. 
