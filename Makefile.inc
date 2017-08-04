@@ -31,30 +31,37 @@ CXXFLAGS+=-DDM_ONLY
 ###
 
 CXX=g++
-CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -g #-lmcheck
-
-LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPFLAG) #-lmcheck
+CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPCFLAG) -O3 -g #-lmcheck
 
 # CXXFLAGS+=-xHost #to get it runnable on cosma-e
 #CXXFLAGS+=-g
 #LDFLAGS+=-g
 LINK.o=$(LINK.cpp) #invoke c++ linker rather than the default (c) linker.
+LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPCFLAG) #-lmcheck
 
 ifeq ($(CXX), g++)
-OMPFLAG=-fopenmp
-else
-# new intel compilers accept -qopenmp and -fopenmp, while old intel only accept -openmp
-OMPFLAG=-openmp
-#OMPFLAG=-qopenmp
+OMPCFLAG=-fopenmp
+endif
+ifeq ($(CXX), icpc)
+#new intel compilers accept only -qopenmp and -fopenmp; old intel only accept -openmp
+OMPCFLAG=-openmp
 endif
 
-FC=gfortran
-FTNLIB=-lgfortran
-FFLAGS+=-fopenmp
-#FC=ifort
-#FTNLIB=-lifport -lifcore
-#FFLAGS+=-openmp
 
+#this is only needed for jing_io so far
+#FC=gfortran
+FC=ifort
+
+ifeq ($(FC), gfortran)
+OMPFFLAG=-fopenmp
+FTNLIB=-lgfortran
+endif
+ifeq ($(FC), ifort)
+OMPFFLAG=-openmp
+FTNLIB=-lifport -lifcore -liomp5
+endif
+
+FFLAGS+=$(OMPFFLAG)
 %.f.o: %.f90
 	$(FC) $^ $(FFLAGS) -c -o $@ 
 
