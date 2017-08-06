@@ -56,7 +56,7 @@ struct Particle_t
   ParticleType_t Type;
 #endif
   void create_MPI_type(MPI_Datatype &dtype);
-  Particle_t()=default;
+  Particle_t(){};
   Particle_t(HBTInt id): Id(id)
   {
   }

@@ -63,30 +63,33 @@ void FlatIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t<Key_t, Index_t> &Key
   Index_t n=Keys.size();
   if(0==n) return;
   
-	KeyMax=Keys.GetKey(0);KeyMin=Keys.GetKey(0);
-	for(Index_t i=1;i<n;i++)
-	{
-		if(Keys.GetKey(i)>KeyMax)
-			KeyMax=Keys.GetKey(i);
-		else if(Keys.GetKey(i)<KeyMin)	
-			KeyMin=Keys.GetKey(i);
-	}
-	KeySpan=KeyMax-KeyMin+1;
-	Index=new Index_t[KeySpan];
-	Offset=KeyMin;
-	Index-=Offset;/*shift PIndex by KeyMin element so that it is accessed through PIndex[KeyMin~KeyMax],
-					i.e.,its subscript ranges the same as particle ID range. PID_all[PIndex[Id]]=Id;*/
-	
-	#pragma omp parallel 
-	{
-	#pragma omp for
-	for(Key_t i=KeyMin;i<=KeyMax;i++)
-		Index[i]=BaseClass_t::NullIndex; //initialize with -1, although not necessary
-	/*====make ID index for query====*/
-	#pragma omp for
-	for(Index_t i=0;i<n;i++)
-	  Index[Keys.GetKey(i)]=Keys.GetIndex(i);		
-	}
+  Key_t keymin, keymax;
+  keymin=keymax=Keys.GetKey(0);
+#pragma omp parallel for reduction(min:keymin), reduction(max:keymax)
+  for(Index_t i=1;i<n;i++)
+  {
+	  if(Keys.GetKey(i)>keymax)
+		  keymax=Keys.GetKey(i);
+	  else if(Keys.GetKey(i)<keymin)	
+		  keymin=Keys.GetKey(i);
+  }
+  KeyMax=keymax; KeyMin=keymin;
+  KeySpan=KeyMax-KeyMin+1;
+  Index=new Index_t[KeySpan];
+  Offset=KeyMin;
+  Index-=Offset;/*shift PIndex by KeyMin element so that it is accessed through PIndex[KeyMin~KeyMax],
+				  i.e.,its subscript ranges the same as particle ID range. PID_all[PIndex[Id]]=Id;*/
+  
+  #pragma omp parallel 
+  {
+  #pragma omp for
+  for(Key_t i=KeyMin;i<=KeyMax;i++)
+	  Index[i]=BaseClass_t::NullIndex; //initialize with -1, although not necessary
+  /*====make ID index for query====*/
+  #pragma omp for
+  for(Index_t i=0;i<n;i++)
+    Index[Keys.GetKey(i)]=Keys.GetIndex(i);		
+  }
 }
 template <class Key_t, class Index_t>
 void FlatIndexTable_t<Key_t, Index_t>::Clear()

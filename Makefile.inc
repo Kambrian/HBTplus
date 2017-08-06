@@ -36,7 +36,7 @@ CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g
 
 LDLIBS+=$(HDFLIB) $(OMPFLAG) $(GSLLIB)
 LDFLAGS+=-g
-#LINK.o=$(LINK.cpp)
+LINK.o=$(CXX) $(LDFLAGS) $(TARGET_ARCH)
 
 ifneq (,$(filter $(CXX),mpic++ mpicxx mpiCC))
 BASECXX=$(shell $(CXX) -show|cut -c1-3)
