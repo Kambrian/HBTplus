@@ -62,7 +62,7 @@ void FlatIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t<Key_t, Index_t> &Key
   
   Key_t keymin, keymax;
   keymin=keymax=Keys.GetKey(0);
-  #pragma omp parallel reduction(max: keymax), reduction(min: keymin)
+  #pragma omp parallel for reduction(max: keymax), reduction(min: keymin)
   for(Index_t i=1;i<n;i++)
   {
 	  if(Keys.GetKey(i)>keymax)
