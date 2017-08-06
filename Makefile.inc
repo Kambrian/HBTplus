@@ -36,20 +36,28 @@ CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPCFLAG) -O3 -g #-lmcheck
 # CXXFLAGS+=-xHost #to get it runnable on cosma-e
 #CXXFLAGS+=-g
 #LDFLAGS+=-g
-LINK.o=$(LINK.cpp) #invoke c++ linker rather than the default (c) linker.
-LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPLIB) #-lmcheck
+LINK.o=$(CXX) $(LDFLAGS) $(TARGET_ARCH) #invoke c++ compiler for linking
+LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPLIB) $(MATHLIB) #-lmcheck
 
 ifeq ($(CXX), g++)
 OMPCFLAG=-fopenmp
+MATHLIB=-lm
 endif
 ifeq ($(CXX), icpc)
 #new intel compilers accept only -qopenmp and -fopenmp; old intel only accept -openmp
 OMPCFLAG=-qopenmp
+MATHLIB=-limf
 endif
 
 #this is only needed for jing_io so far
-#FC=gfortran
+FC=gfortran
+#FC=ifort
+
+## special adjustment for a few peculiar servers, not relevant for general users ##
+HOSTLIST:=UV00000292-P000 a4700
+ifneq ($(filter $(HOST),$(HOSTLIST)),)
 FC=ifort
+endif
 
 ifeq ($(FC), gfortran)
 OMPFFLAG=-fopenmp

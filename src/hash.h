@@ -39,6 +39,7 @@ struct IndexedKey_t
 {
   Key_t Key;
   Index_t Index;  
+  IndexedKey_t(){};//empty constructor, for quick mem allocation.
 };
 
 template <class Key_t, class Index_t>

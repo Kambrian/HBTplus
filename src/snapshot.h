@@ -33,6 +33,7 @@ struct Particle_t
 #endif
   ParticleType_t Type;
 #endif
+  Particle_t(){};//do nothing. this leaves the content uninitialized, for fast memory allocation.
 };
 
 struct Cosmology_t
