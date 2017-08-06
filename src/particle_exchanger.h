@@ -21,7 +21,7 @@ public:
   HBTInt Order;
 //   using Particle_t::Particle_t;
   using Particle_t::operator=;//inherit assignment operator
-  OrderedParticle_t()=default;
+  OrderedParticle_t(){};
   OrderedParticle_t(HBTInt id, HBTInt order): Particle_t(id), Order(order)
   {
   }
@@ -36,7 +36,7 @@ public:
   int ProcessorId;
 //   using Particle_t::Particle_t;
   using Particle_t::operator=;//inherit assignment operator
-  RemoteParticle_t()=default;
+  RemoteParticle_t(){};
   RemoteParticle_t(HBTInt id, HBTInt order): OrderedParticle_t(id, order)
   {
   }

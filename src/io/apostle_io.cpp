@@ -452,7 +452,7 @@ void ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< Hal
   {
     HBTInt haloid;
     HBTInt np;
-    HaloLen_t()=default;
+    HaloLen_t(){};
     HaloLen_t(HBTInt haloid, HBTInt np): haloid(haloid), np(np)
     {
     }

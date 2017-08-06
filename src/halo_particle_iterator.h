@@ -8,7 +8,7 @@ class HaloParticleIterator_t
   HaloIterator FirstHalo, EndHalo, CurrHalo;
   particle_iterator CurrPart;
 public:
-  HaloParticleIterator_t()=default;
+  HaloParticleIterator_t(){};
   HaloParticleIterator_t(const HaloIterator &begin, const HaloIterator &end)
   {
 	init(begin, end);
@@ -61,7 +61,7 @@ class HaloNestIterator_t
   HaloIterator FirstHalo, EndHalo, CurrHalo;
   nest_iterator CurrPart;
 public:
-  HaloNestIterator_t()=default;
+  HaloNestIterator_t(){};
   HaloNestIterator_t(const HaloIterator &begin, const HaloIterator &end)
   {
 	init(begin, end);
