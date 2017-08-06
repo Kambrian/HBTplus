@@ -177,7 +177,7 @@ struct LocatedParticle_t
 {
   HBTInt index;
   HBTReal d2; //distance**2
-  LocatedParticle_t()=default;
+  LocatedParticle_t(){};
   LocatedParticle_t(HBTInt index, HBTReal d2):index(index),d2(d2)
   {}
 };
