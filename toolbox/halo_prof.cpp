@@ -73,7 +73,7 @@ void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
 
 float DlnX=logf(RMAX/RMIN)/(NBIN-1)*2; //spacing in ln-space for r**2
 void logspace(double xmin,double xmax,int N, vector <float> &x);
-void save(vector <HaloSize_t> HaloSize, int isnap, int ifile=0, int nfiles=0);
+void save(vector <HaloSize_t> &HaloSize, int isnap, int ifile=0, int nfiles=0);
 int main(int argc, char **argv)
 {
   if(argc!=3)
@@ -173,7 +173,7 @@ void HaloSize_t::Compute(HBTxyz &cen, GeoTree_t &tree)
     }
 }
 
-void save(vector <HaloSize_t> HaloSize, int isnap, int ifile, int nfiles)
+void save(vector <HaloSize_t> &HaloSize, int isnap, int ifile, int nfiles)
 {
   string filename=HBTConfig.SubhaloPath+"/HaloSize";
   mkdir(filename.c_str(), 0755);

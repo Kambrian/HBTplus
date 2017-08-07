@@ -47,7 +47,7 @@ inline float ComovingMean200Radius(float M200b, float OmegaM0)
 }
 HBTReal virialF_tophat, virialF_b200, virialF_c200;
 HBTReal VelocityUnit;
-void save(vector <HaloSize_t> HaloSize, int isnap);
+void save(vector <HaloSize_t> &HaloSize, int isnap);
 int main(int argc, char **argv)
 {
   if(argc!=3)
@@ -145,7 +145,7 @@ void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_
 #endif
 }
 
-void save(vector <HaloSize_t> HaloSize, int isnap)
+void save(vector <HaloSize_t> &HaloSize, int isnap)
 {
   string filename=HBTConfig.SubhaloPath+"/HaloSize";
   mkdir(filename.c_str(), 0755);
