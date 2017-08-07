@@ -14,6 +14,7 @@
 #define RMAX 2.
 
 #define NBIN 10  //define this to also compute a count profile; the first bin is [0, 1e-2)*Rvir and the remaining bins are logspaced between [1e-2,1)*Rvir
+float Dlnx=(0-(-2.))/(NBIN-1); //1e-2 to 1, logspace
 struct HaloSize_t
 {
   HBTInt HaloId;
@@ -86,6 +87,8 @@ int main(int argc, char **argv)
     HaloSize[grpid].Compute(subsnap.Subhalos[subsnap.MemberTable.SubGroups[grpid][0]].ComovingMostBoundPosition, rmax, np, ll, partsnap);   
   }
   save(HaloSize, isnap);
+  
+  return 0;
 }
 
 void logspace(double xmin,double xmax,int N, vector <float> &x)
@@ -131,14 +134,17 @@ void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_
     partsnap.Cosmology.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, prof);
     partsnap.Cosmology.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
 #ifdef NBIN
-    float dx=(0-(-2.))/(NBIN-1); //1e-2 to 1, logspace
+    float r0=1e-2*RVirComoving;
     for(auto &&p: prof)
     {
       if(p.r<RVirComoving)
       {
-	float logr=log10f(p.r/RVirComoving);
-	int ibin=floor(logr/dx);
-	if(ibin>=NBIN) ibin=NBIN-1;
+	float logr=log10f(p.r/r0);
+	int ibin=ceilf(log10f(p.r/r0)/Dlnx); //1 to NBIN-1 from r0 to rvir
+	if(ibin<0) 
+	  ibin=0;
+	else if(ibin>=NBIN) 
+	  ibin=NBIN-1;
 	Profile[ibin]++;
       }
     }

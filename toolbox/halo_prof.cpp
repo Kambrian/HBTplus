@@ -145,6 +145,8 @@ int main(int argc, char **argv)
     HaloSize.resize(it_save-HaloSize.begin());
     
     save(HaloSize, isnap);
+    
+    return 0;
 }
 
 void HaloSize_t::Compute(HBTxyz &cen, LinkedlistPara_t &ll)
@@ -154,8 +156,9 @@ void HaloSize_t::Compute(HBTxyz &cen, LinkedlistPara_t &ll)
     ll.SearchSphereSerial(RMAX, cen, founds);
     for(auto &&p: founds)
     {
-	int ibin=floor(logf(p.d2)/DlnX);
-	if(ibin>=NBIN) ibin=NBIN-1;
+	int ibin=ceilf(logf(p.d2/RMIN/RMIN)/DlnX);
+	if(ibin<0) ibin=0;
+	else if(ibin>=NBIN) ibin=NBIN-1;
 	n[ibin]++;
     }
 }
@@ -167,8 +170,9 @@ void HaloSize_t::Compute(HBTxyz &cen, GeoTree_t &tree)
     tree.Search(cen, RMAX, founds);
     for(auto &&p: founds)
     {
-	int ibin=floor(logf(p.d2)/DlnX);
-	if(ibin>=NBIN) ibin=NBIN-1;
+	int ibin=ceilf(logf(p.d2/RMIN/RMIN)/DlnX);
+	if(ibin<0) ibin=0;
+	else if(ibin>=NBIN) ibin=NBIN-1;
 	n[ibin]++;
     }
 }
