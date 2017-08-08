@@ -70,17 +70,20 @@ int main(int argc, char **argv)
   ParseHBTParams(argc, argv, HBTConfig, snap_start, snap_end);
   for(int isnap=snap_start;isnap<=snap_end;isnap++)
   {
+    Timer_t timer;
+    timer.Tick();
     HaloSnapshot_t halosnap(isnap);
     SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
     ParticleSnapshot_t partsnap(isnap);
     auto &Cosmology=partsnap.Cosmology;
     Cosmology.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
     VelocityUnit=PhysicalConst::G/partsnap.Cosmology.ScaleFactor;
+    timer.Tick();cout<<"load: "<<timer.GetSeconds(1)<<" seconds\n";
   
     SnapshotPos_t PartPos(partsnap);
     LinkedlistPara_t ll(256, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
     cout<<"linked list compiled\n";
-    
+    timer.Tick();cout<<"link: "<<timer.GetSeconds(2)<<" seconds\n";
     vector <HaloSize_t> HaloSize(halosnap.size());
     #pragma omp parallel for
     for(HBTInt grpid=0;grpid<halosnap.size();grpid++)
@@ -93,6 +96,7 @@ int main(int argc, char **argv)
       float rmax=ComovingMean200Radius(np*Cosmology.ParticleMass, Cosmology.OmegaM0)*RMAX;//use b200 as a ref
       HaloSize[grpid].Compute(subsnap.Subhalos[subsnap.MemberTable.SubGroups[grpid][0]].ComovingMostBoundPosition, rmax, np, ll, partsnap);   
     }
+    timer.Tick();cout<<"compute: "<<timer.GetSeconds(3)<<" seconds\n";
     save(HaloSize, isnap);
   }
   
