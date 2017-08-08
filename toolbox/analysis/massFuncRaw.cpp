@@ -30,6 +30,7 @@ struct Satellite_t
     HBTInt HostId;
     HBTInt TrackId;
     HBTInt CentralTrackId;
+    int IsSinked;
 };
 
 class SubhaloPos_t: public PositionData_t
@@ -146,6 +147,7 @@ void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara
 	    sat.Vmax=sub.VmaxPhysical;
 // 	    sat.VmaxHost=host.VmaxPhysical;
 	    sat.VmaxHost=central.VmaxPhysical;
+	    sat.IsSinked=(sub.SnapshotIndexOfSink>0)&(sub.SnapshotIndexOfSink==sub.SnapshotIndexOfDeath);
             satellites.push_back(sat);
         }
     }
@@ -176,6 +178,7 @@ void BuildHDFSatellite(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk)
     InsertMember(LastMaxVmax, H5T_NATIVE_FLOAT);
     InsertMember(Vmax, H5T_NATIVE_FLOAT);
     InsertMember(VmaxHost, H5T_NATIVE_FLOAT);
+    InsertMember(IsSinked, H5T_NATIVE_INT);
 #undef InsertMember
 
     H5T_dtypeInDisk=H5Tcopy(H5T_dtypeInMem);
