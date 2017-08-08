@@ -13,8 +13,10 @@
 
 #define RMAX 2.
 
-#define NBIN 10  //define this to also compute a count profile; the first bin is [0, 1e-2)*Rvir and the remaining bins are logspaced between [1e-2,1)*Rvir
+// #define NBIN 10  //define this to also compute a count profile; the first bin is [0, 1e-2)*Rvir and the remaining bins are logspaced between [1e-2,1)*Rvir
+#ifdef NBIN
 float Dlnx=(0-(-2.))/(NBIN-1); //1e-2 to 1, logspace
+#endif
 struct HaloSize_t
 {
   HBTInt HaloId;
@@ -51,6 +53,7 @@ HBTReal VelocityUnit;
 void save(vector <HaloSize_t> &HaloSize, int isnap);
 int main(int argc, char **argv)
 {
+  /*
   if(argc!=3)
   {
     cerr<<"Usage: "<<endl;
@@ -62,31 +65,40 @@ int main(int argc, char **argv)
   HBTConfig.ParseConfigFile(argv[1]);
   int isnap=atoi(argv[2]);
   if(isnap<0) isnap=HBTConfig.MaxSnapshotIndex+isnap+1;
-  
-  HaloSnapshot_t halosnap(isnap);
-  SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
-  ParticleSnapshot_t partsnap(isnap);
-  auto &Cosmology=partsnap.Cosmology;
-  Cosmology.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
-  VelocityUnit=PhysicalConst::G/partsnap.Cosmology.ScaleFactor;
- 
-  SnapshotPos_t PartPos(partsnap);
-  LinkedlistPara_t ll(256, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
-  cout<<"linked list compiled\n";
-  
-  vector <HaloSize_t> HaloSize(halosnap.size());
-  #pragma omp parallel for
-  for(HBTInt grpid=0;grpid<halosnap.size();grpid++)
+  */
+  int snap_start, snap_end;
+  ParseHBTParams(argc, argv, HBTConfig, snap_start, snap_end);
+  for(int isnap=snap_start;isnap<=snap_end;isnap++)
   {
-    HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
-    auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
-    if(subgroup.size()==0)
-      continue;
-    HBTInt np=halosnap.Halos[grpid].size();
-    float rmax=ComovingMean200Radius(np*Cosmology.ParticleMass, Cosmology.OmegaM0)*RMAX;//use b200 as a ref
-    HaloSize[grpid].Compute(subsnap.Subhalos[subsnap.MemberTable.SubGroups[grpid][0]].ComovingMostBoundPosition, rmax, np, ll, partsnap);   
+    Timer_t timer;
+    timer.Tick();
+    HaloSnapshot_t halosnap(isnap);
+    SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
+    ParticleSnapshot_t partsnap(isnap);
+    auto &Cosmology=partsnap.Cosmology;
+    Cosmology.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
+    VelocityUnit=PhysicalConst::G/partsnap.Cosmology.ScaleFactor;
+    timer.Tick();cout<<"load: "<<timer.GetSeconds(1)<<" seconds\n";
+  
+    SnapshotPos_t PartPos(partsnap);
+    LinkedlistPara_t ll(256, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+    cout<<"linked list compiled\n";
+    timer.Tick();cout<<"link: "<<timer.GetSeconds(2)<<" seconds\n";
+    vector <HaloSize_t> HaloSize(halosnap.size());
+    #pragma omp parallel for
+    for(HBTInt grpid=0;grpid<halosnap.size();grpid++)
+    {
+      HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
+      auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
+      if(subgroup.size()==0)
+	continue;
+      HBTInt np=halosnap.Halos[grpid].size();
+      float rmax=ComovingMean200Radius(np*Cosmology.ParticleMass, Cosmology.OmegaM0)*RMAX;//use b200 as a ref
+      HaloSize[grpid].Compute(subsnap.Subhalos[subsnap.MemberTable.SubGroups[grpid][0]].ComovingMostBoundPosition, rmax, np, ll, partsnap);   
+    }
+    timer.Tick();cout<<"compute: "<<timer.GetSeconds(3)<<" seconds\n";
+    save(HaloSize, isnap);
   }
-  save(HaloSize, isnap);
   
   return 0;
 }

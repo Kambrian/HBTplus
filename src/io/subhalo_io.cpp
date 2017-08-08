@@ -146,7 +146,7 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
  
   vector <hvl_t> vl;
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
-  bool MembershipError = (H5Lexists (file, "/Membership", H5P_DEFAULT)>0);
+  bool MembershipError = !(H5Lexists (file, "/Membership", H5P_DEFAULT)>0);
   if(!MembershipError)//exist
   {
     ReadDataset(file, "/Membership/NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);

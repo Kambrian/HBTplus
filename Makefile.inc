@@ -1,8 +1,19 @@
+CXX=icpc
+FC=ifort
+#the fortran compiler is only needed for jing_io so far
+
+CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPCFLAG) -O3 -g 
+FFLAGS+=$(OMPFFLAG)
+LDFLAGS+=-g
+LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPLIB) $(MATHLIB) 
+
+LINK.o=$(CXX) $(LDFLAGS) $(TARGET_ARCH) #invoke c++ compiler for linking
+
 #HDFINC=-I/usr/include/hdf5/serial/
 #HDFLIB=-L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_hl -lhdf5
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5
-HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header
+#HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header
 
 ###comment out the following lines if you do not have GSL (for eigenvalue decomposition of inertial tensors)
 #GSLINC=
@@ -30,15 +41,6 @@ CXXFLAGS+=-DDM_ONLY
 #CXXFLAGS+=-DINCLUSIVE_MASS
 ###
 
-CXX=g++
-CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPCFLAG) -O3 -g #-lmcheck
-
-# CXXFLAGS+=-xHost #to get it runnable on cosma-e
-#CXXFLAGS+=-g
-#LDFLAGS+=-g
-LINK.o=$(CXX) $(LDFLAGS) $(TARGET_ARCH) #invoke c++ compiler for linking
-LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPLIB) $(MATHLIB) #-lmcheck
-
 ifeq ($(CXX), g++)
 OMPCFLAG=-fopenmp
 MATHLIB=-lm
@@ -48,10 +50,6 @@ ifeq ($(CXX), icpc)
 OMPCFLAG=-qopenmp
 MATHLIB=-limf
 endif
-
-#this is only needed for jing_io so far
-FC=gfortran
-#FC=ifort
 
 ## special adjustment for a few peculiar servers, not relevant for general users ##
 HOSTLIST:=UV00000292-P000 a4700
@@ -70,7 +68,15 @@ OMPLIB=-liomp5 #newest intel omp is compatible with gcc, but not vice versa
 FTNLIB=-lifport -lifcore
 endif
 
-FFLAGS+=$(OMPFFLAG)
+## special adjustment for a few peculiar servers, not relevant for general users ##
+ifeq ($(HOST), a4700)
+OMPFFLAG=
+OMPLIB=-fopenmp
+src/io/jing/jing_io.o: OMPCFLAG=
+endif
+
+#CXXFLAGS+=-xHost #to get it runnable on cosma-e
+
 %.f.o: %.f90
 	$(FC) $^ $(FFLAGS) -c -o $@ 
 
