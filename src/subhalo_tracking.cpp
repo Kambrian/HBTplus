@@ -654,11 +654,12 @@ void SubhaloSnapshot_t::LocalizeNestedIds(MpiWorker_t &world)
 void SubhaloSnapshot_t::GlobalizeTrackReferences()
 /*translate subhalo references from index to trackIds*/
 {
+  int curr_snap=GetSnapshotIndex();
   #pragma omp for
   for(HBTInt i=0;i<Subhalos.size();i++)
   {
     auto &subhalo=Subhalos[i];
-    if(subhalo.SinkTrackId!=SpecialConst::NullTrackId&&subhalo.SnapshotIndexOfDeath==GetSnapshotIndex())//only do this for freshly merged tracks; the old ones are already global.
+    if(subhalo.JustTrapped(curr_snap))//only do this for freshly merged tracks; the old ones are already global.
       subhalo.SinkTrackId=Subhalos[subhalo.SinkTrackId].TrackId;
     for(auto &&subid: subhalo.NestedSubhalos)
       subid=Subhalos[subid].TrackId;
