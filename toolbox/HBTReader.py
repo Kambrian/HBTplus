@@ -5,7 +5,7 @@ To use it, initialize the reader with the parameter file under the subhalo direc
 
   from HBTReader import HBTReader
 
-  reader=HBTReader('subcat2/VER1.8.2.param')
+  reader=HBTReader('subcat')
 
   snapshotnumber=-1 # or 0~MaxSnap. -1 means last snapshot
 
