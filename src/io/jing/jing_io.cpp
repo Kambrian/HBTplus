@@ -27,8 +27,9 @@ void JingReader_t::ReadIdFileSingle(int ifile, vector< Particle_t >& Particles)
   if(filestat) throw(runtime_error("failed to open file "+filename+", error no. "+to_string(filestat)+"\n"));
   read_fortran_record_HBTInt(PId.data(), &nread, &fileno);
   close_fortran_file_(&fileno);
-  
+ 
   auto curr_particles=Particles.data()+nread*ifile;
+  #pragma omp parallel for num_threads(NumSlaves)
   for(HBTInt i=0;i<nread;i++)
 	curr_particles[i].Id=PId[i];
 }
@@ -43,8 +44,11 @@ void JingReader_t::ReadId(vector <Particle_t> &Particles)
   else
   {
     #pragma omp task shared(Particles)
+    {
+    #pragma omp parallel for num_threads(NumSlaves)
     for(HBTInt i=0;i<Particles.size();i++)
       Particles[i].Id=i;
+    }
   }
 }
 void JingReader_t::CheckIdRange(vector <Particle_t>&Particles)
@@ -83,6 +87,7 @@ void JingReader_t::ReadPosFileSingle(int ifile, vector< Particle_t >& Particles)
     typedef float PosVec_t[3];
     PosVec_t *Pos=new PosVec_t[nread];
     ReadParticleArray(Pos,nread,fileno);
+    #pragma omp parallel for num_threads(NumSlaves)
     for(HBTInt j=0;j<nread;j++)
       copyHBTxyz(curr_particles[j].ComovingPosition,Pos[j]);
     delete [] Pos;
@@ -117,6 +122,7 @@ void JingReader_t::ReadVelFileSingle(int ifile, vector< Particle_t >& Particles)
     typedef float VelVec_t[3];
     VelVec_t *Vel=new VelVec_t[nread];
     ReadParticleArray(Vel,nread,fileno);
+    #pragma omp parallel for num_threads(NumSlaves)
     for(HBTInt j=0;j<nread;j++)
       copyHBTxyz(curr_particles[j].PhysicalVelocity, Vel[j]);
     delete [] Vel;
@@ -283,21 +289,35 @@ void JingReader_t::LoadExtraHeaderParams(JingHeader_t &header)
 
 void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cosmology)
 {
+  Timer_t timer;
+  timer.Tick();
   ReadHeader(Header);
   Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
   Cosmology.ParticleMass=Header.mass[TypeDM];
   Particles.resize(Header.Np);
   
-  int nthreads=NumFilesId+NumFilesPos+NumFilesVel;
-  #pragma omp parallel num_threads(nthreads)
-  #pragma omp single //nowait //creating tasks inside
+  int ntasks=NumFilesId+NumFilesPos+NumFilesVel;
+  #pragma omp parallel
+  #pragma omp single
+#ifdef _OPENMP
+  NumSlaves=omp_get_thread_num();
+  NumSlaves/=ntasks;
+  if(NumSlaves==0) NumSlaves=1;
+  omp_set_nested(1);
+#else
+  NumSlaves=1;
+#endif
+  #pragma omp parallel num_threads(ntasks)
+  #pragma omp single //creating tasks inside
   {
     ReadPosition(Particles);
     ReadVelocity(Particles);
     ReadId(Particles);
   }
-// 	#pragma omp taskwait
-	
+#ifdef _OPENMP
+  omp_set_nested(0);
+#endif
+
   if(HBTConfig.SnapshotHasIdBlock)  CheckIdRange(Particles);
   
   #pragma omp parallel for
@@ -315,7 +335,8 @@ void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cos
     }
   }
 	
-  cout<<" ( "<<nthreads<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
+  timer.Tick();
+  cout<<" ( "<<ntasks<<" total files ) : "<<Particles.size()<<" particles loaded in "<<timer.GetSeconds()<<" seconds"<<endl;
 }
 
 namespace JingGroup
