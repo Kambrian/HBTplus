@@ -66,9 +66,12 @@ public:
   {
 	return tickers.size();
   }
-  double GetSeconds(int itick)
-  /*get the time spent from the previous tick to the current tick*/
+  double GetSeconds(int itick=-1)
+  /*get the time spent from the previous tick to the current tick
+   * if itick not specified, return the current interval
+   * if itick<0, it will be interpreted as end()+itick */
   {
+	if(itick<0) itick+=Size();
 	return GetSeconds(itick, itick-1);
   }
   double GetSeconds(int itick, int itick0)
