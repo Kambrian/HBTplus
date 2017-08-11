@@ -1,3 +1,5 @@
+#ifndef PARALLEL_STABLE_SORT_HEADER_INCLUDED
+#define PARALLEL_STABLE_SORT_HEADER_INCLUDED
 /*
   Copyright (C) 2014 Intel Corporation
   All rights reserved.
@@ -32,11 +34,75 @@
 #include <algorithm>
 #include <omp.h>
 
-#include "pss_common.h"
+#include <utility>
+#include <iterator>
 
 namespace pss {
 
 namespace internal {
+
+//! Destroy sequence [xs,xe)
+template<class RandomAccessIterator>
+void serial_destroy( RandomAccessIterator zs, RandomAccessIterator ze ) {
+    typedef typename std::iterator_traits<RandomAccessIterator>::value_type T;
+    while( zs!=ze ) {
+        --ze;
+        (*ze).~T();
+    }
+}
+
+//! Merge sequences [xs,xe) and [ys,ye) to output sequence [zs,(xe-xs)+(ye-ys)), using std::move
+template<class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3, class Compare>
+void serial_move_merge( RandomAccessIterator1 xs, RandomAccessIterator1 xe, RandomAccessIterator2 ys, RandomAccessIterator2 ye, RandomAccessIterator3 zs, Compare comp ) {
+    if( xs!=xe ) {
+        if( ys!=ye )
+            for(;;)
+                if( comp(*ys,*xs) ) {
+                    *zs = std::move(*ys);
+                    ++zs;
+                    if( ++ys==ye ) break;
+                } else {
+                    *zs = std::move(*xs);
+                    ++zs;
+                    if( ++xs==xe ) goto movey;
+                }
+        ys = xs;
+        ye = xe;
+    }
+movey:
+    std::move( ys, ye, zs );
+}
+
+template<typename RandomAccessIterator1, typename RandomAccessIterator2, typename Compare>
+void stable_sort_base_case(  RandomAccessIterator1 xs, RandomAccessIterator1 xe, RandomAccessIterator2 zs, int inplace, Compare comp) {
+    std::stable_sort( xs, xe, comp );
+    if( inplace!=2 ) {
+        RandomAccessIterator2 ze = zs + (xe-xs);
+        typedef typename std::iterator_traits<RandomAccessIterator2>::value_type T;
+        if( inplace )
+            // Initialize the temporary buffer
+            for( ; zs<ze; ++zs )
+                new(&*zs) T;
+        else
+            // Initialize the temporary buffer and move keys to it.
+            for( ; zs<ze; ++xs, ++zs )
+                new(&*zs) T(std::move(*xs));
+    }
+}
+
+//! Raw memory buffer with automatic cleanup.
+class raw_buffer {
+    void* ptr;
+public:
+    //! Try to obtain buffer of given size.
+    raw_buffer( size_t bytes ) : ptr( operator new(bytes,std::nothrow) ) {}
+    //! True if buffer was successfully obtained, zero otherwise.
+    operator bool() const {return ptr;}
+    //! Return pointer to buffer, or  NULL if buffer could not be obtained.
+    void* get() const {return ptr;}
+    //! Destroy buffer
+    ~raw_buffer() {operator delete(ptr);}
+};
 
 // Merge sequences [xs,xe) and [ys,ye) to output sequence [zs,zs+(xe-xs)+(ye-ys))
 // Destroy input sequence iff destroy==true
@@ -100,6 +166,13 @@ void parallel_stable_sort_aux( RandomAccessIterator1 xs, RandomAccessIterator1 x
 
 } // namespace internal
 
+//! Wrapper for sorting with default comparator.
+template<class RandomAccessIterator>
+void parallel_stable_sort( RandomAccessIterator xs, RandomAccessIterator xe ) {
+    typedef typename std::iterator_traits<RandomAccessIterator>::value_type T;
+    parallel_stable_sort( xs, xe, std::less<T>() );
+}
+
 template<typename RandomAccessIterator, typename Compare>
 void parallel_stable_sort( RandomAccessIterator xs, RandomAccessIterator xe, Compare comp ) {
     typedef typename std::iterator_traits<RandomAccessIterator>::value_type T;
@@ -116,3 +189,4 @@ void parallel_stable_sort( RandomAccessIterator xs, RandomAccessIterator xe, Com
 }
 
 } // namespace pss
+#endif

@@ -75,7 +75,7 @@ void SubhaloSnapshot_t::LoadSubDir(int snapshot_index, const SubReaderDepth_t de
   
   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
   
-  sort(Subhalos.begin(), Subhalos.end(), CompTrackId);//sort so that trackId can be used as index
+  MYSORT(Subhalos.begin(), Subhalos.end(), CompTrackId);//sort so that trackId can be used as index
   //now build membertable
   HBTInt nhost=0;
 #pragma omp parallel for reduction(max:nhost)

@@ -297,7 +297,7 @@ HBTInt ApostleReader_t::LoadGroups(int snapshotId, vector< Halo_t >& Halos)
   }
   
   const int NullGroupId=1<<30; //1073741824
-  sort(Particles.begin(), Particles.end(), CompParticleHost);
+  MYSORT(Particles.begin(), Particles.end(), CompParticleHost);
   assert(Particles.back().HostId==NullGroupId);//max haloid==NullGroupId
   assert(Particles.front().HostId>=0);//min haloid>=0
   
