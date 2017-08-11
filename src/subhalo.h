@@ -137,6 +137,10 @@ public:
   {
     return SnapshotIndexOfDeath==SpecialConst::NullSnapshotId;
   }
+  bool JustTrapped(int currentsnapshotindex)
+  {
+    return SnapshotIndexOfSink==currentsnapshotindex;
+  }
   void DuplicateMostBoundParticleId();
 };
 
