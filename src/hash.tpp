@@ -6,6 +6,9 @@
 #include <cstdlib>
 
 #include "hash.h"
+#ifdef _OPENMP
+#include "parallel_stable_sort.h"
+#endif
 //=====general ID2Index table======//
 /* the hash-table implementation here is by sorting Id and use binsearch to locate keys*/
 /* more general functions hcreate(),hsearch()... exists in glibc; but binsearch should be
@@ -28,7 +31,12 @@ void MappedIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t <Key_t, Index_t> &
 		Map[i].Key=Keys.GetKey(i);
 		Map[i].Index=Keys.GetIndex(i);
 	}
-	sort(Map.begin(), Map.end(), CompPair<Key_t, Index_t>);
+#ifdef _OPENMP
+	pss::parallel_stable_sort(Map.begin(), Map.end(), CompPair<Key_t, Index_t>);
+#else
+ 	sort(Map.begin(), Map.end(), CompPair<Key_t, Index_t>);
+#endif
+	
 }
 template <class Key_t, class Index_t>
 void MappedIndexTable_t<Key_t, Index_t>::Clear()
