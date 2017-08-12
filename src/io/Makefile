@@ -7,4 +7,5 @@ $(TEST): ../config_parser.o ../mymath.o
 halo_io.test: ../halo.o ../snapshot.o snapshot_io.o
 snapshot_io.test: ../snapshot.o
 
-include ../../Makefile.inc
+HBTDIR=../..
+include $(HBTDIR)/Makefile.inc

@@ -1,17 +1,11 @@
-SRC_Jing=$(wildcard src/io/jing/*.cpp) $(wildcard src/io/jing/*.f90)
-SRC_COMM=$(wildcard src/*.cpp) $(wildcard src/io/*.cpp) $(SRC_Jing)
-OBJS_COMM=$(patsubst %.f90,%.f.o, $(SRC_COMM:%.cpp=%.o))
-
-SRC=$(wildcard *.cpp)
 EXE_HBT=HBT HBTdouble  HBT_majormerger_test  HBTi8 HBT.apostle HBT.apostle_thermal HBT.nostrip
 EXE_FOF=FoF FoF.ll FoFdebug FoFdebug2
 EXE=$(EXE_HBT) $(EXE_FOF)
 
 default: HBT
-include Makefile.inc
 
-echo:
-	@echo $(OBJS_COMM)
+HBTDIR=.
+include $(HBTDIR)/Makefile.inc
 
 $(EXE): $(OBJS_COMM)
 

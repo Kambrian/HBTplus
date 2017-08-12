@@ -3,4 +3,5 @@ OBJS=$(SRC:%.cpp=%.o) fortread.f.o
 
 FTNLIB=-L$(IFORTLIB) -lifport -lifcore
 
-include ../../../Makefile.inc
+HBTDIR=../../..
+include $(HBTDIR)/Makefile.inc
