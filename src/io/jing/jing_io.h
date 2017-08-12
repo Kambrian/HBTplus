@@ -32,7 +32,7 @@ class JingReader_t
   int SnapshotId;
   JingHeader_t Header;
   bool NeedByteSwap;
-  int NumFilesPos, NumFilesVel, NumFilesId;
+  int NumFilesPos, NumFilesVel, NumFilesId, NumSlaves;
   
   string GetFileName(const char * filetype, int iFile=0);
   int CountFiles(const char *filetype); 
