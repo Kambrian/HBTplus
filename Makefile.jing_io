@@ -1,0 +1,33 @@
+##### fortran compiler specification if you need to use jing_io for Yipeng's simulations ####
+##### set USE_JING_IO=yes below to enable; alternatively, you can pass it on the command line as: make -e USE_JING_IO=yes
+
+# USE_JING_IO=yes
+
+FC=gfortran
+
+ifeq ($(FC), gfortran)
+OMPFFLAG=-fopenmp
+OMPLIB=-fopenmp
+FTNLIB=-lgfortran
+endif
+ifeq ($(FC), ifort)
+OMPFFLAG=-qopenmp
+OMPLIB=-liomp5 #newest intel omp is compatible with gcc, but not vice versa
+FTNLIB=-lifport -lifcore
+endif
+
+ifeq ($(USE_JING_IO), yes)
+$(HBTDIR)/src/io/snapshot_io.o $(HBTDIR)/src/io/halo_io.o: CXXFLAGS+=-DUSE_JING_IO
+LDLIBS+=$(FTNLIB)
+else
+OMPLIB=$(OMPCFLAG)
+endif
+
+FFLAGS+=$(OMPFFLAG)
+%.f.o: %.f90
+	$(FC) $^ $(FFLAGS) -c -o $@ 
+
+ifeq ($(USE_JING_IO),yes)
+SRC_Jing=$(wildcard $(HBTDIR)/src/io/jing/*.cpp) $(wildcard $(HBTDIR)/src/io/jing/*.f90)
+endif
+OBJS_Jing=$(patsubst %.f90,%.f.o, $(SRC_Jing:%.cpp=%.o))

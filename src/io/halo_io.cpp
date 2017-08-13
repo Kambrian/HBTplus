@@ -15,7 +15,9 @@
 #include "../halo.h"
 #include "gadget_group_io.h"
 #include "apostle_io.h"
+#ifdef USE_JING_IO
 #include "jing/jing_io.h"
+#endif
 #include "hbt_group_io.h"
 #include "custom_io.h"
 
@@ -29,8 +31,10 @@ void HaloSnapshot_t::Load(int snapshot_index)
 	TotNumberOfParticles=GadgetGroup::Load(SnapshotId, Halos);
   else if(IsApostleGroup(GroupFileFormat))
 	TotNumberOfParticles=ApostleReader_t().LoadGroups(SnapshotId, Halos);
+#ifdef USE_JING_IO
   else if(JingGroup::IsJingGroup(HBTConfig.GroupFileFormat))
 	TotNumberOfParticles=JingGroup::LoadGroup(SnapshotId, Halos);
+#endif
   else if(GroupFileFormat=="hbt_group_hdf5")
 	TotNumberOfParticles=HBTGroupIO::LoadHDFGroups(snapshot_index, SnapshotId, Halos);
   else if(GroupFileFormat=="my_group_format")

@@ -1,12 +1,9 @@
-CXX=icpc
-FC=ifort
-#the fortran compiler is only needed for jing_io so far
+### c++ compiler. 
+CXX=g++
 
 CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPCFLAG) -O3 -g 
-FFLAGS+=$(OMPFFLAG)
 LDFLAGS+=-g
-LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPLIB) $(MATHLIB) 
-
+LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPLIB) $(MATHLIB) 
 LINK.o=$(CXX) $(LDFLAGS) $(TARGET_ARCH) #invoke c++ compiler for linking
 
 #HDFINC=-I/usr/include/hdf5/serial/
@@ -51,34 +48,12 @@ OMPCFLAG=-qopenmp
 MATHLIB=-limf
 endif
 
-## special adjustment for a few peculiar servers, not relevant for general users ##
-HOSTLIST:=UV00000292-P000 a4700
-ifneq ($(filter $(HOST),$(HOSTLIST)),)
-FC=ifort
-endif
-
-ifeq ($(FC), gfortran)
-OMPFFLAG=-fopenmp
-OMPLIB=-fopenmp
-FTNLIB=-lgfortran
-endif
-ifeq ($(FC), ifort)
-OMPFFLAG=-qopenmp
-OMPLIB=-liomp5 #newest intel omp is compatible with gcc, but not vice versa
-FTNLIB=-lifport -lifcore
-endif
-
-## special adjustment for a few peculiar servers, not relevant for general users ##
-ifeq ($(HOST), a4700)
-OMPFFLAG=
-OMPLIB=-fopenmp
-src/io/jing/jing_io.o: OMPCFLAG=
-endif
-
 #CXXFLAGS+=-xHost #to get it runnable on cosma-e
 
-%.f.o: %.f90
-	$(FC) $^ $(FFLAGS) -c -o $@ 
+include $(HBTDIR)/Makefile.jing_io
+
+###If you work on multiple systems, you can create a Makefile.local on each host to override common settings###
+-include $(HBTDIR)/Makefile.local
 
 %.test.o: %.cpp
 	$(CXX) $^ -DTEST_$(basename $<) $(CXXFLAGS) -c -o $@
@@ -99,3 +74,9 @@ clean_curdir:
 
 depend_curdir:
 	makedepend --$(CXXFLAGS)-- -Y $(SRC)
+	
+SRC_COMM=$(wildcard $(HBTDIR)/src/*.cpp) $(wildcard $(HBTDIR)/src/io/*.cpp) $(SRC_Jing)
+OBJS_COMM=$(patsubst %.f90,%.f.o, $(SRC_COMM:%.cpp=%.o))
+
+echo:
+	@echo $(OBJS_COMM)

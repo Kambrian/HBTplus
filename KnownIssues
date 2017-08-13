@@ -4,11 +4,22 @@
   
 - Very poor parallel performance of jing_io when compiled with gfortran on uv35. The IO was almost serial or even worse.
 
-  Using intel fortran instead of gfortran solves the problem, i.e., by setting 
-    FC=ifort
-    FTNLIB=-lifport -lifcore
-  in Makefile.inc. The old intel c++ compiler (2013) was not built with full c++11 support while the newest intel c++ compiler (2017) seems to have a bug in parallelizing the IO. Fortunately we can use ifort together with g++. 
+  Using intel fortran instead of gfortran solves the problem. The old intel c++ compiler (2013) was not built with full c++11 support while the newest intel c++ compiler (2017) seems to have a bug in parallelizing the IO. Fortunately we can use ifort together with g++. The solution is to create a Makefile.local with the following content:
   
+     CXX=g++
+     FC=ifort
+     OMPCFLAG=-fopenmp
+     MATHLIB=-lm
+     OMPFFLAG=-qopenmp
+     OMPLIB=-liomp5
+     FTNLIB=-lifport -lifcore
+
 - Fortran file format error when run on 6113 on a4700, compiled with gfortran
 
-  Again intel fortran solves the problem.
+  Again intel fortran solves the problem. However, the current intel fortran can not be used together with gcc when openmp is enabled. The solution is to create Makefile.local under HBT directory with the following content:
+  
+      FC=ifort
+      OMPFFLAG=
+      OMPLIB=-fopenmp
+      FTNLIB=-lifport -lifcore
+      $(OBJS_Jing): OMPCFLAG=
