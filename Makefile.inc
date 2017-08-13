@@ -1,9 +1,9 @@
+### c++ compiler. 
 CXX=g++
 
 CXXFLAGS+=-std=c++11 $(HDFINC) $(GSLINC) $(OMPCFLAG) -O3 -g 
 LDFLAGS+=-g
-LDLIBS+=$(FTNLIB) $(HDFLIB) $(GSLLIB) $(OMPLIB) $(MATHLIB) 
-
+LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPLIB) $(MATHLIB) 
 LINK.o=$(CXX) $(LDFLAGS) $(TARGET_ARCH) #invoke c++ compiler for linking
 
 #HDFINC=-I/usr/include/hdf5/serial/
@@ -48,11 +48,12 @@ OMPCFLAG=-qopenmp
 MATHLIB=-limf
 endif
 
-OMPLIB=$(OMPCFLAG)
-
 #CXXFLAGS+=-xHost #to get it runnable on cosma-e
 
 include $(HBTDIR)/Makefile.jing_io
+
+###If you work on multiple systems, you can create a Makefile.local on each host to override common settings###
+-include $(HBTDIR)/Makefile.local
 
 %.test.o: %.cpp
 	$(CXX) $^ -DTEST_$(basename $<) $(CXXFLAGS) -c -o $@
