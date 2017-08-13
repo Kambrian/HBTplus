@@ -20,14 +20,14 @@ void MappedIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t <Key_t, Index_t> &
 {
   BaseClass_t::NullIndex=null_index;
   Index_t n=Keys.size();
-	Map.resize(n);
-	#pragma omp parallel for
-	for(Index_t i=0;i<n;i++)
-	{
-		Map[i].Key=Keys.GetKey(i);
-		Map[i].Index=Keys.GetIndex(i);
-	}
-	sort(Map.begin(), Map.end(), CompPair<Key_t, Index_t>);
+  Map.resize(n);
+  #pragma omp parallel for
+  for(Index_t i=0;i<n;i++)
+  {
+    Map[i].Key=Keys.GetKey(i);
+    Map[i].Index=Keys.GetIndex(i);
+  }
+  sort(Map.begin(), Map.end(), CompPair<Key_t, Index_t>);
   NumQueryCrit=n/log2(n);
 }
 template <class Key_t, class Index_t>
@@ -65,13 +65,14 @@ void FlatIndexTable_t<Key_t, Index_t>::Fill(const KeyList_t<Key_t, Index_t> &Key
   
   Key_t keymin, keymax;
   keymin=keymax=Keys.GetKey(0);
-#pragma omp parallel for reduction(min:keymin), reduction(max:keymax)
+#pragma omp parallel for reduction(min:keymin) reduction(max:keymax)
   for(Index_t i=1;i<n;i++)
   {
-	  if(Keys.GetKey(i)>keymax)
-		  keymax=Keys.GetKey(i);
-	  else if(Keys.GetKey(i)<keymin)	
-		  keymin=Keys.GetKey(i);
+    Key_t key=Keys.GetKey(i);
+    if(key>keymax)
+      keymax=key;
+    if(key<keymin)	
+      keymin=key;
   }
   KeyMax=keymax; KeyMin=keymin;
   KeySpan=KeyMax-KeyMin+1;
