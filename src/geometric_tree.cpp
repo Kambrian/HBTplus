@@ -76,11 +76,6 @@ void GeoTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const dou
   FillNodeCenter(no, center);
 }
 
-inline HBTReal GuessNeighbourRange(HBTInt n_neighbours, HBTReal number_density_guess)
-{
-  return pow(3 * n_neighbours / (4 * 3.141593) / number_density_guess, 1.0 / 3);
-}
-
 HBTInt GeoTree_t::NearestNeighbour(const HBTxyz & cen, HBTReal rguess)
 //return the particle_index of the nearest neighbour
 {
@@ -161,16 +156,15 @@ void GeoTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
     }
 }
 
-#define SPH_DENS_NGB 64
 double GeoTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
 {
   vector <LocatedParticle_t> founds;
   Search(cen, hguess, founds);
   int numngb=founds.size();
-  while(numngb<SPH_DENS_NGB)
+  while(numngb<NumNeighbourSPH)
   {
     if(numngb)	
-      hguess *= pow(1.*SPH_DENS_NGB/numngb,1.0/3.0)*1.1;//update hguess adaptively, and conservatively to keep it slightly larger
+      hguess *= pow(1.*NumNeighbourSPH/numngb,1.0/3.0)*1.1;//update hguess adaptively, and conservatively to keep it slightly larger
     else  //zero ngb, double hguess
 	hguess *= 2.;
       
@@ -179,7 +173,7 @@ double GeoTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
     numngb=founds.size();
   }
   
-  auto pivot_particle=founds.begin()+SPH_DENS_NGB-1;
+  auto pivot_particle=founds.begin()+NumNeighbourSPH-1;
   nth_element(founds.begin(), founds.end(), pivot_particle, CompLocatedDistance);
   double h=sqrt(pivot_particle->d2);
   // 	h=sqrtf(h);
