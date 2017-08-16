@@ -174,7 +174,7 @@ double GeoTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
   }
   
   auto pivot_particle=founds.begin()+NumNeighbourSPH-1;
-  nth_element(founds.begin(), founds.end(), pivot_particle, CompLocatedDistance);
+  nth_element(founds.begin(),  pivot_particle, founds.end(), CompLocatedDistance);
   double h=sqrt(pivot_particle->d2);
   // 	h=sqrtf(h);
   hguess=h*1.01;
