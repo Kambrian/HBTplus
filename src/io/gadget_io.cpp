@@ -14,6 +14,20 @@ using namespace std;
 #include "../mymath.h"
 #include "gadget_io.h"
 
+vector <Particle_t> _empty_particles;
+GadgetReader_t::GadgetReader_t(int snapshot_id, Cosmology_t& cosmology): SnapshotId(snapshot_id), Cosmology(cosmology), Header(), Particles(_empty_particles)
+{
+  NeedByteSwap=false;
+  IntTypeSize=0;
+  RealTypeSize=0;
+  
+  LoadGadgetHeader();
+  Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);  
+  Cosmology.ParticleMass=Header.mass[TypeDM];//this may be non-informative for non-confirming header
+  if(Cosmology.ParticleMass==0) 
+    cerr<<"WARNING: particle mass=0 in snapshot header. May need to read mass block to get the correct mass.\n";
+}
+
 GadgetReader_t::GadgetReader_t(int snapshot_id, vector< Particle_t >& particles, Cosmology_t& cosmology): SnapshotId(snapshot_id), Particles(particles), Cosmology(cosmology), Header()
 {
   NeedByteSwap=false;

@@ -102,6 +102,7 @@ extern int count_pattern_files(char *filename_pattern);
 extern std::ostream& operator << (std::ostream& o, HBTxyz &a);
 extern void swap_Nbyte(void *data2swap,size_t nel,size_t mbyte);
 extern size_t SkipFortranBlock(FILE *fp, bool NeedByteSwap);
+extern void logspace(double xmin,double xmax,int N, vector <float> &x);
 inline size_t fread_swap(void *buf,const size_t member_size, const size_t member_count,FILE *fp, const bool FlagByteSwap)
 {
 	size_t Nread;

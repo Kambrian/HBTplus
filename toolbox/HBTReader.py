@@ -92,6 +92,10 @@ class HBTReader:
 	    self.ParticleMass=f['/Cosmology/ParticleMass'][0]
 	except:
 	  print "Info: fail to get ParticleMass."
+	
+	with self.Open(-1) as f:
+	  self.OmegaM0=f['/Cosmology/OmegaM0'][0]
+	  self.OmegaLambda0=f['/Cosmology/OmegaLambda0'][0]
 
   def Snapshots(self):
 	return np.arange(self.MinSnap, self.MaxSnap+1)
@@ -237,6 +241,10 @@ class HBTReader:
 	except:
 	  return h5py.File(self.GetFileName(isnap),'r')['ScaleFactor'][0]
 
+  def GetScaleFactorDict(self):
+	''' return a dictionary that maps snapshot_index to ScaleFactor'''
+	return dict([(i, self.GetScaleFactor(i)) for i in range(self.MinSnap, self.MaxSnap+1)])
+	
   def GetExclusiveParticles(self, isnap=-1):
 	'''return an exclusive set of particles for subhaloes at isnap, by assigning duplicate particles to the lowest mass subhaloes'''
 	OriginPart=self.LoadParticles(isnap)

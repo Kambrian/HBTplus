@@ -42,6 +42,7 @@ class GadgetReader_t
     
 public:
   GadgetReader_t(int snapshot_id, vector <Particle_t> &particles, Cosmology_t & cosmology);
+  GadgetReader_t(int snapshot_id, Cosmology_t & cosmology);
 };
 
 #endif
