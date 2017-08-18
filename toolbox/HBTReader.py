@@ -34,7 +34,7 @@ def PeriodicDistance(x,y, BoxSize, axis=-1):
   d[d<-BoxSize/2]=d[d<-BoxSize/2]+BoxSize
   return np.sqrt(np.sum(d**2, axis=axis))
 
-def distance(x,y, axis=1):
+def distance(x,y, axis=-1):
   return np.sqrt(np.sum((x-y)**2, axis=axis))
 
 class ConfigReader:
@@ -92,6 +92,10 @@ class HBTReader:
 	    self.ParticleMass=f['/Cosmology/ParticleMass'][0]
 	except:
 	  print "Info: fail to get ParticleMass."
+	
+	with self.Open(-1) as f:
+	  self.OmegaM0=f['/Cosmology/OmegaM0'][0]
+	  self.OmegaLambda0=f['/Cosmology/OmegaLambda0'][0]
 
   def Snapshots(self):
 	return np.arange(self.MinSnap, self.MaxSnap+1)
@@ -219,14 +223,17 @@ class HBTReader:
 	''' load an entire track of the given trackId '''
 	track=[];
 	snaps=[]
+	scales=[]
 	snapbirth=self.GetSub(trackId)['SnapshotIndexOfBirth']
 	for isnap in range(snapbirth, self.MaxSnap+1):
 		s=self.GetSub(trackId, isnap)
+		a=self.GetScaleFactor(isnap)
 		if fields is not None:
 		  s=s[fields]
 		track.append(s)
 		snaps.append(isnap)
-	return append_fields(np.array(track), 'Snapshot', np.array(snaps), usemask=False)
+		scales.append(a)
+	return append_fields(np.array(track), ['Snapshot', 'ScaleFactor'], [np.array(snaps),np.array(scales)], usemask=False)
 
   def GetScaleFactor(self, isnap):
 	try:
@@ -234,6 +241,10 @@ class HBTReader:
 	except:
 	  return h5py.File(self.GetFileName(isnap),'r')['ScaleFactor'][0]
 
+  def GetScaleFactorDict(self):
+	''' return a dictionary that maps snapshot_index to ScaleFactor'''
+	return dict([(i, self.GetScaleFactor(i)) for i in range(self.MinSnap, self.MaxSnap+1)])
+	
   def GetExclusiveParticles(self, isnap=-1):
 	'''return an exclusive set of particles for subhaloes at isnap, by assigning duplicate particles to the lowest mass subhaloes'''
 	OriginPart=self.LoadParticles(isnap)
