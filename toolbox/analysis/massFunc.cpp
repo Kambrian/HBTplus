@@ -80,7 +80,6 @@ public:
   }
 };
 
-void logspace(double xmin,double xmax,int N,vector <float> &x);
 #ifdef EXTERN_VIR
 struct HaloSize_t
 {
@@ -372,21 +371,6 @@ void MassFunc_t::save(hid_t file)
   writeHDFmatrix(file, MainSatList.data(), "MainSatList", 1, dims, H5T_NATIVE_FLOAT);
   writeHDFmatrix(file, MainSatRList.data(), "MainSatRList", 1, dims, H5T_NATIVE_FLOAT);
 #endif
-}
-
-void logspace(double xmin,double xmax,int N, vector <float> &x)
-{
-  x.resize(N);
-  int i;
-  double dx;
-  x[0]=xmin;x[N-1]=xmax;
-  xmin=log(xmin);
-  xmax=log(xmax);
-  dx=exp((xmax-xmin)/(N-1));
-  for(i=1;i<N-1;i++)
-  {
-    x[i]=x[i-1]*dx;
-  }
 }
 
 #ifdef EXTERN_VIR

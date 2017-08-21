@@ -72,7 +72,6 @@ struct HaloSize_t
 void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
 
 float DlnX=logf(RMAX/RMIN)/(NBIN-1)*2; //spacing in ln-space for r**2
-void logspace(double xmin,double xmax,int N, vector <float> &x);
 void save(vector <HaloSize_t> &HaloSize, int isnap, int ifile=0, int nfiles=0);
 int main(int argc, char **argv)
 {
@@ -216,18 +215,4 @@ void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk)
   H5Tpack(H5T_dtypeInDisk); //clear fields not added to save disk space
 
   H5Tclose(H5T_HBTIntArray);
-}
-void logspace(double xmin,double xmax,int N, vector <float> &x)
-{
-  x.resize(N);
-  int i;
-  double dx;
-  x[0]=xmin;x[N-1]=xmax;
-  xmin=log(xmin);
-  xmax=log(xmax);
-  dx=exp((xmax-xmin)/(N-1));
-  for(i=1;i<N-1;i++)
-  {
-    x[i]=x[i-1]*dx;
-  }
 }
