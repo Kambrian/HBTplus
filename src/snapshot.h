@@ -6,7 +6,6 @@
 #include <assert.h>
 #include <cstdlib>
 #include <cstdio>
-#include <unordered_map>
 
 #include "datatypes.h"
 #include "mymath.h"
