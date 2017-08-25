@@ -95,7 +95,7 @@ int main(int argc, char **argv)
     cout<<"linked list compiled\n";
     timer.Tick();cout<<"link: "<<timer.GetSeconds(2)<<" seconds\n";
     vector <HaloSize_t> HaloSize(halosnap.size());
-    #pragma omp parallel for schedule(dynamic)
+    #pragma omp parallel for schedule(dynamic, 1)
     for(HBTInt grpid=0;grpid<halosnap.size();grpid++)
     {
       HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..

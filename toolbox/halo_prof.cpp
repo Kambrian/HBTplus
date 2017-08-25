@@ -90,7 +90,7 @@ int main(int argc, char **argv)
   auto &Cosmology=partsnap.Cosmology;
     
   vector <HaloSize_t> HaloSize(subsnap.MemberTable.SubGroups.size()); 
-  #pragma omp parallel for schedule(dynamic)
+  #pragma omp parallel for schedule(dynamic, 1000)
   for(HBTInt grpid=0;grpid<HaloSize.size();grpid++)
   {
     HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
