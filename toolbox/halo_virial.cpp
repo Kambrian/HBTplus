@@ -26,11 +26,21 @@ struct HaloSize_t
 #ifdef NBIN
   HBTInt Profile[NBIN];
 #endif
-  HaloSize_t(): HaloId(-1), CenterComoving{0.}, MVir(0), M200Crit(0), M200Mean(0), RVirComoving(0), R200CritComoving(0), R200MeanComoving(0), RmaxComoving(0), VmaxPhysical(0)
-#ifdef NBIN
-  , Profile{0}
-#endif
+  HaloSize_t(){};
+  void fill_zeros()
   {
+    CenterComoving[0]=CenterComoving[1]=CenterComoving[2]=0.;
+    MVir=0.;
+    M200Crit=0.;
+    M200Mean=0.;
+    RVirComoving=0.;
+    R200CritComoving=0.;
+    R200MeanComoving=0.;
+    RmaxComoving=0.;
+    VmaxPhysical=0.;
+#ifdef NBIN
+    fill(begin(Profile), end(Profile), 0.);
+#endif
   }
   void Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, ParticleSnapshot_t &partsnap);
 };
@@ -85,13 +95,16 @@ int main(int argc, char **argv)
     cout<<"linked list compiled\n";
     timer.Tick();cout<<"link: "<<timer.GetSeconds(2)<<" seconds\n";
     vector <HaloSize_t> HaloSize(halosnap.size());
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic)
     for(HBTInt grpid=0;grpid<halosnap.size();grpid++)
     {
       HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
       auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
       if(subgroup.size()==0)
+      {
+	HaloSize[grpid].fill_zeros();
 	continue;
+      }
       HBTInt np=halosnap.Halos[grpid].size();
       float rmax=ComovingMean200Radius(np*Cosmology.ParticleMass, Cosmology.OmegaM0)*RMAX;//use b200 as a ref
       HaloSize[grpid].Compute(subsnap.Subhalos[subsnap.MemberTable.SubGroups[grpid][0]].ComovingMostBoundPosition, rmax, np, ll, partsnap);   

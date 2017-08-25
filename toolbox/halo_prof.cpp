@@ -16,7 +16,7 @@
 #include "../src/linkedlist_parallel.h"
 #include "../src/geometric_tree.h"
 
-#define NBOUND_MIN 10000 //min number of host bound particles to consider.
+#define NBOUND_MIN 1000 //min number of host bound particles to consider.
 #define RMIN 1e-2 //only for deciding binwidth; not used to set the innermost bin edge.
 #define RMAX 20.
 #define NBIN 20
@@ -63,9 +63,7 @@ struct HaloSize_t
   HBTInt TrackId;
   HBTInt HaloId;
   HBTInt n[NBIN];
-  HaloSize_t(): TrackId(-1), HaloId(-1), n{0}
-  {
-  }
+  HaloSize_t(){};
   void Compute(HBTxyz &cen, LinkedlistPara_t &ll);
   void Compute(HBTxyz &cen, GeoTree_t &tree);
 };
@@ -92,14 +90,18 @@ int main(int argc, char **argv)
   auto &Cosmology=partsnap.Cosmology;
     
   vector <HaloSize_t> HaloSize(subsnap.MemberTable.SubGroups.size()); 
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(dynamic)
   for(HBTInt grpid=0;grpid<HaloSize.size();grpid++)
   {
     HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
     auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
     if(subgroup.size()==0||subsnap.Subhalos[subgroup[0]].Nbound<NBOUND_MIN) 
+    {
+      HaloSize[grpid].TrackId=-1;
       continue;
+    }
     HaloSize[grpid].TrackId=subgroup[0];
+    fill(begin(HaloSize[grpid].n), end(HaloSize[grpid].n), 0);
   }
   
   const int nloop=256; //do it in blocks to save memory
