@@ -3,7 +3,7 @@
 #or set CPATH and LIBRARY_PATH variable locally 
 HDFINC=
 HDFLIB=-lhdf5_hl -lhdf5 
-HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header
+#HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header
 
 ###comment out the following lines if you do not have GSL (for eigenvalue decomposition of inertial tensors)
 #GSLINC=
@@ -47,8 +47,8 @@ endif
 ifeq ($(BASECXX), g++)
 #OMPFLAG=-fopenmp
 else
-#OMPFLAG=-openmp
 #OMPFLAG=-qopenmp
+CXXFLAGS+=-diag-disable 3180  #to disable omp warnings by icc when not using omp; comment this out if you enabled OMPFLAG
 endif
   
 %.test.o: %.cpp
