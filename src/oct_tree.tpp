@@ -7,18 +7,23 @@
 #include "config_parser.h"
 
 template <class T>
+inline void OctTree_t<T>::AppendCell()
+{
+  Cells.emplace_back(OctTreeCell_t(-1));
+}
+
+template <class T>
 HBTInt OctTree_t<T>::Build(const Snapshot_t &snapshot, HBTInt num_part)
 /* build tree for a snapshot (or SnapshotView); automatically resize memory if necessary.
   * if num_part>0 is given, then only use the first num_part particles in the snapshot
   */
 {
-	HBTInt NumNids,numnodes;
 	HBTInt sub,subid,i,j,nodeid;
 	double center[3], lenhalf;
 	double xmin[3], xmax[3],Center[3], Len,Lenhalf;
 
 	if(!num_part) num_part=snapshot.size();
-	if(num_part>MaxNumberOfParticles)
+	if(num_part>NextnodeFromParticle.size())
 	{
 	  Clear();
 	  Reserve(num_part);
@@ -49,20 +54,15 @@ HBTInt OctTree_t<T>::Build(const Snapshot_t &snapshot, HBTInt num_part)
     Center[j] = 0.5 * (xmax[j] + xmin[j]);
   
   Lenhalf=0.5*Len;
-MaxNodeId=MaxNumberOfCells+NumberOfParticles;
 
-Nodes= Cells-NumberOfParticles;	/* select first node */
-
-
-nodeid = NumberOfParticles;	/* id used to distinguish whether it's internal node or particle*/
-NumNids=NumberOfParticles+1;	
-	/* create an empty  root node  */
-  for(i = 0; i < 8; i++)
-Cells->sons[i] = -1;
+  /* select first node */
+  Nodes= Cells.data()-NumberOfParticles;	
+  /* create an empty  root node  */
+  AppendCell();
 
   for(i = 0; i < NumberOfParticles; i++)	/* insert all  particles */
 	{
-	  nodeid = NumberOfParticles ;	/* select index of first node in tree */
+	  nodeid = RootNodeId ;	/* select index of first node in tree */
 	    lenhalf = Lenhalf;
 	  for(j = 0; j < 3; j++)
 	    center[j] = Center[j];
@@ -109,17 +109,10 @@ Cells->sons[i] = -1;
 			}
 		else if(subid<NumberOfParticles)//a particle node, upgrade the node to internal
 			{
-			Nodes[nodeid].sons[sub]=NumNids;//create a new node;
-			nodeid=NumNids;//take over the new nodeid
-			NumNids++;
-			if(NumNids >= MaxNodeId)
-			{
-			  cerr<<"maximum number "<<MaxNumberOfCells<<" of tree-nodes reached for particle "<<i<<endl;
-			  exit(1);
-			}
-			for(sub=0;sub<8;sub++)//initialize new node
-				Nodes[nodeid].sons[sub]=-1;
-// 			copyXYZ(Nodes[nodeid].way.s, center);//DO NOT DO IT HERE: corrupting the union data
+			  HBTInt newnodeid=NumberOfParticles+Cells.size();
+			  AppendCell();
+			  Nodes[nodeid].sons[sub]=newnodeid;//create a new node;
+			  nodeid=newnodeid;//take over the new nodeid
 			/*insert that subid into this new node*/
 			//what if the two particles are too near? 
 			//unnecessary to divide too fine, just get rid of one by random insertion. 
@@ -151,45 +144,29 @@ Cells->sons[i] = -1;
 		}
 	}
 	
-	numnodes=NumNids-NumberOfParticles;
-	//~ FilledFraction=(HBTReal)numnodes/MaxNumberOfCells;
-	//~ #pragma omp critical
-	//~ if(FilledFraction>MaxNodeFilledFraction) MaxNodeFilledFraction=FilledFraction;
-	//~ fprintf(logfile,"used %d nodes out of allocated %d. (filled fraction %g)\n",
-	 //~ numnodes, MaxNumberOfCells, (double)numnodes / MaxNumberOfCells);	
 	/* finished inserting, now update for walk*/
 	UpdateInternalNodes(NumberOfParticles , -1, Len, Center);/*insert sibling and next infomation*/
 	
-	return numnodes; 
+	return Cells.size(); 
 }
 
 template <class T>
-void OctTree_t<T>::Reserve(const size_t max_num_part)
+void OctTree_t<T>::Reserve(const size_t MaxNumberOfParticles)
 /* allocate tree memory to hold a maximum of max_num_part particles */
 {
-  MaxNumberOfParticles=max_num_part;
-  MaxNumberOfCells =HBTConfig.TreeAllocFactor*MaxNumberOfParticles;
+  NextnodeFromParticle.resize(MaxNumberOfParticles);
+  
+  HBTInt MaxNumberOfCells =HBTConfig.TreeAllocFactor*MaxNumberOfParticles;
   if(MaxNumberOfCells<HBTConfig.TreeMinNumOfCells) MaxNumberOfCells=HBTConfig.TreeMinNumOfCells;
-  Cells=new OctTreeCell_t[MaxNumberOfCells+1];
-
-  NextnodeFromParticle=new HBTInt[MaxNumberOfParticles];
+  Cells.reserve(MaxNumberOfCells);
 }
 
 template <class T>
 void OctTree_t<T>::Clear()
 {
-  if(MaxNumberOfParticles)
-  {
-	delete [] NextnodeFromParticle;
-	MaxNumberOfParticles=0;
-	NumberOfParticles=0;
-  }
-  if(MaxNumberOfCells)
-  {
-	delete [] Cells;
-	MaxNumberOfCells=0;
-	MaxNodeId=0;
-  }
+  NextnodeFromParticle.clear();
+  Cells.clear();
+  NumberOfParticles=0;
 }
 
 
