@@ -9,7 +9,8 @@
 template <class T>
 inline void OctTree_t<T>::AppendCell()
 {
-  Cells.emplace_back(OctTreeCell_t(-1));
+  Cells.emplace_back(-1);
+  Nodes=Cells.data()-RootNodeId;//always update reference
 }
 
 template <class T>
@@ -22,15 +23,9 @@ HBTInt OctTree_t<T>::Build(const Snapshot_t &snapshot, HBTInt num_part)
 	double center[3], lenhalf;
 	double xmin[3], xmax[3],Center[3], Len,Lenhalf;
 
-	if(!num_part) num_part=snapshot.size();
-	if(num_part>NextnodeFromParticle.size())
-	{
-	  Clear();
-	  Reserve(num_part);
-	}
-	
-	NumberOfParticles=num_part;
 	Snapshot=&snapshot;
+	if(!num_part) num_part=snapshot.size();
+	Reserve(num_part);
 	
 	/* find enclosing rectangle */
   for(j = 0; j < 3; j++)
@@ -54,9 +49,7 @@ HBTInt OctTree_t<T>::Build(const Snapshot_t &snapshot, HBTInt num_part)
     Center[j] = 0.5 * (xmax[j] + xmin[j]);
   
   Lenhalf=0.5*Len;
-
-  /* select first node */
-  Nodes= Cells.data()-NumberOfParticles;	
+	
   /* create an empty  root node  */
   AppendCell();
 
@@ -151,13 +144,15 @@ HBTInt OctTree_t<T>::Build(const Snapshot_t &snapshot, HBTInt num_part)
 }
 
 template <class T>
-void OctTree_t<T>::Reserve(const size_t MaxNumberOfParticles)
+void OctTree_t<T>::Reserve(const size_t np)
 /* allocate tree memory to hold a maximum of max_num_part particles */
 {
-  NextnodeFromParticle.resize(MaxNumberOfParticles);
+  NumberOfParticles=np;
+  NextnodeFromParticle.resize(NumberOfParticles);
   
-  HBTInt MaxNumberOfCells =HBTConfig.TreeAllocFactor*MaxNumberOfParticles;
+  HBTInt MaxNumberOfCells =HBTConfig.TreeAllocFactor*NumberOfParticles;
   if(MaxNumberOfCells<HBTConfig.TreeMinNumOfCells) MaxNumberOfCells=HBTConfig.TreeMinNumOfCells;
+  Cells.clear();
   Cells.reserve(MaxNumberOfCells);
 }
 
