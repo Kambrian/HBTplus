@@ -10,7 +10,7 @@
 #include "datatypes.h"
 #include "mpi_wrapper.h"
 
-#define HBT_VERSION "1.15.3.MPI"
+#define HBT_VERSION "1.15.4.MPI"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
@@ -101,9 +101,9 @@ public:
 	SourceSubRelaxFactor=3.;
 	SubCoreSizeFactor=0.25;
 	SubCoreSizeMin=20;
-	TreeAllocFactor=1.; /* a value of 2 should be more than sufficient*/
+	TreeAllocFactor=0.8; /* a value of 2 should be more than sufficient*/
 	TreeNodeOpenAngle=0.45;
-	TreeMinNumOfCells=500;
+	TreeMinNumOfCells=10;
 	MaxSampleSizeOfPotentialEstimate=1000;//set to 0 to disable sampling
 	RefineMostboundParticle=true;
 	GroupLoadedFullParticle=false;
