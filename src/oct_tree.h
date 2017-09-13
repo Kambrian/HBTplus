@@ -36,7 +36,7 @@ template <class T> union TreeCell_t
     HBTInt nextnode;        /*!< this gives the next node in case the current node needs to be opened */
   }way;
   TreeCell_t(){};
-  TreeCell_t(HBTInt i): sons{i}
+  TreeCell_t(HBTInt i): sons{i,i,i,i,i,i,i,i}
   {
   }
 };
