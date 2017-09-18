@@ -10,7 +10,7 @@
 #include <cmath>
 #include "datatypes.h"
 
-#define HBT_VERSION "1.15.3"
+#define HBT_VERSION "1.15.4"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
@@ -109,9 +109,9 @@ public:
 	FoFLinkParam=0.2;
 	FoFSizeMin=20;
 	FoFDarkMatterMassFraction=1.0;
-	TreeAllocFactor=1.; /* a value of 2 should be more than sufficient*/
+	TreeAllocFactor=0.8; /* a value of 2 should be more than sufficient*/
 	TreeNodeOpenAngle=0.45;
-	TreeMinNumOfCells=500;
+	TreeMinNumOfCells=10;
 	MaxSampleSizeOfPotentialEstimate=1000;//set to 0 to disable sampling
 	RefineMostboundParticle=true;
 	GroupLoadedIndex=false;

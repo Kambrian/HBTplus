@@ -35,6 +35,10 @@ template <class T> union TreeCell_t
     HBTInt sibling;         /*!< this gives the next node in the walk in case the current node can be used */
     HBTInt nextnode;        /*!< this gives the next node in case the current node needs to be opened */
   }way;
+  TreeCell_t(){};
+  TreeCell_t(HBTInt i): sons{i,i,i,i,i,i,i,i}
+  {
+  }
 };
 
 template <class CellT> 
@@ -43,21 +47,21 @@ class OctTree_t
 protected:  
   typedef CellT OctTreeCell_t;
   /*the storage*/
-  OctTreeCell_t *Cells, *Nodes;   /* =Cells-NumberOfParticles. the nodes are labelled from 0 to NumPart+NumNodes-1, so that nodeid=0~NumPart-1 are particles, and nodeid>=NumPart are cells */
-  HBTInt * NextnodeFromParticle; /* next node for each particle. Particles are the first NumPart nodes, and cells are the remaining nodes.*/
-  size_t MaxNumberOfCells, MaxNumberOfParticles;
-  HBTInt MaxNodeId;
+  vector <OctTreeCell_t> Cells;
+  OctTreeCell_t *Nodes;   /* =Cells-NumberOfParticles. the nodes are labelled from 0 to NumPart+NumNodes-1, so that nodeid=0~NumPart-1 are particles, and nodeid>=NumPart are cells */
+  vector <HBTInt> NextnodeFromParticle; /* next node for each particle. Particles are the first NumPart nodes, and cells are the remaining nodes.*/
   const Snapshot_t * Snapshot;
   HBTInt NumberOfParticles; //alias to Snapshot->GetSize().
   HBTInt & RootNodeId; //alias to NumberOfParticles
 private:  
   virtual void UpdateInternalNodes(HBTInt no,HBTInt sib,double len, const double center[3])=0;
 public:
-  OctTree_t(): MaxNumberOfCells(0), MaxNumberOfParticles(0), MaxNodeId(0), NumberOfParticles(0), RootNodeId(NumberOfParticles)
+  OctTree_t(): NumberOfParticles(0), RootNodeId(NumberOfParticles)
   {
   }
   void Reserve(const size_t max_num_part);
   HBTInt Build(const Snapshot_t &snapshot, HBTInt num_part=0);
+  void AppendCell();
   void Clear();
   ~OctTree_t()
   {
