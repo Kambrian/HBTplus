@@ -69,7 +69,7 @@ void SubhaloSnapshot_t::LoadSubDir(int snapshot_index, const SubReaderDepth_t de
     
   Subhalos.clear();  
   Subhalos.resize(TotNumberOfSubs); 
-#pragma omp parallel for
+// #pragma omp parallel for  //hdf5 does not support concurrent read
   for(int iFile=0;iFile<NumberOfFiles;iFile++)
       ReadFile(iFile, depth);
   
