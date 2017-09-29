@@ -45,7 +45,10 @@ struct HaloSize_t
   void Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, ParticleSnapshot_t &partsnap);
 };
 void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
-
+inline bool CompProfRadiusVal(const RadVelMass_t &a, const float r)
+{
+  return a.r<r;
+}
 inline bool CompProfRadius(const RadVelMass_t &a, const RadVelMass_t &b)
 {
   return a.r<b.r;
@@ -137,13 +140,16 @@ void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_
 	    if(prof[i].r<HBTConfig.SofteningHalo) prof[i].r=HBTConfig.SofteningHalo; //resolution
 	    prof[i].v=prof[i].m/prof[i].r;//v**2
     }
-    auto maxprof=max_element(prof.begin(), prof.end(), CompProfVel);
-    RmaxComoving=maxprof->r;
-    VmaxPhysical=sqrt(maxprof->v*VelocityUnit);
    
     partsnap.Cosmology.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
     partsnap.Cosmology.SphericalOverdensitySize(M200Crit, R200CritComoving, virialF_c200, prof);
     partsnap.Cosmology.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
+    
+    auto it_rv=lower_bound(prof.begin(), prof.end(), R200CritComoving, CompProfRadiusVal);
+    auto maxprof=max_element(prof.begin(), it_rv, CompProfVel);//restrict Rmax<R200C
+    RmaxComoving=maxprof->r;
+    VmaxPhysical=sqrt(maxprof->v*VelocityUnit);
+    
 #ifdef NBIN
     float r0=1e-2*RVirComoving;
     for(auto &&p: prof)
