@@ -427,7 +427,7 @@ def get_extent(X,Y):
   can be used to specify extent for imshow()'''
   if X.squeeze().ndim==2:
 	dx=X[0,1]-X[0,0]
-	dy=Y[1,0]-Y[1,1]
+	dy=Y[1,0]-Y[0,0]
   else:
 	dx=X[1]-X[0]
 	dy=Y[1]-Y[0]
