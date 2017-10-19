@@ -34,6 +34,7 @@ struct ParticleHost_t: public Particle_t
 
 class ApostleReader_t
 {
+  const int NullGroupId=1<<30; //1073741824
   string SnapshotName;
     
   vector <HBTInt> np_file;

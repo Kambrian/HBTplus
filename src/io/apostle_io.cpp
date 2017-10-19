@@ -337,7 +337,7 @@ void ApostleReader_t::ReadGroupParticles(int ifile, ParticleHost_t *ParticlesInF
 	  vector <HBTInt> id(np);
 	  ReadDataset(particle_data, "GroupNumber", H5T_HBTInt, id.data());
 	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].HostId=(id[i]<0?-id[i]:id[i]);//negative means unbound 
+		ParticlesThisType[i].HostId=(id[i]<0?NullGroupId:id[i]);//negative means outside fof but within Rv 
 	}
 	
 	H5Gclose(particle_data);
@@ -440,7 +440,6 @@ void ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< Hal
 	}
   }
   
-  const int NullGroupId=1<<30; //1073741824
   sort(ParticleHosts.begin(), ParticleHosts.end(), CompParticleHost);
   if(!ParticleHosts.empty())
   {
