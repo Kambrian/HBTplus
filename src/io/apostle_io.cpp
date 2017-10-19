@@ -234,7 +234,7 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bo
 	  vector <HBTInt> id(np);
 	  ReadDataset(particle_data, "GroupNumber", H5T_HBTInt, id.data());
 	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].HostId=(id[i]<0?-id[i]:id[i]);//negative means unbound 
+		ParticlesThisType[i].HostId=(id[i]<0?NullGroupId:id[i]);//negative means particles inside virial radius but outside fof. 
 	}
 	
 	H5Gclose(particle_data);
@@ -296,7 +296,6 @@ HBTInt ApostleReader_t::LoadGroups(int snapshotId, vector< Halo_t >& Halos)
 	  Particles[i].ParticleId=i;
   }
   
-  const int NullGroupId=1<<30; //1073741824
   MYSORT(Particles.begin(), Particles.end(), CompParticleHost);
   assert(Particles.back().HostId==NullGroupId);//max haloid==NullGroupId
   assert(Particles.front().HostId>=0);//min haloid>=0
