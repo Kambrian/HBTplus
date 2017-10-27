@@ -133,7 +133,7 @@ hbt_option(HBT_UNSIGNED_LONG_ID_OUTPUT UNSIGNED_LONG_ID_OUTPUT "Enable to output
 #
 # HBT executable
 #
-add_executable(HBT HBT.cpp ${HBT_SRC})
+add_executable(HBT ${HBT_SRC})
 target_link_libraries(HBT ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES} ${GSL_LIBRARIES} ${MPI_CXX_LIBRARIES})
 
 #
