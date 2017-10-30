@@ -42,7 +42,12 @@ if(HBT_USE_OPENMP)
   else(OPENMP_FOUND)
     error("Unable to find OpenMP flag for this compiler")
   endif(OPENMP_FOUND)
-endif()
+else(HBT_USE_OPENMP)
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    # Suppress warnings about unrecognised '#pragma omp' from Intel compiler
+    add_compile_options("-diag-disable 3180")
+  endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+endif(HBT_USE_OPENMP)
 
 #
 # Find MPI libraries for C++
