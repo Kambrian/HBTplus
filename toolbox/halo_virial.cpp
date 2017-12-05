@@ -170,9 +170,12 @@ void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_
 
 void save(vector <HaloSize_t> &HaloSize, int isnap)
 {
-  string filename=HBTConfig.SubhaloPath+"/HaloSize";
-  mkdir(filename.c_str(), 0755);
-  filename=filename+"/HaloSize_"+to_string(isnap)+".hdf5";
+  string filepath=HBTConfig.SubhaloPath+"/HaloSize";
+  stringstream formatter;
+  formatter<<filepath<<"/HaloSize_"<<setw(3)<<setfill('0')<<isnap<<".hdf5";
+  string filename=formatter.str();
+
+  mkdir(filepath.c_str(), 0755);
   hid_t file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   hsize_t ndim=1, dim_atom[]={1}, dims[2]={HaloSize.size(),2};
   hid_t H5T_HaloSizeInMem, H5T_HaloSizeInDisk;
