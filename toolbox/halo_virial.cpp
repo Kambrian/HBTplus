@@ -39,7 +39,7 @@ struct HaloSize_t
     RmaxComoving=0.;
     VmaxPhysical=0.;
 #ifdef NBIN
-    fill(begin(Profile), end(Profile), 0.);
+    fill(begin(Profile), end(Profile), 0);
 #endif
   }
   void Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, ParticleSnapshot_t &partsnap);
@@ -151,7 +151,7 @@ void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_
     VmaxPhysical=sqrt(maxprof->v*VelocityUnit);
     
 #ifdef NBIN
-    fill(begin(Profile), end(Profile), 0.);
+    fill(begin(Profile), end(Profile), 0);
     float r0=1e-2*RVirComoving;
     for(auto &&p: prof)
     {
