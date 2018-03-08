@@ -47,7 +47,7 @@ void JingReader_t::ReadId(vector <Particle_t> &Particles)
     {
     #pragma omp parallel for num_threads(NumSlaves)
     for(HBTInt i=0;i<Particles.size();i++)
-      Particles[i].Id=i;
+      Particles[i].Id=i+1; //v1.15.5.2: change ID range from [0, N) to [1, N].
     }
   }
 }
@@ -297,6 +297,8 @@ void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cos
   Particles.resize(Header.Np);
   
   int ntasks=NumFilesId+NumFilesPos+NumFilesVel;
+  if((!HBTConfig.SnapshotHasIdBlock)&(NumFilesId==0)) 
+    ntasks+=1; //allocate one task to generate IDs if no ID file.
   #pragma omp parallel
   #pragma omp single
 #ifdef _OPENMP
