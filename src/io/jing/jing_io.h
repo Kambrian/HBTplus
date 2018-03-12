@@ -32,10 +32,12 @@ class JingReader_t
   int SnapshotId;
   JingHeader_t Header;
   bool NeedByteSwap;
+  bool IsICFile;
   int NumFilesPos, NumFilesVel, NumFilesId, NumSlaves;
   
   string GetFileName(const char * filetype, int iFile=0);
   int CountFiles(const char *filetype); 
+  int ProbeFilesType(bool isIC);
   void ProbeFiles();
   void ReadId(vector <Particle_t> &Particles);
   void ReadVelocity(vector <Particle_t> &Particles);
@@ -50,6 +52,7 @@ public:
   JingReader_t(int snapshot_id): SnapshotId(snapshot_id)
   {
     NeedByteSwap=false;
+    IsICFile=false;
     ProbeFiles();
   }
   void ReadHeader(JingHeader_t &header, const char filetype[]="pos", int ifile=0);

@@ -101,6 +101,37 @@ real*4::ztp,omgt,lbdt,boxsize,xscale,vscale
 read(fileno) np,ips,ztp,omgt,lbdt,boxsize,xscale,vscale
 end subroutine read_part_header_int8
 
+subroutine read_ic_header_int4(np,ips,ztp,omgt,lbdt,boxsize,xscale,vscale,fileno)
+implicit none
+INTEGER*4 ::np,ips,fileno
+real*4::ztp,omgt,lbdt,boxsize,xscale,vscale
+INTEGER*4 ::ng,iseed,ipos,nu
+real*4::omega0,lambda0,delta,alpha
+xscale=1.
+vscale=1.
+read(fileno) ng,np,omega0,lambda0,ztp,boxsize,ips,delta,iseed,ipos,alpha,omgt,lbdt
+read(fileno) nu
+ztp=ztp-1.
+write(*,*) "ng,np,omega0,lambda0,ztp,boxsize,ips,delta,iseed,ipos,alpha,omgt,lbdt,nu="
+write(*,*)  ng,np,omega0,lambda0,ztp,boxsize,ips,delta,iseed,ipos,alpha,omgt,lbdt,nu
+end subroutine read_ic_header_int4
+
+subroutine read_ic_header_int8(np,ips,ztp,omgt,lbdt,boxsize,xscale,vscale,fileno)
+implicit none
+INTEGER*8 ::np,ips
+INTEGER*4 fileno
+real*4::ztp,omgt,lbdt,boxsize,xscale,vscale
+INTEGER*8 ::ng,iseed,ipos,nu
+real*4::omega0,lambda0,delta,alpha
+xscale=1.
+vscale=1.
+read(fileno) ng,np,omega0,lambda0,ztp,boxsize,ips,delta,iseed,ipos,alpha,omgt,lbdt
+read(fileno) nu !dont know what this is
+ztp=ztp-1.
+write(*,*) "ng,np,omega0,lambda0,ztp,boxsize,ips,delta,iseed,ipos,alpha,omgt,lbdt,nu="
+write(*,*)  ng,np,omega0,lambda0,ztp,boxsize,ips,delta,iseed,ipos,alpha,omgt,lbdt,nu
+end subroutine read_ic_header_int8
+
 subroutine read_part_arr_imajor(part_arr,np,fileno)
 !arr stored as arr(n,3) on disk, i.e., ID varies first, then dimension
 implicit none

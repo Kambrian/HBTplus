@@ -69,7 +69,12 @@ void JingReader_t::ReadPosFileSingle(int ifile, vector< Particle_t >& Particles)
   open_fortran_file_(filename.c_str(),&fileno,&flag_endian,&filestat);
   if(filestat) throw(runtime_error("failed to open file "+filename+", error no. "+to_string(filestat)+"\n"));
 	
-  if(0==ifile)	skip_fortran_record_(&fileno);
+  if(0==ifile)
+  {
+    skip_fortran_record_(&fileno);
+    if(IsICFile) 
+      skip_fortran_record_(&fileno); //another one if is ic.
+  }
 	
   if(Header.FlagHasScale)//has scale
   {
@@ -103,8 +108,9 @@ void JingReader_t::ReadVelFileSingle(int ifile, vector< Particle_t >& Particles)
   int fileno,filestat, flag_endian=NeedByteSwap;
   open_fortran_file_(filename.c_str(),&fileno,&flag_endian,&filestat);
   if(filestat) throw(runtime_error("failed to open file "+filename+", error no. "+to_string(filestat)+"\n"));
-	
-  if(0==ifile)	skip_fortran_record_(&fileno);
+
+  if(!IsICFile)//no header if is ic
+    if(0==ifile) skip_fortran_record_(&fileno);
 	
   if(Header.FlagHasScale)//has scale
   {
@@ -150,7 +156,7 @@ string JingReader_t::GetFileName(const char * filetype, int iFile)
   return string(buf);
 }
 
-void JingReader_t::ProbeFiles()
+int JingReader_t::ProbeFilesType(bool isIC)
 { 
   int flag_endian=NeedByteSwap,filestat,fileno;
   int reset_fileno=1;
@@ -165,20 +171,25 @@ void JingReader_t::ProbeFiles()
   }
 
   JingHeader_t header;
-  read_part_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
+  if(isIC)
+    read_ic_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
+					  &header.BoxSize,&header.xscale,&header.vscale,&fileno);
+  else
+    read_part_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
 					  &header.BoxSize,&header.xscale,&header.vscale,&fileno);
   auto L=header.BoxSize;
   if(header.ips!=SnapshotId)
   {
-    NeedByteSwap=!NeedByteSwap;
     auto i=header.ips;
     swap_Nbyte(&i, 1, sizeof(i));
-	swap_Nbyte(&L, 1, sizeof(L));
+    swap_Nbyte(&L, 1, sizeof(L));
     if(i!=SnapshotId)
     {
       cerr<<"Error: fail to determine endianness for snapshot "<<SnapshotId<<", read ips="<<header.ips<<" or "<<i<<"(byteswapped)"<<endl;
-      exit(1);
+      close_fortran_file_(&fileno);
+      return 1;
     }
+    NeedByteSwap=!NeedByteSwap;
   }
   if(L!=HBTConfig.BoxSize)
 	cerr<<"Warning: boxsize does not match, maybe different units? "<<L<<","<<HBTConfig.BoxSize<<endl;
@@ -188,6 +199,19 @@ void JingReader_t::ProbeFiles()
   NumFilesId=CountFiles("id");
   NumFilesPos=CountFiles("pos");
   NumFilesVel=CountFiles("vel");
+  
+  return 0;
+}
+
+void JingReader_t::ProbeFiles()
+{ 
+  if(ProbeFilesType(IsICFile))//fail if true
+  {
+    IsICFile=!IsICFile;
+    cerr<<"trying as IsICFile="<<IsICFile<<endl;
+    if(ProbeFilesType(IsICFile)) 
+      exit(1);
+  } 
 }
 
 int JingReader_t::CountFiles(const char *filetype)
@@ -221,7 +245,11 @@ void JingReader_t::ReadHeader(JingHeader_t& header, const char *filetype, int if
     cerr<<"Error opening file "<<filename<<",error no. "<<filestat<<endl;
     exit(1);
   }
-  read_part_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
+  if(IsICFile)
+    read_ic_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
+		   &header.BoxSize,&header.xscale,&header.vscale,&fileno);
+  else
+    read_part_header(&header.Np,&header.ips,&header.Redshift,&header.Omegat,&header.Lambdat,
 		   &header.BoxSize,&header.xscale,&header.vscale,&fileno);
   close_fortran_file_(&fileno);
 //   assert(header.BoxSize==HBTConfig.BoxSize);

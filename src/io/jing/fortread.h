@@ -17,6 +17,10 @@ extern void read_part_header_int4_(int *np,int *ips,float *ztp,float *omgt,float
 			      float *boxsize,float *xscale,float *vscale,int *fileno);
 extern void read_part_header_int8_(long int *np,long int *ips,float *ztp,float *omgt,float *lbdt,
 			      float *boxsize,float *xscale,float *vscale,int *fileno);
+extern void read_ic_header_int4_(int *np,int *ips,float *ztp,float *omgt,float *lbdt,
+			      float *boxsize,float *xscale,float *vscale,int *fileno);
+extern void read_ic_header_int8_(long int *np,long int *ips,float *ztp,float *omgt,float *lbdt,
+			      float *boxsize,float *xscale,float *vscale,int *fileno);
 extern void read_group_header_int4_(float *b,int *ngrp, int *fileno);
 extern void read_group_header_int8_(float *b,long int *ngrp, int *fileno);
 }
@@ -24,10 +28,12 @@ extern void read_group_header_int8_(float *b,long int *ngrp, int *fileno);
 #ifdef HBT_INT8
 #define read_fortran_record_HBTInt read_fortran_record8_
 #define read_part_header read_part_header_int8_
+#define read_ic_header read_ic_header_int8_
 #define read_group_header read_group_header_int8_
 #else
 #define read_fortran_record_HBTInt read_fortran_record4_
 #define read_part_header read_part_header_int4_
+#define read_ic_header read_ic_header_int4_
 #define read_group_header read_group_header_int4_
 #endif
 
