@@ -29,12 +29,12 @@ struct Cosmology_t
 	OmegaM0=omega0;
 	OmegaLambda0=omegaLambda0;
 	ScaleFactor=scalefactor;
-	Hz=PhysicalConst::H0 * sqrt(OmegaM0 / (ScaleFactor * ScaleFactor * ScaleFactor) 
-		+ (1 - OmegaM0 - OmegaLambda0) / (ScaleFactor * ScaleFactor)
-		+ OmegaLambda0);//Hubble param for the current catalogue;
+	double Hratio=sqrt(omega0 / (scalefactor * scalefactor * scalefactor) 
+		+ (1 - omega0 - omegaLambda0) / (scalefactor * scalefactor)
+		+ omegaLambda0);//Hubble param for the current catalogue;
 	
-	HBTReal Hratio=Hz/PhysicalConst::H0;
-	OmegaZ=OmegaM0/(ScaleFactor*ScaleFactor*ScaleFactor)/Hratio/Hratio;
+	Hz=Hratio*PhysicalConst::H0;
+	OmegaZ=omega0/(scalefactor*scalefactor*scalefactor)/Hratio/Hratio;
   }
 };
 

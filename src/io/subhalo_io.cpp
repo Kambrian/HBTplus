@@ -185,6 +185,7 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
   ReadDataset(file, "/Cosmology/OmegaLambda0", H5T_HBTReal, &Cosmology.OmegaLambda0);
   ReadDataset(file, "/Cosmology/HubbleParam", H5T_HBTReal, &Cosmology.Hz);
   ReadDataset(file, "/Cosmology/ScaleFactor", H5T_HBTReal, &Cosmology.ScaleFactor);
+  Cosmology.Set(Cosmology.ScaleFactor, Cosmology.OmegaM0, Cosmology.OmegaLambda0);
   
 //   ReadDataset(file, "NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);
 //   ReadDataset(file, "NumberOfFakeHalos", H5T_HBTInt, &MemberTable.NFake);
