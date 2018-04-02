@@ -106,6 +106,7 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
   Cosmology.ParticleMass=0;
   if(H5Lexists (file, "/Cosmology/ParticleMass", H5P_DEFAULT)>0)
     ReadDataset(file, "/Cosmology/ParticleMass", H5T_HBTReal, &Cosmology.ParticleMass);
+  Cosmology.Set(Cosmology.ScaleFactor, Cosmology.OmegaM0, Cosmology.OmegaLambda0);
   }
   
 //   ReadDataset(file, "NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);

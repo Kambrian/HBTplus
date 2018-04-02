@@ -135,6 +135,7 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
   Cosmology.ParticleMass=0;
   if(H5Lexists (file, "/Cosmology/ParticleMass", H5P_DEFAULT)>0)
     ReadDataset(file, "/Cosmology/ParticleMass", H5T_HBTReal, &Cosmology.ParticleMass);
+  Cosmology.Set(Cosmology.ScaleFactor, Cosmology.OmegaM0, Cosmology.OmegaLambda0);
   
   hsize_t dims[1];
   dset=H5Dopen2(file, "Subhalos", H5P_DEFAULT);
