@@ -36,7 +36,7 @@ void Linkedlist_t::build(int ndiv, PositionData_t *data, HBTReal boxsize, bool p
   HBTInt i,j,grid[3];
   HBTInt ind;
   //~ float range[3][2],step[3];
-  cout<<"creating linked list for "<<particles.size()<<" particles..."<<endl;
+ // cout<<"creating linked list for "<<particles.size()<<" particles..."<<endl;
   /*determining enclosing cube*/
   if(BoxSize)
   {
