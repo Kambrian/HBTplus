@@ -87,7 +87,7 @@ public:
   }
   void print(int ithread)
   {
-    cout<<"ithread="<<ithread<<", Nbin="<<Nbin<<"N="<<N[0]<<","<<N[3]<<",rmin2="<<Rmin2<<endl;
+    cout<<"ithread="<<ithread<<", Nbin="<<Nbin<<", N="<<N[0]<<","<<N[3]<<",rmin2="<<Rmin2<<endl;
   }
 };
 
@@ -116,8 +116,11 @@ int main(int argc, char **argv)
   auto &Cosmology=partsnap.Cosmology;
     
   omp_set_dynamic(0);//so that the threadprivate vars persist accross parallel regions
+/*  
 #pragma omp parallel
+#pragma omp critical(print_collector)
   Collector.print(omp_get_thread_num());
+*/
   
   const int nloop=NLOOP; //do it in blocks to save memory
   HBTInt nmax=partsnap.size();
