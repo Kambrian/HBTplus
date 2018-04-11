@@ -15,9 +15,14 @@
 
 // #define TypeMax 6
 
-struct RadVelMass_t
+struct RadMassVel_t
 {
-  HBTReal r, v, m; 
+  HBTReal r, m, v; 
+  RadMassVel_t(){};
+  RadMassVel_t(HBTReal r, HBTReal m):r(r), m(m)
+  {}
+  RadMassVel_t(HBTReal r, HBTReal m, HBTReal v):r(r),m(m),v(v)
+  {}
 };
   
 struct Particle_t
@@ -59,7 +64,7 @@ struct Cosmology_t
   }
   void HaloVirialFactors(HBTReal &virialF_tophat, HBTReal &virialF_b200, HBTReal &virialF_c200) const;
   void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted) const;
-  void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <RadVelMass_t> &prof) const;
+  void SphericalOverdensitySize(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <RadMassVel_t> &prof) const;
   void SphericalOverdensitySize2(float &Mvir, float &Rvir, HBTReal VirialFactor, const vector <HBTReal> &RSorted) const;
 };
 

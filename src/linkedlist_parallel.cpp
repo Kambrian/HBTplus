@@ -20,28 +20,23 @@ LinkedlistPara_t::LinkedlistPara_t(int ndiv, PositionData_t *data, HBTReal boxsi
     LLs[thread_id].build(ndiv, &(Samples[thread_id]), boxsize, periodic);
   }
 }
-void LinkedlistPara_t::SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds)
-{//parallel version. not suitable for use inside another parallel region.
-#pragma omp parallel for
-  for(int thread_id=0;thread_id<LLs.size();thread_id++)
+class SampleCollector_t: public ParticleCollector_t
+{
+  ParticleCollector_t &Collector;
+  PositionSample_t &Sample;
+public:
+  SampleCollector_t(ParticleCollector_t &collector, PositionSample_t &sample):Collector(collector), Sample(sample)
+  {}
+  void Collect(HBTInt pid, HBTReal d2)
   {
-    vector <LocatedParticle_t> thread_founds;
-    LLs[thread_id].SearchShell(rmin, rmax, searchcenter, thread_founds);
-    Samples[thread_id].restore_id(thread_founds);
-    #pragma omp critical(insert_linklist_founds) //this prevents nested parallelization
-    {
-      founds.insert(founds.end(), thread_founds.begin(), thread_founds.end());
-    }
+    Collector.Collect(Sample.restore_id(pid), d2);
   }
-}
-void LinkedlistPara_t::SearchShellSerial(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds)
+};
+void LinkedlistPara_t::SearchShellSerial(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, ParticleCollector_t &collector)
 {//serial version, which can be safely run inside another parallel region
   for(int thread_id=0;thread_id<LLs.size();thread_id++)
   {
-    vector <LocatedParticle_t> thread_founds;
-    LLs[thread_id].SearchShell(rmin, rmax, searchcenter, thread_founds);
-    Samples[thread_id].restore_id(thread_founds);
-    founds.insert(founds.end(), thread_founds.begin(), thread_founds.end());
+    SampleCollector_t thread_collector(collector, Samples[thread_id]);
+    LLs[thread_id].SearchShell(rmin, rmax, searchcenter, thread_collector);
   }
 }
-

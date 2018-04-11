@@ -140,7 +140,7 @@ void Cosmology_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Vir
   Rvir=pow(i/RhoVirial, 1.0/3);//comoving
 }
 
-void Cosmology_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector <RadVelMass_t> &prof) const
+void Cosmology_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector <RadMassVel_t> &prof) const
 /*
  * find SphericalOverdensitySize from a given list of sorted particle distances.
  * all distances comoving.

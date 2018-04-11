@@ -42,18 +42,18 @@ struct HaloSize_t
     fill(begin(Profile), end(Profile), 0);
 #endif
   }
-  void Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, ParticleSnapshot_t &partsnap);
+  void Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, const ParticleSnapshot_t &partsnap);
 };
 void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
-inline bool CompProfRadiusVal(const RadVelMass_t &a, const float r)
+inline bool CompProfRadiusVal(const RadMassVel_t &a, const float r)
 {
   return a.r<r;
 }
-inline bool CompProfRadius(const RadVelMass_t &a, const RadVelMass_t &b)
+inline bool CompProfRadius(const RadMassVel_t &a, const RadMassVel_t &b)
 {
   return a.r<b.r;
 }
-inline bool CompProfVel(const RadVelMass_t &a, const RadVelMass_t &b)
+inline bool CompProfVel(const RadMassVel_t &a, const RadMassVel_t &b)
 {
   return a.v<b.v;
 }
@@ -118,20 +118,27 @@ int main(int argc, char **argv)
   
   return 0;
 }
-
-void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, ParticleSnapshot_t &partsnap)
+class ProfCollector_t: public ParticleCollector_t
+{
+  const ParticleSnapshot_t &PartSnap;
+public:
+  vector <RadMassVel_t> Prof;
+  ProfCollector_t(const ParticleSnapshot_t &partsnap, HBTInt n_reserve=0):PartSnap(partsnap), Prof()
+  {
+    Prof.reserve(n_reserve);
+  }
+  void Collect(HBTInt index, HBTReal d2)
+  {
+    Prof.emplace_back(sqrt(d2), PartSnap.GetMass(index));
+  }
+};
+void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, const ParticleSnapshot_t &partsnap)
 {
     copyHBTxyz(CenterComoving, cen);
-    vector <LocatedParticle_t> founds;
-    founds.reserve(nguess);
-    ll.SearchSphereSerial(rmax, cen, founds);
-    HBTInt np=founds.size();
-    vector <RadVelMass_t> prof(np);
-    for(HBTInt i=0;i<np;i++)
-    {
-	prof[i].r=sqrt(founds[i].d2);
-	prof[i].m=partsnap.GetMass(founds[i].index);
-    }
+    ProfCollector_t collector(partsnap, nguess);
+    ll.SearchSphereSerial(rmax, cen, collector);
+    HBTInt np=collector.Prof.size();
+    auto &prof=collector.Prof;
     sort(prof.begin(), prof.end(), CompProfRadius);
     double m_cum=0.;
     for(auto && p: prof)  p.m=(m_cum+=p.m);

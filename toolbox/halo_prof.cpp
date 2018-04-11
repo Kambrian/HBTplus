@@ -150,32 +150,31 @@ int main(int argc, char **argv)
     return 0;
 }
 
+class LogBinCollector_t: public ParticleCollector_t
+{
+public:
+  HBTInt *N;
+  LogBinCollector_t(HBTInt *n): N(n)
+  {}
+  void Collect(HBTInt index, HBTReal d2)
+  {
+    int ibin=ceilf(logf(d2/RMIN/RMIN)/DlnX);
+    if(ibin<0) ibin=0;
+    else if(ibin>=NBIN) ibin=NBIN-1;
+    N[ibin]++;
+  }
+};
+
 void HaloSize_t::Compute(HBTxyz &cen, LinkedlistPara_t &ll)
 {
-    vector <LocatedParticle_t> founds;
-    founds.reserve(1024);
-    ll.SearchSphereSerial(RMAX, cen, founds);
-    for(auto &&p: founds)
-    {
-	int ibin=ceilf(logf(p.d2/RMIN/RMIN)/DlnX);
-	if(ibin<0) ibin=0;
-	else if(ibin>=NBIN) ibin=NBIN-1;
-	n[ibin]++;
-    }
+    LogBinCollector_t collector(n);
+    ll.SearchSphereSerial(RMAX, cen, collector);
 }
 
 void HaloSize_t::Compute(HBTxyz &cen, GeoTree_t &tree)
 {
-    vector <LocatedParticle_t> founds;
-    founds.reserve(1024);
-    tree.Search(cen, RMAX, founds);
-    for(auto &&p: founds)
-    {
-	int ibin=ceilf(logf(p.d2/RMIN/RMIN)/DlnX);
-	if(ibin<0) ibin=0;
-	else if(ibin>=NBIN) ibin=NBIN-1;
-	n[ibin]++;
-    }
+    LogBinCollector_t collector(n);
+    tree.Search(cen, RMAX, collector);
 }
 
 void save(vector <HaloSize_t> &HaloSize, int isnap, int ifile, int nfiles)

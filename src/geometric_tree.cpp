@@ -79,19 +79,19 @@ void GeoTree_t::UpdateInternalNodes(HBTInt no, HBTInt sib, double len, const dou
 HBTInt GeoTree_t::NearestNeighbour(const HBTxyz & cen, HBTReal rguess)
 //return the particle_index of the nearest neighbour
 {
-  vector <LocatedParticle_t> founds;
-  Search(cen, rguess, founds);
-  while(founds.empty())         //WARNING: dead loop if tree is empty.
+  NearestNeighbourCollector_t collector;
+  Search(cen, rguess, collector);
+  while(collector.IsEmpty())         //WARNING: dead loop if tree is empty.
   {
     rguess *= 1.26;//double the guess volume
-    Search(cen, rguess, founds);
+    Search(cen, rguess, collector);
   }
-  return min_element(founds.begin(), founds.end(), CompLocatedDistance)->index;	
+  return collector.Index;	
 }
 
-void GeoTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <LocatedParticle_t> &founds)
+void GeoTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, ParticleCollector_t &collector)
 {/*find a list of particles from the tree, located within radius around searchcenter,
-  * and APPEND their particle_index and distance^2 to founds */
+  * and process the particles with collector */
   bool IsPeriodic=HBTConfig.PeriodicBoundaryOn;
   double x0=searchcenter[0], y0=searchcenter[1], z0=searchcenter[2];
   double h2 = radius * radius;
@@ -125,7 +125,7 @@ void GeoTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
 	  double r2 = dx * dx + dy * dy + dz * dz;
 
 	  if(r2 < h2)
-	      founds.emplace_back(pid, r2);
+	      collector.Collect(pid, r2);
 	}
       else
 	{
@@ -158,8 +158,9 @@ void GeoTree_t::Search(const HBTxyz & searchcenter, HBTReal radius, vector <Loca
 
 double GeoTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
 {
-  vector <LocatedParticle_t> founds;
-  Search(cen, hguess, founds);
+  LocatedParticleCollector_t collector(NumNeighbourSPH*2);
+  vector <LocatedParticle_t> &founds=collector.Founds;
+  Search(cen, hguess, collector);
   int numngb=founds.size();
   while(numngb<NumNeighbourSPH)
   {
@@ -169,7 +170,7 @@ double GeoTree_t::SphDensity(const HBTxyz &cen, HBTReal & hguess)
 	hguess *= 2.;
       
       founds.clear();
-    Search(cen, hguess, founds);
+    Search(cen, hguess, collector);
     numngb=founds.size();
   }
   
