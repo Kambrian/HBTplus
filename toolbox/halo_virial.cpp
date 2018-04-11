@@ -17,6 +17,9 @@
 #ifdef NBIN
 float Dlnx=(0-(-2.))/(NBIN-1); //1e-2 to 1, logspace
 #endif
+
+#define NDIV 256
+
 struct HaloSize_t
 {
   HBTInt HaloId;
@@ -94,7 +97,7 @@ int main(int argc, char **argv)
     timer.Tick();cout<<"load: "<<timer.GetSeconds(1)<<" seconds\n";
   
     SnapshotPos_t PartPos(partsnap);
-    LinkedlistPara_t ll(256, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+    LinkedlistPara_t ll(NDIV, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
     cout<<"linked list compiled\n";
     timer.Tick();cout<<"link: "<<timer.GetSeconds(2)<<" seconds\n";
     vector <HaloSize_t> HaloSize(halosnap.size());
