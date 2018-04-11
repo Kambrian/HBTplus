@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     timer.Tick();
     HaloSnapshot_t halosnap(isnap);
     SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
-    ParticleSnapshot_t partsnap(isnap);
+    ParticleSnapshot_t partsnap(isnap, false);
     auto &Cosmology=partsnap.Cosmology;
     Cosmology.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
     VelocityUnit=PhysicalConst::G/partsnap.Cosmology.ScaleFactor;

@@ -24,7 +24,7 @@
 #define RMAX 100e3
 #define NBIN 10
 #define USE_LL //algorithm: whether to use linkedlist or geotree for spatial search.
-#define NLOOP 4
+#define NLOOP 1
 #define NDIV 128
 
 class SnapshotOffset_t: public Snapshot_t
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
   if(isnap<0) isnap=HBTConfig.MaxSnapshotIndex+isnap+1;
   
   SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
-  ParticleSnapshot_t partsnap(isnap);
+  ParticleSnapshot_t partsnap(isnap, false);
   auto &Cosmology=partsnap.Cosmology;
     
   omp_set_dynamic(0);//so that the threadprivate vars persist accross parallel regions

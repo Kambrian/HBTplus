@@ -87,7 +87,7 @@ int main(int argc, char **argv)
   if(isnap<0) isnap=HBTConfig.MaxSnapshotIndex+isnap+1;
   
   SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
-  ParticleSnapshot_t partsnap(isnap);
+  ParticleSnapshot_t partsnap(isnap, false);
   auto &Cosmology=partsnap.Cosmology;
     
   vector <HaloSize_t> HaloSize(subsnap.MemberTable.SubGroups.size()); 
