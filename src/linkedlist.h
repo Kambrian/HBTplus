@@ -49,8 +49,8 @@ public:
     build(ndiv, data, boxsize, periodic);
   }
   void build(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false);
-  void SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds);
-  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds);
+  void SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, ParticleCollector_t &collector);
+  void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, ParticleCollector_t &colletor);
   HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTInt> &group_tags, HBTReal LinkLength);
 };
 

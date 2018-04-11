@@ -230,11 +230,11 @@ void Subhalo_t::AverageCoordinates()
   AverageVelocity(PhysicalAverageVelocity, Particles.data(), Nbound);
 }
 
-inline bool CompProfRadius(const RadVelMass_t &a, const RadVelMass_t &b)
+inline bool CompProfRadius(const RadMassVel_t &a, const RadMassVel_t &b)
 {
   return a.r<b.r;
 }
-inline bool CompProfVel(const RadVelMass_t &a, const RadVelMass_t &b)
+inline bool CompProfVel(const RadMassVel_t &a, const RadMassVel_t &b)
 {
   return a.v<b.v;
 }
@@ -283,7 +283,7 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
   
   const HBTxyz &cen=ComovingMostBoundPosition; //most-bound particle as center.
   
-  vector <RadVelMass_t> prof(Nbound);
+  vector <RadMassVel_t> prof(Nbound);
   #pragma omp parallel if(Nbound>100)
   {
   #pragma omp for

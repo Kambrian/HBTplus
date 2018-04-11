@@ -79,7 +79,7 @@ void Linkedlist_t::build(int ndiv, PositionData_t *data, HBTReal boxsize, bool p
 								  store last ll index, and finally the head*/
   }
 }
-void Linkedlist_t::SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds)
+void Linkedlist_t::SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, ParticleCollector_t &collector)
 {/*search in [rmin, rmax] radial range (inclusive), and append results to founds
   */
   PositionData_t &particles=*Particles;
@@ -88,7 +88,7 @@ void Linkedlist_t::SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchc
   
   if(rmin<=0)
   {
-    SearchSphere(rmax, searchcenter, founds);
+    SearchSphere(rmax, searchcenter, collector);
     return;
   }
 	  
@@ -110,15 +110,13 @@ void Linkedlist_t::SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchc
 	while(pid>=0)
 	{
 	  HBTReal dr2=Distance2(particles[pid],searchcenter);
-	  if(dr2<rmax2&&dr2>rmin2)  founds.emplace_back(pid,dr2);
+	  if(dr2<rmax2&&dr2>rmin2)  collector.Collect(pid,dr2);
 	  pid=List[pid];
 	}
       }
 }
-
-void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vector <LocatedParticle_t> &founds)
-{//append found (pid, distance^2) pairs to founds
-  //TODO: use callback functions instead of appending to founds.
+void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, ParticleCollector_t &collector)
+{
   PositionData_t &particles=*Particles;
   HBTReal x0=searchcenter[0], y0=searchcenter[1], z0=searchcenter[2];
   HBTReal radius2=radius*radius;
@@ -163,11 +161,10 @@ void Linkedlist_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, vect
 	  HBTReal r2 = dx * dx + dy * dy + dz * dz;
 	  
 	  if(r2 < radius2) 
-	    founds.emplace_back(p, r2);
+	    collector.Collect(p, r2);
 	}
       }
 }
-
 class SpatialSnapshot_t: public PositionData_t
 {
   const Snapshot_t &Snapshot;

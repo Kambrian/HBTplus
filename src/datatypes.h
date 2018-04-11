@@ -5,6 +5,7 @@
 #include <cstring>
 using namespace std;
 #include <array>
+#include <vector>
 // #include <memory>
 #ifdef DM_ONLY
 #undef UNBIND_WITH_THERMAL_ENERGY
@@ -198,6 +199,49 @@ inline bool CompLocatedDistance(const LocatedParticle_t &a, const LocatedParticl
 {
   return a.d2<b.d2;
 }
-
+class ParticleCollector_t
+{
+public:
+  virtual void Collect(HBTInt index, HBTReal d2)=0;
+};
+class LocatedParticleCollector_t: public ParticleCollector_t
+//a simple collector that appends all found particles to a vector.
+{
+public:
+  vector <LocatedParticle_t> Founds;
+  LocatedParticleCollector_t(HBTInt n_reserve=0): Founds()
+  {
+    Founds.reserve(n_reserve);
+  }
+  void Collect(HBTInt index, HBTReal d2)
+  {
+    Founds.emplace_back(index, d2);
+  }
+  void Clear()
+  {
+    Founds.clear();
+  }
+};
+class NearestNeighbourCollector_t: public ParticleCollector_t
+//a collector for nearest neighbour search. keeps the nearest neighbour particle.
+{
+public:
+  HBTInt Index;
+  HBTReal D2;//distance squared
+  NearestNeighbourCollector_t():Index(0), D2(-1)
+  {}
+  void Collect(HBTInt index, HBTReal d2)
+  {
+    if(d2<D2)
+    {
+      D2=d2;
+      Index=index;
+    }
+  }
+  bool IsEmpty()
+  {
+    return D2<0.;
+  }
+};
 #define DATATYPES_INCLUDED
 #endif

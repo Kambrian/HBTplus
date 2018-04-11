@@ -256,7 +256,7 @@ void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal Viri
   Mvir=i*ParticleMass;
   Rvir=pow(i/RhoVirial, 1.0/3);//comoving
 }
-void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector <RadVelMass_t> &prof) const
+void Snapshot_t::SphericalOverdensitySize(float& Mvir, float& Rvir, HBTReal VirialFactor, const vector <RadMassVel_t> &prof) const
 /*
  * find SphericalOverdensitySize from a given list of sorted particle distances.
  * all distances comoving.
