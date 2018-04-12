@@ -111,7 +111,6 @@ int main(int argc, char **argv)
   int isnap=atoi(argv[2]);
   if(isnap<0) isnap=HBTConfig.MaxSnapshotIndex+isnap+1;
   
-  SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
   ParticleSnapshot_t partsnap(isnap, false);
   auto &Cosmology=partsnap.Cosmology;
     
