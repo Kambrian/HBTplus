@@ -129,7 +129,7 @@ int main(int argc, char **argv)
     HBTInt np=min(blocksize, nmax-offset);
     SnapshotOffset_t snapslice(offset, partsnap);//split the snapshot and do it piece by piece
     snapslice.ReSize(np);
-    cout<<"i="<<iloop<<endl;
+    cout<<"iloop="<<iloop<<endl;
     Timer_t timer;timer.Tick();
   #ifdef USE_LL
     SnapshotPos_t PartPos(snapslice);
@@ -152,6 +152,11 @@ int main(int argc, char **argv)
     #else
       tree.Search(cen, RMAX, Collector);
     #endif
+      if(i%1000==0)
+      {
+	printf("i=%d\n", i);
+	fflush(stdout);
+      }
     }
     timer.Tick();cout<<"built in "<<timer.GetSeconds(1)<<" seconds, searched in "<<timer.GetSeconds(-1)<<" seconds\n";
   }
