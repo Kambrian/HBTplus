@@ -44,9 +44,11 @@ depend:
 ./src/snapshot.o: ./src/snapshot.h ./src/datatypes.h ./src/mymath.h
 ./src/snapshot.o: ./src/mysort.h ./src/config_parser.h
 ./src/snapshot.o: ./src/snapshot_number.h ./src/hash.h ./src/hash.tpp
-./src/linkedlist.o: ./src/mymath.h ./src/mysort.h ./src/datatypes.h
-./src/linkedlist.o: ./src/linkedlist.h ./src/snapshot.h ./src/config_parser.h
+./src/linkedlist.o: ./src/linkedlist.h ./src/mymath.h ./src/mysort.h
+./src/linkedlist.o: ./src/datatypes.h ./src/linkedlist_base.h
+./src/linkedlist.o: ./src/snapshot.h ./src/config_parser.h
 ./src/linkedlist.o: ./src/snapshot_number.h ./src/hash.h ./src/hash.tpp
+./src/hdf_wrapper.o: ./src/hdf_wrapper.h
 ./src/halo.o: ./src/mymath.h ./src/mysort.h ./src/datatypes.h ./src/halo.h
 ./src/halo.o: ./src/snapshot_number.h ./src/config_parser.h ./src/snapshot.h
 ./src/halo.o: ./src/hash.h ./src/hash.tpp
@@ -59,17 +61,16 @@ depend:
 ./src/geometric_tree.o: ./src/oct_tree.h ./src/snapshot.h
 ./src/geometric_tree.o: ./src/snapshot_number.h ./src/hash.h ./src/hash.tpp
 ./src/geometric_tree.o: ./src/oct_tree.tpp
-./src/hdf_wrapper.o: ./src/hdf_wrapper.h
-./src/gravity_tree.o: ./src/mymath.h ./src/mysort.h ./src/datatypes.h
-./src/gravity_tree.o: ./src/config_parser.h ./src/gravity_tree.h
-./src/gravity_tree.o: ./src/oct_tree.h ./src/snapshot.h
-./src/gravity_tree.o: ./src/snapshot_number.h ./src/hash.h ./src/hash.tpp
-./src/gravity_tree.o: ./src/oct_tree.tpp
 ./src/subhalo.o: ./src/datatypes.h ./src/snapshot_number.h
 ./src/subhalo.o: ./src/config_parser.h ./src/subhalo.h ./src/halo.h
 ./src/subhalo.o: ./src/snapshot.h ./src/mymath.h ./src/mysort.h ./src/hash.h
 ./src/subhalo.o: ./src/hash.tpp ./src/hdf_wrapper.h ./src/gravity_tree.h
 ./src/subhalo.o: ./src/oct_tree.h ./src/oct_tree.tpp
+./src/gravity_tree.o: ./src/mymath.h ./src/mysort.h ./src/datatypes.h
+./src/gravity_tree.o: ./src/config_parser.h ./src/gravity_tree.h
+./src/gravity_tree.o: ./src/oct_tree.h ./src/snapshot.h
+./src/gravity_tree.o: ./src/snapshot_number.h ./src/hash.h ./src/hash.tpp
+./src/gravity_tree.o: ./src/oct_tree.tpp
 ./src/mymath.o: ./src/mymath.h ./src/mysort.h ./src/datatypes.h
 ./src/subhalo_unbind.o: ./src/datatypes.h ./src/snapshot_number.h
 ./src/subhalo_unbind.o: ./src/config_parser.h ./src/subhalo.h ./src/halo.h
@@ -77,16 +78,15 @@ depend:
 ./src/subhalo_unbind.o: ./src/hash.h ./src/hash.tpp ./src/hdf_wrapper.h
 ./src/subhalo_unbind.o: ./src/gravity_tree.h ./src/oct_tree.h
 ./src/subhalo_unbind.o: ./src/oct_tree.tpp
+./src/linkedlist_base.o: ./src/mymath.h ./src/mysort.h ./src/datatypes.h
+./src/linkedlist_base.o: ./src/linkedlist_base.h ./src/snapshot.h
+./src/linkedlist_base.o: ./src/config_parser.h ./src/snapshot_number.h
+./src/linkedlist_base.o: ./src/hash.h ./src/hash.tpp
 ./src/fof_builder.o: ./src/fof_builder.h ./src/geometric_tree.h
 ./src/fof_builder.o: ./src/oct_tree.h ./src/datatypes.h ./src/snapshot.h
 ./src/fof_builder.o: ./src/mymath.h ./src/mysort.h ./src/config_parser.h
 ./src/fof_builder.o: ./src/snapshot_number.h ./src/hash.h ./src/hash.tpp
 ./src/fof_builder.o: ./src/oct_tree.tpp
-./src/linkedlist_parallel.o: ./src/linkedlist_parallel.h ./src/mymath.h
-./src/linkedlist_parallel.o: ./src/mysort.h ./src/datatypes.h
-./src/linkedlist_parallel.o: ./src/linkedlist.h ./src/snapshot.h
-./src/linkedlist_parallel.o: ./src/config_parser.h ./src/snapshot_number.h
-./src/linkedlist_parallel.o: ./src/hash.h ./src/hash.tpp
 ./src/io/custom_io.o: ./src/mymath.h ./src/mysort.h ./src/datatypes.h
 ./src/io/custom_io.o: ./src/io/custom_io.h ./src/datatypes.h ./src/halo.h
 ./src/io/custom_io.o: ./src/snapshot_number.h ./src/config_parser.h
