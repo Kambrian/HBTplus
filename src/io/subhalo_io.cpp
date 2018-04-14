@@ -139,7 +139,7 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const SubRe
   MPI_Bcast(&NumberOfFiles, 1, MPI_INT, 0, world.Communicator);
   
   Subhalos.clear();
-  int nfiles_skip, nfiles_end;
+  HBTInt nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), NumberOfFiles, nfiles_skip, nfiles_end);
   
   for(int i=0, ireader=0;i<world.size();i++, ireader++)

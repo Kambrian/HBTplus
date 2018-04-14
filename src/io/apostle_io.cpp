@@ -365,7 +365,7 @@ void ApostleReader_t::LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <P
 //   Cosmology.ParticleMass=Header.mass[TypeDM];
 #endif
   
-  int nfiles_skip, nfiles_end;
+  HBTInt nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), Header.NumberOfFiles, nfiles_skip, nfiles_end);
   {
     HBTInt np=0;
@@ -417,7 +417,7 @@ void ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< Hal
   world.SyncContainer(offset_file, MPI_HBT_INT, root);
   
   vector <ParticleHost_t> ParticleHosts;
-  int nfiles_skip, nfiles_end;
+  HBTInt nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), Header.NumberOfFiles, nfiles_skip, nfiles_end);
   {
     HBTInt np=0;

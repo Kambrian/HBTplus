@@ -258,7 +258,8 @@ public:
 
 extern int LargestRootFactor(int N, int dim);
 extern vector <int> ClosestFactors(int N, int dim);
-extern void AssignTasks(int worker_id, int nworkers, int ntasks, int &task_begin, int &task_end);
+extern void AssignTasks(HBTInt worker_id, HBTInt nworkers, HBTInt ntasks, HBTInt &task_begin, HBTInt &task_end);
+extern void logspace(double xmin,double xmax,int N, vector <float> &x);
 
 #ifdef HAS_GSL
 extern void EigenAxis(double Ixx, double Ixy, double Ixz, double Iyy, double Iyz, double Izz, float Axis[3][3]);
