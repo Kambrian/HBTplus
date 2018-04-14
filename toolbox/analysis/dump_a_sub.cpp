@@ -7,16 +7,16 @@ using namespace std;
 #include <cstdlib>
 #include <cstdio>
 
-#include "../src/snapshot.h"
-#include "../src/subhalo.h"
-#include "../src/mymath.h"
+#include "../../src/snapshot.h"
+#include "../../src/subhalo.h"
+#include "../../src/mymath.h"
 
 int main(int argc, char **argv)
 {
   int isnap=32, subid=22;
   HBTConfig.ParseConfigFile(argv[1]);
   SubhaloSnapshot_t subsnap;
-  subsnap.Load(isnap, true);
+  subsnap.Load(isnap);
 
   FILE *fp;
   stringstream filename;
