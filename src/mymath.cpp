@@ -231,3 +231,17 @@ void logspace(double xmin,double xmax,int N, vector <float> &x)
   }
 }
 
+void AssignTasks(HBTInt worker_id, HBTInt nworkers, HBTInt ntasks, HBTInt &task_begin, HBTInt &task_end)
+/*distribute ntasks to nworkers approximately fairly (equally if possible, otherwise the leading workers do one more task than others).
+ * return the tasks assigned to worker_id as [task_begin, task_end).
+ * worker_id is in the range [0, nworkers).*/
+{
+  HBTInt ntask_remainder=ntasks%nworkers;
+  HBTInt ntask_this=ntasks/nworkers;;
+  task_begin=ntask_this*worker_id+min(ntask_remainder, worker_id);//distribute remainder to leading nodes
+  if(worker_id<ntask_remainder) 
+	ntask_this++;
+  task_end=ntask_this+task_begin;
+  assert(task_end<=ntasks);
+}
+

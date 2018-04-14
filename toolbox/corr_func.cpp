@@ -13,7 +13,7 @@
 #include "../src/halo.h"
 #include "../src/subhalo.h"
 #include "../src/mymath.h"
-#include "../src/linkedlist_parallel.h"
+#include "../src/linkedlist.h"
 #include "../src/geometric_tree.h"
 
 #define SAMPLESIZE 100000
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
     Timer_t timer;timer.Tick();
   #ifdef USE_LL
     SnapshotPos_t PartPos(snapslice);
-    LinkedlistPara_t ll(NDIV, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+    Linkedlist_t ll(NDIV, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
     cout<<"linked list compiled\n";
   #else
     GeoTree_t tree;
@@ -148,7 +148,7 @@ int main(int argc, char **argv)
       HBTInt pid=i*iskip;
       auto &cen=partsnap.GetComovingPosition(pid);
     #ifdef USE_LL
-      ll.SearchSphereSerial(RMAX, cen, Collector);
+      ll.SearchSphere(RMAX, cen, Collector);
     #else
       tree.Search(cen, RMAX, Collector);
     #endif
