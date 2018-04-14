@@ -57,7 +57,7 @@ struct HaloSize_t
 vector <HaloSize_t> HaloSize;
 void LoadHaloSize(vector<HaloSize_t> &HaloSize, int isnap);
 void save(vector <Satellite_t> &Satellites, int isnap);
-void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &ll, vector <Satellite_t> &satellites);
+void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Linkedlist_t &ll, vector <Satellite_t> &satellites);
 
 int main(int argc,char **argv)
 {
@@ -83,7 +83,7 @@ int main(int argc,char **argv)
     }
 
     SubhaloPos_t SubPos(subsnap.Subhalos);
-    LinkedlistPara_t ll(200, &SubPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+    Linkedlist_t ll(200, &SubPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
     cout<<"linked list compiled\n";
 
     vector <Satellite_t> Satellites;
@@ -110,7 +110,7 @@ float max_rvir(HaloSize_t &halo)
 //   return max(max(halo.R200CritComoving, halo.RVirComoving), halo.R200MeanComoving);
 }
 
-void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara_t &ll, vector <Satellite_t> &satellites)
+void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, Linkedlist_t &ll, vector <Satellite_t> &satellites)
 {
     satellites.clear();
     auto &host=HaloSize[grpid];
@@ -122,7 +122,7 @@ void collect_submass(int grpid, const SubhaloSnapshot_t &subsnap, LinkedlistPara
     if(central.Nbound<=1) return;
     LocatedParticleCollector_t collector;
     vector <LocatedParticle_t> &sublist=collector.Founds;
-    ll.SearchSphereSerial(rmax, central.ComovingMostBoundPosition, collector);
+    ll.SearchSphere(rmax, central.ComovingMostBoundPosition, collector);
     for(auto &&subid: sublist)
     {
 //         if(subid.id!=cenid)
