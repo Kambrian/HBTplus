@@ -35,24 +35,6 @@ HBT.o: src/config_parser.h src/snapshot_number.h src/hash.h src/hash.tpp
 HBT.o: src/halo.h src/snapshot.h src/subhalo.h src/halo.h src/hdf_wrapper.h
 HBT.o: src/mymath.h src/particle_exchanger.h src/halo_particle_iterator.h
 HBT.o: src/subhalo.h src/hash_remote.tpp
-FoFdebug2.o: src/datatypes.h src/config_parser.h src/datatypes.h
-FoFdebug2.o: src/mpi_wrapper.h src/snapshot.h src/mymath.h
-FoFdebug2.o: src/config_parser.h src/snapshot_number.h src/hash.h
-FoFdebug2.o: src/hash.tpp src/halo.h src/snapshot.h src/subhalo.h src/halo.h
-FoFdebug2.o: src/hdf_wrapper.h src/mymath.h src/gravity_tree.h src/oct_tree.h
-FoFdebug2.o: src/oct_tree.tpp src/linkedlist.h
-FoFdebug.o: src/datatypes.h src/config_parser.h src/datatypes.h
-FoFdebug.o: src/mpi_wrapper.h src/snapshot.h src/mymath.h src/config_parser.h
-FoFdebug.o: src/snapshot_number.h src/hash.h src/hash.tpp src/halo.h
-FoFdebug.o: src/snapshot.h src/subhalo.h src/halo.h src/hdf_wrapper.h
-FoFdebug.o: src/mymath.h src/gravity_tree.h src/oct_tree.h src/oct_tree.tpp
-FoFdebug.o: src/linkedlist.h
-HBTdebug.o: src/mpi_wrapper.h src/datatypes.h src/mymath.h src/datatypes.h
-HBTdebug.o: src/config_parser.h src/mpi_wrapper.h src/snapshot.h
-HBTdebug.o: src/config_parser.h src/snapshot_number.h src/hash.h src/hash.tpp
-HBTdebug.o: src/halo.h src/snapshot.h src/subhalo.h src/halo.h
-HBTdebug.o: src/hdf_wrapper.h src/mymath.h src/particle_exchanger.h
-HBTdebug.o: src/halo_particle_iterator.h src/subhalo.h src/hash_remote.tpp
 src/subhalo_unbind.o: src/datatypes.h src/snapshot_number.h
 src/subhalo_unbind.o: src/config_parser.h src/subhalo.h src/gravity_tree.h
 src/subhalo_unbind.o: src/oct_tree.h src/snapshot.h src/oct_tree.tpp
@@ -62,9 +44,13 @@ src/particle_exchanger.o: src/datatypes.h src/mymath.h src/mpi_wrapper.h
 src/particle_exchanger.o: src/halo_particle_iterator.h src/subhalo.h
 src/particle_exchanger.o: src/hash_remote.tpp src/hash.h src/hash.tpp
 src/snapshot.o: src/snapshot.h src/mymath.h src/datatypes.h
-src/linkedlist.o: src/mymath.h src/datatypes.h src/linkedlist.h
-src/linkedlist.o: src/snapshot.h
+src/linkedlist.o: src/linkedlist.h src/mymath.h src/datatypes.h
+src/linkedlist.o: src/linkedlist_base.h src/snapshot.h
 src/hdf_wrapper.o: src/hdf_wrapper.h
+src/halo.o: src/mpi_wrapper.h src/mymath.h src/datatypes.h src/halo.h
+src/halo.o: src/particle_exchanger.h src/snapshot.h
+src/halo.o: src/halo_particle_iterator.h src/subhalo.h src/hash_remote.tpp
+src/halo.o: src/hash.h src/hash.tpp
 src/subhalo_merge.o: src/datatypes.h src/snapshot_number.h
 src/subhalo_merge.o: src/config_parser.h src/subhalo.h
 src/mpi_wrapper.o: src/mpi_wrapper.h
@@ -73,22 +59,18 @@ src/snapshot_exchanger.o: src/mpi_wrapper.h
 src/geometric_tree.o: src/mymath.h src/datatypes.h src/config_parser.h
 src/geometric_tree.o: src/geometric_tree.h src/oct_tree.h src/snapshot.h
 src/geometric_tree.o: src/oct_tree.tpp
+src/subhalo.o: src/datatypes.h src/snapshot_number.h src/config_parser.h
+src/subhalo.o: src/subhalo.h src/particle_exchanger.h src/mymath.h
+src/subhalo.o: src/mpi_wrapper.h src/snapshot.h src/halo_particle_iterator.h
+src/subhalo.o: src/hash_remote.tpp src/hash.h src/hash.tpp
 src/subhalo_tracking.o: src/datatypes.h src/snapshot_number.h
 src/subhalo_tracking.o: src/config_parser.h src/subhalo.h
 src/gravity_tree.o: src/mymath.h src/datatypes.h src/config_parser.h
 src/gravity_tree.o: src/gravity_tree.h src/oct_tree.h src/snapshot.h
 src/gravity_tree.o: src/oct_tree.tpp
-src/subhalo.o: src/datatypes.h src/snapshot_number.h src/config_parser.h
-src/subhalo.o: src/subhalo.h src/particle_exchanger.h src/mymath.h
-src/subhalo.o: src/mpi_wrapper.h src/snapshot.h src/halo_particle_iterator.h
-src/subhalo.o: src/hash_remote.tpp src/hash.h src/hash.tpp
 src/mymath.o: src/mymath.h src/datatypes.h
-src/halo.o: src/mpi_wrapper.h src/mymath.h src/datatypes.h src/halo.h
-src/halo.o: src/particle_exchanger.h src/snapshot.h
-src/halo.o: src/halo_particle_iterator.h src/subhalo.h src/hash_remote.tpp
-src/halo.o: src/hash.h src/hash.tpp
-src/linkedlist_parallel.o: src/linkedlist_parallel.h src/mymath.h
-src/linkedlist_parallel.o: src/datatypes.h src/linkedlist.h src/snapshot.h
+src/linkedlist_base.o: src/mymath.h src/datatypes.h src/linkedlist_base.h
+src/linkedlist_base.o: src/snapshot.h
 src/config_parser.o: src/config_parser.h
 src/io/snapshot_io.o: src/mpi_wrapper.h src/datatypes.h src/mymath.h
 src/io/snapshot_io.o: src/snapshot.h src/config_parser.h
