@@ -13,7 +13,7 @@
 #include "../src/halo.h"
 #include "../src/subhalo.h"
 #include "../src/mymath.h"
-#include "../src/linkedlist_parallel.h"
+#include "../src/linkedlist.h"
 #include "../src/geometric_tree.h"
 
 #define NBOUND_MIN 1000 //min number of host bound particles to consider.
@@ -65,7 +65,7 @@ struct HaloSize_t
   HBTInt HaloId;
   HBTInt n[NBIN];
   HaloSize_t(){};
-  void Compute(HBTxyz &cen, LinkedlistPara_t &ll);
+  void Compute(HBTxyz &cen, Linkedlist_t &ll);
   void Compute(HBTxyz &cen, GeoTree_t &tree);
 };
 void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     
   #ifdef USE_LL
     SnapshotPos_t PartPos(snapslice);
-    LinkedlistPara_t searcher(NDIV, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+    Linkedlist_t searcher(NDIV, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
     cout<<"linked list compiled\n";
   #else
     GeoTree_t searcher;
@@ -166,10 +166,10 @@ public:
   }
 };
 
-void HaloSize_t::Compute(HBTxyz &cen, LinkedlistPara_t &ll)
+void HaloSize_t::Compute(HBTxyz &cen, Linkedlist_t &ll)
 {
     LogBinCollector_t collector(n);
-    ll.SearchSphereSerial(RMAX, cen, collector);
+    ll.SearchSphere(RMAX, cen, collector);
 }
 
 void HaloSize_t::Compute(HBTxyz &cen, GeoTree_t &tree)

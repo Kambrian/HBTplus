@@ -25,7 +25,7 @@
 #define NBIN 10
 #define USE_LL //algorithm: whether to use linkedlist or geotree for spatial search.
 #define NLOOP 1
-#define NDIV 128
+#define NDIV 64
 
 class SnapshotOffset_t: public Snapshot_t
 {

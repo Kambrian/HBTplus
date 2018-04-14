@@ -9,7 +9,7 @@
 #include "../../src/halo.h"
 #include "../../src/subhalo.h"
 #include "../../src/mymath.h"
-#include "../../src/linkedlist_parallel.h"
+#include "../../src/linkedlist.h"
 
 #define RMAX 10	 //statistics done in r<RMAX*rvir
 

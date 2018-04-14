@@ -9,7 +9,7 @@
 #include "../src/halo.h"
 #include "../src/subhalo.h"
 #include "../src/mymath.h"
-#include "../src/linkedlist_parallel.h"
+#include "../src/linkedlist.h"
 
 #define RMAX 2.
 
@@ -45,7 +45,7 @@ struct HaloSize_t
     fill(begin(Profile), end(Profile), 0);
 #endif
   }
-  void Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, const ParticleSnapshot_t &partsnap);
+  void Compute(HBTxyz &cen, float rmax, HBTInt nguess, Linkedlist_t &ll, const ParticleSnapshot_t &partsnap);
 };
 void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk);
 inline bool CompProfRadiusVal(const RadMassVel_t &a, const float r)
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
     timer.Tick();cout<<"load: "<<timer.GetSeconds(1)<<" seconds\n";
   
     SnapshotPos_t PartPos(partsnap);
-    LinkedlistPara_t ll(NDIV, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
+    Linkedlist_t ll(NDIV, &PartPos, HBTConfig.BoxSize, HBTConfig.PeriodicBoundaryOn);
     cout<<"linked list compiled\n";
     timer.Tick();cout<<"link: "<<timer.GetSeconds(2)<<" seconds\n";
     vector <HaloSize_t> HaloSize(halosnap.size());
@@ -135,11 +135,11 @@ public:
     Prof.emplace_back(sqrt(d2), PartSnap.GetMass(index));
   }
 };
-void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, LinkedlistPara_t &ll, const ParticleSnapshot_t &partsnap)
+void HaloSize_t::Compute(HBTxyz &cen, float rmax, HBTInt nguess, Linkedlist_t &ll, const ParticleSnapshot_t &partsnap)
 {
     copyHBTxyz(CenterComoving, cen);
     ProfCollector_t collector(partsnap, nguess);
-    ll.SearchSphereSerial(rmax, cen, collector);
+    ll.SearchSphere(rmax, cen, collector);
     HBTInt np=collector.Prof.size();
     auto &prof=collector.Prof;
     sort(prof.begin(), prof.end(), CompProfRadius);

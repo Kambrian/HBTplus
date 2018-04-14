@@ -9,7 +9,7 @@
 #include "../../src/halo.h"
 #include "../../src/subhalo.h"
 #include "../../src/mymath.h"
-#include "../../src/linkedlist_parallel.h"
+#include "../../src/linkedlist.h"
 
 #define NORM  //produce normalized massfunction (in terms Msub/Mhost rather than Msub)
 // #define RMIN 0
