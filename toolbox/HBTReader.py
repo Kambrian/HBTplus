@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 class to read the HBT outputs.
 
@@ -19,14 +20,14 @@ To use it, initialize the reader with the parameter file under the subhalo direc
 
 '''
 
-import numpy as np
-import matplotlib.pyplot as plt
-import h5py
 import sys
-import os.path, glob
+import glob
+import numbers
+import numpy as np
+import h5py
 from numpy.lib.recfunctions import append_fields
 from matplotlib.pylab import find
-import numbers
+import logging
 
 
 def PeriodicDistance(x, y, BoxSize, axis=-1):
@@ -41,7 +42,8 @@ def distance(x, y, axis=-1):
 
 
 class ConfigReader:
-    ''' class to read the config files '''
+    """Class to read the config files (i.e. ``Parameters.log``).
+    """
 
     def __init__(self, config_file):
         self.Options = {}
@@ -58,14 +60,41 @@ class ConfigReader:
 
 
 def get_hbt_snapnum(snapname):
+    """Extracts snapshot number from a filename.
+
+    Example:
+
+    .. code::python
+
+        from HBTReader import HBTReader
+        reader=HBTReader('subcat')
+        snapshotnumber=-1                                    # or 0~MaxSnap. -1 means last snapshot
+        subs=reader.LoadSubhalos(snapshotnumber)             # load all
+        nbound=reader.LoadSubhalos(snapshotnumber, 'Nbound') # only Nbound
+        sub2=reader.LoadSubhalos(snapshotnumber, subindex=2) # only subhalo 2
+        track2=reader.GetTrack(2)                            # track 2
+
+    Arguments:
+        snapname (str): name of snapshot file
+
+    Returns:
+        (int): snapshot number
+    """
     return int(snapname.rsplit('SubSnap_')[1].split('.')[0])
 
 
 class HBTReader:
-    ''' class to read HBT2 catalogue '''
+    """Class to read the HBTPlus outputs.
+
+    To use it, initialize the reader with the directory in which
+    ``Parameters.log`` is stored - it is written by HBT during runtime.
+
+    Arguments:
+        subhalo_path (str): directory with config files
+    """
+
 
     def __init__(self, subhalo_path):
-        ''' initialize HBTReader to read data in subhalo_path. A parameter file must exist there (Parameters.log dumped by HBT during runtime).'''
         config_file = subhalo_path + '/Parameters.log'
         self.Options = ConfigReader(config_file).Options
         self.rootdir = self.Options['SubhaloPath']
@@ -81,6 +110,7 @@ class HBTReader:
             lastfile = sorted(
                 glob.glob(self.rootdir + '/*/SubSnap_*.hdf5'),
                 key=get_hbt_snapnum)[-1]
+
         extension = lastfile.rsplit('SubSnap_')[1].split('.')
         MaxSnap = int(extension[0])
         if MaxSnap != self.MaxSnap:
@@ -114,6 +144,16 @@ class HBTReader:
         return np.arange(self.MinSnap, self.MaxSnap + 1)
 
     def GetFileName(self, isnap, ifile=0, filetype='Sub'):
+        """Returns filename of an HBT snapshot
+
+        Arguments:
+            isnap (int): snapshot of the file
+            ifile (int): (default=0) index for sub-snapshots
+            filetype (str): (default='Sub') 'Src', 'Sub' or 'HaloSize'
+
+        Returns:
+            (str): HBT snaphost filename
+        """
         if isnap < 0:
             isnap = self.MaxSnap + 1 + isnap
         if self.nfiles:
@@ -123,11 +163,28 @@ class HBTReader:
             return self.rootdir + '/' + filetype + 'Snap_%03d.hdf5' % (isnap)
 
     def Open(self, isnap, ifile=0, filetype='Sub', mode='r'):
-        '''return the opened hdf5 file'''
+        """Opens HDF5 file.
+
+        Arguments:
+            isnap (int): snapshot of the file
+            ifile (int): (default=0) index for sub-snapshots
+            filetype (str): (default='Sub') 'Src', 'Sub' or 'HaloSize'
+            mode (chr): (default='r') file handle mode
+
+        Returns:
+            (File): HDF5 HBT file handle
+        """
         return h5py.File(self.GetFileName(isnap, ifile, filetype), mode)
 
     def LoadNestedSubhalos(self, isnap=-1, selection=None):
-        '''load the list of nested subhalo indices for each subhalo'''
+        """Load the list of nested subhalo indices for each subhalo
+
+        Arguments:
+            isnap (int): (default = -1) snapshot number
+
+        Returns:
+            (numpy.ndarray): array of nested indices
+        """
         nests = []
         for i in xrange(max(self.nfiles, 1)):
             with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
@@ -135,15 +192,34 @@ class HBTReader:
         return np.array(nests)
 
     def LoadSubhalos(self, isnap=-1, selection=None, show_progress=False):
-        '''load subhalos from snapshot isnap (default =-1, means final snapshot; isnap<0 will count backward from final snapshot)
-	
-	`selection` can be a single field, a list of the field names or a single subhalo index. e.g., selection=('Rank', 'Nbound') will load only the Rank and Nbound fields of subhaloes. selection=3 will only load subhalo with subindex 3. Default will load all fields of all subhaloes.
-	
-	...Note: subindex specifies the order of the subhalo in the file at the current snapshot, i.e., subhalo=AllSubhalo[subindex].    subindex==trackId for single file output, but subindex!=trackId for mpi multiple-file outputs. 
-	
-	You can also use numpy slice for selection, e.g., selection=np.s_[:10, 'Rank','HostHaloId'] will select the 'Rank' and 'HostHaloId' of the first 10 subhaloes. You can also specify multiple subhaloes by passing a list of (ordered) subindex, e.g., selection=((1,2,3),). However, currently only a single subhalo can be specified for multiple-file hbt data (not restricted for single-file data).
-	
-	'''
+        """Load all subhaloes from a snapshot.
+
+        .. Note::
+
+            ``selection=('Rank', 'Nbound')`` will load only the Rank and Nbound
+            fields of subhaloes; ``selection=3`` will only load subhalo with
+            subindex 3; default will load all fields of all subhaloes.  You can
+            also use ``numpy`` slice for selection, e.g. ``selection=np.s_[:10,
+            'Rank','HostHaloId']`` will select the ``Rank`` and ``HostHaloId``
+            of the first 10 subhaloes. You can also specify multiple subhaloes
+            by passing a list of (ordered) subindex, e.g.,
+            ``selection=((1,2,3),)``.  However, currently only a single subhalo
+            can be specified for multiple-file HBT data (not restricted for
+            single-file data).
+
+        .. Note::
+
+            Subindex specifies the order of the subhalo in the file at the current
+            snapshot, i.e., ``subhalo=AllSubhalo[subindex]``.  ``subindex == trackId``
+            for single file output, but ``subindex != trackId`` for mpi multiple-file
+            outputs.
+
+        Arguments:
+            isnap (int): (default = -1) snapshot
+            selection (numpy.s\_): (default = None) can be a single field, a list of
+                the field names or a single subhalo index
+            show_progress (bool): (default = False)
+        """
         subhalos = []
         offset = 0
         trans_index = False
@@ -171,6 +247,7 @@ class HBTReader:
                     offset += nsub
                 else:
                     subhalos.append(subfile['Subhalos'][selection])
+
         if len(subhalos):
             subhalos = np.hstack(subhalos)
         else:
@@ -178,9 +255,15 @@ class HBTReader:
         if show_progress:
             print ""
         #subhalos.sort(order=['HostHaloId','Nbound'])
+
         return subhalos
 
     def GetNumberOfSubhalos(self, isnap=-1):
+        """Retunrs number of subhaloes in a snapshot.
+
+        Arguments:
+            isnap (int): (default = -1) snapshot number
+        """
         with h5py.File(self.GetFileName(isnap, 0), 'r') as f:
             if self.nfiles:
                 return f['TotalNumberOfSubhalosInAllFiles'][...]
@@ -188,11 +271,20 @@ class HBTReader:
                 return f['Subhalos'].shape[0]
 
     def LoadParticles(self, isnap=-1, subindex=None, filetype='Sub'):
-        ''' load subhalo particle list at snapshot isnap. 
-	
-	if subindex is given, only load subhalo of the given index (the order it appears in the file, subindex==trackId for single file output, but not for mpi multiple-file outputs). otherwise load all the subhaloes.
-	
-	default filetype='Sub' will load subhalo particles. set filetype='Src' to load source subhalo particles instead (for debugging purpose only).'''
+        """Loads subhalo particle list at snapshot
+
+        If ``subindex`` is given, only load subhalo of the given index (the order it
+        appears in the file, subindex==trackId for single file output, but not for
+        mpi multiple-file outputs). Otherwise loads all the subhaloes.
+
+        Default filetype (``Sub``) will load subhalo particles. Filetype ``Src``
+        loads source subhalo particles instead (for debugging purpose only).
+
+        Arguments:
+            isnap (int): (default=-1) snapshot number
+            subindex (int): (default=None) index of a subhalo
+            filetype (str): (default='Sub') HBT file type
+        """
 
         subhalos = []
         offset = 0
@@ -213,8 +305,12 @@ class HBTReader:
         return subhalos
 
     def GetParticleProperties(self, subindex, isnap=-1):
-        '''load subhalo particle properties for subhalo with index subindex (the order it appears in the file, subindex==trackId for single file output, but not for mpi multiple-file outputs)'''
+        """Returns subhalo particle properties for subhalo with index subindex.
 
+        Values are returned in the order they appear in the file,
+        ``subindex==trackId`` for single file output (but not for mpi
+        multiple-file outputs)
+        """
         offset = 0
         for i in xrange(max(self.nfiles, 1)):
             with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
@@ -230,7 +326,8 @@ class HBTReader:
         raise RuntimeError("subhalo %d not found" % subindex)
 
     def GetSub(self, trackId, isnap=-1):
-        ''' load a subhalo with the given trackId at snapshot isnap'''
+        """Loads a subhalo with the given ``trackId`` at snapshot ``isnap``.
+        """
         #subhalos=LoadSubhalos(isnap, rootdir)
         #return subhalos[subhalos['TrackId']==trackId]
         if self.nfiles:
@@ -240,7 +337,8 @@ class HBTReader:
         return self.LoadSubhalos(isnap, subid)
 
     def GetTrack(self, trackId, fields=None):
-        ''' load an entire track of the given trackId '''
+        """Loads an entire track of the given ``trackId``.
+        """
         track = []
         snaps = []
         scales = []
@@ -259,6 +357,8 @@ class HBTReader:
             usemask=False)
 
     def GetScaleFactor(self, isnap):
+        """Reads scale factor at a given snapshot.
+        """
         try:
             return h5py.File(self.GetFileName(isnap),
                              'r')['Cosmology/ScaleFactor'][0]
@@ -266,12 +366,16 @@ class HBTReader:
             return h5py.File(self.GetFileName(isnap), 'r')['ScaleFactor'][0]
 
     def GetScaleFactorDict(self):
-        ''' return a dictionary that maps snapshot_index to ScaleFactor'''
+        """Returns a dictionary that maps ``snapshot_index`` to ``ScaleFactor``.
+        """
         return dict([(i, self.GetScaleFactor(i))
                      for i in range(self.MinSnap, self.MaxSnap + 1)])
 
     def GetExclusiveParticles(self, isnap=-1):
-        '''return an exclusive set of particles for subhaloes at isnap, by assigning duplicate particles to the lowest mass subhaloes'''
+        """Loads an exclusive set of particles for subhaloes at ``isnap``
+
+        Duplicate particles are assigned to the lowest mass subhaloes.
+        """
         OriginPart = self.LoadParticles(isnap)
         OriginPart = zip(range(len(OriginPart)), OriginPart)
         comp_mass = lambda x: len(x[1])
