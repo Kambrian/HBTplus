@@ -1,32 +1,10 @@
 #!/usr/bin/env python
-'''
-class to read the HBT outputs.
-
-To use it, initialize the reader with the parameter file under the subhalo directory, e.g.,
-
-  from HBTReader import HBTReader
-
-  reader=HBTReader('subcat')
-
-  snapshotnumber=-1 # or 0~MaxSnap. -1 means last snapshot
-
-  subs=reader.LoadSubhalos(snapshotnumber) #load all
-
-  nbound=reader.LoadSubhalos(snapshotnumber, 'Nbound') #only Nbound
-
-  sub2=reader.LoadSubhalos(snapshotnumber, subindex=2) #only subhalo 2
-
-  track2=reader.GetTrack(2) #track 2
-
-'''
-
 import sys
 import glob
 import numbers
 import numpy as np
 import h5py
 from numpy.lib.recfunctions import append_fields
-from matplotlib.pylab import find
 import logging
 
 
@@ -162,7 +140,7 @@ class HBTReader:
         else:
             return self.rootdir + '/' + filetype + 'Snap_%03d.hdf5' % (isnap)
 
-    def Open(self, isnap, ifile=0, filetype='Sub', mode='r'):
+    def OpenFile(self, isnap, ifile=0, filetype='Sub', mode='r'):
         """Opens HDF5 file.
 
         Arguments:
@@ -187,7 +165,7 @@ class HBTReader:
         """
         nests = []
         for i in xrange(max(self.nfiles, 1)):
-            with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
+            with self.OpenFile(isnap, i) as subfile:
                 nests.extend(subfile['NestedSubhalos'][...])
         return np.array(nests)
 
@@ -235,7 +213,7 @@ class HBTReader:
             if show_progress:
                 sys.stdout.write(".")
                 sys.stdout.flush()
-            with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
+            with self.OpenFile(isnap, i) as subfile:
                 nsub = subfile['Subhalos'].shape[0]
                 if nsub == 0:
                     continue
@@ -264,7 +242,7 @@ class HBTReader:
         Arguments:
             isnap (int): (default = -1) snapshot number
         """
-        with h5py.File(self.GetFileName(isnap, 0), 'r') as f:
+        with self.OpenFile(isnap) as f:
             if self.nfiles:
                 return f['TotalNumberOfSubhalosInAllFiles'][...]
             else:
@@ -289,16 +267,16 @@ class HBTReader:
         subhalos = []
         offset = 0
         for i in xrange(max(self.nfiles, 1)):
-            with h5py.File(self.GetFileName(isnap, i, filetype),
-                           'r') as subfile:
+            with self.OpenFile(isnap, i, filetype) as subfile:
                 if subindex is None:
                     subhalos.append(subfile[filetype + 'haloParticles'][...])
                 else:
                     nsub = subfile[filetype + 'haloParticles'].shape[0]
                     if offset + nsub > subindex:
                         subhalos.append(
-                            subfile[filetype + 'haloParticles'][subindex
-                                                                - offset])
+                            subfile
+                                [filetype + 'haloParticles']
+                                [subindex - offset])
                         break
                     offset += nsub
         subhalos = np.hstack(subhalos)
@@ -313,7 +291,7 @@ class HBTReader:
         """
         offset = 0
         for i in xrange(max(self.nfiles, 1)):
-            with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
+            with self.OpenFile(isnap, i) as subfile:
                 nsub = subfile['Subhalos'].shape[0]
                 if offset + nsub > subindex:
                     try:
@@ -331,7 +309,8 @@ class HBTReader:
         #subhalos=LoadSubhalos(isnap, rootdir)
         #return subhalos[subhalos['TrackId']==trackId]
         if self.nfiles:
-            subid = find(self.LoadSubhalos(isnap, 'TrackId') == trackId)[0]
+            subids = self.LoadSubhalos(isnap, 'TrackId')
+            subid = subids[subids == trackId][0]
         else:
             subid = trackId
         return self.LoadSubhalos(isnap, subid)
@@ -360,10 +339,11 @@ class HBTReader:
         """Reads scale factor at a given snapshot.
         """
         try:
-            return h5py.File(self.GetFileName(isnap),
-                             'r')['Cosmology/ScaleFactor'][0]
+            return self.OpenFile(self.GetFileName(isnap))\
+                ['Cosmology/ScaleFactor'][0]
         except:
-            return h5py.File(self.GetFileName(isnap), 'r')['ScaleFactor'][0]
+            return self.OpenFile(self.GetFileName(isnap))\
+                ['ScaleFactor'][0]
 
     def GetScaleFactorDict(self):
         """Returns a dictionary that maps ``snapshot_index`` to ``ScaleFactor``.
@@ -424,3 +404,4 @@ if __name__ == '__main__':
         "apostle.GetTrack(103)",
         setup="from __main__ import apostle",
         number=1))
+
