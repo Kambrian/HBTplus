@@ -138,7 +138,10 @@ class HBTReader:
             return self.rootdir + '/%03d/' % isnap + filetype + 'Snap_%03d.%d.hdf5' % (
                 isnap, ifile)
         else:
-            return self.rootdir + '/' + filetype + 'Snap_%03d.hdf5' % (isnap)
+						if filetype == 'HaloSize':
+								return self.rootdir + '/HaloSize/' + 'HaloSize_%03d.hdf5' % (isnap)
+						else:
+								return self.rootdir + '/' + filetype + 'Snap_%03d.hdf5' % (isnap)
 
     def OpenFile(self, isnap, ifile=0, filetype='Sub', mode='r'):
         """Opens HDF5 file.
