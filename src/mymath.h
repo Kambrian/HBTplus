@@ -87,26 +87,27 @@ public:
   {
 	return tickers.size();
   }
+  int FixTickNum(int itick)
+  {
+    return itick<0?itick+Size():itick;
+  }
   double GetSeconds(int itick=-1)
   /*get the time spent from the previous tick to the current tick
    * if itick not specified, return the current interval
    * if itick<0, it will be interpreted as end()+itick */
   {
-	if(itick<0) itick+=Size();
+	itick=FixTickNum(itick);
 	return GetSeconds(itick, itick-1);
   }
   double GetSeconds(int itick, int itick0)
   /*get the time spent from itick0 to itick*/
   {
-	double tsign=1.;
-	if(itick<itick0)
-	{
-	  tsign=-1.;
-	  swap(itick, itick0);
-	}
-	if(itick>Size()) itick=Size();
-	if(itick0<0) itick0=0;
-	return tsign*chrono::duration_cast<chrono::duration<double> >(tickers[itick]-tickers[itick0]).count();
+    itick=FixTickNum(itick);
+    itick0=FixTickNum(itick0);
+    if(itick<itick0)
+      swap(itick, itick0);
+	
+    return chrono::duration_cast<chrono::duration<double> >(tickers[itick]-tickers[itick0]).count();
   }
 };
 
