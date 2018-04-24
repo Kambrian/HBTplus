@@ -471,8 +471,8 @@ class HBTReader:
 
         progenitors = self.GetHostProgenitors(HostHaloId, isnap, file)
 
-        log.debug("Halo %d at %d with %d progenitor(s)" %
-                  (HostHaloId, isnap, progenitors.size))
+        log.debug("Halo %d at %d with %d progenitor(s)" % (HostHaloId, isnap,
+                                                           progenitors.size))
 
         # TODO: print TrackId as graph edge label
         if file is not None:
@@ -547,9 +547,7 @@ class HBTReader:
 
         hosts = np.unique(
             np.array(
-                hosts,
-                dtype=np.dtype([('Snapshot', int),
-                                ('HaloId', int)])),
+                hosts, dtype=np.dtype([('Snapshot', int), ('HaloId', int)])),
             axis=0)
         hosts = hosts[hosts['HaloId'] != 0]
 
