@@ -91,8 +91,9 @@ class HBTReader:
         extension = lastfile.rsplit('SubSnap_')[1].split('.')
         MaxSnap = int(extension[0])
         if MaxSnap != self.MaxSnap:
-            print "HBT run not finished yet, maxsnap %d found (expecting %d)" % (
-                MaxSnap, self.MaxSnap)
+            logging.info(
+                "HBT run not finished yet, maxsnap %d found (expecting %d)" %
+                (MaxSnap, self.MaxSnap))
             self.MaxSnap = MaxSnap
 
         self.nfiles = 0
@@ -100,7 +101,7 @@ class HBTReader:
             self.nfiles = len(
                 glob.glob(self.rootdir + '/%03d' % MaxSnap +
                           '/SubSnap_%03d.*.hdf5' % MaxSnap))
-            print self.nfiles, "subfiles per snapshot"
+            logging.info("%d subfiles per snapshot" % self.nfiles)
 
         if 'MinSnapshotIndex' in self.Options:
             self.MinSnap = int(self.Options['MinSnapshotIndex'])
@@ -111,7 +112,7 @@ class HBTReader:
             with self.Open(-1) as file:
                 self.ParticleMass = file['/Cosmology/ParticleMass'][0]
         except:
-            print "Info: fail to get ParticleMass."
+            logging.error("Failed to get ParticleMass")
 
         with self.Open(-1) as file:
             self.OmegaM0 = file['/Cosmology/OmegaM0'][0]
@@ -471,8 +472,9 @@ class HBTReader:
 
         progenitors = self.GetHostProgenitors(HostHaloId, isnap, file)
 
-        log.debug("Halo %d at %d with %d progenitor(s)" % (HostHaloId, isnap,
-                                                           progenitors.size))
+        loggging.debug(
+            "Halo %d at %d with %d progenitor(s)" %
+            (HostHaloId, isnap, progenitors.size))
 
         # TODO: print TrackId as graph edge label
         if file is not None:
