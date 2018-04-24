@@ -630,7 +630,7 @@ class HBTReader:
 
             logging.debug('Found %d subhalos' % len(subhalos))
 
-            positions = [((particle - hosthalo['CenterComoving'])
+            positions = [((particle - hosthalo['CenterComoving']) /
                           hosthalo['R200CritComoving'])[0]
                          for subhalo in subhalos
                          for particle in self.GetParticleProperties(
