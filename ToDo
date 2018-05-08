@@ -1,0 +1,6 @@
+new particle query algorithm
+
+1) distribute snapshot in blocks
+2) distribute halo in blocks
+3) compute location of halo using queried particles
+4) guess target node of unqueried particles, fetch particles to local buffer (can have a guessed buffer first)
