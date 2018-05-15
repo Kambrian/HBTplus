@@ -1,3 +1,20 @@
+"""HBTReader module.
+
+Python module containing ``HBTReader`` class, used for analysis of  HBT+ halo
+finder output.
+
+Example:
+
+.. code::python
+
+    from HBTReader import HBTReader
+    reader=HBTReader('subcat')
+    snapshotnumber=-1                                    # or 0~MaxSnap. -1 means last snapshot
+    subs=reader.LoadSubhalos(snapshotnumber)             # load all
+    nbound=reader.LoadSubhalos(snapshotnumber, 'Nbound') # only Nbound
+    sub2=reader.LoadSubhalos(snapshotnumber, subindex=2) # only subhalo 2
+    track2=reader.GetTrack(2)                            # track 2
+"""
 #!/usr/bin/env python
 import sys
 import glob
@@ -39,18 +56,6 @@ class ConfigReader:
 
 def get_hbt_snapnum(snapname):
     """Extracts snapshot number from a filename.
-
-    Example:
-
-    .. code::python
-
-        from HBTReader import HBTReader
-        reader=HBTReader('subcat')
-        snapshotnumber=-1                                    # or 0~MaxSnap. -1 means last snapshot
-        subs=reader.LoadSubhalos(snapshotnumber)             # load all
-        nbound=reader.LoadSubhalos(snapshotnumber, 'Nbound') # only Nbound
-        sub2=reader.LoadSubhalos(snapshotnumber, subindex=2) # only subhalo 2
-        track2=reader.GetTrack(2)                            # track 2
 
     Arguments:
         snapname (str): name of snapshot file
@@ -464,7 +469,7 @@ class HBTReader:
 
         return result
 
-    def GetMergerTree(self, HostHaloId, isnap=-1, file=None):
+    def GetHostMergerTree(self, HostHaloId, isnap=-1, file=sys.stdout):
         """Builds a FoF merger tree starting at a host halo ID.
 
         Prints a graph which can be consumed by [Dot](graphviz.org] software.
@@ -472,31 +477,29 @@ class HBTReader:
         Arguments:
             HostHaloId (int): a halo at which to root a tree
             isnap (int): (default = -1) snapshot number
-            file (File): (default=None) if not ``None``, Dot diagram will be generated
-                on the fly
+            file (File): (default=sys.stdout) default output for a Dot diagram
 
         Returns:
             (list): multiply embedded list with a tree, i.e. ``[1, [2, 3]]``
         """
 
-        progenitors = self.GetHostProgenitors(HostHaloId, isnap)
+        progenitors = self.GetProgenitorHaloes(HostHaloId, isnap)
 
         logging.debug("Halo %d at %d with %d progenitor(s)" %
                       (HostHaloId, isnap, progenitors.size))
 
-        if file is not None:
-            file.write("\t\"%d_%d\" [label=\"%d, %d\"]\n"%\
-                (isnap, HostHaloId, isnap, HostHaloId))
-            for progenitor in progenitors:
-                file.write("\t\"%d_%d\" -- \"%d_%d\"\n" %
-                           (isnap, HostHaloId, isnap - 1, progenitor))
+        file.write("\t\"%d_%d\" [label=\"%d, %d\"]\n"%\
+            (isnap, HostHaloId, isnap, HostHaloId))
+        for progenitor in progenitors:
+            file.write("\t\"%d_%d\" -- \"%d_%d\"\n" % (isnap, HostHaloId,
+                                                       isnap - 1, progenitor))
 
         return [(HostHaloId, isnap), [] if progenitors.size == 0 else [
-            self.GetMergerTree(progenitor, isnap - 1, file)
+            self.GetHostMergerTree(progenitor, isnap - 1, file)
             for progenitor in progenitors
         ]]
 
-    def GetHostProgenitors(self, HostHaloId, isnap=-1):
+    def GetProgenitorHaloes(self, HostHaloId, isnap=-1):
         """Returns progenitors of a given host halo.
 
         Given a HostHaloId and a snapshot number, it finds all subhaloes within
@@ -524,138 +527,6 @@ class HBTReader:
             progenitors = np.array([])
 
         return progenitors
-
-    def GetCollapsedMassHistory(self, HostHaloId, isnap=-1, f=0.02):
-        """Calculates a CMH, starting at a FOF group.
-
-        CMH is a sum of masses of all progenitors over a threshold.
-
-        Arguments:
-            HostHaloId (int): starting point of the tree
-            isnap (int): (default = -1) initial snapshot
-            f (float): (default = 0.02) NFW :math:`f` parameter
-
-        Returns:
-            (numpy.ndarray): CMH of a host halo
-        """
-
-        m0 = self.GetHostHalo(HostHaloId, isnap)['M200Crit']
-        trackIds = self.GetSubsOfHost(HostHaloId, isnap)['TrackId']
-
-        logging.info(
-            "Starting halo %d of mass %.2f with %d tracks at snapshot %d" %
-            (HostHaloId, m0, len(trackIds), isnap))
-
-        hosts = []
-        for trackId in trackIds:
-            track = self.GetTrack(trackId, MaxSnap=isnap)
-            logging.debug("Track %d of halo %d@%d across %d snapshots" %
-                          (trackId, HostHaloId, isnap, len(track)))
-            hosts_of_track = zip(track['Snapshot'], track['HostHaloId'])
-            hosts.extend(hosts_of_track)
-
-        hosts = np.unique(
-            np.array(
-                hosts, dtype=np.dtype([('Snapshot', int), ('HaloId', int)])),
-            axis=0)
-        hosts = hosts[hosts['HaloId'] != 0]
-
-        masses = [
-            self.GetHostHalo(host['HaloId'], host['Snapshot'])['M200Crit']
-            for host in hosts
-        ]
-        hosts = append_fields(hosts, 'M200Crit', masses, usemask=False)
-        snaps = np.unique(hosts['Snapshot'])
-
-        logging.debug(
-            "Queried halo %d@%d with %d host halos across %d snapshots" %
-            (HostHaloId, isnap, len(hosts), len(snaps)))
-
-        cmh = np.array(
-            zip(np.full_like(snaps, HostHaloId), snaps, np.zeros_like(snaps)),
-            dtype=np.dtype([
-                ('HaloId', np.int32),
-                ('Snapshot', np.int32),
-                ('M200Crit', np.float32),
-            ]))
-        for i, _ in np.ndenumerate(cmh):
-            cmh[i]['M200Crit'] = np.sum(filter(lambda m: m > f * m0,\
-                hosts[hosts['Snapshot'] == cmh[i]['Snapshot']]['M200Crit']))
-
-        logging.info("Finished CMH for halo %d@%d" % (HostHaloId, isnap))
-
-        return cmh
-
-    def GetHostProfile(self, selection=None, isnap=-1):
-        """Returns normalised, binned particle positions of a FoF group.
-        """
-
-        logging.info('Retrieving profile for halos %s' % str(selection))
-        profile = self.LoadHostHalos(isnap, selection)['Profile']
-        return profile
-
-    def CalculateProfile(self, TrackId, isnap=-1, bins=None):
-        """Returns normalised particle positions of a subhalo.
-
-        If bins are provided, particle positions are binned, and a density
-        profile is returned.  Otherwise, raw positions, centered around
-        ``ComovingAveragePosition`` and normalised to ``BoundR200CritComoving``
-        are returned.
-        """
-
-        result = []
-        subhalo = self.GetSub(TrackId, isnap)
-        positions = \
-            (self.GetParticleProperties(TrackId, isnap)['ComovingPosition'] -
-             subhalo['ComovingAveragePosition'][0]) /\
-            subhalo['BoundR200CritComoving']
-
-        if bins is not None:
-            distances = np.apply_along_axis(
-                lambda x: np.sqrt(np.sum(np.power(x, 2.0))), 1, positions)
-            result = np.histogram(distances, bins=bins)
-        else:
-            result = positions
-
-        return result
-
-    def CalculateHostProfile(self, HostHaloId, isnap=-1, bins=None):
-        """Returns normalised particle positions of a FoF group.
-
-        If bins are provided, particle positions are binned, and a density
-        profile is returned.  Otherwise, raw positions, centered around
-        ``ComovingPosition`` and normalised to ``R200CritComoving`` are
-        returned.
-        """
-
-        logging.debug('Calculating profile for halo %d' % HostHaloId)
-        result = []
-
-        try:
-            subhalos = self.GetSubsOfHost(HostHaloId, isnap)['TrackId']
-            hosthalo = self.LoadHostHalos(isnap, selection=HostHaloId)
-
-            logging.debug('Found %d subhalos' % len(subhalos))
-
-            positions = [((particle - hosthalo['CenterComoving']) /
-                          hosthalo['R200CritComoving'])[0]
-                         for subhalo in subhalos
-                         for particle in self.GetParticleProperties(
-                             subhalo, isnap)['ComovingPosition']]
-
-            logging.debug('Found %d particles' % len(positions))
-
-            if bins is not None:
-                distances = np.apply_along_axis(
-                    lambda x: np.sqrt(np.sum(np.power(x, 2.0))), 1, positions)
-                result = np.histogram(distances, bins=bins)
-            else:
-                result = positions
-
-        except TypeError:
-            result = []
-
-        return result
 
 
 if __name__ == '__main__':
