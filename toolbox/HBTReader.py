@@ -2,10 +2,10 @@
 import sys
 import glob
 import numbers
+import logging
 import numpy as np
 import h5py
 from numpy.lib.recfunctions import append_fields
-import logging
 
 
 def PeriodicDistance(x, y, BoxSize, axis=-1):
@@ -138,10 +138,12 @@ class HBTReader:
             return self.rootdir + '/%03d/' % isnap + filetype + 'Snap_%03d.%d.hdf5' % (
                 isnap, ifile)
         else:
-						if filetype == 'HaloSize':
-								return self.rootdir + '/HaloSize/' + 'HaloSize_%03d.hdf5' % (isnap)
-						else:
-								return self.rootdir + '/' + filetype + 'Snap_%03d.hdf5' % (isnap)
+            if filetype == 'HaloSize':
+                return self.rootdir + '/HaloSize/' + 'HaloSize_%03d.hdf5' % (
+                    isnap)
+            else:
+                return self.rootdir + '/' + filetype + 'Snap_%03d.hdf5' % (
+                    isnap)
 
     def OpenFile(self, isnap, ifile=0, filetype='Sub', mode='r'):
         """Opens HDF5 file.
@@ -234,7 +236,7 @@ class HBTReader:
         else:
             subhalos = np.array(subhalos)
         if show_progress:
-            print ""
+            print("")
         #subhalos.sort(order=['HostHaloId','Nbound'])
 
         return subhalos
@@ -317,14 +319,20 @@ class HBTReader:
             subid = trackId
         return self.LoadSubhalos(isnap, subid)
 
-    def GetTrack(self, trackId, fields=None):
+    def GetTrack(self, trackId, MaxSnap=None, fields=None):
         """Loads an entire track of the given ``trackId``.
         """
         track = []
         snaps = []
         scales = []
         snapbirth = self.GetSub(trackId)['SnapshotIndexOfBirth']
-        for isnap in range(snapbirth, self.MaxSnap + 1):
+
+        if MaxSnap is None:
+            isnap_range = range(snapbirth, self.MaxSnap + 1)
+        else:
+            isnap_range = range(snapbirth, MaxSnap + 1)
+
+        for isnap in isnap_range:
             s = self.GetSub(trackId, isnap)
             a = self.GetScaleFactor(isnap)
             if fields is not None:
@@ -341,11 +349,9 @@ class HBTReader:
         """Reads scale factor at a given snapshot.
         """
         try:
-            return self.OpenFile(self.GetFileName(isnap))\
-                ['Cosmology/ScaleFactor'][0]
+            return self.OpenFile(isnap)['Cosmology/ScaleFactor'][0]
         except:
-            return self.OpenFile(self.GetFileName(isnap))\
-                ['ScaleFactor'][0]
+            return self.OpenFile(isnap)['ScaleFactor'][0]
 
     def GetScaleFactorDict(self):
         """Returns a dictionary that maps ``snapshot_index`` to ``ScaleFactor``.
@@ -473,13 +479,11 @@ class HBTReader:
             (list): multiply embedded list with a tree, i.e. ``[1, [2, 3]]``
         """
 
-        progenitors = self.GetHostProgenitors(HostHaloId, isnap, file)
+        progenitors = self.GetHostProgenitors(HostHaloId, isnap)
 
-        loggging.debug(
-            "Halo %d at %d with %d progenitor(s)" %
-            (HostHaloId, isnap, progenitors.size))
+        logging.debug("Halo %d at %d with %d progenitor(s)" %
+                      (HostHaloId, isnap, progenitors.size))
 
-        # TODO: print TrackId as graph edge label
         if file is not None:
             file.write("\t\"%d_%d\" [label=\"%d, %d\"]\n"%\
                 (isnap, HostHaloId, isnap, HostHaloId))
@@ -521,7 +525,7 @@ class HBTReader:
 
         return progenitors
 
-    def GetCollapsedMassHistory(self, HostHaloId, isnap=-1, f=0.01):
+    def GetCollapsedMassHistory(self, HostHaloId, isnap=-1, f=0.02):
         """Calculates a CMH, starting at a FOF group.
 
         CMH is a sum of masses of all progenitors over a threshold.
@@ -529,7 +533,7 @@ class HBTReader:
         Arguments:
             HostHaloId (int): starting point of the tree
             isnap (int): (default = -1) initial snapshot
-            f (float): (default = 0.01) NFW :math:`f` parameter
+            f (float): (default = 0.02) NFW :math:`f` parameter
 
         Returns:
             (numpy.ndarray): CMH of a host halo
