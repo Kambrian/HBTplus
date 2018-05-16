@@ -324,7 +324,7 @@ class HBTReader:
             subid = trackId
         return self.LoadSubhalos(isnap, subid)
 
-    def GetTrack(self, trackId, MaxSnap=None, fields=None):
+    def GetTrack(self, trackId, fields=None， MaxSnap=None):
         """Loads an entire track of the given ``trackId``.
         """
         track = []
