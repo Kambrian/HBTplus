@@ -1,0 +1,6 @@
+*~
+*.pyc
+*.save
+*.save.[0-9]
+
+__pycache__
