@@ -318,8 +318,7 @@ class HBTReader:
         #subhalos=LoadSubhalos(isnap, rootdir)
         #return subhalos[subhalos['TrackId']==trackId]
         if self.nfiles:
-            subids = self.LoadSubhalos(isnap, 'TrackId')
-            subid = subids[subids == trackId][0]
+            subid = np.flatnonzero(self.LoadSubhalos(isnap, 'TrackId') == trackId)[0]
         else:
             subid = trackId
         return self.LoadSubhalos(isnap, subid)
