@@ -33,6 +33,7 @@ import numbers
 if sys.version_info[0] == 2:
     range = xrange
 
+
 def PeriodicDistance(x,y, BoxSize, axis=-1):
     d=x-y
     d[d>BoxSize/2]=d[d>BoxSize/2]-BoxSize
@@ -247,22 +248,28 @@ class HBTReader:
       subid=trackId
     return self.LoadSubhalos(isnap, subid)
 
+  def GetTrackSnapshot(self, trackId, isnap, fields=None):
+    """Get track information for a single snapshot"""
+    s = self.GetSub(trackId, isnap)
+    if fields is not None:
+        return s[fields]
+    return s
+
   def GetTrack(self, trackId, fields=None):
     ''' load an entire track of the given trackId '''
     track=[]
     snaps=[]
     scales=[]
     snapbirth=self.GetSub(trackId)['SnapshotIndexOfBirth']
-    for isnap in range(snapbirth, self.MaxSnap+1):
-        s=self.GetSub(trackId, isnap)
-        a=self.GetScaleFactor(isnap)
-        if fields is not None:
-          s=s[fields]
-        track.append(s)
-        snaps.append(isnap)
-        scales.append(a)
-    return append_fields(np.array(track), ['Snapshot', 'ScaleFactor'], \
-        [np.array(snaps),np.array(scales)], usemask=False)
+    if hasattr(snapbirth, '__iter__'):
+        snapbirth = snapbirth[0]
+    snaps = np.arange(snapbirth, self.MaxSnap+1, dtype=int)
+    track = np.array(
+        [self.GetTrackSnapshot(trackId, isnap, fields=fields)
+         for isnap in snaps])
+    scales = np.array([self.GetScaleFactor(isnap) for isnap in snaps])
+    return append_fields(
+        track, ['Snapshot', 'ScaleFactor'], [snaps,scales], usemask=False)
 
   def GetScaleFactor(self, isnap):
     try:
