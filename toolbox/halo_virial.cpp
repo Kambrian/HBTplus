@@ -11,6 +11,7 @@
 #include "../src/mymath.h"
 #include "../src/linkedlist.h"
 
+//#define DUMP_SUB_PARTICLE_INDICES //uncomment this if you want to save particle indices of subhaloes
 #define RMAX 2.
 
 // #define NBIN 10  //define this to also compute a count profile; the first bin is [0, 1e-2)*Rvir and the remaining bins are logspaced between [1e-2,1)*Rvir
@@ -67,6 +68,9 @@ inline float ComovingMean200Radius(float M200b, float OmegaM0)
 HBTReal virialF_tophat, virialF_b200, virialF_c200;
 HBTReal VelocityUnit;
 void save(vector <HaloSize_t> &HaloSize, int isnap);
+#ifdef DUMP_SUB_PARTICLE_INDICES
+void SaveSubParticleIndex(SubhaloSnapshot_t &subsnap);
+#endif
 int main(int argc, char **argv)
 {
   /*
@@ -89,8 +93,24 @@ int main(int argc, char **argv)
     Timer_t timer;
     timer.Tick();
     HaloSnapshot_t halosnap(isnap);
-    SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);;
-    ParticleSnapshot_t partsnap(isnap, false);
+    bool FlagHash;
+#ifdef DUMP_SUB_PARTICLE_INDICES
+    SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubParticles);
+    FlagHash=true;
+#else
+    SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubTable);
+    FlagHash=false;
+#endif
+    ParticleSnapshot_t partsnap(isnap, FlagHash);
+#ifdef DUMP_SUB_PARTICLE_INDICES
+    #pragma omp parallel
+	subsnap.ParticleIdToIndex(partsnap);
+    SaveSubParticleIndex(subsnap);
+    #pragma omp parallel for
+    for(HBTInt i=0;i<subsnap.Subhalos.size();i++)
+      subsnap.Subhalos[i].Particles.clear();
+#endif
+    
     auto &Cosmology=partsnap.Cosmology;
     Cosmology.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
     VelocityUnit=PhysicalConst::G/partsnap.Cosmology.ScaleFactor;
@@ -102,7 +122,7 @@ int main(int argc, char **argv)
     timer.Tick();cout<<"link: "<<timer.GetSeconds(2)<<" seconds\n";
     vector <HaloSize_t> HaloSize(halosnap.size());
     #pragma omp parallel for schedule(dynamic, 1)
-    for(HBTInt grpid=0;grpid<halosnap.size();grpid++)
+    for(HBTInt grpid=0;grpid<subsnap.MemberTable.SubGroups.size();grpid++)
     {
       HaloSize[grpid].HaloId=grpid;//need to adjust this in MPI version..
       auto &subgroup=subsnap.MemberTable.SubGroups[grpid];
@@ -115,12 +135,15 @@ int main(int argc, char **argv)
       float rmax=ComovingMean200Radius(np*Cosmology.ParticleMass, Cosmology.OmegaM0)*RMAX;//use b200 as a ref
       HaloSize[grpid].Compute(subsnap.Subhalos[subsnap.MemberTable.SubGroups[grpid][0]].ComovingMostBoundPosition, rmax, np, ll, partsnap);   
     }
+    for(HBTInt grpid=subsnap.MemberTable.SubGroups.size();grpid<halosnap.size();grpid++)//to handle fake haloes not listed in MemberTable for MPI version.
+      HaloSize[grpid].fill_zeros();
     timer.Tick();cout<<"compute: "<<timer.GetSeconds(3)<<" seconds\n";
     save(HaloSize, isnap);
   }
   
   return 0;
 }
+
 class ProfCollector_t: public ParticleCollector_t
 {
   const ParticleSnapshot_t &PartSnap;
@@ -229,3 +252,29 @@ void BuildHDFHaloSize(hid_t &H5T_dtypeInMem, hid_t &H5T_dtypeInDisk)
 //   H5Tclose(H5T_FloatVec3);
   H5Tclose(H5T_HBTxyz);
 }
+#ifdef DUMP_SUB_PARTICLE_INDICES
+void SaveSubParticleIndex(SubhaloSnapshot_t &subsnap)
+{
+  string filename;
+  subsnap.GetSubFileName(filename, "Sub");
+  cout<<"Saving particle indices to "<<filename<<"..."<<endl;
+  hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+  hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
+  
+  hsize_t ndim=1;
+  hsize_t dim_sub[]={subsnap.Subhalos.size()};
+  vector <hvl_t> vl(subsnap.Subhalos.size());
+  
+  //now write the particle list for each subhalo
+  for(HBTInt i=0;i<vl.size();i++)
+  {
+	vl[i].len=subsnap.Subhalos[i].Nbound;
+	vl[i].p=subsnap.Subhalos[i].Particles.data();
+  }
+  writeHDFmatrix(file, vl.data(), "SubhaloParticleIndices", ndim, dim_sub, H5T_HBTIntArr);
+  
+  H5Fclose(file);
+  H5Tclose(H5T_HBTIntArr);
+  cout<<subsnap.Subhalos.size()<<" subhaloes saved.\n";
+}
+#endif
