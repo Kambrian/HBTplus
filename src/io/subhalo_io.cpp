@@ -176,68 +176,69 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
     H5Dclose(dset);
   }
   
-  if(0==nsubhalos) return;
-
-  vl.resize(nsubhalos);
-  if(depth==SubReaderDepth_t::SubParticles||depth==SubReaderDepth_t::SrcParticles)
+  if(nsubhalos>0)//read in subhalos
   {
-    hid_t file2;
-    switch(depth)
+    vl.resize(nsubhalos);
+    if(depth==SubReaderDepth_t::SubParticles||depth==SubReaderDepth_t::SrcParticles)
     {
-      case SubReaderDepth_t::SubParticles:
-	dset=H5Dopen2(file, "SubhaloParticles", H5P_DEFAULT);
-	break;
-      case SubReaderDepth_t::SrcParticles:
-	GetSubFileName(filename, "Src");
-	file2=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-	dset=H5Dopen2(file2,"SrchaloParticles", H5P_DEFAULT);
-	break;
+      hid_t file2;
+      switch(depth)
+      {
+	case SubReaderDepth_t::SubParticles:
+	  dset=H5Dopen2(file, "SubhaloParticles", H5P_DEFAULT);
+	  break;
+	case SubReaderDepth_t::SrcParticles:
+	  GetSubFileName(filename, "Src");
+	  file2=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+	  dset=H5Dopen2(file2,"SrchaloParticles", H5P_DEFAULT);
+	  break;
+      }
+      GetDatasetDims(dset, dims);
+      assert(dims[0]==nsubhalos);
+      H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+      for(HBTInt i=0;i<nsubhalos;i++)
+      {
+	Subhalos[i].Particles.resize(vl[i].len);
+	memcpy(Subhalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+      }
+      ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
+      H5Dclose(dset);
+      if(depth==SubReaderDepth_t::SrcParticles)
+	H5Fclose(file2);
     }
-    GetDatasetDims(dset, dims);
-    assert(dims[0]==nsubhalos);
-    H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-    for(HBTInt i=0;i<nsubhalos;i++)
-    {
-      Subhalos[i].Particles.resize(vl[i].len);
-      memcpy(Subhalos[i].Particles.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+    
+    {//read nested subhalos
+      dset=H5Dopen2(file, "NestedSubhalos", H5P_DEFAULT);
+      GetDatasetDims(dset, dims);
+      assert(dims[0]==nsubhalos);
+      H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+      for(HBTInt i=0;i<nsubhalos;i++)
+      {
+	Subhalos[i].NestedSubhalos.resize(vl[i].len);
+	memcpy(Subhalos[i].NestedSubhalos.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+      }
+      ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
+      H5Dclose(dset);
     }
-    ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
-    H5Dclose(dset);
-    if(depth==SubReaderDepth_t::SrcParticles)
-      H5Fclose(file2);
-  }
-  
-  {//read nested subhalos
-    dset=H5Dopen2(file, "NestedSubhalos", H5P_DEFAULT);
-    GetDatasetDims(dset, dims);
-    assert(dims[0]==nsubhalos);
-    H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-    for(HBTInt i=0;i<nsubhalos;i++)
-    {
-      Subhalos[i].NestedSubhalos.resize(vl[i].len);
-      memcpy(Subhalos[i].NestedSubhalos.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
-    }
-    ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
-    H5Dclose(dset);
-  }
-  
+    
 #ifdef SAVE_BINDING_ENERGY
-  {//read binding energies
-	dset=H5Dopen2(file, "BindingEnergies", H5P_DEFAULT);
-    GetDatasetDims(dset, dims);
-    assert(dims[0]==nsubhalos);
-	hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
-    H5Dread(dset, H5T_FloatArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-    for(HBTInt i=0;i<nsubhalos;i++)
-    {
-      Subhalos[i].Energies.resize(vl[i].len);
-      memcpy(Subhalos[i].Energies.data(), vl[i].p, sizeof(float)*vl[i].len);
+    {//read binding energies
+	  dset=H5Dopen2(file, "BindingEnergies", H5P_DEFAULT);
+      GetDatasetDims(dset, dims);
+      assert(dims[0]==nsubhalos);
+	  hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
+      H5Dread(dset, H5T_FloatArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+      for(HBTInt i=0;i<nsubhalos;i++)
+      {
+	Subhalos[i].Energies.resize(vl[i].len);
+	memcpy(Subhalos[i].Energies.data(), vl[i].p, sizeof(float)*vl[i].len);
+      }
+      ReclaimVlenData(dset, H5T_FloatArr, vl.data());
+	  H5Tclose(H5T_FloatArr);
+      H5Dclose(dset);
     }
-    ReclaimVlenData(dset, H5T_FloatArr, vl.data());
-	H5Tclose(H5T_FloatArr);
-    H5Dclose(dset);
-  }
 #endif
+  }
   
   H5Fclose(file);
   H5Tclose(H5T_HBTIntArr);
