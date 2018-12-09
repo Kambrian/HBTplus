@@ -39,7 +39,7 @@ LDFLAGS+=-g
 LINK.o=$(CXX) $(LDFLAGS) $(TARGET_ARCH)
 
 ifneq (,$(filter $(CXX),mpic++ mpicxx mpiCC))
-BASECXX=$(shell $(CXX) -show|cut -c1-3)
+BASECXX=$(shell $(CXX) -show|cut -f 1 -d ' '| rev |cut -c1-3|rev)
 else
 BASECXX=$(CXX)
 endif
