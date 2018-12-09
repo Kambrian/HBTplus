@@ -223,7 +223,7 @@ void GadgetReader_t::Load(MpiWorker_t &world)
 //   Cosmology.ParticleMass=Header.mass[TypeDM];
 #endif
   
-  int nfiles_skip, nfiles_end;
+  HBTInt nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), Header.num_files, nfiles_skip, nfiles_end);
   {
   HBTInt np=0;

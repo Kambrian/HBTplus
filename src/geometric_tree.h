@@ -17,7 +17,7 @@ public:
   GeoTree_t():OctTree_t<GeoTreeCell_t>(), NumNeighbourSPH(64)
   {
   }
-  void Search(const HBTxyz &searchcenter, HBTReal radius, vector <LocatedParticle_t> &founds);
+  void Search(const HBTxyz &searchcenter, HBTReal radius, ParticleCollector_t &collector);
   HBTInt NearestNeighbour(const HBTxyz &searchcenter, HBTReal rguess);
   double SphDensity(const HBTxyz &cen, HBTReal & rguess);
   int GetNumNeighbourSPH()

@@ -212,13 +212,13 @@ vector <int> ClosestFactors(int N, int dim)
   return factors;
 }
 
-void AssignTasks(int worker_id, int nworkers, int ntasks, int &task_begin, int &task_end)
+void AssignTasks(HBTInt worker_id, HBTInt nworkers, HBTInt ntasks, HBTInt &task_begin, HBTInt &task_end)
 /*distribute ntasks to nworkers approximately fairly (equally if possible, otherwise the leading workers do one more task than others).
  * return the tasks assigned to worker_id as [task_begin, task_end).
  * worker_id is in the range [0, nworkers).*/
 {
-  int ntask_remainder=ntasks%nworkers;
-  int ntask_this=ntasks/nworkers;;
+  HBTInt ntask_remainder=ntasks%nworkers;
+  HBTInt ntask_this=ntasks/nworkers;;
   task_begin=ntask_this*worker_id+min(ntask_remainder, worker_id);//distribute remainder to leading nodes
   if(worker_id<ntask_remainder) 
 	ntask_this++;
@@ -267,4 +267,19 @@ size_t SkipFortranBlock(FILE *fp, bool NeedByteSwap)
   assert(blocksize==blocksize2);
   return blocksize;
 #undef ReadBlockSize
+}
+
+void logspace(double xmin,double xmax,int N, vector <float> &x)
+{
+  x.resize(N);
+  int i;
+  double dx;
+  x[0]=xmin;x[N-1]=xmax;
+  xmin=log(xmin);
+  xmax=log(xmax);
+  dx=exp((xmax-xmin)/(N-1));
+  for(i=1;i<N-1;i++)
+  {
+    x[i]=x[i-1]*dx;
+  }
 }

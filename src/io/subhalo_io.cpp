@@ -139,7 +139,7 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const SubRe
   MPI_Bcast(&NumberOfFiles, 1, MPI_INT, 0, world.Communicator);
   
   Subhalos.clear();
-  int nfiles_skip, nfiles_end;
+  HBTInt nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), NumberOfFiles, nfiles_skip, nfiles_end);
   
   for(int i=0, ireader=0;i<world.size();i++, ireader++)
@@ -198,76 +198,78 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
   if(nsubhalos)	H5Dread(dset, H5T_SubhaloInMem, H5S_ALL, H5S_ALL, H5P_DEFAULT, &Subhalos[nsubhalos_old]);
   H5Dclose(dset);
  
-  if(0==nsubhalos) return;
-  
-  Subhalo_t * NewSubhalos=&Subhalos[nsubhalos_old];
-  vector <hvl_t> vl(dims[0]);
-  vl.resize(nsubhalos);
-  hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
-  if(depth==SubReaderDepth_t::SubParticles||depth==SubReaderDepth_t::SrcParticles)
+  if(nsubhalos)
   {
-    hid_t file2;
-    switch(depth)
+    Subhalo_t * NewSubhalos=&Subhalos[nsubhalos_old];
+    vector <hvl_t> vl(dims[0]);
+    vl.resize(nsubhalos);
+    hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
+    if(depth==SubReaderDepth_t::SubParticles||depth==SubReaderDepth_t::SrcParticles)
     {
-      case SubReaderDepth_t::SubParticles:
-	dset=H5Dopen2(file, "SubhaloParticles", H5P_DEFAULT);
-	break;
-      case SubReaderDepth_t::SrcParticles:
-	GetSubFileName(filename, iFile, "Src");
-	file2=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-	dset=H5Dopen2(file2,"SrchaloParticles", H5P_DEFAULT);
-	break;
+      hid_t file2;
+      switch(depth)
+      {
+	case SubReaderDepth_t::SubParticles:
+	  dset=H5Dopen2(file, "SubhaloParticles", H5P_DEFAULT);
+	  break;
+	case SubReaderDepth_t::SrcParticles:
+	  GetSubFileName(filename, iFile, "Src");
+	  file2=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+	  dset=H5Dopen2(file2,"SrchaloParticles", H5P_DEFAULT);
+	  break;
+      }
+      GetDatasetDims(dset, dims);
+      assert(dims[0]==nsubhalos);
+      H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+      for(HBTInt i=0;i<nsubhalos;i++)
+      {
+	NewSubhalos[i].Particles.resize(vl[i].len);
+	HBTInt *p=(HBTInt *)(vl[i].p);
+	for(HBTInt j=0;j<vl[i].len;j++)
+	  NewSubhalos[i].Particles[j].Id=p[j];
+      }
+      ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
+      H5Dclose(dset);
+      if(depth==SubReaderDepth_t::SrcParticles)
+	H5Fclose(file2);
     }
-    GetDatasetDims(dset, dims);
-    assert(dims[0]==nsubhalos);
-    H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-    for(HBTInt i=0;i<nsubhalos;i++)
-    {
-      NewSubhalos[i].Particles.resize(vl[i].len);
-      HBTInt *p=(HBTInt *)(vl[i].p);
-      for(HBTInt j=0;j<vl[i].len;j++)
-	NewSubhalos[i].Particles[j].Id=p[j];
+    
+    {//read nested subhalos
+      dset=H5Dopen2(file, "NestedSubhalos", H5P_DEFAULT);
+      GetDatasetDims(dset, dims);
+      assert(dims[0]==nsubhalos);
+      H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+      for(HBTInt i=0;i<nsubhalos;i++)
+      {
+	NewSubhalos[i].NestedSubhalos.resize(vl[i].len);
+	memcpy(NewSubhalos[i].NestedSubhalos.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
+      }
+      ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
+      H5Dclose(dset);
     }
-    ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
-    H5Dclose(dset);
-    if(depth==SubReaderDepth_t::SrcParticles)
-      H5Fclose(file2);
-  }
+    
+  #ifdef SAVE_BINDING_ENERGY
+    {//read binding energies
+	  dset=H5Dopen2(file, "BindingEnergies", H5P_DEFAULT);
+      GetDatasetDims(dset, dims);
+      assert(dims[0]==nsubhalos);
+	  hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
+      H5Dread(dset, H5T_FloatArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
+      for(HBTInt i=0;i<nsubhalos;i++)
+      {
+	NewSubhalos[i].Energies.resize(vl[i].len);
+	memcpy(NewSubhalos[i].Energies.data(), vl[i].p, sizeof(float)*vl[i].len);
+      }
+      ReclaimVlenData(dset, H5T_FloatArr, vl.data());
+	  H5Tclose(H5T_FloatArr);
+      H5Dclose(dset);
+    }
+  #endif
   
-  {//read nested subhalos
-    dset=H5Dopen2(file, "NestedSubhalos", H5P_DEFAULT);
-    GetDatasetDims(dset, dims);
-    assert(dims[0]==nsubhalos);
-    H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-    for(HBTInt i=0;i<nsubhalos;i++)
-    {
-      NewSubhalos[i].NestedSubhalos.resize(vl[i].len);
-      memcpy(NewSubhalos[i].NestedSubhalos.data(), vl[i].p, sizeof(HBTInt)*vl[i].len);
-    }
-    ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
-    H5Dclose(dset);
+    H5Tclose(H5T_HBTIntArr);
   }
-  
-#ifdef SAVE_BINDING_ENERGY
-  {//read binding energies
-	dset=H5Dopen2(file, "BindingEnergies", H5P_DEFAULT);
-    GetDatasetDims(dset, dims);
-    assert(dims[0]==nsubhalos);
-	hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
-    H5Dread(dset, H5T_FloatArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
-    for(HBTInt i=0;i<nsubhalos;i++)
-    {
-      NewSubhalos[i].Energies.resize(vl[i].len);
-      memcpy(NewSubhalos[i].Energies.data(), vl[i].p, sizeof(float)*vl[i].len);
-    }
-    ReclaimVlenData(dset, H5T_FloatArr, vl.data());
-	H5Tclose(H5T_FloatArr);
-    H5Dclose(dset);
-  }
-#endif
   
   H5Fclose(file);
-  H5Tclose(H5T_HBTIntArr);
 }
 
 void SubhaloSnapshot_t::Save(MpiWorker_t &world)
