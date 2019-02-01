@@ -93,6 +93,13 @@ int main(int argc, char **argv)
     Timer_t timer;
     timer.Tick();
     HaloSnapshot_t halosnap(isnap);
+    if(halosnap.size()==0)
+    {
+        vector <HaloSize_t> HaloSize(0);
+        save(HaloSize, isnap);
+        continue;
+    }
+
     bool FlagHash;
 #ifdef DUMP_SUB_PARTICLE_INDICES
     SubhaloSnapshot_t subsnap(isnap, SubReaderDepth_t::SubParticles);
@@ -110,7 +117,7 @@ int main(int argc, char **argv)
     for(HBTInt i=0;i<subsnap.Subhalos.size();i++)
       subsnap.Subhalos[i].Particles.clear();
 #endif
-    
+
     auto &Cosmology=partsnap.Cosmology;
     Cosmology.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
     VelocityUnit=PhysicalConst::G/partsnap.Cosmology.ScaleFactor;
