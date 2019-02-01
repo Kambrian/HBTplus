@@ -157,7 +157,7 @@ void SubhaloSnapshot_t::LoadSingle(int snapshot_index, const SubReaderDepth_t de
     HBTInt nhalos=dims[0]-1;
     vl.resize(dims[0]);
     
-    if(nsubhalos)
+    //if(nsubhalos)
     {
 	H5Dread(dset, H5T_HBTIntArr, H5S_ALL, H5S_ALL, H5P_DEFAULT, vl.data());
 	MemberTable.Init(nhalos, nsubhalos);
