@@ -27,7 +27,6 @@ import h5py
 import sys
 import os.path, glob
 from numpy.lib.recfunctions import append_fields
-from matplotlib.pylab import find
 import numbers
 
 if sys.version_info[0] == 2:
@@ -60,10 +59,11 @@ class ConfigReader:
 
 def get_hbt_snapnum(snapname):
     return int(snapname.rsplit('SubSnap_')[1].split('.')[0])
-      
+
+
 class HBTReader:
   ''' class to read HBT2 catalogue '''
-    
+
   def __init__(self, subhalo_path):
     ''' initialize HBTReader to read data in subhalo_path. A parameter file must 
     exist there (Parameters.log dumped by HBT during runtime).'''
@@ -73,6 +73,11 @@ class HBTReader:
     self.MaxSnap=int(self.Options['MaxSnapshotIndex'])
     self.BoxSize=float(self.Options['BoxSize'])
     self.Softening=float(self.Options['SofteningHalo'])
+    # due to recent changes in the cosma machines, things may have
+    # moved around
+    if not os.path.isdir(self.rootdir):
+        self.rootdir = self.rootdir.replace(
+            '/gpfs/data/jvbq85', '/cosma/home/durham/jvbq85/data')
 
     try:
       lastfile=sorted(glob.glob(self.rootdir+'/SubSnap_*.hdf5'),
@@ -243,9 +248,12 @@ class HBTReader:
     #subhalos=LoadSubhalos(isnap, rootdir)
     #return subhalos[subhalos['TrackId']==trackId]
     if self.nfiles:
-      subid=find(self.LoadSubhalos(isnap, 'TrackId')==trackId)[0]
+      #subid=find(self.LoadSubhalos(isnap, 'TrackId')==trackId)[0]
+        TrackIds = self.LoadSubhalos(isnap, 'TrackId')
+        subid = TrackIds[np.where(TrackIds == trackId)][0]
+        #subid = where(self.LoadSubhalos(isnap, 'TrackId')==trackId)[0]
     else:
-      subid=trackId
+        subid = trackId
     return self.LoadSubhalos(isnap, subid)
 
   def GetTrackSnapshot(self, trackId, isnap, fields=None):
