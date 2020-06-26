@@ -27,6 +27,7 @@ import sys
 import os.path, glob
 from numpy.lib.recfunctions import append_fields
 import numbers
+from time import time
 
 if sys.version_info[0] == 2:
     range = xrange
@@ -106,7 +107,8 @@ class HBTReader:
       with self.Open(-1) as f:
         self.ParticleMass=f['/Cosmology/ParticleMass'][0]
     except:
-      print("Info: fail to get ParticleMass.")
+      #print("Info: fail to get ParticleMass.")
+      pass
 
     with self.Open(-1) as f:
       self.OmegaM0=f['/Cosmology/OmegaM0'][0]
@@ -172,7 +174,10 @@ class HBTReader:
       if show_progress:
         sys.stdout.write(".")
         sys.stdout.flush()
-      with h5py.File(self.GetFileName(isnap, i), 'r') as subfile:
+      file = self.GetFileName(isnap, i)
+      if not os.path.isfile(file):
+        continue
+      with h5py.File(file, 'r') as subfile:
         nsub=subfile['Subhalos'].shape[0]
         if nsub==0:
           continue
@@ -264,17 +269,18 @@ class HBTReader:
 
   def GetTrack(self, trackId, fields=None):
     ''' load an entire track of the given trackId '''
-    track=[]
-    snaps=[]
-    scales=[]
     snapbirth=self.GetSub(trackId)['SnapshotIndexOfBirth']
     if hasattr(snapbirth, '__iter__'):
         snapbirth = snapbirth[0]
     snaps = np.arange(snapbirth, self.MaxSnap+1, dtype=int)
-    track = np.array(
-        [self.GetTrackSnapshot(trackId, isnap, fields=fields)
-         for isnap in snaps])
-    scales = np.array([self.GetScaleFactor(isnap) for isnap in snaps])
+    to = time()
+    track = []
+    scales = -1 * np.ones(snaps.size)
+    for i, isnap in enumerate(snaps):
+        if os.path.isfile(self.GetFileName(isnap)):
+            track.append(self.GetTrackSnapshot(trackId, isnap, fields=fields))
+            scales[i] = self.GetScaleFactor(isnap)
+    track = np.array(track)
     return append_fields(
         track, ['Snapshot', 'ScaleFactor'], [snaps,scales], usemask=False)
 
