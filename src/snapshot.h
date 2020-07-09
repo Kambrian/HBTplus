@@ -105,7 +105,7 @@ public:
   };
   HBTInt ReSize(HBTInt n)
   {
-	N=n;
+	return N=n;
   }
   HBTInt size() const
   {
