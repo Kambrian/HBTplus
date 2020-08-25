@@ -27,6 +27,14 @@ int main(int argc, char **argv)
 	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
 	mkdir(HBTConfig.SubhaloPath.c_str(), 0755);
 	HBTConfig.DumpParameters();
+    
+    cout<<argv[0]<<" run using "<<world.size()<<" mpi tasks";
+    #ifdef _OPENMP
+    #pragma omp parallel
+    #pragma omp master
+    cout<<", each with "<<omp_get_num_threads()<<" threads";
+    #endif
+    cout<<endl;
   }
   HBTConfig.BroadCast(world, 0, snapshot_start, snapshot_end);
 
