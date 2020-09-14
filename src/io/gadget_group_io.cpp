@@ -52,6 +52,8 @@ bool GetGroupFileByteOrder(const char *filename, const int FileCounts)
 	offset=0;
   else if(GroupFileFormat=="gadget3_int"||GroupFileFormat=="gadget3_long")
 	offset=3*sizeof(int)+sizeof(long long);  
+  else if(GroupFileFormat=="gadget3_MXXL")
+    offset=2*sizeof(int)+2*sizeof(long long);
   else// if(GroupFileFormat=="gadget2_int"||GroupFileFormat=="gadget2_long")
 	offset=3*sizeof(int); 
 
@@ -146,8 +148,7 @@ private:
  
   template <class PIDtype_t>
   void ReadV2V3(int read_level, HBTInt start_particle, HBTInt end_particle);
-  
-  void ReadPM06K(int read_level, HBTInt start_particle, HBTInt end_particle);
+  void ReadMXXL(int read_level, HBTInt start_particle, HBTInt end_particle);
   
 public: 
   HBTInt NumberOfGroups;//in file, not necessarily the same as read
@@ -162,16 +163,21 @@ public:
   }
   void Read(int ifile, int read_level, HBTInt start_particle=0, HBTInt end_particle=-1);
 };
-template <class PIDtype_t>
-void GroupFileReader_t::ReadPMO6K(int read_level, HBTInt start_particle, HBTInt end_particle)
-/*read_level: 0: meta data only ; 1: read group len and offset; 2: read particle list*/
+void GroupFileReader_t::ReadMXXL(int read_level, HBTInt start_particle, HBTInt end_particle)
+/* For reading MXXL (or PMO6K ) groups with compressed particle ids.
+ *read_level: 0: meta data only ; 1: read group len and offset; 2: read particle list*/
 {
   FILE *fd;
   char filename[1024];
   int Ngroups, Nids, NFiles;
   long long TotNids, TotNgroups; //long long TotNgroups, differ from V3
-  bool NeedByteSwap;
      
+  if(HBTConfig.ParticleIdRankStyle)
+  {
+	cerr<<"ParticleIdRankStyle not implemented for group files\n";
+	exit(1);
+  } 
+  
 	if(FileCounts>1)
 	  sprintf(filename, filename_format.c_str(), "tab", iFile);
 	else
@@ -233,72 +239,64 @@ void GroupFileReader_t::ReadPMO6K(int read_level, HBTInt start_particle, HBTInt 
 	if(end_particle<0) end_particle=Nids;
 	HBTInt Nread=end_particle-start_particle;
     
+    typedef unsigned long long MyIDType;
+    typedef MyIDType BucketType_t;
+    #define BUCKET_SIZE (8*sizeof(BucketType_t))
+    #define OBJECT_SIZE  40 //each 40bit id is an object  
     
-    typedef PIDtype_t MyIDType;
-//     typedef unsigned long long MyIDType;
+    /* book-keeping for buckets */
+    HBTInt start_bucket= (((long long) start_particle)* OBJECT_SIZE)/BUCKET_SIZE;
+    HBTInt end_bucket= (((long long) end_particle)* OBJECT_SIZE)/BUCKET_SIZE;
+    if((((long long) end_particle) * OBJECT_SIZE) % BUCKET_SIZE) 
+        end_bucket++;
+    int Nbucket = end_bucket-start_bucket;    
+    int bucket_bits_start = (((long long) start_particle)* OBJECT_SIZE)%BUCKET_SIZE;
+    int bucket_bits_left = BUCKET_SIZE-bucket_bits_start;
 
-    #define BUCKET_SIZE (8*sizeof(MyIDType))
-    #define OBJECT_SIZE  40 //each 40bit id is an object, each MyID is a bucket
+    int Nbucket_file;
+    myfread(&Nbucket_file, sizeof(int), 1, fd);
+    assert(Nbucket <= Nbucket_file);
     
-    vector <MyIDType> PIDs(Nread);
-    
-
-  /* read in the buckets containing the compressed ids */  
-  int Nbucket, Nbucket0;
-  Nbucket = (((long long) Nread) * OBJECT_SIZE) / BUCKET_SIZE;
-  if((((long long) Nread) * OBJECT_SIZE) % BUCKET_SIZE)
-    Nbucket++;
-  myfread(&Nbucket0, sizeof(int), 1, fd);
-  assert(Nbucket <= Nbucket0);
-  
-  vector <MyIDType> comp(Nbucket);
-  myfread(comp.data(), sizeof(MyIDType), Nbucket, fd);
-
-  /* now do decompression */
-  int bucket_bits_left = BUCKET_SIZE;
-  int bucket_bits_start = 0;
-
-  #define SET_MASK(m, n) ( ((((unsigned long long)1) << m)-1) << n ) //set m bits to 1 starting at offset n
-  #define TAKE_BITS(x, m, n) (( x & SET_MASK(m, n)) >> n) //take m bits starting at bit n from data x
-  
-  for(HBTInt i_object = 0, i_bucket=0; i_object < Nids; i_object++)
     {
-      MyIDType ids_rec = 0;
-      int object_bits_left = OBJECT_SIZE;
-      int object_bits_start = 0;
-      while(object_bits_left != 0)
+    /* read in the buckets containing the compressed ids */  
+    vector <BucketType_t> comp(Nbucket);
+    fseek(fd, sizeof(BucketType_t)*start_bucket, SEEK_CUR);
+    myfread(comp.data(), sizeof(BucketType_t), Nbucket, fd);
+
+    /* now do decompression */
+
+    #define SET_MASK(m, n) ( ((((unsigned long long)1) << m)-1) << n ) //set m bits to 1 starting at offset n
+    #define TAKE_BITS(x, m, n) ((((MyIDType) x) & SET_MASK(m, n)) >> n) //take m bits starting at bit n from data x
+    
+    Particles.resize(Nread);
+    
+    for(HBTInt i_object = 0, i_bucket=0; i_object < Nread; i_object++)
+    {
+        MyIDType ids_rec = 0;
+        int object_bits_left = OBJECT_SIZE;
+        int object_bits_start = 0;
+        while(object_bits_left != 0)
         {
-          int active_bits = min(bucket_bits_left, object_bits_left);
-          //copy from bucket to object:
-          ids_rec |= ( TAKE_BITS(comp[i_bucket], active_bits, bucket_bits_start) << object_bits_start);
-          object_bits_left -= active_bits;
-          object_bits_start += active_bits;
-          bucket_bits_left -= active_bits;
-          bucket_bits_start += active_bits;
-          if(bucket_bits_left == 0)
+        int active_bits = min(bucket_bits_left, object_bits_left);
+        //copy from bucket to object:
+        ids_rec |= ( TAKE_BITS(comp[i_bucket], active_bits, bucket_bits_start) << object_bits_start);
+        object_bits_left -= active_bits;
+        object_bits_start += active_bits;
+        bucket_bits_left -= active_bits;
+        bucket_bits_start += active_bits;
+        if(bucket_bits_left == 0)
             {
-              i_bucket++;
-              bucket_bits_left = BUCKET_SIZE;
-              bucket_bits_start = 0;
+            i_bucket++;
+            bucket_bits_left = BUCKET_SIZE;
+            bucket_bits_start = 0;
             }
         }
 
-      PIDs[i_object] = ids_rec;
+        Particles[i_object] = ids_rec;
     }
-
-    comp.clear();
-
-  fclose(fd);
+    }
     
-	vector <PIDtype_t> PIDs(Nread);
-	fseek(fd, sizeof(PIDtype_t)*start_particle, SEEK_CUR);
-	myfread(PIDs.data(), sizeof(PIDtype_t), Nread, fd);
-	PIDtype_t Mask=HBTConfig.GroupParticleIdMask;
-	if(Mask) 
-	#pragma omp parallel for
-	for(HBTInt i=0;i<Nread;i++)
-	  PIDs[i]&=Mask;
-	fseek(fd, sizeof(PIDtype_t)*(Nids-end_particle), SEEK_CUR);
+	fseek(fd, sizeof(BucketType_t)*(Nbucket_file-end_bucket), SEEK_CUR);
 	if(long int extra_bytes=BytesToEOF(fd))
 	{
 	  cerr<<"Error: unexpected format of "<<filename<<endl;
@@ -311,15 +309,6 @@ void GroupFileReader_t::ReadPMO6K(int read_level, HBTInt start_particle, HBTInt 
 	  fflush(stderr);exit(1);  
 	}
 	fclose(fd);
-  
-  if(HBTConfig.ParticleIdRankStyle)
-  {
-	cerr<<"ParticleIdRankStyle not implemented for group files\n";
-	exit(1);
-  } else
-  {
-	Particles.assign(PIDs.begin(), PIDs.end());
-  }
 }
 
 template <class PIDtype_t>
@@ -330,7 +319,6 @@ void GroupFileReader_t::ReadV2V3(int read_level, HBTInt start_particle, HBTInt e
   char filename[1024];
   int Ngroups, TotNgroups, Nids, NFiles;
   long long TotNids;
-  bool NeedByteSwap;
   bool IsGroupV3=("gadget3_int"==HBTConfig.GroupFileFormat||"gadget3_long"==HBTConfig.GroupFileFormat);
      
 	if(FileCounts>1)
@@ -443,6 +431,8 @@ void GroupFileReader_t::Read(int ifile, int read_level, HBTInt start_particle, H
       ReadV2V3<int>(read_level, start_particle, end_particle);
   else if(GroupFileFormat=="gadget2_long"||GroupFileFormat=="gadget3_long")
       ReadV2V3<long>(read_level, start_particle, end_particle);
+  else if(GroupFileFormat=="gadget3_MXXL")
+      ReadMXXL(read_level, start_particle, end_particle);
   else
       throw(runtime_error("unknown GroupFileFormat "+GroupFileFormat));
 }
