@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstdio>
+// #include <cmath>
 
 #include "../mymath.h"
 #include "../halo.h"
@@ -146,6 +147,8 @@ private:
   template <class PIDtype_t>
   void ReadV2V3(int read_level, HBTInt start_particle, HBTInt end_particle);
   
+  void ReadPM06K(int read_level, HBTInt start_particle, HBTInt end_particle);
+  
 public: 
   HBTInt NumberOfGroups;//in file, not necessarily the same as read
   HBTInt NumberOfParticles;//in file, not necessarily the same as read
@@ -159,6 +162,165 @@ public:
   }
   void Read(int ifile, int read_level, HBTInt start_particle=0, HBTInt end_particle=-1);
 };
+template <class PIDtype_t>
+void GroupFileReader_t::ReadPMO6K(int read_level, HBTInt start_particle, HBTInt end_particle)
+/*read_level: 0: meta data only ; 1: read group len and offset; 2: read particle list*/
+{
+  FILE *fd;
+  char filename[1024];
+  int Ngroups, Nids, NFiles;
+  long long TotNids, TotNgroups; //long long TotNgroups, differ from V3
+  bool NeedByteSwap;
+     
+	if(FileCounts>1)
+	  sprintf(filename, filename_format.c_str(), "tab", iFile);
+	else
+	  sprintf(filename, filename_format.c_str(), "tab");
+		
+	myfopen(fd,filename,"r");
+	myfread(&Ngroups, sizeof(Ngroups), 1, fd);
+    myfread(&TotNgroups, sizeof(TotNgroups), 1, fd);
+    myfread(&Nids, sizeof(Nids), 1, fd);
+    myfread(&TotNids,sizeof(TotNids),1,fd);
+	
+	NumberOfGroups=Ngroups;
+	NumberOfParticles=Nids;
+	myfread(&NFiles, sizeof(NFiles), 1, fd);
+	if(IsSubFile)
+	{
+	  int Nsub,TotNsub;
+	  myfread(&Nsub,sizeof(int),1,fd);
+	  myfread(&TotNsub,sizeof(int),1,fd);
+	}
+	if(FileCounts!=NFiles)
+	{
+	  cout<<"File count mismatch for file "<<filename<<": expect "<<FileCounts<<", got "<<NFiles<<endl;
+	  exit(1);
+	}
+	if(read_level==READ_META_DATA) 
+	{
+	  fclose(fd);
+	  return;
+	}
+	
+	if(read_level==READ_LEN_OFFSET)
+	{
+	  Len.resize(Ngroups);
+	  Offset.resize(Ngroups);
+	  myfread(Len.data(), sizeof(int), Ngroups, fd);
+	  myfread(Offset.data(), sizeof(int), Ngroups, fd);
+  // 	fseek(fd,sizeof(int)*Ngroups, SEEK_CUR);//skip offset
+	  if(feof(fd))
+	  {
+		fprintf(stderr,"error:End-of-File in %s\n",filename);
+		fflush(stderr);exit(1);  
+	  }
+	  fclose(fd);
+	  return;
+	}
+	fclose(fd);
+ 
+  if(FileCounts>1)
+	  sprintf(filename, filename_format.c_str(), "ids", iFile);
+	else
+	  sprintf(filename, filename_format.c_str(), "ids");
+	
+	myfopen(fd,filename,"r");
+	long long fileoffset;//differ from V3
+    fseek(fd, sizeof(Ngroups)+sizeof(TotNgroups)+sizeof(Nids)+sizeof(TotNids)+sizeof(NFiles)+sizeof(fileoffset), SEEK_CUR);
+	
+	assert(end_particle<=Nids);
+	if(end_particle<0) end_particle=Nids;
+	HBTInt Nread=end_particle-start_particle;
+    
+    
+    typedef PIDtype_t MyIDType;
+//     typedef unsigned long long MyIDType;
+
+    #define BUCKET_SIZE (8*sizeof(MyIDType))
+    #define OBJECT_SIZE  40 //each 40bit id is an object, each MyID is a bucket
+    
+    vector <MyIDType> PIDs(Nread);
+    
+
+  /* read in the buckets containing the compressed ids */  
+  int Nbucket, Nbucket0;
+  Nbucket = (((long long) Nread) * OBJECT_SIZE) / BUCKET_SIZE;
+  if((((long long) Nread) * OBJECT_SIZE) % BUCKET_SIZE)
+    Nbucket++;
+  myfread(&Nbucket0, sizeof(int), 1, fd);
+  assert(Nbucket <= Nbucket0);
+  
+  vector <MyIDType> comp(Nbucket);
+  myfread(comp.data(), sizeof(MyIDType), Nbucket, fd);
+
+  /* now do decompression */
+  int bucket_bits_left = BUCKET_SIZE;
+  int bucket_bits_start = 0;
+
+  #define SET_MASK(m, n) ( ((((unsigned long long)1) << m)-1) << n ) //set m bits to 1 starting at offset n
+  #define TAKE_BITS(x, m, n) (( x & SET_MASK(m, n)) >> n) //take m bits starting at bit n from data x
+  
+  for(HBTInt i_object = 0, i_bucket=0; i_object < Nids; i_object++)
+    {
+      MyIDType ids_rec = 0;
+      int object_bits_left = OBJECT_SIZE;
+      int object_bits_start = 0;
+      while(object_bits_left != 0)
+        {
+          int active_bits = min(bucket_bits_left, object_bits_left);
+          //copy from bucket to object:
+          ids_rec |= ( TAKE_BITS(comp[i_bucket], active_bits, bucket_bits_start) << object_bits_start);
+          object_bits_left -= active_bits;
+          object_bits_start += active_bits;
+          bucket_bits_left -= active_bits;
+          bucket_bits_start += active_bits;
+          if(bucket_bits_left == 0)
+            {
+              i_bucket++;
+              bucket_bits_left = BUCKET_SIZE;
+              bucket_bits_start = 0;
+            }
+        }
+
+      PIDs[i_object] = ids_rec;
+    }
+
+    comp.clear();
+
+  fclose(fd);
+    
+	vector <PIDtype_t> PIDs(Nread);
+	fseek(fd, sizeof(PIDtype_t)*start_particle, SEEK_CUR);
+	myfread(PIDs.data(), sizeof(PIDtype_t), Nread, fd);
+	PIDtype_t Mask=HBTConfig.GroupParticleIdMask;
+	if(Mask) 
+	#pragma omp parallel for
+	for(HBTInt i=0;i<Nread;i++)
+	  PIDs[i]&=Mask;
+	fseek(fd, sizeof(PIDtype_t)*(Nids-end_particle), SEEK_CUR);
+	if(long int extra_bytes=BytesToEOF(fd))
+	{
+	  cerr<<"Error: unexpected format of "<<filename<<endl;
+	  cerr<<extra_bytes<<" extra bytes beyond particleId block! Check if particleId has a different type?\n";
+	  exit(1);
+	}
+	if(feof(fd))
+	{
+	  fprintf(stderr,"error:End-of-File in %s\n",filename);
+	  fflush(stderr);exit(1);  
+	}
+	fclose(fd);
+  
+  if(HBTConfig.ParticleIdRankStyle)
+  {
+	cerr<<"ParticleIdRankStyle not implemented for group files\n";
+	exit(1);
+  } else
+  {
+	Particles.assign(PIDs.begin(), PIDs.end());
+  }
+}
 
 template <class PIDtype_t>
 void GroupFileReader_t::ReadV2V3(int read_level, HBTInt start_particle, HBTInt end_particle)
