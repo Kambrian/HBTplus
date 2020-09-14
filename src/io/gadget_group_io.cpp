@@ -168,7 +168,6 @@ void GroupFileReader_t::ReadV2V3(int read_level, HBTInt start_particle, HBTInt e
   char filename[1024];
   int Ngroups, TotNgroups, Nids, NFiles;
   long long TotNids;
-  bool NeedByteSwap;
   bool IsGroupV3=("gadget3_int"==HBTConfig.GroupFileFormat||"gadget3_long"==HBTConfig.GroupFileFormat);
      
 	if(FileCounts>1)
