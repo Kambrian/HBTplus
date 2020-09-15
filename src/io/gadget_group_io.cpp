@@ -194,9 +194,10 @@ void GroupFileReader_t::ReadMXXL(int read_level, HBTInt start_particle, HBTInt e
 	myfread(&NFiles, sizeof(NFiles), 1, fd);
 	if(IsSubFile)
 	{
-	  int Nsub,TotNsub;
-	  myfread(&Nsub,sizeof(int),1,fd);
-	  myfread(&TotNsub,sizeof(int),1,fd);
+	  int Nsub;
+      long long TotNsub;
+	  myfread(&Nsub,sizeof(Nsub),1,fd);
+	  myfread(&TotNsub,sizeof(TotNsub),1,fd);
 	}
 	if(FileCounts!=NFiles)
 	{
