@@ -86,21 +86,21 @@ endif(HBT_USE_GSL)
 set(HBT_SRC 
   HBT.cpp
   src/config_parser.cpp
-  src/halo.cpp
-  src/linkedlist_parallel.cpp
-  src/particle_exchanger.cpp
-  src/subhalo.cpp
-  src/subhalo_unbind.cpp
   src/geometric_tree.cpp
-  src/hdf_wrapper.cpp
-  src/mpi_wrapper.cpp
-  src/snapshot.cpp
-  src/subhalo_merge.cpp
   src/gravity_tree.cpp
+  src/halo.cpp
+  src/hdf_wrapper.cpp
+  src/linkedlist_base.cpp
   src/linkedlist.cpp
+  src/mpi_wrapper.cpp
   src/mymath.cpp
+  src/particle_exchanger.cpp
+  src/snapshot.cpp
   src/snapshot_exchanger.cpp
+  src/subhalo.cpp
+  src/subhalo_merge.cpp
   src/subhalo_tracking.cpp
+  src/subhalo_unbind.cpp
   src/io/apostle_io.cpp
   src/io/gadget_group_io.cpp
   src/io/gadget_io.cpp
