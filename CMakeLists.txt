@@ -52,7 +52,7 @@ endif(HBT_USE_OPENMP)
 #
 # Find MPI libraries for C++
 #
-find_package(MPI REQUIRED)
+find_package(MPI COMPONENTS CXX REQUIRED)
 add_definitions(${MPI_CXX_COMPILE_FLAGS})
 include_directories(${MPI_CXX_INCLUDE_PATH})
 link_directories(${MPI_CXX_LIBRARIES})
