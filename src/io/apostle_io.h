@@ -58,7 +58,7 @@ public:
   }
   ~ApostleReader_t()
   {
-    MPI_Type_free(&MPI_ApostleHeader_t);
+    My_Type_free(&MPI_ApostleHeader_t);
   }
   void LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology);
   void LoadGroups(MpiWorker_t &world, int snapshotId, vector <Halo_t> &Halos);
