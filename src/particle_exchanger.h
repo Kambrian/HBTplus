@@ -113,7 +113,7 @@ public:
   ParticleExchanger_t(MpiWorker_t &world, const ParticleSnapshot_t &snap, vector <Halo_T> &InHalos);
   ~ParticleExchanger_t()
   {
-	MPI_Type_free(&MPI_HBTParticle_t);
+	My_Type_free(&MPI_HBTParticle_t);
   }
   void Exchange();
 };

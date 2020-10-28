@@ -10,6 +10,8 @@
 #include "datatypes.h"
 #include "snapshot_number.h"
 #include "snapshot.h"
+#include "mpi_wrapper.h"
+
 class Halo_t
 {
 public:
@@ -53,7 +55,7 @@ public:
   ~HaloSnapshot_t()
   {
 // 	Clear();
-	MPI_Type_free(&MPI_HBT_HaloId_t);
+	My_Type_free(&MPI_HBT_HaloId_t);
   }
   void Load(MpiWorker_t & world, int snapshot_index);
   void Clear();

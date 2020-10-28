@@ -43,3 +43,17 @@ void MpiWorker_t::SyncVectorString(vector< string >& x, int root)
       x.push_back(s);
   }
 }
+
+/* 
+   Free an MPI type, but only if MPI has not been finalized.
+   This is for use in object destructors which might be called
+   after MPI has been finalized. If it has, the type has already
+   been freed and we don't need to do anything.
+*/
+void My_Type_free(MPI_Datatype *datatype) {
+
+  int finalized;
+  MPI_Finalized(&finalized);
+  if(!finalized)MPI_Type_free(datatype);
+
+}

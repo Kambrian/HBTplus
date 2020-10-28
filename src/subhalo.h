@@ -9,6 +9,7 @@
 #include "snapshot_number.h"
 #include "halo.h"
 #include "hdf_wrapper.h"
+#include "mpi_wrapper.h"
 
 enum class SubReaderDepth_t
 {
@@ -226,7 +227,7 @@ public:
   {
 	H5Tclose(H5T_SubhaloInDisk);
 	H5Tclose(H5T_SubhaloInMem);
-	MPI_Type_free(&MPI_HBT_SubhaloShell_t);
+        My_Type_free(&MPI_HBT_SubhaloShell_t);
   }
   string GetSubDir();
   void GetSubFileName(string &filename, int iFile, const string &ftype="Sub");
