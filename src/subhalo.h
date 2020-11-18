@@ -61,7 +61,7 @@ public:
 //   float MVir;
   
   //kinetic properties
-  float SpecificSelfPotentialEnergy;
+  float SpecificSelfPotentialEnergy;//average specific potential energy of each particle, <phi/m>. the total potential energy of the system is 0.5*<phi/m>*M, where the 0.5 factor corrects for double counting of mutual potential.
   float SpecificSelfKineticEnergy;//<0.5*v^2>
   float SpecificAngularMomentum[3];//<Rphysical x Vphysical>
 //   float SpinPeebles[3];
