@@ -222,4 +222,12 @@ void MyBcast(MpiWorker_t &world, InParticleIterator_T InParticleIterator, OutPar
 	}
   }
 }
+
+/* 
+   Free an MPI type, but only if MPI has not been finalized.
+   This is for use in object destructors which might be called
+   after MPI has been finalized. If it has, the type has already
+   been freed and we don't need to do anything.
+*/
+void My_Type_free(MPI_Datatype *datatype);
 #endif
