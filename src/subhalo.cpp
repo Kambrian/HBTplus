@@ -162,7 +162,7 @@ void Subhalo_t::CalculateProfileProperties(const ParticleSnapshot_t &part_snap)
   for(int i=0;i<3;i++)
   {
 	SpinPeebles[i]=SpecificAngularMomentum[i]*
-	  sqrt(fabs(SpecificSelfPotentialEnergy+SpecificSelfKineticEnergy))/PhysicalConst::G/Mbound;
+	  sqrt(fabs(SpecificSelfPotentialEnergy+0.5*SpecificSelfKineticEnergy))/PhysicalConst::G/Mbound;
 	SpinBullock[i]=SpecificAngularMomentum[i]/sqrt(2.*PhysicalConst::G*Mbound*R2SigmaComoving);
   }
   */
