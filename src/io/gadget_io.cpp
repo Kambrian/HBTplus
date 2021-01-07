@@ -141,7 +141,7 @@ void GadgetReader_t::LoadGadgetHeader(int ifile)
   if((HBTReal)Header.BoxSize!=HBTConfig.BoxSize)
   {
 	cerr<<"BoxSize not match input: read "<<Header.BoxSize<<"; expect "<<HBTConfig.BoxSize<<endl;
-	cerr<<"Maybe the length unit differ? Excpected unit: "<<HBTConfig.LengthInMpch<<" Msol/h\n";
+	cerr<<"Maybe the length unit differ? Expected unit: "<<HBTConfig.LengthInMpch<<" Mpc/h\n";
 	exit(1);
   }
   
