@@ -269,7 +269,7 @@ void Subhalo_t::Unbind(const Snapshot_t &epoch)
   if(Particles.size()<HBTConfig.MinNumPartOfSub)//not enough src particles, can be due to masking
   {
       if(IsAlive())
-          SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
+          SnapshotIndexOfDeath=epoch.GetSnapshotIndex();
   }
   
   if(Particles.size()==0)
