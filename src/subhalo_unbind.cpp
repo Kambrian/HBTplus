@@ -274,6 +274,12 @@ void Subhalo_t::Unbind(const ParticleSnapshot_t &snapshot)
   bool RefineMostboundParticle=(MaxSampleSize>0&&HBTConfig.RefineMostboundParticle);
   HBTReal BoundMassPrecision=HBTConfig.BoundMassPrecision;
   
+  if(Particles.size()<HBTConfig.MinNumPartOfSub)//not enough src particles, can be due to masking
+  {
+      if(IsAlive())
+          SnapshotIndexOfDeath=snapshot.GetSnapshotIndex();
+  }
+  
   if(Particles.size()==0)
   {
     Nbound=0;
