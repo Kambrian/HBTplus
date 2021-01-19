@@ -246,6 +246,28 @@ class HBTReader:
 
         return subhalos
 
+    def LoadHostTrackIds(self, isnap):
+        '''load the HostTrackId for all the subhalos in the given isnap.
+        HostTrackId is the TrackId of the central in the HostHalo
+        HostTrackId=-1 means field sub (without a proper host halo, 
+        in which case you may want to assign its own trackId as hostTrackId--but you need to do it yourself)
+        '''
+        
+        Subhalos=self.LoadSubhalos(isnap, ['TrackId','Rank','HostHaloId'])
+        try: #use the Membership table if it exists
+            with self.Open(isnap) as f:
+                GroupedTrackIds=f['Membership/GroupedTrackIds'][...]
+            HostTrackId=np.array([GroupedTrackIds[s][0] for s in Subhalos['HostHaloId']])
+        except:
+            ## alternative method when Membership is not available
+            Host2Track=Subhalos[(Subhalos['Rank']==0)&(Subhalos['HostHaloId']>=0)][['HostHaloId','TrackId']]
+            Host2Track=dict(zip(Host2Track['HostHaloId'], Host2Track['TrackId']))
+            Host2Track.update({-1:-1})
+            HostTrackId=np.array([Host2Track[s] for s in Subhalos['HostHaloId']])
+        
+        HostTrackId[Subhalos['HostHaloId']<0]=-1
+        return HostTrackId
+
     def GetNumberOfSubhalos(self, isnap=-1):
         """Retunrs number of subhaloes in a snapshot.
 
@@ -321,7 +343,7 @@ class HBTReader:
             subid = np.flatnonzero(self.LoadSubhalos(isnap, 'TrackId') == trackId)[0]
         else:
             subid = trackId
-        return self.LoadSubhalos(isnap, subid)
+        return self.LoadSubhalos(isnap, subid)[0]
 
     def GetTrack(self, trackId, fields=None, MaxSnap=None):
         """Loads an entire track of the given ``trackId``.
@@ -348,6 +370,28 @@ class HBTReader:
             np.array(track), ['Snapshot', 'ScaleFactor'],
             [np.array(snaps), np.array(scales)],
             usemask=False)
+
+    def GetTrackHost(self,trackId):
+        ''' load the history of the HostTrackId (i.e., the TrackId of the central in the same HostHaloId) for the given trackId.
+        Currently only single-file SubSnap output is supported, and trackId is a scalar.
+        return the list of HostTrackIds, from snapbirth to final snapshot.
+        '''
+        HostTrackIds=[]
+        snapbirth=self.GetSub(trackId)['SnapshotIndexOfBirth']
+        if self.nfiles>1:
+            raise NotImplementedError("multiple-file SubSnap is not supported in this function")
+        for isnap in range(snapbirth, self.MaxSnap+1):
+            Subhalo=self.GetSub(trackId,isnap)
+            HostHaloId=Subhalo['HostHaloId']
+            #print isnap, ':', HostHaloId, Subhalo['Rank']
+            if HostHaloId>=0:
+                with self.Open(isnap) as f:
+                    hostTrackId=f['Membership/GroupedTrackIds'][HostHaloId][0]
+            else:
+                hostTrackId=trackId
+            #print hostTrackId
+            HostTrackIds.append(hostTrackId)
+        return HostTrackIds
 
     def GetScaleFactor(self, isnap):
         """Reads scale factor at a given snapshot.
