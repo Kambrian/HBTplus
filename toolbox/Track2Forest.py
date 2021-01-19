@@ -55,16 +55,7 @@ def AssignForestIds(datadir):
             continue
         #Subhalos.sort(order='TrackId')
         
-        try:
-            with reader.Open(isnap) as f:
-                GroupedTrackIds=f['Membership/GroupedTrackIds'][...]
-            HostTrackId=np.array([GroupedTrackIds[s][0] for s in Subhalos['HostHaloId']])
-        except: # alternative method when Membership is not available
-            Host2Track=Subhalos[(Subhalos['Rank']==0)&(Subhalos['HostHaloId']>=0)][['HostHaloId','TrackId']]
-            Host2Track=dict(zip(Host2Track['HostHaloId'], Host2Track['TrackId']))
-            Host2Track.update({-1:-1})
-            HostTrackId=np.array([Host2Track[s] for s in Subhalos['HostHaloId']])
-        
+        HostTrackId=reader.LoadHostTrackIds(isnap)
         HostTrackId[Subhalos['HostHaloId']<0]=Subhalos['TrackId'][Subhalos['HostHaloId']<0]
         #Subhalos=recfunctions.append_fields(Subhalos, 'HostTrackId', HostTrackId, usemask=False)
         
