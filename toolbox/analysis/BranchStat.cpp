@@ -86,9 +86,11 @@ struct TargetHalo_t
 	{
 	  auto &p=Particle[ipart];
 	  p.BranchId=halosnap.ParticleHash.GetIndex(p.ParticleId);
-      p.BranchId=halosnap.Halos[p.BranchId].HaloId;//bugfix: change to global HaloId instead of local
       if(p.BranchId!=SpecialConst::NullHaloId)
-          p.BranchId+=halosnap.GetSnapshotId()*BranchIDSnapBase;//prepend snapshotId
+      {
+        p.BranchId=halosnap.Halos[p.BranchId].HaloId;//bugfix: change to global HaloId instead of local
+        p.BranchId+=halosnap.GetSnapshotId()*BranchIDSnapBase;//prepend snapshotId
+      }
 	  p.Index=ipart;//new index
 // 		BranchCount[p.BranchId]++;
 	}
@@ -187,7 +189,7 @@ public:
 
 int main(int argc, char **argv)
 {
-    assert(sizeof(long)==16);//make sure BranchId dtype is long enough
+    assert(sizeof(long)==8);//make sure BranchId dtype is long enough
    MPI_Init(&argc, &argv);
  MpiWorker_t world(MPI_COMM_WORLD);
 #ifdef _OPENMP
