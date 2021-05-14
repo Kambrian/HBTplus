@@ -24,7 +24,7 @@ public:
   {
     return NumNeighbourSPH;
   }
-  int SetNumNeighbourSPH(int num_neighbour)
+  void SetNumNeighbourSPH(int num_neighbour)
   {
     NumNeighbourSPH=num_neighbour;
   }
