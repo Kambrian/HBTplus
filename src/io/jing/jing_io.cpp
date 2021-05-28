@@ -327,12 +327,14 @@ void JingReader_t::LoadSnapshot(vector <Particle_t> &Particles, Cosmology_t &Cos
   int ntasks=NumFilesId+NumFilesPos+NumFilesVel;//set to a small number to reduce number of concurrent readings, which could reduce memory consumption on a tight machine 
   if((!HBTConfig.SnapshotHasIdBlock)&(NumFilesId==0)) 
     ntasks+=1; //allocate one task to generate IDs if no ID file.
+#ifdef _OPENMP
   #pragma omp parallel
   #pragma omp single
-#ifdef _OPENMP
+  {
   NumSlaves=omp_get_num_threads();
   NumSlaves/=ntasks;
   if(NumSlaves==0) NumSlaves=1;
+  }
   omp_set_nested(1);
 #else
   NumSlaves=1;
