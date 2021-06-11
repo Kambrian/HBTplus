@@ -78,6 +78,9 @@ public:
   template <class REDUCIBLECOLLECTOR>
   void SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, ParticleCollector_t &collector);
   void SearchShellSerial(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, ParticleCollector_t &collector);
+  template <class REDUCIBLECOLLECTOR>
+  void SearchCylinder(HBTReal radius_z, HBTReal radius_p, const HBTxyz &searchcenter, ParticleCollector_t &collector);
+  void SearchCylinderSerial(HBTReal radius_z, HBTReal radius_p, const HBTxyz &searchcenter, ParticleCollector_t &collector);
 };
 
 class ReducibleCollector_t: public ParticleCollector_t
@@ -111,6 +114,21 @@ void LinkedlistPara_t::SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &sea
   {
     ReducibleSampleCollector_t<REDUCIBLECOLLECTOR> thread_founds(Samples[thread_id]);
     LLs[thread_id].SearchShell(rmin, rmax, searchcenter, thread_founds);
+    #pragma omp critical(insert_linklist_founds) //this prevents nested parallelization
+    {
+      thread_founds.Reduce(collector);
+    }
+  }
+}
+
+template <class REDUCIBLECOLLECTOR>
+void LinkedlistPara_t::SearchCylinder(HBTReal radius_z, HBTReal radius_p, const HBTxyz &searchcenter, ParticleCollector_t &collector)
+{//parallel version. not suitable for use inside another parallel region. must specify a ReducibleCollector_t template parameter to define Collect and Reduce method for each thread collector.
+#pragma omp parallel for
+  for(int thread_id=0;thread_id<LLs.size();thread_id++)
+  {
+    ReducibleSampleCollector_t<REDUCIBLECOLLECTOR> thread_founds(Samples[thread_id]);
+    LLs[thread_id].SearchCylinder(radius_z, radius_p, searchcenter, thread_founds);
     #pragma omp critical(insert_linklist_founds) //this prevents nested parallelization
     {
       thread_founds.Reduce(collector);
