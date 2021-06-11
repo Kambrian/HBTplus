@@ -55,6 +55,7 @@ public:
   void build(int ndiv, PositionData_t *data, HBTReal boxsize=0., bool periodic=false);
   void SearchShell(HBTReal rmin, HBTReal rmax, const HBTxyz &searchcenter, ParticleCollector_t &collector);
   void SearchSphere(HBTReal radius, const HBTxyz &searchcenter, ParticleCollector_t &colletor);
+  void SearchCylinder(HBTReal radius_z, HBTReal radius_p, const HBTxyz &searchcenter, ParticleCollector_t &collector);//search within +-radius_z along z and projected radius_p 
   HBTInt TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTInt> &group_tags, HBTReal LinkLength);
   HBTInt get_chain_length(int i)
   {

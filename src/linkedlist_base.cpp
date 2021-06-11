@@ -173,6 +173,59 @@ void LinkedlistBase_t::SearchSphere(HBTReal radius, const HBTxyz &searchcenter, 
       }
 }
 
+void LinkedlistBase_t::SearchCylinder(HBTReal radius_z, HBTReal radius_p, const HBTxyz &searchcenter, ParticleCollector_t &collector)
+{
+  PositionData_t &particles=*Particles;
+  HBTReal x0=searchcenter[0], y0=searchcenter[1], z0=searchcenter[2];
+  HBTReal radius2=radius_p*radius_p;
+  int i,j,k,subbox_grid[3][2];
+  HBTReal radvec[3]={radius_p, radius_p, radius_z};
+  
+  for(i=0;i<2;i++)
+  {
+    subbox_grid[i][0]=floor((searchcenter[i]-radvec[i]-Range[i][0])/Step[i]);
+    subbox_grid[i][1]=floor((searchcenter[i]+radvec[i]-Range[i][0])/Step[i]);
+    if(!PeriodicBoundary)
+    {//do not fix if periodic, since the search sphere is allowed to overflow the box in periodic case.
+      subbox_grid[i][0]=FixGridId(subbox_grid[i][0]);
+      subbox_grid[i][1]=FixGridId(subbox_grid[i][1]);
+    }	
+  }
+  
+  for(i=subbox_grid[0][0];i<subbox_grid[0][1]+1;i++)
+    for(j=subbox_grid[1][0];j<subbox_grid[1][1]+1;j++)
+      for(k=subbox_grid[2][0];k<subbox_grid[2][1]+1;k++)
+      {
+	HBTInt pid=GetHOCSafe(i,j,k); //in case the grid-id is out of box, in the periodic case
+	while(pid>=0)
+	{
+	  HBTInt p=pid;
+	  pid=List[p];
+	  
+	  auto &pos=particles[p];
+	  HBTReal dx = pos[0] - x0;
+	  if(PeriodicBoundary) dx=NEAREST(dx);
+	  if(dx > radius_p || dx < -radius_p)
+	    continue;
+	  
+	  HBTReal dy = pos[1] - y0;
+	  if(PeriodicBoundary) dy=NEAREST(dy);
+	  if(dy > radius_p || dy < -radius_p)
+	    continue;
+	  
+	  HBTReal dz = pos[2] - z0;
+	  if(PeriodicBoundary) dz=NEAREST(dz);
+	  if(dz > radius_z || dz < -radius_z)
+	    continue;
+	  
+	  HBTReal r2 = dx * dx + dy * dy;
+	  
+	  if(r2 < radius2) 
+	    collector.Collect(p, r2);
+	}
+      }
+}
+
 HBTInt LinkedlistBase_t::TagFriendsOfFriends(HBTInt seed, HBTInt grpid, vector <HBTInt> &group_tags, HBTReal LinkLength)
 /*tag all the particles that are linked to seed with grpid
  * Note if system stack size is too small, this recursive routine may crash

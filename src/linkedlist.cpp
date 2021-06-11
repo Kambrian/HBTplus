@@ -40,6 +40,14 @@ void LinkedlistPara_t::SearchShellSerial(HBTReal rmin, HBTReal rmax, const HBTxy
     LLs[thread_id].SearchShell(rmin, rmax, searchcenter, thread_collector);
   }
 }
+void LinkedlistPara_t::SearchCylinderSerial(HBTReal radius_z, HBTReal radius_p, const HBTxyz &searchcenter, ParticleCollector_t &collector)
+{//serial version, which can be safely run inside another parallel region
+  for(int thread_id=0;thread_id<LLs.size();thread_id++)
+  {
+    SampleCollector_t thread_collector(collector, Samples[thread_id]);
+    LLs[thread_id].SearchCylinder(radius_z, radius_p, searchcenter, thread_collector);
+  }
+}
 
 void Linkedlist_t::parallel_build(int ndiv, PositionData_t *data, HBTReal boxsize, bool periodic)
 {
