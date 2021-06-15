@@ -181,7 +181,7 @@ void LinkedlistBase_t::SearchCylinder(HBTReal radius_z, HBTReal radius_p, const 
   int i,j,k,subbox_grid[3][2];
   HBTReal radvec[3]={radius_p, radius_p, radius_z};
   
-  for(i=0;i<2;i++)
+  for(i=0;i<3;i++)
   {
     subbox_grid[i][0]=floor((searchcenter[i]-radvec[i]-Range[i][0])/Step[i]);
     subbox_grid[i][1]=floor((searchcenter[i]+radvec[i]-Range[i][0])/Step[i]);
