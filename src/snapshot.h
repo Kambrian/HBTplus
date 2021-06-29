@@ -175,6 +175,7 @@ public:
   const Particle_t & GetParticle(HBTInt index) const;
   
   void Load(int snapshot_index, bool fill_particle_hash=true);
+  void ConvertToRedshiftSpace(int iz);
 };
 
 inline void Snapshot_t::RelativeVelocity(const HBTxyz& targetPos, const HBTxyz& targetVel, const HBTxyz& refPos, const HBTxyz& refVel, HBTxyz& relativeVel) const

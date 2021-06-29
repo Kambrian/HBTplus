@@ -51,6 +51,18 @@ void ParticleSnapshot_t::Clear()
   ClearParticleHash();//even if you don't do this, the destructor will still clean up the memory.
 }
 
+void ParticleSnapshot_t::ConvertToRedshiftSpace(int iz)
+/* convert coordinate z to redshift space coordinate z_obs, through z_obs=z+v_z/H/a. 
+ * iz=0,1,2 specifies the dimension to be used as the redshift direction */
+{
+#pragma omp parallel for
+    for(HBTInt i=0;i<Particles.size();i++)
+    {
+        auto &p=Particles[i];
+        p.ComovingPosition[iz]+=p.PhysicalVelocity[iz]/Cosmology.Hz/Cosmology.ScaleFactor;
+    }
+}
+
 double ParticleSnapshot_t::AveragePosition(HBTxyz& CoM, const ParticleIndex_t PartIndex[], const ParticleIndex_t NumPart) const
 /*mass weighted average position*/
 {
