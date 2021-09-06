@@ -42,9 +42,9 @@ typedef float HBTReal;
 
 // the user should ganrantee that HBTInt can at least hold NP_DM (when HBTPID_RANKSTYLE is defined)
 #ifdef HBT_INT8
-typedef long HBTInt;  
+typedef long HBTInt;
 #define HBTIFMT "%ld"
-#else 
+#else
 typedef int HBTInt;
 #define HBTIFMT "%d"
 #endif
@@ -69,6 +69,7 @@ typedef int HBTInt;
   memcpy(dest, src, sizeof(HBTxyz));
 }*/
 typedef array <HBTReal, 3> HBTxyz;
+typedef array <HBTInt, 6> HBTgroup;
 inline void copyHBTxyz(HBTxyz &dest, const HBTxyz &src)
 {
   /*copy for std:arr implementation*/
@@ -96,7 +97,7 @@ namespace SpecialConst
   const HBTInt NullHaloId=-1;//do not change this.
   const HBTInt NullSubhaloId=-1;
   const HBTInt NullTrackId=-1;
-    
+
   const HBTxyz NullCoordinate={0.,0.,0.};
 //   const Particle_t NullParticle(NullParticleId, NullParticleId, NullCoordinate, NullCoordinate);
 };
@@ -129,7 +130,7 @@ public:
   }
   void IncrementBind()
   {
-	N++; 
+	N++;
   }
   T * data() const
   {
