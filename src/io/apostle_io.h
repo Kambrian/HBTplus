@@ -47,6 +47,7 @@ class ApostleReader_t
   void GetGroupName(int ifile, string &filename);
   void SetSnapshot(int snapshotId);
   void GetParticleCountInFile(hid_t file, int np[]);
+
   hid_t CountTable_t, MassTable_t, H5T_HBTxyz;
 public:
   void LoadSnapshot(int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology);

@@ -1,6 +1,7 @@
 using namespace std;
 #include <numeric>
 #include <iostream>
+// #include <iomanip>
 #include <sstream>
 #include <string>
 #include <typeinfo>
@@ -72,10 +73,12 @@ void ApostleReader_t::ReadHeader(int ifile, ApostleHeader_t &header,int &illustr
   ReadAttribute(file, "Header", "BoxSize", H5T_NATIVE_DOUBLE, &Header.BoxSize);
   assert((HBTReal)Header.BoxSize==HBTConfig.BoxSize);
   ReadAttribute(file, "Header", "Time", H5T_NATIVE_DOUBLE, &Header.ScaleFactor);
-  ReadAttribute(file, "Header", "Omega0", H5T_NATIVE_DOUBLE, &Header.OmegaM0);
+  ReadAttribute(file, "Header", "OmegaLambda", H5T_NATIVE_DOUBLE, &Header.OmegaLambda0);
   ReadAttribute(file, "Header", "OmegaLambda", H5T_NATIVE_DOUBLE, &Header.OmegaLambda0);
   ReadAttribute(file, "Header", "MassTable", H5T_NATIVE_DOUBLE, Header.mass);
+//   cout<<Header.mass[0]<<","<<Header.mass[1]<<","<<Header.mass[2]<<endl;
   ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, Header.npart);
+
   unsigned np[TypeMax], np_high[TypeMax];
   ReadAttribute(file, "Header", "NumPart_Total", H5T_NATIVE_UINT, np);
   ReadAttribute(file, "Header", "NumPart_Total_HighWord", H5T_NATIVE_UINT, np_high);
@@ -167,10 +170,10 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 		  x[i][j]=position_modulus(x[i][j], boxsize);
 	  }
 	  for(int i=0;i<np;i++)
-            copyHBTxyz(ParticlesThisType[i].ComovingPosition, x[i]);
+		copyHBTxyz(ParticlesThisType[i].ComovingPosition, x[i]);
 	}
 
-      {//velocity
+	{//velocity
 	  vector <HBTxyz> v(np);
 	  if(H5Lexists(particle_data, "Velocities", H5P_DEFAULT))
 	    ReadDataset(particle_data, "Velocities", H5T_HBTReal, v.data());
@@ -264,7 +267,6 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bo
 		ParticlesThisType[i].ParticleId=id[i];
 	}
 
-	if(H5Lexists(particle_data, "GroupNumber", H5P_DEFAULT))
 	{//Hostid
 	  vector <HBTInt> id(np);
 	  ReadDataset(particle_data, "GroupNumber", H5T_HBTInt, id.data());
