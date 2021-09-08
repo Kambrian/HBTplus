@@ -73,7 +73,7 @@ void ApostleReader_t::ReadHeader(int ifile, ApostleHeader_t &header,int &illustr
   ReadAttribute(file, "Header", "BoxSize", H5T_NATIVE_DOUBLE, &Header.BoxSize);
   assert((HBTReal)Header.BoxSize==HBTConfig.BoxSize);
   ReadAttribute(file, "Header", "Time", H5T_NATIVE_DOUBLE, &Header.ScaleFactor);
-  ReadAttribute(file, "Header", "OmegaLambda", H5T_NATIVE_DOUBLE, &Header.OmegaLambda0);
+  ReadAttribute(file, "Header", "Omega0", H5T_NATIVE_DOUBLE, &Header.OmegaM0);
   ReadAttribute(file, "Header", "OmegaLambda", H5T_NATIVE_DOUBLE, &Header.OmegaLambda0);
   ReadAttribute(file, "Header", "MassTable", H5T_NATIVE_DOUBLE, Header.mass);
 //   cout<<Header.mass[0]<<","<<Header.mass[1]<<","<<Header.mass[2]<<endl;
