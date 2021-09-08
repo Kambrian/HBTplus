@@ -37,14 +37,15 @@ class ApostleReader_t
   vector <HBTInt> np_file;
   vector <HBTInt> offset_file;
   ApostleHeader_t Header;
-  void Whetherillustris(hid_t file,int &illustris);
-  void ReadHeader(int ifile, ApostleHeader_t &header,int &illustris);
+  bool is_illustris;
+  bool IsIllustris(hid_t file);
+  void ReadHeader(int ifile, ApostleHeader_t &header);
   HBTInt CompileFileOffsets(int nfiles);
   void ReadSnapshot(int ifile, Particle_t * ParticlesInFile);
   void ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bool FlagReadParticleId);
-  void ReadillustrisGroup(int ifile, int jtype,int &offset,ParticleHost_t *ParticlesInFile, bool FlagReadParticleId);
+  void ReadIllustrisGroup(int ifile, int itype,int &offset,ParticleHost_t *ParticlesInFile, bool FlagReadParticleId);
   void GetFileName(int ifile, string &filename);
-  void GetGroupName(int ifile, string &filename);
+  void GetIllustrisGroupName(int ifile, string &filename);
   void SetSnapshot(int snapshotId);
   void GetParticleCountInFile(hid_t file, int np[]);
 
