@@ -174,7 +174,7 @@ class HBTReader:
             (numpy.ndarray): array of nested indices
         """
         nests = []
-        for i in xrange(max(self.nfiles, 1)):
+        for i in range(max(self.nfiles, 1)):
             with self.OpenFile(isnap, i) as subfile:
                 nests.extend(subfile['NestedSubhalos'][...])
         return np.array(nests)
@@ -219,7 +219,7 @@ class HBTReader:
         if type(selection) is list:
             selection = tuple(selection)
 
-        for i in xrange(max(self.nfiles, 1)):
+        for i in range(max(self.nfiles, 1)):
             if show_progress:
                 sys.stdout.write(".")
                 sys.stdout.flush()
@@ -261,7 +261,7 @@ class HBTReader:
         except:
             ## alternative method when Membership is not available
             Host2Track=Subhalos[(Subhalos['Rank']==0)&(Subhalos['HostHaloId']>=0)][['HostHaloId','TrackId']]
-            Host2Track=dict(zip(Host2Track['HostHaloId'], Host2Track['TrackId']))
+            Host2Track=dict(list(zip(Host2Track['HostHaloId'], Host2Track['TrackId'])))
             Host2Track.update({-1:-1})
             HostTrackId=np.array([Host2Track[s] for s in Subhalos['HostHaloId']])
         
@@ -298,7 +298,7 @@ class HBTReader:
 
         subhalos = []
         offset = 0
-        for i in xrange(max(self.nfiles, 1)):
+        for i in range(max(self.nfiles, 1)):
             with self.OpenFile(isnap, i, filetype) as subfile:
                 if subindex is None:
                     subhalos.append(subfile[filetype + 'haloParticles'][...])
@@ -321,7 +321,7 @@ class HBTReader:
         multiple-file outputs)
         """
         offset = 0
-        for i in xrange(max(self.nfiles, 1)):
+        for i in range(max(self.nfiles, 1)):
             with self.OpenFile(isnap, i) as subfile:
                 nsub = subfile['Subhalos'].shape[0]
                 if offset + nsub > subindex:
@@ -354,9 +354,9 @@ class HBTReader:
         snapbirth = self.GetSub(trackId)['SnapshotIndexOfBirth']
 
         if MaxSnap is None:
-            isnap_range = range(snapbirth, self.MaxSnap + 1)
+            isnap_range = list(range(snapbirth, self.MaxSnap + 1))
         else:
-            isnap_range = range(snapbirth, MaxSnap + 1)
+            isnap_range = list(range(snapbirth, MaxSnap + 1))
 
         for isnap in isnap_range:
             s = self.GetSub(trackId, isnap)
@@ -413,7 +413,7 @@ class HBTReader:
         Duplicate particles are assigned to the lowest mass subhaloes.
         """
         OriginPart = self.LoadParticles(isnap)
-        OriginPart = zip(range(len(OriginPart)), OriginPart)
+        OriginPart = list(zip(list(range(len(OriginPart))), OriginPart))
         comp_mass = lambda x: len(x[1])
         OriginPart.sort(key=comp_mass)
         repo = set()
@@ -578,27 +578,27 @@ if __name__ == '__main__':
     apostle = HBTReader(
         '/cosma/home/jvbq85/data/HBT/data/apostle/S1_LR/subcat/VER1.8.1.param')
     #apostle=HBTReader('/cosma/home/jvbq85/data/HBT/data/MilliMill/subcat2_full/VER1.8.1.param')
-    print(timeit.timeit(
+    print((timeit.timeit(
         "[apostle.LoadSubhalos(i, 1) for i in range(10,apostle.MaxSnap)]",
         setup="from __main__ import apostle",
-        number=1))
+        number=1)))
     #print(timeit.timeit("[apostle.LoadSubhalos(i, np.s_['Nbound','Rank']) for i in range(10,apostle.MaxSnap)]", setup="from __main__ import apostle,np", number=1))
-    print(timeit.timeit(
+    print((timeit.timeit(
         "[apostle.LoadSubhalos(i, 'Nbound') for i in range(10,apostle.MaxSnap)]",
         setup="from __main__ import apostle",
-        number=1))
-    print(timeit.timeit(
+        number=1)))
+    print((timeit.timeit(
         "apostle.LoadSubhalos(-1, ('Nbound','Rank'))",
         setup="from __main__ import apostle",
-        number=100))
-    print(timeit.timeit(
+        number=100)))
+    print((timeit.timeit(
         "[apostle.LoadSubhalos(i) for i in range(10,apostle.MaxSnap)]",
         setup="from __main__ import apostle",
-        number=1))
-    print(timeit.timeit(
+        number=1)))
+    print((timeit.timeit(
         "apostle.GetTrack(12)", setup="from __main__ import apostle",
-        number=1))
-    print(timeit.timeit(
+        number=1)))
+    print((timeit.timeit(
         "apostle.GetTrack(103)",
         setup="from __main__ import apostle",
-        number=1))
+        number=1)))
