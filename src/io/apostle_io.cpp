@@ -16,7 +16,7 @@ using namespace std;
 #include "apostle_io.h"
 
 bool ApostleReader_t::IsIllustris(hid_t file)
-{
+{//TODO: rely on config param to decide
       stringstream grpname;
 	grpname<<"PartType"<<3;
 	if(H5Lexists(file, grpname.str().c_str(), H5P_DEFAULT)){
@@ -56,13 +56,10 @@ void ApostleReader_t::GetFileName(int ifile, string &filename)
 
 void ApostleReader_t::GetIllustrisGroupName(int ifile, string &filename)
 {
-  string subname=SnapshotName;
-  subname.erase(0, 8);
-  stringstream formatter;
-  formatter<<"groups_"<<setw(3)<<setfill('0')<<subname;
-  SnapshotName=formatter.str();
+  string group_snap=SnapshotName;
+  group_snap.replace(0,7,"groups"); //change snapdir_xxx to groups_xxx
   stringstream formatter_group;
-  formatter_group<<HBTConfig.SnapshotPath<<"/"<<SnapshotName<<"/"<<SnapshotName<<"."<<ifile<<".hdf5";
+  formatter_group<<HBTConfig.HaloPath<<"/"<<group_snap<<"/"<<group_snap<<"."<<ifile<<".hdf5";
   filename=formatter_group.str();
 }
 
