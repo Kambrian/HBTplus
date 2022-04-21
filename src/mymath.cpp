@@ -20,7 +20,7 @@ std::ostream& operator << (std::ostream& o, HBTxyz &a)
    return o;
 };
 	
-HBTInt compile_offset(HBTInt Len[], HBTInt Offset[], HBTInt n)
+HBTInt CompileOffsets(HBTInt Len[], HBTInt Offset[], HBTInt n)
 {//fill offset info, and return total length.
   HBTInt i,offset;
   for(i=0,offset=0;i<n;i++)

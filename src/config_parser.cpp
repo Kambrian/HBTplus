@@ -110,7 +110,7 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   TreeNodeResolutionHalf=TreeNodeResolution/2.;
   TreeNodeOpenAngleSquare=TreeNodeOpenAngle*TreeNodeOpenAngle;
   
-  if(GroupFileFormat=="apostle_particle_index"||GroupFileFormat=="jing_index")
+  if(GroupFileFormat=="apostle_particle_index"||GroupFileFormat=="jing_index"||GroupFileFormat=="illustris_particle_index")
 	GroupLoadedIndex=true;
   
   ReadSnapshotNameList();

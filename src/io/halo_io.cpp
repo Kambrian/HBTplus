@@ -29,8 +29,10 @@ void HaloSnapshot_t::Load(int snapshot_index)
   
   if(GadgetGroup::IsGadgetGroup(GroupFileFormat))
 	TotNumberOfParticles=GadgetGroup::Load(SnapshotId, Halos);
-  else if(IsApostleGroup(GroupFileFormat))
-	TotNumberOfParticles=ApostleReader_t().LoadGroups(SnapshotId, Halos);
+  else if(Apostle::IsApostleGroup(GroupFileFormat))
+	TotNumberOfParticles=Apostle::ApostleReader_t().LoadApostleGroups(SnapshotId, Halos);
+  else if(Apostle::IsIllustrisGroup(GroupFileFormat))
+	TotNumberOfParticles=Apostle::ApostleReader_t().LoadIllustrisGroups(SnapshotId, Halos);
 #ifdef USE_JING_IO
   else if(JingGroup::IsJingGroup(HBTConfig.GroupFileFormat))
 	TotNumberOfParticles=JingGroup::LoadGroup(SnapshotId, Halos);

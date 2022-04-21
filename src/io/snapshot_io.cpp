@@ -25,9 +25,9 @@ void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
   {
 	GadgetReader_t(SnapshotId, Particles, Cosmology);
   }
-  else if(HBTConfig.SnapshotFormat=="apostle")
+  else if(HBTConfig.SnapshotFormat=="apostle"||HBTConfig.SnapshotFormat=="illustris")
   {
-	ApostleReader_t().LoadSnapshot(SnapshotId, Particles, Cosmology);
+	Apostle::ApostleReader_t().LoadSnapshot(SnapshotId, Particles, Cosmology);
   }
 #ifdef USE_JING_IO
   else if(HBTConfig.SnapshotFormat=="jing")

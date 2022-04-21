@@ -82,11 +82,22 @@ inline void copyHBTxyz(HBTxyz &dest, const T src[3])
   dest[2]=src[2];
 }
 template <class T1, class T2>
-inline void copyXYZ(T1 & dest, const T2 src)
+inline void copyXYZ(T1 & dest, const T2 &src)
 {
   dest[0]=src[0];
   dest[1]=src[1];
   dest[2]=src[2];
+}
+
+template <class T1, class T2>
+inline void copy_6val(T1 & dest, const T2 &src)
+{
+  dest[0]=src[0];
+  dest[1]=src[1];
+  dest[2]=src[2];
+  dest[3]=src[3];
+  dest[4]=src[4];
+  dest[5]=src[5];
 }
 
 namespace SpecialConst

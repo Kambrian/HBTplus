@@ -15,114 +15,166 @@ using namespace std;
 #include "../hdf_wrapper.h"
 #include "apostle_io.h"
 
-bool ApostleReader_t::IsIllustris(hid_t file)
-{//TODO: rely on config param to decide
-      stringstream grpname;
-	grpname<<"PartType"<<3;
-	if(H5Lexists(file, grpname.str().c_str(), H5P_DEFAULT)){
-            hid_t type3_data=H5Gopen2(file, grpname.str().c_str(), H5P_DEFAULT);
-            if(H5Lexists(type3_data, "ParentID", H5P_DEFAULT)){
-                  return true;
-            }
-	}
-      return false;
-}
+#define PartTypeTracer 3
 
-void ApostleReader_t::SetSnapshot(int snapshotId)
+namespace Apostle
 {
+void ApostleSnap_t::SetSnapshot(int snapshotId)
+{
+  SnapIsIllustris=IsIllustrisSnap(HBTConfig.SnapshotFormat);
+  if(SnapIsIllustris)
+    SnapDirBaseName="snapdir";
+  else
+    SnapDirBaseName="snapshot";
+  
+//   SnapshotId=snapshotId;
   if(HBTConfig.SnapshotNameList.empty())
   {
 	stringstream formatter;
-	formatter<<"snapshot_"<<setw(3)<<setfill('0')<<snapshotId;
+	formatter<<SnapDirBaseName<<"_"<<setw(3)<<setfill('0')<<snapshotId;
 	SnapshotName=formatter.str();
   }
   else
 	SnapshotName=HBTConfig.SnapshotNameList[snapshotId];
 }
 
-void ApostleReader_t::GetFileName(int ifile, string &filename)
+void ApostleHeader_t::GetFileName(int ifile, string &filename)
 {
   string subname=SnapshotName;
-  subname.erase(4, 4);//i.e., remove "shot" from "snapshot" or "snipshot"
-  //the SnapshotName of illustris data is snapdir_XXX,which only has three letters between "snap" and "_"
-  //the following lines add the eliminated "_" for illustris data
-  if(subname[4]!='_'){
-      subname.insert(4,"_");
-  }
+  if(SnapIsIllustris)
+      subname.erase(4,3);//remove "dir" from "snapdir"
+  else
+      subname.erase(4, 4);//i.e., remove "shot" from "snapshot" or "snipshot"
   stringstream formatter;
   formatter<<HBTConfig.SnapshotPath<<"/"<<SnapshotName<<"/"<<subname<<"."<<ifile<<".hdf5";
   filename=formatter.str();
 }
 
-void ApostleReader_t::GetIllustrisGroupName(int ifile, string &filename)
+void ApostleHeader_t::GetParticleCountInFile(hid_t file, HBTInt np[])
 {
-  string group_snap=SnapshotName;
-  group_snap.replace(0,7,"groups"); //change snapdir_xxx to groups_xxx
-  stringstream formatter_group;
-  formatter_group<<HBTConfig.HaloPath<<"/"<<group_snap<<"/"<<group_snap<<"."<<ifile<<".hdf5";
-  filename=formatter_group.str();
+  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_HBTInt, np);
+  //PartType3 in illustris is TRACERS,which is not information of particles
+  if(SnapIsIllustris) np[PartTypeTracer]=0;
+#ifdef DM_ONLY
+  for(int i=0;i<TypeMax;i++)
+	if(i!=TypeDM) np[i]=0;
+#endif
 }
 
-void ApostleReader_t::ReadHeader(int ifile, ApostleHeader_t &header)
+void ApostleHeader_t::ReadFileHeader(int ifile)
 {
   string filename;
   GetFileName(ifile, filename);
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  ReadAttribute(file, "Header", "NumFilesPerSnapshot", H5T_NATIVE_INT, &Header.NumberOfFiles);
-  ReadAttribute(file, "Header", "BoxSize", H5T_NATIVE_DOUBLE, &Header.BoxSize);
-  assert((HBTReal)Header.BoxSize==HBTConfig.BoxSize);
-  ReadAttribute(file, "Header", "Time", H5T_NATIVE_DOUBLE, &Header.ScaleFactor);
-  ReadAttribute(file, "Header", "Omega0", H5T_NATIVE_DOUBLE, &Header.OmegaM0);
-  ReadAttribute(file, "Header", "OmegaLambda", H5T_NATIVE_DOUBLE, &Header.OmegaLambda0);
-  ReadAttribute(file, "Header", "MassTable", H5T_NATIVE_DOUBLE, Header.mass);
-//   cout<<Header.mass[0]<<","<<Header.mass[1]<<","<<Header.mass[2]<<endl;
-  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, Header.npart);
+  ReadAttribute(file, "Header", "NumFilesPerSnapshot", H5T_NATIVE_INT, &NumberOfFiles);
+  ReadAttribute(file, "Header", "BoxSize", H5T_NATIVE_DOUBLE, &BoxSize);
+  assert((HBTReal)BoxSize==HBTConfig.BoxSize);
+  ReadAttribute(file, "Header", "Time", H5T_NATIVE_DOUBLE, &ScaleFactor);
+  ReadAttribute(file, "Header", "Omega0", H5T_NATIVE_DOUBLE, &OmegaM0);
+  ReadAttribute(file, "Header", "OmegaLambda", H5T_NATIVE_DOUBLE, &OmegaLambda0);
+  ReadAttribute(file, "Header", "MassTable", H5T_NATIVE_DOUBLE, Mass);
+//   cout<<Mass[0]<<","<<Mass[1]<<","<<Mass[2]<<endl;
+  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_HBTInt, NumPart.data());
 
   unsigned np[TypeMax], np_high[TypeMax];
   ReadAttribute(file, "Header", "NumPart_Total", H5T_NATIVE_UINT, np);
   ReadAttribute(file, "Header", "NumPart_Total_HighWord", H5T_NATIVE_UINT, np_high);
   for(int i=0;i<TypeMax;i++)
-	Header.npartTotal[i]=(((unsigned long)np_high[i])<<32)|np[i];
-  is_illustris=IsIllustris(file);
-  //PartType3 in illustris is TRACERS,which is not information of particles
-  if(is_illustris){
-      Header.npartTotal[3]=0;
+	NumPartTotal[i]=(((unsigned long)np_high[i])<<32)|np[i];
+  //Skip Tracers in Illustris. TODO: the gas particles in Illustris are moving cells, not completely Lagrangian. may need special treatment
+  if(SnapIsIllustris) 
+  {
+    NumPart[PartTypeTracer]=0;
+    NumPartTotal[PartTypeTracer]=0;
   }
+  #ifdef DM_ONLY
+  for(int i=0;i<TypeMax;i++)
+	if(i!=TypeDM) NumPartTotal[i]=0;
+  #endif
   H5Fclose(file);
 }
-void ApostleReader_t::GetParticleCountInFile(hid_t file, int np[])
-{
-  ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, np);
-#ifdef DM_ONLY
-  for(int i=0;i<TypeMax;i++)
-	if(i!=TypeDM) np[i]=0;
-#endif
-  //PartType3 in illustris is TRACERS,which is not information of particles
-  if(is_illustris){
-      np[3]=0;
-  }
-}
-HBTInt ApostleReader_t::CompileFileOffsets(int nfiles)
-{
-  HBTInt offset=0;
-  np_file.reserve(nfiles);
-  offset_file.reserve(nfiles);
-  for(int ifile=0;ifile<nfiles;ifile++)
-  {
-	offset_file.push_back(offset);
 
-	int np_this[TypeMax];
+void ApostleHeader_t::CompileTypeOffsets()
+{
+  NumPartAll=CompileOffsets(NumPartTotal.begin(), NumPartTotal.end(), TypeOffsetInMem.begin());
+  
+  NumPartEachFile.resize(NumberOfFiles);
+  FileOffsetInType.resize(NumberOfFiles);
+  
+  TypeCounts_t offset_in_type={};
+  
+  for(int ifile=0;ifile<NumberOfFiles;ifile++)
+  {
+	auto &np_type=NumPartEachFile[ifile];
 	string filename;
 	GetFileName(ifile, filename);
 	hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-	GetParticleCountInFile(file, np_this);
+	GetParticleCountInFile(file, np_type.data());
 	H5Fclose(file);
-	HBTInt np=accumulate(begin(np_this), end(np_this), (HBTInt)0);
-
-	np_file.push_back(np);
-	offset+=np;
+        
+    FileOffsetInType[ifile]=offset_in_type;
+    for(int itype=0;itype<TypeMax;itype++)
+        offset_in_type[itype]+=np_type[itype];
   }
-  return offset;
+}
+
+void ApostleHeader_t::Fill(int snapshotId)
+{
+    SetSnapshot(snapshotId);
+    ReadFileHeader(0);
+    CompileTypeOffsets();
+}
+
+void IllustrisGroupHeader_t::GetFileName(int ifile, string &filename)
+{
+  string snap_idname=SnapshotName.substr(SnapshotName.size()-3); //last 3 chars
+  string group_snap="groups_"+snap_idname; 
+  stringstream formatter, formatter2;
+  formatter<<HBTConfig.HaloPath<<"/"<<group_snap<<"/fof_subhalo_tab_"<<snap_idname<<"."<<ifile<<".hdf5";
+  formatter2<<HBTConfig.HaloPath<<"/"<<group_snap<<"/"<<group_snap<<"."<<ifile<<".hdf5"; //old illustris
+  filename=formatter.str();
+  if(!file_exist(filename.c_str()))
+      filename=formatter2.str();
+}
+
+void IllustrisGroupHeader_t::ReadFileHeader(int ifile)
+{
+  string filename;
+  GetFileName(ifile, filename);
+  hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  ReadAttribute(file, "Header", "NumFiles", H5T_NATIVE_INT, &NumFiles);
+  ReadAttribute(file, "Header", "Ngroups_ThisFile", H5T_HBTInt, &NumGroupsThisFile);
+  ReadAttribute(file, "Header", "Ngroups_Total", H5T_HBTInt, &NumGroupsTotal);
+  H5Fclose(file);
+}
+
+void IllustrisGroupHeader_t::CompileFileOffsets()
+{
+    GroupFileLen.resize(NumFiles);
+    GroupFileOffset.resize(NumFiles);
+    
+    HBTInt ngroups, offset=0;
+    for(int ifile=0;ifile<NumFiles;ifile++)
+    {
+        string filename;
+        GetFileName(ifile, filename);
+        hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+        ReadAttribute(file, "Header", "Ngroups_ThisFile", H5T_HBTInt, &ngroups);
+        H5Fclose(file);
+        
+        GroupFileLen[ifile]=ngroups;
+        GroupFileOffset[ifile]=offset;
+        offset+=ngroups;
+    }
+    
+    assert(offset==NumGroupsTotal);
+}
+
+void IllustrisGroupHeader_t::Fill(int snapshotId)
+{
+    SetSnapshot(snapshotId);
+    ReadFileHeader(0);
+    CompileFileOffsets();
 }
 
 static void check_id_size(hid_t loc)
@@ -134,23 +186,20 @@ static void check_id_size(hid_t loc)
   H5Tclose(dtype);
   H5Dclose(dset);
 }
-void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
+void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *Particles)
 {
   string filename;
-  GetFileName(ifile, filename);
+  SnapHeader.GetFileName(ifile, filename);
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  vector <int> np_this(TypeMax);
-  vector <HBTInt> offset_this(TypeMax);
-  GetParticleCountInFile(file, np_this.data());
-  CompileOffsets(np_this, offset_this);
+  auto &np_this=SnapHeader.NumPartEachFile[ifile];
 
-  HBTReal vunit=sqrt(Header.ScaleFactor);
-  HBTReal boxsize=Header.BoxSize;
+  HBTReal vunit=sqrt(SnapHeader.ScaleFactor);
+  HBTReal boxsize=SnapHeader.BoxSize;
   for(int itype=0;itype<TypeMax;itype++)
   {
 	int np=np_this[itype];
 	if(np==0) continue;
-	auto ParticlesThisType=ParticlesInFile+offset_this[itype];
+	auto ParticlesThisType=Particles+SnapHeader.TypeOffsetInMem[itype]+SnapHeader.FileOffsetInType[ifile][itype];//order type by type globally, and file by file in each type
 	stringstream grpname;
 	grpname<<"PartType"<<itype;
 	if(!H5Lexists(file, grpname.str().c_str(), H5P_DEFAULT)) continue;
@@ -192,7 +241,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 
 #ifndef DM_ONLY
 	//mass
-	if(Header.mass[itype]==0)
+	if(SnapHeader.Mass[itype]==0)
 	{
 	  vector <HBTReal> m(np);
 	  if(H5Lexists(particle_data, "Masses", H5P_DEFAULT))
@@ -205,7 +254,7 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	else
 	{
 	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].Mass=Header.mass[itype];
+		ParticlesThisType[i].Mass=SnapHeader.Mass[itype];
 	}
 
 	//internal energy
@@ -237,21 +286,18 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
   H5Fclose(file);
 }
 
-void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bool FlagReadParticleId)
-{
+void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *Particles, bool FlagReadParticleId)
+{//read apostle group HostIds
   string filename;
-  GetFileName(ifile, filename);
+  SnapHeader.GetFileName(ifile, filename);
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  vector <int> np_this(TypeMax);
-  vector <HBTInt> offset_this(TypeMax);
-  GetParticleCountInFile(file, np_this.data());
-  CompileOffsets(np_this, offset_this);
+  auto &np_this=SnapHeader.NumPartEachFile[ifile];
 
   for(int itype=0;itype<TypeMax;itype++)
   {
 	int np=np_this[itype];
 	if(np==0) continue;
-	auto ParticlesThisType=ParticlesInFile+offset_this[itype];
+	auto ParticlesThisType=Particles+SnapHeader.TypeOffsetInMem[itype]+SnapHeader.FileOffsetInType[ifile][itype];//order type by type globally, and file by file in each type
 	stringstream grpname;
 	grpname<<"PartType"<<itype;
 	if(!H5Lexists(file, grpname.str().c_str(), H5P_DEFAULT)) continue;
@@ -278,57 +324,49 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bo
 
   H5Fclose(file);
 }
-void ApostleReader_t::ReadIllustrisGroup(int ifile, int itype,int &offset,ParticleHost_t *ParticlesInFile, bool FlagReadParticleId)
-{
+
+void ApostleReader_t::ReadParticleIDs(int ifile, HBTInt *ParticleIDs)
+{//Read ID only
   string filename;
-  GetFileName(ifile, filename);
+  SnapHeader.GetFileName(ifile, filename);
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  vector <int> np_this(TypeMax);
-  vector <HBTInt> offset_this(TypeMax);
-  GetParticleCountInFile(file, np_this.data());
-  CompileOffsets(np_this, offset_this);
+  auto &np_this=SnapHeader.NumPartEachFile[ifile];
 
-  int np=np_this[itype];
-  if(np!=0 ){
-      auto ParticlesThisType=ParticlesInFile+offset;
-      stringstream grpname;
-      grpname<<"PartType"<<itype;
-      if(H5Lexists(file, grpname.str().c_str(), H5P_DEFAULT)) {
-            hid_t particle_data=H5Gopen2(file, grpname.str().c_str(), H5P_DEFAULT);
+  for(int itype=0;itype<TypeMax;itype++)
+  {
+	int np=np_this[itype];
+	if(np==0) continue;
+	auto ParticlesThisType=ParticleIDs+SnapHeader.TypeOffsetInMem[itype]+SnapHeader.FileOffsetInType[ifile][itype];//order type by type globally, and file by file in each type
+	stringstream grpname;
+	grpname<<"PartType"<<itype;
+	if(!H5Lexists(file, grpname.str().c_str(), H5P_DEFAULT)) continue;
+	hid_t particle_data=H5Gopen2(file, grpname.str().c_str(), H5P_DEFAULT);
+// 	if(particle_data<0) continue; //skip non-existing type
 
-            if(FlagReadParticleId)
-            {//id
-                  check_id_size(particle_data);
-                  vector <HBTInt> id(np);
-                  ReadDataset(particle_data, "ParticleIDs", H5T_HBTInt, id.data());
-                  for(int i=0;i<np;i++)
-                        ParticlesThisType[i].ParticleId=id[i];
-            }
+	check_id_size(particle_data);
+    ReadDataset(particle_data, "ParticleIDs", H5T_HBTInt, ParticlesThisType);
 
-            H5Gclose(particle_data);
-      }
+	H5Gclose(particle_data);
   }
-  offset=offset+np;//offset for this data type by file
+
   H5Fclose(file);
 }
 
 void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology)
 {
-  SetSnapshot(snapshotId);
-  ReadHeader(0, Header);
-  Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
-  Cosmology.ParticleMass=Header.mass[TypeDM];
-  HBTInt np=CompileFileOffsets(Header.NumberOfFiles);
-  Particles.resize(np);
-
+  SnapHeader.Fill(snapshotId);
+  Cosmology.Set(SnapHeader.ScaleFactor, SnapHeader.OmegaM0, SnapHeader.OmegaLambda0);
+  Cosmology.ParticleMass=SnapHeader.Mass[TypeDM];
+  
+  Particles.resize(SnapHeader.NumPartAll);
 #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
-  for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
+  for(int iFile=0; iFile<SnapHeader.NumberOfFiles; iFile++)
   {
-	ReadSnapshot(iFile, Particles.data()+offset_file[iFile]);
+	ReadSnapshot(iFile, Particles.data());
 	cout<<iFile<<" "<<flush;
   }
   cout<<endl;
-  cout<<" ( "<<Header.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
+  cout<<" ( "<<SnapHeader.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 //   cout<<" Particle[0]: x="<<Particles[0].ComovingPosition<<", v="<<Particles[0].PhysicalVelocity<<", m="<<Particles[0].Mass<<endl;
 //   cout<<" Particle[2]: x="<<Particles[2].ComovingPosition<<", v="<<Particles[2].PhysicalVelocity<<", m="<<Particles[2].Mass<<endl;
 //   cout<<" Particle[end]: x="<<Particles.back().ComovingPosition<<", v="<<Particles.back().PhysicalVelocity<<", m="<<Particles.back().Mass<<endl;
@@ -339,136 +377,17 @@ inline bool CompParticleHost(const ParticleHost_t &a, const ParticleHost_t &b)
   return a.HostId<b.HostId;
 }
 
-HBTInt ApostleReader_t::LoadGroups(int snapshotId, vector< Halo_t >& Halos)
+HBTInt ApostleReader_t::LoadApostleGroups(int snapshotId, vector< Halo_t >& Halos)
 {
-  typedef array <HBTInt, 6> HBTgroup;
-
-  SetSnapshot(snapshotId);
-  ReadHeader(0, Header);
-  HBTInt NumberOfParticles=CompileFileOffsets(Header.NumberOfFiles);
-  vector <ParticleHost_t> Particles(NumberOfParticles);
+  SnapHeader.Fill(snapshotId);
+  vector <ParticleHost_t> Particles(SnapHeader.NumPartAll);
   bool FlagReadId=!HBTConfig.GroupLoadedIndex;
 
-if(is_illustris){
-//Offsets by type for all files
-  vector <HBTInt> offsets(TypeMax);
-  for (int itype=0;itype<TypeMax;itype++)
-      {
-            offsets[itype+1]=offsets[itype]+Header.npartTotal[itype];
-      }
-
   cout<<"reading group files: ";
-//read snapshot first by type ,then by file
-#pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
-  for (int itype=0;itype<TypeMax;itype++)
-  {
-      int off=0;
-      for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
-      {
-            ReadIllustrisGroup(iFile,itype,off, Particles.data()+offsets[itype],1);
-            if(itype==5){
-            cout<<iFile<<" "<<flush;
-            }
-      }
-  }
-  cout<<endl;
-
-//read head of group file
-  string filename;
-  GetIllustrisGroupName(0, filename);
-  hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  HBTInt NumGroups=0;
-  HBTInt Numfiles=0;
-  ReadAttribute(file, "Header", "Ngroups_Total", H5T_NATIVE_INT, &NumGroups);
-  ReadAttribute(file, "Header", "NumFiles", H5T_NATIVE_INT, &Numfiles);
-  H5Fclose(file);
-
-//read group file
-  vector <HBTgroup> group_offsets(NumGroups);
-  HBTInt j=0;//the index for group_offset
-  HBTInt j_original=0;
-  for(HBTInt i=0;i<Numfiles;i++)
-  {
-	string filename;
-	GetIllustrisGroupName(i, filename);
-      hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-
-      HBTInt NumGroups_thisfile=0;
-      ReadAttribute(file, "Header", "Ngroups_ThisFile", H5T_NATIVE_INT, &NumGroups_thisfile);
-
-	stringstream grpname;
-	grpname<<"Offsets";
-	hid_t group_data=H5Gopen2(file, grpname.str().c_str(), H5P_DEFAULT);
-
-      vector <HBTgroup> group_offsets_this(NumGroups_thisfile);
-      ReadDataset(group_data, "Group_SnapByType",H5T_HBTInt, group_offsets_this.data());
-      j_original=j;
-      HBTInt k=0;
-      while (j<j_original+NumGroups_thisfile)
-      {
-            group_offsets[j]=group_offsets_this[k];
-            j=j+1;
-            k=k+1;
-      }
-
-	H5Gclose(group_data);
-
-      H5Fclose(file);
-  }
-
-  vector <HBTInt> group_offsets_alltype(NumGroups);
-  HBTInt k=0;
-  while (k<NumGroups)
-      {
-            group_offsets_alltype[k]=group_offsets[k][0]+group_offsets[k][1]+group_offsets[k][2]+group_offsets[k][3]+group_offsets[k][4]+group_offsets[k][5];
-            k=k+1;
-      }
-
-  Halos.resize(NumGroups-1);
-	for(HBTInt i=0;i<NumGroups-1;i++)
-	{
-	  HBTInt np=group_offsets_alltype[i+1]-group_offsets_alltype[i];
-	  auto &p=Halos[i].Particles;
-	  p.resize(np);
-	  auto p_in=Particles.data();
-	  //Offsets for single group by type
-	  vector <HBTInt> single_group_offsets(TypeMax);
-	  single_group_offsets[0]=group_offsets[i+1][0]-group_offsets[i][0];
-	  for (int itype=1;itype<TypeMax;itype++)
-        {
-            single_group_offsets[itype]=single_group_offsets[itype-1]+group_offsets[i+1][itype]-group_offsets[i][itype];
-        }
-        auto p_in_o=p_in;
-	  p_in=p_in+group_offsets[i][0];
-	  int k=0;
-	  for(HBTInt j=0;j<single_group_offsets[0];j++){
-                  p[j]=p_in[k].ParticleId;
-                  k=k+1;
-            }
-        for (int itype=1;itype<TypeMax;itype++)
-        {
-            p_in=p_in_o+offsets[itype]+group_offsets[i][itype];
-            int k=0;
-	      for(HBTInt j=single_group_offsets[itype-1];j<single_group_offsets[itype];j++){
-                  p[j]=p_in[k].ParticleId;
-                  k=k+1;
-            }
-	  }
-	}
-
-  cout<<Halos.size()<<" groups loaded";
-  if(Halos.size()) cout<<" : "<<Halos[0].Particles.size();
-  if(Halos.size()>1) cout<<","<<Halos[1].Particles.size()<<"...";
-  cout<<endl;
-
-  return NumberOfParticles;
-}
-else{
-cout<<"reading group files: ";
   #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
-  for(int iFile=0; iFile<Header.NumberOfFiles; iFile++)
+  for(int iFile=0; iFile<SnapHeader.NumberOfFiles; iFile++)
   {
-	ReadGroupId(iFile, Particles.data()+offset_file[iFile], FlagReadId);
+	ReadGroupId(iFile, Particles.data(), FlagReadId);
 	cout<<iFile<<" "<<flush;
   }
   cout<<endl;
@@ -476,7 +395,7 @@ cout<<"reading group files: ";
   if(!FlagReadId)
   {//fill with index
 	#pragma omp parallel for
-	for(HBTInt i=0;i<NumberOfParticles;i++)
+	for(HBTInt i=0;i<SnapHeader.NumPartAll;i++)
 	  Particles[i].ParticleId=i;
   }
 
@@ -522,9 +441,106 @@ cout<<"reading group files: ";
 
   return imax;
 }
+
+HBTInt ApostleReader_t::LoadIllustrisGroups(int snapshotId, vector< Halo_t >& Halos)
+{
+//   typedef array <HBTInt, 6> HBTgroup;
+
+  SnapHeader.Fill(snapshotId);
+  GroupHeader.Fill(snapshotId);
+  Halos.resize(GroupHeader.NumGroupsTotal);
+  
+  vector <TypeCounts_t> GroupLenType, GroupOffsetType;
+  GroupLenType.resize(GroupHeader.NumGroupsTotal);
+  GroupOffsetType.resize(GroupHeader.NumGroupsTotal);
+  
+  #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+  for(int ifile=0;ifile<GroupHeader.NumFiles;ifile++)
+  {
+    string filename;
+    GroupHeader.GetFileName(ifile, filename);
+    hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+    ReadDataset(file, "Group/GroupLenType", H5T_HBTInt, GroupLenType.data()+GroupHeader.GroupFileOffset[ifile]);
+    H5Fclose(file);
+   }
+   
+   
+  #pragma omp parallel for
+  for(int igrp=0;igrp<GroupHeader.NumGroupsTotal;igrp++)
+  {
+    GroupLenType[igrp][PartTypeTracer]=0;//skip tracers
+    int np=0;
+    for(int itype=0;itype<TypeMax;itype++)
+        np+=GroupLenType[igrp][itype];
+    Halos[igrp].Particles.resize(np);
+  }
+  
+  //TODO: test if offset file exist, if yes, read it to fill the offset
+  
+  TypeCounts_t type_offset=SnapHeader.TypeOffsetInMem;
+  #pragma omp parallel for
+  for(int itype=0;itype<TypeMax;itype++)
+  {
+    for(int igrp=0;igrp<GroupHeader.NumGroupsTotal;igrp++)
+    {
+        GroupOffsetType[igrp][itype]=type_offset[itype];
+        type_offset[itype]+=GroupLenType[igrp][itype];
+    }
+  }
+  
+  #pragma omp parallel for
+  for(int igrp=0;igrp<GroupHeader.NumGroupsTotal;igrp++)
+  {
+    int offset_local=0;
+    for(int itype=0;itype<TypeMax;itype++)
+    {
+        int np_thistype=GroupLenType[igrp][itype];
+        HBTInt pid=GroupOffsetType[igrp][itype];
+        auto particles=Halos[igrp].Particles.data()+offset_local;
+        offset_local+=np_thistype;
+        for(int i=0;i<np_thistype;i++)
+            particles[i]=pid++;
+    }
+  }
+    
+  
+  bool FlagReadId=!HBTConfig.GroupLoadedIndex;
+  if(FlagReadId)
+  {
+    vector <HBTInt> ParticleIDs(SnapHeader.NumPartAll);
+    #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+    for(int iFile=0; iFile<SnapHeader.NumberOfFiles; iFile++)
+        ReadParticleIDs(iFile, ParticleIDs.data());
+        
+    #pragma omp parallel for 
+    for(int igrp=0; igrp<Halos.size();igrp++)
+    {
+        auto &particles=Halos[igrp].Particles;
+        for(int i=0;i<particles.size();i++)
+            particles[i]=ParticleIDs[particles[i]]; //convert index to id
+    }
+  }
+
+  cout<<Halos.size()<<" groups loaded";
+  if(Halos.size()) cout<<", np= "<<Halos[0].Particles.size();
+  if(Halos.size()>1) cout<<","<<Halos[1].Particles.size()<<"...";
+  cout<<endl;
+
+  return Halos.size();
 }
 
 bool IsApostleGroup(const string &GroupFileFormat)
 {
   return GroupFileFormat.substr(0, 7)=="apostle";
+}
+
+bool IsIllustrisGroup(const string &GroupFileFormat)
+{
+    return GroupFileFormat.substr(0,9)=="illustris";
+}
+
+bool IsIllustrisSnap(const string &SnapshotFormat)
+{
+    return SnapshotFormat.substr(0,9)=="illustris";
+}
 }

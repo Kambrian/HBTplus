@@ -1,9 +1,15 @@
 /* IO for Apostle (EAGLE local group) data.
  *
  * To specify a list of snapshot, list the snapshot directories (one per line) in snapshotlist.txt and place it under your subhalo output directory.
+ * 
+ * This IO supports the following formats:
+ *   SnapshotFormat: apostle, illustris
+ *   GroupFileFormat: apostle, apostle_particle_index,  //for eagle or apostle data
+ *                    illustris, illustris_particle_index //for illustris or illustrisTNG data.
+ * 
+ * specifying `apostle_particle_index` or `illustris_particle_index` format will cause ApostleReader to fill the groups with particle indices that directly maps to the snapshot, saving any effort for translating from id to index later. If it is disirable to fill the groups with actual particle ids, please use `apostle` or `illustris` for the group format.
  *
- * To use this IO, in the config file, set SnapshotFormat to apostle,  and set GroupFileFormat to apostle or apostle_particle_index.
- *
+ * The particles are loaded into snapshot memory type by type, loading first type file by file and then next type..
  */
 
 #ifndef APOSTLE_IO_INCLUDED
@@ -11,16 +17,57 @@
 #include "../hdf_wrapper.h"
 #include "../halo.h"
 
-struct ApostleHeader_t
+namespace Apostle{
+
+typedef array <HBTInt, TypeMax> TypeCounts_t;
+
+struct ApostleSnap_t
 {
+  bool SnapIsIllustris;
+//   int SnapshotId;
+  string SnapDirBaseName;
+  string SnapshotName;
+  
+  void SetSnapshot(int snapshotId);
+};
+
+class ApostleHeader_t: public ApostleSnap_t
+{
+  void GetParticleCountInFile(hid_t file, HBTInt np[]);
+  void ReadFileHeader(int ifile);
+  void CompileTypeOffsets();
+public:    
   int      NumberOfFiles;
   double   BoxSize;
   double   ScaleFactor;
   double   OmegaM0;
   double   OmegaLambda0;
-  double   mass[TypeMax];
-  int      npart[TypeMax];
-  HBTInt npartTotal[TypeMax];
+  double   Mass[TypeMax];
+  TypeCounts_t  NumPart;
+  TypeCounts_t NumPartTotal;
+  HBTInt NumPartAll;
+  
+  TypeCounts_t TypeOffsetInMem; //offsets (in particles) of each type in the global particle array
+  vector<TypeCounts_t> NumPartEachFile; //TypeCount in each file 
+  vector<TypeCounts_t> FileOffsetInType; //cumsum(NumPartTypeFile, axis=file), sum over previous files for each type
+  
+  void GetFileName(int ifile, string &filename);
+  void Fill(int snapshotId);
+};
+
+class IllustrisGroupHeader_t: public ApostleSnap_t
+{
+    void ReadFileHeader(int ifile);
+    void CompileFileOffsets();
+public:
+    int NumFiles;
+    int NumGroupsThisFile;
+    int NumGroupsTotal;
+    
+    vector<HBTInt> GroupFileLen, GroupFileOffset; //number of groups and offsets in groups for each file
+    
+    void GetFileName(int ifile, string &filename);
+    void Fill(int snapshotId);
 };
 
 struct ParticleHost_t
@@ -32,28 +79,22 @@ struct ParticleHost_t
 class ApostleReader_t
 {
   const int NullGroupId=1<<30; //1073741824
-  string SnapshotName;
-
-  vector <HBTInt> np_file;
-  vector <HBTInt> offset_file;
-  ApostleHeader_t Header;
-  bool is_illustris;
-  bool IsIllustris(hid_t file);
-  void ReadHeader(int ifile, ApostleHeader_t &header);
-  HBTInt CompileFileOffsets(int nfiles);
-  void ReadSnapshot(int ifile, Particle_t * ParticlesInFile);
-  void ReadGroupId(int ifile, ParticleHost_t *ParticlesInFile, bool FlagReadParticleId);
-  void ReadIllustrisGroup(int ifile, int itype,int &offset,ParticleHost_t *ParticlesInFile, bool FlagReadParticleId);
-  void GetFileName(int ifile, string &filename);
-  void GetIllustrisGroupName(int ifile, string &filename);
-  void SetSnapshot(int snapshotId);
-  void GetParticleCountInFile(hid_t file, int np[]);
-
-  hid_t CountTable_t, MassTable_t, H5T_HBTxyz;
+  
+  ApostleHeader_t SnapHeader;
+  IllustrisGroupHeader_t GroupHeader;
+  
+  void ReadSnapshot(int ifile, Particle_t * Particles);
+  void ReadGroupId(int ifile, ParticleHost_t *Particles, bool FlagReadParticleId);
+  void ReadParticleIDs(int ifile, HBTInt *ParticleIDs);
 public:
   void LoadSnapshot(int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology);
-  HBTInt LoadGroups(int snapshotId, vector <Halo_t> &Halos);
+  HBTInt LoadApostleGroups(int snapshotId, vector <Halo_t> &Halos);
+  HBTInt LoadIllustrisGroups(int snapshotId, vector <Halo_t> &Halos);
 };
 
 extern bool IsApostleGroup(const string &GroupFileFormat);
+extern bool IsIllustrisGroup(const string &GroupFileFormat);
+extern bool IsApostleSnap(const string &SnapshotFormat);
+extern bool IsIllustrisSnap(const string &GroupFileFormat);
+}
 #endif

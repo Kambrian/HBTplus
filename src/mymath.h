@@ -47,6 +47,8 @@ size_t CompileOffsets(CountIterator_t CountBegin, CountIterator_t CountEnd, Offs
   return offset;
 }
 
+extern HBTInt CompileOffsets(HBTInt Len[], HBTInt Offset[], HBTInt n);
+
 class Timer_t
 {
 public:
