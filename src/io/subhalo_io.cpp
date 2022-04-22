@@ -287,7 +287,8 @@ void SubhaloSnapshot_t::Save()
 //   writeHDFmatrix(file, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
   
   hid_t datagrp=H5Gcreate2(file, "/Membership", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  H5LTset_attribute_string(file,"/Membership","Comment","List of subhaloes in each group.");
+//   H5LTset_attribute_string(file,"/Membership","Comment","List of subhaloes in each group.");
+  SetStringAttribute(file,"/Membership","Comment","List of subhaloes in each group.");
   writeHDFmatrix(datagrp, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);
   writeHDFmatrix(datagrp, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
  
@@ -309,7 +310,8 @@ void SubhaloSnapshot_t::Save()
   vl[Ngroups].len=MemberTable.SubGroups[-1].size();
   vl[Ngroups].p=MemberTable.SubGroups[-1].data();
   writeHDFmatrix(datagrp, vl.data(), "GroupedTrackIds", ndim, dim_grp, H5T_HBTIntArr);
-  H5LTset_attribute_string(datagrp,"GroupedTrackIds","Comment","Nhalo+1 groups. The last group contain tracks outside any host halo (i.e., field subhaloes).");
+//   H5LTset_attribute_string(datagrp,"GroupedTrackIds","Comment","Nhalo+1 groups. The last group contain tracks outside any host halo (i.e., field subhaloes).");
+  SetStringAttribute(datagrp,"GroupedTrackIds","Comment","Nhalo+1 groups. The last group contain tracks outside any host halo (i.e., field subhaloes).");
   H5Gclose(datagrp);
    
   hsize_t dim_sub[]={Subhalos.size()};
@@ -386,7 +388,9 @@ void SubhaloSnapshot_t::Save()
 	vl[i].p=Subhalos[i].NestedSubhalos.data();
   }
   writeHDFmatrix(file, vl.data(), "NestedSubhalos", ndim, dim_sub, H5T_HBTIntArr);
-  H5LTset_attribute_string(file,"/NestedSubhalos","Comment","List of the TrackIds of first-level sub-subhaloes within each subhalo.");
+//   H5LTset_attribute_string(file,"/NestedSubhalos","Comment","List of the TrackIds of first-level sub-subhaloes within each subhalo.");
+  SetStringAttribute(file,"/NestedSubhalos","Comment","List of the TrackIds of first-level sub-subhaloes within each subhalo.");
+
   
 #ifdef SAVE_BINDING_ENERGY
   hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);

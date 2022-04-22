@@ -6,10 +6,10 @@ LDFLAGS+=-g
 LDLIBS+=$(HDFLIB) $(GSLLIB) $(OMPLIB) $(MATHLIB) 
 LINK.o=$(CXX) $(LDFLAGS) $(TARGET_ARCH) #invoke c++ compiler for linking
 
-HDFINC=-I/usr/include/hdf5/serial/
-HDFLIB=-L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5_hl -lhdf5
-#HDFINC=
-#HDFLIB=-lhdf5_hl -lhdf5
+#HDFINC=-I/usr/include/hdf5/serial/
+#HDFLIB=-L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5
+HDFINC=
+HDFLIB=-lhdf5
 HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header
 
 ###comment out the following lines if you do not have GSL (for eigenvalue decomposition of inertial tensors)

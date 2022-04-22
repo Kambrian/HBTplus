@@ -3,7 +3,7 @@
  * 
  * To use this reader, set
  * 
- *   GroupFileFormat hbt_group_format
+ *   GroupFileFormat hbt_group_hdf5
  * 
  * in config file.
  */
@@ -85,7 +85,8 @@ namespace HBTGroupIO
       vl[i].p=halos[i].data();
     }
     writeHDFmatrix(file, vl.data(), "HaloParticles", ndim, dim_grp, H5T_HBTIntArr);
-    H5LTset_attribute_string(file,"HaloParticles","Comment","List of particle ids in each group");
+//     H5LTset_attribute_string(file,"HaloParticles","Comment","List of particle ids in each group");
+    SetStringAttribute(file, "HaloParticles", "Comment", "List of particle ids in each group");
     
     H5Fclose(file);
     H5Tclose(H5T_HBTIntArr);

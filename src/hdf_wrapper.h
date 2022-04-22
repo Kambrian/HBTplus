@@ -2,7 +2,7 @@
 #define HDF_WRAPPER_INCLUDED
 
 #include "hdf5.h"
-#include "hdf5_hl.h"	
+// #include "hdf5_hl.h"	
 // #include "H5Cpp.h"
 #include <iostream>
 
@@ -18,6 +18,7 @@
 #endif
 
 extern void writeHDFmatrix(hid_t file, const void * buf, const char * name, hsize_t ndim, const hsize_t *dims, hid_t dtype, hid_t dtype_file);
+extern herr_t SetStringAttribute(hid_t loc_id, const char *obj_name, const char *attr_name, const char *content);
 
 inline int GetDatasetDims(hid_t dset, hsize_t dims[])
 {
