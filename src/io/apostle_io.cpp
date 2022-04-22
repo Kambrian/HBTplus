@@ -457,6 +457,7 @@ HBTInt ApostleReader_t::LoadIllustrisGroups(int snapshotId, vector< Halo_t >& Ha
   #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int ifile=0;ifile<GroupHeader.NumFiles;ifile++)
   {
+    if(GroupHeader.GroupFileLen[ifile]==0) continue; //skip empty files
     string filename;
     GroupHeader.GetFileName(ifile, filename);
     hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
