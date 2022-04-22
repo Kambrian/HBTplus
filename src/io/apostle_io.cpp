@@ -472,7 +472,12 @@ HBTInt ApostleReader_t::LoadIllustrisGroups(int snapshotId, vector< Halo_t >& Ha
     GroupLenType[igrp][PartTypeTracer]=0;//skip tracers
     int np=0;
     for(int itype=0;itype<TypeMax;itype++)
+    {
+        #ifdef DM_ONLY
+        if(itype!=TypeDM) GroupLenType[igrp][itype]=0; //clear other types
+        #endif
         np+=GroupLenType[igrp][itype];
+    }
     Halos[igrp].Particles.resize(np);
   }
   
