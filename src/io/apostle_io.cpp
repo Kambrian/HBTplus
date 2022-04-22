@@ -533,12 +533,14 @@ bool IsApostleGroup(const string &GroupFileFormat)
 {
   return GroupFileFormat.substr(0, 7)=="apostle";
 }
-
 bool IsIllustrisGroup(const string &GroupFileFormat)
 {
     return GroupFileFormat.substr(0,9)=="illustris";
 }
-
+bool IsApostleSnap(const string &SnapshotFormat)
+{
+    return SnapshotFormat.substr(0,7)=="apostle";
+}
 bool IsIllustrisSnap(const string &SnapshotFormat)
 {
     return SnapshotFormat.substr(0,9)=="illustris";
