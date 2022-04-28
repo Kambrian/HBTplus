@@ -62,6 +62,7 @@ include $(HBTDIR)/Makefile.jing_io
 $(TEST): CXXFLAGS+=-g -gdwarf-2 -O0
 
 SUBDIRS:=$(wildcard */.)
+SUBDIRS:=$(filter-out bias/. MW/., $(SUBDIRS))
 SUBDIRSCLEAN=$(addsuffix clean,$(SUBDIRS))
 
 clean: clean_curdir $(SUBDIRSCLEAN)
