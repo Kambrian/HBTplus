@@ -3,12 +3,16 @@ useful for decomposing the dataset into indepedent domains for semi-analytical g
 
 usage: 
 
-  from Track2Forest import AssignForestIds
-  TrackForest=AssignForestIds(subcatdir)
+    python Track2Forest.py [subcat_path] <outfile>
 
-#the TrackIds and ForestIds can now be accessed as TrackForest['TrackIds'], TrackForest['ForestIds']. You can also sort according to one of them, e.g.,
- 
-  TrackForest.sort(order='ForestId')
+If outputfile is not specified, then will write to subcat_path/TrackForest.hdf5
+
+
+The output file contains three datasets: TrackForest, ForestSize, ForestOffset
+The TrackIds and ForestIds can be accessed as TrackForest['TrackId'], TrackForest['ForestId']. 
+The tracks in each forest can be found as  
+        
+        TrackForest['TrackId'][ForestOffset[forest_id]:ForestOffset[forest_id+1]]
 
 '''
 
@@ -76,3 +80,37 @@ def AssignForestIds(datadir):
     
     return TrackForest
 
+def SaveForest(TrackForest, outfile):
+    
+    TrackForest.sort(order='ForestId')
+    
+    ForestSize=np.bincount(TrackForest['ForestId'])
+    ForestOffset=np.cumsum(ForestSize)
+    ForestOffset=np.concatenate(([0],ForestOffset)) #The last ForestOffset is the total size of TrackForest.
+    
+    f=h5py.File(outfile, 'w')
+    f.create_dataset('TrackForest', data=TrackForest)
+    f.create_dataset('ForestSize', data=ForestSize)
+    f.create_dataset('ForestOffset', data=ForestOffset)
+    f.create_dataset('Comment', data="the tracks in each forest can be found as  #TrackForest['TrackId'][ForestOffset[forest_id]:ForestOffset[forest_id+1]]")
+    f.close()
+
+
+if __name__ == '__main__':
+    import sys
+    argc=len(sys.argv)
+    if argc<2 or argc>3:
+        print('Usage: ')
+        print('     python '+sys.argv[0]+' [subcat_path] <outputfile> ')
+        print('     Aggregate connected tracks into forests for subcat at subcat_path, and write the forest decomposition to outfile in hdf5 format')
+        print('     If outputfile is not specified, then will write to subcat_path/TrackForest.hdf5\n')
+        sys.exit()
+    
+    subcatdir=sys.argv[1]
+    outfile=subcatdir+'/TrackForest.hdf5'
+    if argc>2:
+        outfile=sys.argv[2]
+
+
+    TrackForest=AssignForestIds(subcatdir)
+    SaveForest(TrackForest, outfile)
