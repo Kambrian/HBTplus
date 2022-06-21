@@ -444,7 +444,7 @@ void Subhalo_t::RecursiveUnbind(SubhaloList_t &Subhalos, const ParticleSnapshot_
     auto subid=NestedSubhalos[i];
 	auto &subhalo=Subhalos[subid];
 	subhalo.RecursiveUnbind(Subhalos, snap);
-	Particles.insert(Particles.end(), subhalo.Particles.begin()+subhalo.Nbound, subhalo.Particles.end());
+        Particles.insert(Particles.end(), subhalo.Particles.begin()+subhalo.Nbound, subhalo.Particles.end());//the mostbound particle of orphan is treated as bound and thus does not feed to its host subhalo. However, it can still be collected by the central subhalo as it is not masked out from the fof particles.
   }
   if(is_orphan)	Particles.swap(particle_backup);//restore to single particle for unbinding
   Unbind(snap);
