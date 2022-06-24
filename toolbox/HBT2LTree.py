@@ -236,7 +236,7 @@ class Tree_t:
             g.close()
 
 #subcatdir='/home/cossim/IllustrisTNG/Illustris-3/subcat'
-#groupcatdir='/home/cossim/IllustrisTNG/Illustris-3'
+#groupcatdir='/home/cossim/IllustrisTNG/Illustris-3/output'
 #nfiles_group=2
 #groupsize_filetype='Illustris'
 
