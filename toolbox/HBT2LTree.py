@@ -15,7 +15,7 @@ def LoadGroupMass(groupcatdir, nfiles_group, isnap):
     Group_M_Mean200=[]
     Group_M_TopHat=[]
     for ifile in range(nfiles_group):
-        with h5py.File(groupcatdir+'/groups_%03d/groups_%03d.%i'%(isnap, isnap, ifile), 'r') as f:
+        with h5py.File(groupcatdir+'/groups_%03d/groups_%03d.%i.hdf5'%(isnap, isnap, ifile), 'r') as f:
             Group_M_Crit200.append(f['Group_M_Crit200'][...])
             Group_M_Mean200.append(f['Group_M_Mean200'][...])
             Group_M_TopHat.append(f['Group_M_TopHat200'][...])
