@@ -53,7 +53,7 @@ def AssignForestIds(datadir):
 
     Subhalos=reader.LoadSubhalos(-1, ['TrackId'])
     HostHistory=[set() for i in Subhalos] #list of hosttrackIds for each subhalo
-    for isnap in xrange(reader.MinSnap, reader.MaxSnap+1, 1):
+    for isnap in range(reader.MinSnap, reader.MaxSnap+1, 1):
         Subhalos=reader.LoadSubhalos(isnap, ['TrackId','HostHaloId','Rank'])
         if Subhalos.size==0:
             continue
