@@ -16,9 +16,9 @@ def LoadGroupMass(groupcatdir, nfiles_group, isnap):
     Group_M_TopHat=[]
     for ifile in range(nfiles_group):
         with h5py.File(groupcatdir+'/groups_%03d/groups_%03d.%i.hdf5'%(isnap, isnap, ifile), 'r') as f:
-            Group_M_Crit200.append(f['Group_M_Crit200'][...])
-            Group_M_Mean200.append(f['Group_M_Mean200'][...])
-            Group_M_TopHat.append(f['Group_M_TopHat200'][...])
+            Group_M_Crit200.append(f['Group/Group_M_Crit200'][...])
+            Group_M_Mean200.append(f['Group/Group_M_Mean200'][...])
+            Group_M_TopHat.append(f['Group/Group_M_TopHat200'][...])
     Group_M_Crit200=np.concatenate(Group_M_Crit200)
     Group_M_Mean200=np.concatenate(Group_M_Mean200)
     Group_M_TopHat=np.concatenate(Group_M_TopHat)
@@ -44,6 +44,7 @@ class SnapAll_t:
         self.Snapshots=[]
         self.MinSnap=self.reader.MinSnap
         self.MaxSnap=self.reader.MaxSnap
+        self.ScaleFactors=[self.reader.GetScaleFactor(i) for i in range(self.MinSnap, self.MaxSnap+1)]
         field_list=['TrackId', 'HostHaloId', 'Rank', 'SnapshotIndexOfBirth', 'SnapshotIndexOfDeath', 
                     'SinkTrackId', 'MostBoundParticleId', 'Nbound',  'Mbound', 'RHalfComoving', 'VmaxPhysical', 
                     'ComovingMostBoundPosition', 'PhysicalAverageVelocity', 'SpecificAngularMomentum', 
@@ -136,17 +137,16 @@ class Tree_t:
 
         sub0=SnapDB.Snapshots[-1][0]
         TrackMeta=np.array(TrackMeta, dtype=[('DestTrackId', sub0['TrackId'].dtype), 
-                                    ('DestSnap', 'int'), ('Nbound', sub0['Nbound'].dtype)])
+                                    ('DestSnap', 'int32'), ('Nbound', sub0['Nbound'].dtype)])
         return Tracks, TrackMeta
     
     def _sort_tracks(self):
         #sort according to root, merger time and current size
         self.TrackMeta['DestSnap']*=-1 #to sort in descending order of DestSnap
         track_order=np.argsort(self.TrackMeta, order=('DestTrackId', 'DestSnap', 'Nbound'))
-        track_order=list(track_order)
         self.TrackMeta['DestSnap']*=-1
 
-        self.Tracks=list(np.array(self.Tracks, dtype=object)[track_order])
+        self.Tracks=[self.Tracks[i] for i in track_order]
         self.TrackMeta=self.TrackMeta[track_order]
 
     def _clean(self):
@@ -233,17 +233,17 @@ class Tree_t:
             g.create_dataset('SubhaloSpin', data=spin)
             #g.create_dataset('SubhaloVmax', data=tree['VmaxPhysical'])
             g.create_dataset('SubhaloVelDisp', data=np.sqrt(2.*tree['SpecificSelfKineticEnergy']))
-            g.close()
+            #g.close()
 
-#subcatdir='/home/cossim/IllustrisTNG/Illustris-3/subcat'
-#groupcatdir='/home/cossim/IllustrisTNG/Illustris-3/output'
-#nfiles_group=2
-#groupsize_filetype='Illustris'
+subcatdir='/home/cossim/IllustrisTNG/Illustris-3/subcat'
+groupcatdir='/home/cossim/IllustrisTNG/Illustris-3/output'
+nfiles_group=2
+groupsize_filetype='Illustris'
 
-subcatdir='/home/jxhan/data/simu/8213/subcatNew'
-groupcatdir='/home/jxhan/data/simu/8213/fof'
-nfiles_group=0
-groupsize_filetype='HBT'
+#subcatdir='/home/jxhan/data/simu/8213/subcatNew'
+#groupcatdir='/home/jxhan/data/simu/8213/fof'
+#nfiles_group=0
+#groupsize_filetype='HBT'
 
 tree_filename=subcatdir+'/LTree.hdf5'
 
@@ -254,7 +254,21 @@ with h5py.File(subcatdir+'/TrackForest.hdf5','r') as f:
 
 SnapDB=SnapAll_t(subcatdir, groupcatdir, nfiles_group, groupsize_filetype)
 
+TreeNHalos=[]
 for forestId in range(len(ForestOffset)-1):
     tree=Tree_t(forestId, TrackForest, ForestOffset, SnapDB)
     tree.save(tree_filename)
+    TreeNHalos.append(len(tree.Tree))
 
+TreeNHalos=np.array(TreeNHalos)
+TotNSubhalos=np.array([np.sum(s['Nbound']>1) for s in SnapDB.Snapshots])
+redshifts=1./np.array(SnapDB.ScaleFactors)-1
+
+with h5py.File(tree_filename, 'a') as f:
+    g=f.create_group('Header')
+    g.create_dataset('Redshifts', data=redshifts)
+    g.create_dataset('TotNSubhalos', data=TotNSubhalos)
+    g.create_dataset('TreeNHalos', data=TreeNHalos)
+    g.create_dataset('FirstSnapshotNr', data=SnapDB.MinSnap)
+    g.create_dataset('LastSnapshotNr', data=SnapDB.MaxSnap)
+    #g.create_dataset('ParticleMass', data=SnapDB.reader.ParticleMass)
