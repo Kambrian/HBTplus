@@ -255,15 +255,15 @@ class HBTReader:
         
         Subhalos=self.LoadSubhalos(isnap, ['TrackId','Rank','HostHaloId'])
         try: #use the Membership table if it exists
-            with self.Open(isnap) as f:
+            with self.OpenFile(isnap) as f:
                 GroupedTrackIds=f['Membership/GroupedTrackIds'][...]
             HostTrackId=np.array([GroupedTrackIds[s][0] for s in Subhalos['HostHaloId']])
         except:
             ## alternative method when Membership is not available
             Host2Track=Subhalos[(Subhalos['Rank']==0)&(Subhalos['HostHaloId']>=0)][['HostHaloId','TrackId']]
             Host2Track=dict(list(zip(Host2Track['HostHaloId'], Host2Track['TrackId'])))
-            Host2Track.update({-1:-1})
-            HostTrackId=np.array([Host2Track[s] for s in Subhalos['HostHaloId']])
+            Host2Track[-1]=-1
+            HostTrackId=np.array([Host2Track[s] for s in Subhalos['HostHaloId']], dtype=Subhalos['TrackId'].dtype)
         
         HostTrackId[Subhalos['HostHaloId']<0]=-1
         return HostTrackId
@@ -385,7 +385,7 @@ class HBTReader:
             HostHaloId=Subhalo['HostHaloId']
             #print isnap, ':', HostHaloId, Subhalo['Rank']
             if HostHaloId>=0:
-                with self.Open(isnap) as f:
+                with self.OpenFile(isnap) as f:
                     hostTrackId=f['Membership/GroupedTrackIds'][HostHaloId][0]
             else:
                 hostTrackId=trackId

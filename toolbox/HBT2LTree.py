@@ -1,4 +1,10 @@
 '''convert HBT tree to LHaloTree
+
+The mergers are defined as follows in this version:
+1) when SinkTrackId is present, the subhalo merges to SinkTrackId at SnapshotIndexOfDeath (which is no later than the sink snapshot. For orphans the detected sink could be after SnapshotIndexOfDeath.)
+2) when SinkTrackId<0 and SnapshotIndexOfDeath>=0, the subhalo merges to the central subhalo at SnapshotIndexOfDeath.
+
+Dead subhalos are cleaned (removed) from the Tree file.
 '''
 
 import numpy as np
@@ -61,6 +67,7 @@ class SnapAll_t:
                 #Subhalos.sort(order='TrackId')
                 HostTrackId=self.reader.LoadHostTrackIds(isnap)
                 HostTrackId[Subhalos['HostHaloId']<0]=Subhalos['TrackId'][Subhalos['HostHaloId']<0] #FirstHaloInFoFGroup
+                HostTrackId=np.array(HostTrackId)
                 NextTrackInFoF=np.zeros_like(HostTrackId)-1
                 with self.reader.OpenFile(isnap) as f:
                     TrackIdGroups = f['Membership/GroupedTrackIds'][...]
@@ -92,6 +99,7 @@ class SnapAll_t:
         return track
 
 def GetDestiny(track):
+    '''define the merger events for dead subhalos'''
     sub0=track[-1]
     SnapBirth=sub0['SnapshotIndexOfBirth']
     if sub0['SnapshotIndexOfDeath']>=0: #dead
@@ -271,4 +279,5 @@ with h5py.File(tree_filename, 'a') as f:
     g.create_dataset('TreeNHalos', data=TreeNHalos)
     g.create_dataset('FirstSnapshotNr', data=SnapDB.MinSnap)
     g.create_dataset('LastSnapshotNr', data=SnapDB.MaxSnap)
+    g.create_dataset('NTreesPerFile', data=len(TreeNHalos))
     #g.create_dataset('ParticleMass', data=SnapDB.reader.ParticleMass)
