@@ -51,9 +51,9 @@ class SnapAll_t:
         self.MinSnap=self.reader.MinSnap
         self.MaxSnap=self.reader.MaxSnap
         self.ScaleFactors=[self.reader.GetScaleFactor(i) for i in range(self.MinSnap, self.MaxSnap+1)]
-        field_list=['TrackId', 'HostHaloId', 'Rank', 'SnapshotIndexOfBirth', 'SnapshotIndexOfDeath', 
-                    'SinkTrackId', 'MostBoundParticleId', 'Nbound',  'Mbound', 'RHalfComoving', 'VmaxPhysical', 
-                    'ComovingMostBoundPosition', 'PhysicalAverageVelocity', 'SpecificAngularMomentum', 
+        field_list=['TrackId', 'HostHaloId', 'Rank', 'SnapshotIndexOfBirth', 'SnapshotIndexOfDeath',
+                    'SinkTrackId', 'MostBoundParticleId', 'Nbound',  'Mbound', 'RHalfComoving', 'VmaxPhysical',
+                    'ComovingMostBoundPosition', 'PhysicalAverageVelocity', 'SpecificAngularMomentum',
                     'SpecificSelfPotentialEnergy', 'SpecificSelfKineticEnergy']
         for isnap in range(self.reader.MinSnap, self.reader.MaxSnap+1, 1):
                 Subhalos=self.reader.LoadSubhalos(isnap, field_list)
@@ -74,8 +74,8 @@ class SnapAll_t:
                 for g in TrackIdGroups[:-1]:
                     if len(g)>1:
                         NextTrackInFoF[g[:-1]]=g[1:]
-                Subhalos=recfunctions.append_fields(Subhalos, ['HostTrackId', 'NextTrackInFoF', 'HostM200Crit', 'HostM200Mean', 'HostMvir'], 
-                                                    [HostTrackId, NextTrackInFoF, SubHostMass.T[0], SubHostMass.T[1], SubHostMass.T[2]], 
+                Subhalos=recfunctions.append_fields(Subhalos, ['HostTrackId', 'NextTrackInFoF', 'HostM200Crit', 'HostM200Mean', 'HostMvir'],
+                                                    [HostTrackId, NextTrackInFoF, SubHostMass.T[0], SubHostMass.T[1], SubHostMass.T[2]],
                                                     usemask=False)
 
                 self.Snapshots.append(Subhalos)
@@ -93,7 +93,7 @@ class SnapAll_t:
             snaps.append(isnap)
         snaps=np.array(snaps)
         null_array=np.zeros_like(snaps)-1
-        track=recfunctions.append_fields(np.array(track), 
+        track=recfunctions.append_fields(np.array(track),
                                          ['SnapNum', 'NodeId', 'NextPro', 'FirstProTrack', 'FirstProSnap', 'DescendantTrack', 'DescendantSnap'],
                                          [snaps, null_array, null_array, null_array, null_array, null_array, null_array], usemask=False)
         return track
@@ -127,7 +127,7 @@ def GetDestiny(track):
 
 class Tree_t:
     def __init__(self, forestId, TrackForest, ForestOffset, SnapDB):
-        ''' collect tracks in the Forest specified by forestId, and merge them to a LTree''' 
+        ''' collect tracks in the Forest specified by forestId, and merge them to a LTree'''
         self.TreeId=forestId
         self.TrackList=TrackForest['TrackId'][ForestOffset[forestId]:ForestOffset[forestId+1]]
         self.NumTracks=len(self.TrackList)
@@ -144,10 +144,10 @@ class Tree_t:
             TrackMeta.append((i,s,track[-1]['Nbound']))
 
         sub0=SnapDB.Snapshots[-1][0]
-        TrackMeta=np.array(TrackMeta, dtype=[('DestTrackId', sub0['TrackId'].dtype), 
+        TrackMeta=np.array(TrackMeta, dtype=[('DestTrackId', sub0['TrackId'].dtype),
                                     ('DestSnap', 'int32'), ('Nbound', sub0['Nbound'].dtype)])
         return Tracks, TrackMeta
-    
+
     def _sort_tracks(self):
         #sort according to root, merger time and current size
         self.TrackMeta['DestSnap']*=-1 #to sort in descending order of DestSnap
@@ -161,7 +161,7 @@ class Tree_t:
         #clean-up empty nodes
         for i in range(self.NumTracks):
             self.Tracks[i]=np.delete(self.Tracks[i], self.Tracks[i]['Nbound']<2)
-    
+
     def _link(self):
         #fill in pro-desc info
         TrackDict=defaultdict(lambda :-1)
@@ -208,9 +208,9 @@ class Tree_t:
                         proid=nextpro
                         nextpro=Tree[proid]['NextPro']
                     Tree[proid]['NextPro']=node['NodeId'] #attach
-                    
+
         return Tree
-    
+
     def save(self, filename):
         G=43007.1
         tree=self.Tree
@@ -239,7 +239,7 @@ class Tree_t:
                 np.abs(tree['SpecificSelfPotentialEnergy']+0.5*tree['SpecificSelfKineticEnergy'])
                 )/G/tree['Mbound'] #peebles spin
             g.create_dataset('SubhaloSpin', data=spin)
-            #g.create_dataset('SubhaloVmax', data=tree['VmaxPhysical'])
+            g.create_dataset('SubhaloVmax', data=tree['VmaxPhysical'])
             g.create_dataset('SubhaloVelDisp', data=np.sqrt(2.*tree['SpecificSelfKineticEnergy']))
             #g.close()
 
