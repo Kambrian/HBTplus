@@ -21,8 +21,15 @@ namespace Apostle
 {
 void ApostleSnap_t::SetSnapshot(int snapshotId)
 {
-  SnapIsIllustris=IsIllustrisSnap(HBTConfig.SnapshotFormat);
-  if(SnapIsIllustris)
+  if(IsIllustrisSnap(HBTConfig.SnapshotFormat))
+      SnapType=SnapshotType_t::illustris;
+  if(IsApostleSnap(HBTConfig.SnapshotFormat))
+      SnapType=SnapshotType_t::apostle;
+  if(IsHelucidSnap(HBTConfig.SnapshotFormat))
+      SnapType=SnapshotType_t::helucid;
+  
+//   SnapIsIllustris=IsIllustrisSnap(HBTConfig.SnapshotFormat);
+  if(SnapType==SnapshotType_t::illustris||SnapType==SnapshotType_t::helucid)
     SnapDirBaseName="snapdir";
   else
     SnapDirBaseName="snapshot";
@@ -41,7 +48,7 @@ void ApostleSnap_t::SetSnapshot(int snapshotId)
 void ApostleHeader_t::GetFileName(int ifile, string &filename)
 {
   string subname=SnapshotName;
-  if(SnapIsIllustris)
+  if(SnapType==SnapshotType_t::illustris||SnapType==SnapshotType_t::helucid)
       subname.erase(4,3);//remove "dir" from "snapdir"
   else
       subname.erase(4, 4);//i.e., remove "shot" from "snapshot" or "snipshot"
@@ -54,7 +61,7 @@ void ApostleHeader_t::GetParticleCountInFile(hid_t file, HBTInt np[])
 {
   ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_HBTInt, np);
   //PartType3 in illustris is TRACERS,which is not information of particles
-  if(SnapIsIllustris) np[PartTypeTracer]=0;
+  if(SnapType==SnapshotType_t::illustris) np[PartTypeTracer]=0;
 #ifdef DM_ONLY
   for(int i=0;i<TypeMax;i++)
 	if(i!=TypeDM) np[i]=0;
@@ -82,7 +89,7 @@ void ApostleHeader_t::ReadFileHeader(int ifile)
   for(int i=0;i<TypeMax;i++)
 	NumPartTotal[i]=(np_high[i]<<32)|np[i];
   //Skip Tracers in Illustris. TODO: the gas particles in Illustris are moving cells, not completely Lagrangian. may need special treatment
-  if(SnapIsIllustris) 
+  if(SnapType==SnapshotType_t::illustris) 
   {
     NumPart[PartTypeTracer]=0;
     NumPartTotal[PartTypeTracer]=0;
@@ -281,7 +288,21 @@ void ApostleReader_t::ReadSnapshot(int ifile, Particle_t *Particles)
 		ParticlesThisType[i].Id=id[i];
 	}
 
-#ifndef DM_ONLY
+#ifdef DM_ONLY
+    //mass
+    if(SnapHeader.Mass[TypeDM]==0)//mass not recorded in header
+    {
+        vector <HBTReal> m(np);
+        if(H5Lexists(particle_data, "Masses", H5P_DEFAULT))
+            ReadDataset(particle_data, "Masses", H5T_HBTReal, m.data());
+        else
+            ReadDataset(particle_data, "Mass", H5T_HBTReal, m.data());
+        assert(m.front()==m.back()); //must be uniform mass
+#pragma omp single nowait
+        SnapHeader.Mass[TypeDM]=m.front();
+        cout<<"WARNING: running in DM_ONLY mode, but header does not contain a fixed DM particle mass.\n Setting to first mass = "<<m.front()<<" from mass record"<<endl;
+    }
+#else
 	//mass
 	if(SnapHeader.Mass[itype]==0)
 	{
@@ -401,7 +422,6 @@ void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particle
 {
   SnapHeader.Fill(snapshotId);
   Cosmology.Set(SnapHeader.ScaleFactor, SnapHeader.OmegaM0, SnapHeader.OmegaLambda0);
-  Cosmology.ParticleMass=SnapHeader.Mass[TypeDM];
   
   Particles.resize(SnapHeader.NumPartAll);
 #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
@@ -412,6 +432,8 @@ void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particle
   }
   cout<<endl;
   cout<<" ( "<<SnapHeader.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
+  
+  Cosmology.ParticleMass=SnapHeader.Mass[TypeDM];
 //   cout<<" Particle[0]: x="<<Particles[0].ComovingPosition<<", v="<<Particles[0].PhysicalVelocity<<", m="<<Particles[0].Mass<<endl;
 //   cout<<" Particle[2]: x="<<Particles[2].ComovingPosition<<", v="<<Particles[2].PhysicalVelocity<<", m="<<Particles[2].Mass<<endl;
 //   cout<<" Particle[end]: x="<<Particles.back().ComovingPosition<<", v="<<Particles.back().PhysicalVelocity<<", m="<<Particles.back().Mass<<endl;
@@ -581,9 +603,13 @@ HBTInt ApostleReader_t::LoadIllustrisGroups(int snapshotId, vector< Halo_t >& Ha
 }
 
 
-bool IsHelucidGroup(const std::string& GroupFileFormat)
+bool IsHelucidGroup(const string& GroupFileFormat)
 {//helucid is a minor variant of apostle
     return GroupFileFormat=="apostle_helucid";
+}
+bool IsHelucidSnap(const string &SnapshotFormat)
+{
+    return SnapshotFormat=="apostle_helucid";
 }
 bool IsApostleGroup(const string &GroupFileFormat)
 {//applies to both apostle and helucid; 

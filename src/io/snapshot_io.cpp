@@ -25,7 +25,9 @@ void ParticleSnapshot_t::Load(int snapshot_index, bool fill_particle_hash)
   {
 	GadgetReader_t(SnapshotId, Particles, Cosmology);
   }
-  else if(HBTConfig.SnapshotFormat=="apostle"||HBTConfig.SnapshotFormat=="illustris")
+  else if(Apostle::IsIllustrisSnap(HBTConfig.SnapshotFormat)||
+      Apostle::IsHelucidSnap(HBTConfig.SnapshotFormat)||
+      Apostle::IsApostleSnap(HBTConfig.SnapshotFormat))
   {
 	Apostle::ApostleReader_t().LoadSnapshot(SnapshotId, Particles, Cosmology);
   }

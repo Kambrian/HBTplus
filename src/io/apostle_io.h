@@ -22,9 +22,17 @@ namespace Apostle{
 
 typedef array <HBTInt, TypeMax> TypeCounts_t;
 
+typedef enum 
+{
+    apostle,
+    illustris,
+    helucid
+} SnapshotType_t;
+
 struct ApostleSnap_t
 {
-  bool SnapIsIllustris;
+  SnapshotType_t SnapType;
+//   bool SnapIsIllustris;
 //   int SnapshotId;
   string SnapDirBaseName;
   string SnapshotName;
@@ -98,9 +106,10 @@ public:
 };
 
 extern bool IsHelucidGroup(const string &GroupFileFormat);
+extern bool IsHelucidSnap(const string &SnapshotFormat);
 extern bool IsApostleGroup(const string &GroupFileFormat);
 extern bool IsIllustrisGroup(const string &GroupFileFormat);
 extern bool IsApostleSnap(const string &SnapshotFormat);
-extern bool IsIllustrisSnap(const string &GroupFileFormat);
+extern bool IsIllustrisSnap(const string &SnapshotFormat);
 }
 #endif
