@@ -377,7 +377,10 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *Particles, bool Fla
 
 	{//Hostid
 	  vector <HBTInt> id(np);
-	  ReadDataset(particle_data, "GroupNumber", H5T_HBTInt, id.data());
+      if(H5Lexists(particle_data, "GroupNumber", H5P_DEFAULT))
+          ReadDataset(particle_data, "GroupNumber", H5T_HBTInt, id.data());
+      else
+          ReadDataset(particle_data, "HaloID", H5T_HBTInt, id.data());
 	  for(int i=0;i<np;i++)
       {
           HBTInt id_fixed=id[i]-SnapHeader.MinGroupId;//shift the HaloId to start from 0 if not.
