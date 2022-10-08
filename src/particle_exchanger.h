@@ -151,7 +151,7 @@ void ParticleExchanger_t<Halo_T>::CollectParticles()
 
 template <class Halo_T>
 void ParticleExchanger_t<Halo_T>::SendParticles()
-{
+{//order the particles and send them to the corresponding processing according to ProcessIdRange
   sort(LocalParticles.begin(), LocalParticles.end(), ParticleExchangeComp::CompParticleId);
   
   LocalSizes.resize(world.size());
@@ -201,7 +201,7 @@ void ParticleExchanger_t<Halo_T>::QueryParticles()
   for(auto &&p: RoamParticles)
   {
     if(p.Id!=SpecialConst::NullParticleId)
-      p=snap.Particles[p.Id];
+      p=snap.Particles[p.Id];//query the particle property; may need to spawn particles due to star formation here.
   }
   
   ParticleExchangeComp::RestoreParticleOrder(RoamParticles);
