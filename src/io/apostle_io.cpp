@@ -92,7 +92,49 @@ void ApostleHeader_t::ReadFileHeader(int ifile)
 	if(i!=TypeDM) NumPartTotal[i]=0;
   #endif
   H5Fclose(file);
+  
+  
+  if(IsHelucidGroup(HBTConfig.GroupFileFormat))
+  {
+      int nbit=sizeof(HBTInt)*8;
+      NullGroupId=1<<(nbit-2); //a large enough arbitrary number
+      MinGroupId=1;
+  }
+  else//default to apostle; not used by illustris
+  {
+      NullGroupId=1<<30; //1073741824
+      MinGroupId=0;
+  }
+  
 }
+
+/*
+void ApostleHeader_t::LoadExtraHeaderParams()
+{
+    string filename=HBTConfig.ConfigFile;
+    ifstream ifs;
+    ifs.open(filename);
+    if(!ifs.is_open())
+    {
+        cerr<<"Error opening parameter file "<<filename<<endl;
+        exit(1);
+    }
+    string line;
+    while(getline(ifs,line))
+    {
+        if(line.compare(0,13,"[ReaderExtra]")==0)//find the section
+            break;
+    }
+    
+    string name;
+//     HBTInt NullGroupId, MinGroupId;
+    #define ReadNameValue(x) ifs>>name>>x;assert(name==#x)
+    ReadNameValue(NullGroupId);
+    ReadNameValue(MinGroupId);
+    #undef ReadNameValue
+    ifs.close();
+}
+*/
 
 void ApostleHeader_t::CompileTypeOffsets()
 {
@@ -316,7 +358,10 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *Particles, bool Fla
 	  vector <HBTInt> id(np);
 	  ReadDataset(particle_data, "GroupNumber", H5T_HBTInt, id.data());
 	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].HostId=(id[i]<0?NullGroupId:id[i]);//negative means particles inside virial radius but outside fof.
+      {
+          HBTInt id_fixed=id[i]-SnapHeader.MinGroupId;//shift the HaloId to start from 0 if not.
+          ParticlesThisType[i].HostId=(id_fixed<0?SnapHeader.NullGroupId:id_fixed);//negative means particles inside virial radius but outside fof.
+      }
 	}
 
 	H5Gclose(particle_data);
@@ -400,7 +445,7 @@ HBTInt ApostleReader_t::LoadApostleGroups(int snapshotId, vector< Halo_t >& Halo
   }
 
   MYSORT(Particles.begin(), Particles.end(), CompParticleHost);
-  assert(Particles.back().HostId==NullGroupId);//max haloid==NullGroupId
+  assert(Particles.back().HostId==SnapHeader.NullGroupId);//max haloid==NullGroupId
   assert(Particles.front().HostId>=0);//min haloid>=0
 
   HBTInt NumGroups=0;
@@ -535,16 +580,21 @@ HBTInt ApostleReader_t::LoadIllustrisGroups(int snapshotId, vector< Halo_t >& Ha
   return Halos.size();
 }
 
+
+bool IsHelucidGroup(const std::string& GroupFileFormat)
+{//helucid is a minor variant of apostle
+    return GroupFileFormat=="apostle_helucid";
+}
 bool IsApostleGroup(const string &GroupFileFormat)
-{
-  return GroupFileFormat.substr(0, 7)=="apostle";
+{//applies to both apostle and helucid; 
+    return GroupFileFormat.substr(0, 7)=="apostle";
 }
 bool IsIllustrisGroup(const string &GroupFileFormat)
 {
     return GroupFileFormat.substr(0,9)=="illustris";
 }
 bool IsApostleSnap(const string &SnapshotFormat)
-{
+{//applies to both apostle and helucid
     return SnapshotFormat.substr(0,7)=="apostle";
 }
 bool IsIllustrisSnap(const string &SnapshotFormat)

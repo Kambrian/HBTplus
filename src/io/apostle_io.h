@@ -6,6 +6,7 @@
  *   SnapshotFormat: apostle, illustris
  *   GroupFileFormat: apostle, apostle_particle_index,  //for eagle or apostle data
  *                    illustris, illustris_particle_index //for illustris or illustrisTNG data.
+ *                    apostle_helucid//for helucid data. the halo_id of helucid starts from 1; we will shift the halo_id so that it starts from 0 in HBT+.
  * 
  * specifying `apostle_particle_index` or `illustris_particle_index` format will cause ApostleReader to fill the groups with particle indices that directly maps to the snapshot, saving any effort for translating from id to index later. If it is disirable to fill the groups with actual particle ids, please use `apostle` or `illustris` for the group format.
  *
@@ -47,12 +48,16 @@ public:
   TypeCounts_t NumPartTotal;
   HBTInt NumPartAll;
   
+  HBTInt NullGroupId;
+  HBTInt MinGroupId;
+  
   TypeCounts_t TypeOffsetInMem; //offsets (in particles) of each type in the global particle array
   vector<TypeCounts_t> NumPartEachFile; //TypeCount in each file 
   vector<TypeCounts_t> FileOffsetInType; //cumsum(NumPartTypeFile, axis=file), sum over previous files for each type
   
   void GetFileName(int ifile, string &filename);
   void Fill(int snapshotId);
+//   void LoadExtraHeaderParams();
 };
 
 class IllustrisGroupHeader_t: public ApostleSnap_t
@@ -78,8 +83,8 @@ struct ParticleHost_t
 
 class ApostleReader_t
 {
-  const int NullGroupId=1<<30; //1073741824
-  
+//   const int NullGroupId=1<<30; //1073741824
+
   ApostleHeader_t SnapHeader;
   IllustrisGroupHeader_t GroupHeader;
   
@@ -92,6 +97,7 @@ public:
   HBTInt LoadIllustrisGroups(int snapshotId, vector <Halo_t> &Halos);
 };
 
+extern bool IsHelucidGroup(const string &GroupFileFormat);
 extern bool IsApostleGroup(const string &GroupFileFormat);
 extern bool IsIllustrisGroup(const string &GroupFileFormat);
 extern bool IsApostleSnap(const string &SnapshotFormat);
