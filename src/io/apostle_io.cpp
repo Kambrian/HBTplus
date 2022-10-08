@@ -76,11 +76,11 @@ void ApostleHeader_t::ReadFileHeader(int ifile)
 //   cout<<Mass[0]<<","<<Mass[1]<<","<<Mass[2]<<endl;
   ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_HBTInt, NumPart.data());
 
-  unsigned np[TypeMax], np_high[TypeMax];
-  ReadAttribute(file, "Header", "NumPart_Total", H5T_NATIVE_UINT, np);
-  ReadAttribute(file, "Header", "NumPart_Total_HighWord", H5T_NATIVE_UINT, np_high);
+  unsigned long long np[TypeMax], np_high[TypeMax];
+  ReadAttribute(file, "Header", "NumPart_Total", H5T_NATIVE_ULLONG, np);
+  ReadAttribute(file, "Header", "NumPart_Total_HighWord", H5T_NATIVE_ULLONG, np_high);
   for(int i=0;i<TypeMax;i++)
-	NumPartTotal[i]=(((unsigned long)np_high[i])<<32)|np[i];
+	NumPartTotal[i]=(np_high[i]<<32)|np[i];
   //Skip Tracers in Illustris. TODO: the gas particles in Illustris are moving cells, not completely Lagrangian. may need special treatment
   if(SnapIsIllustris) 
   {
