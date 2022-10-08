@@ -48,10 +48,12 @@ void ApostleSnap_t::SetSnapshot(int snapshotId)
 void ApostleHeader_t::GetFileName(int ifile, string &filename)
 {
   string subname=SnapshotName;
-  if(SnapType==SnapshotType_t::illustris||SnapType==SnapshotType_t::helucid)
-      subname.erase(4,3);//remove "dir" from "snapdir"
-  else
-      subname.erase(4, 4);//i.e., remove "shot" from "snapshot" or "snipshot"
+  auto baselen=subname.find("_");
+  subname.erase(4, baselen-4);//i.e., remove "shot" from "snapshot" or "snipshot"; or remove "dir" from "snapdir"
+//   if(SnapType==SnapshotType_t::illustris||SnapType==SnapshotType_t::helucid)
+//       subname.erase(4,3);//remove "dir" from "snapdir"
+//   else
+//       subname.erase(4, 4);//i.e., remove "shot" from "snapshot" or "snipshot"
   stringstream formatter;
   formatter<<HBTConfig.SnapshotPath<<"/"<<SnapshotName<<"/"<<subname<<"."<<ifile<<".hdf5";
   filename=formatter.str();
