@@ -106,7 +106,7 @@ void ApostleHeader_t::ReadFileHeader(int ifile)
   if(IsHelucidGroup(HBTConfig.GroupFileFormat))
   {
       int nbit=sizeof(HBTInt)*8;
-      NullGroupId=1<<(nbit-2); //a large enough arbitrary number
+      NullGroupId=((HBTInt)1)<<(nbit-2); //a large enough arbitrary number
       MinGroupId=1;
   }
   else//default to apostle; not used by illustris
@@ -610,11 +610,11 @@ HBTInt ApostleReader_t::LoadIllustrisGroups(int snapshotId, vector< Halo_t >& Ha
 
 bool IsHelucidGroup(const string& GroupFileFormat)
 {//helucid is a minor variant of apostle
-    return GroupFileFormat=="apostle_helucid";
+    return GroupFileFormat.substr(0,15)=="apostle_helucid";
 }
 bool IsHelucidSnap(const string &SnapshotFormat)
 {
-    return SnapshotFormat=="apostle_helucid";
+    return SnapshotFormat.substr(0,15)=="apostle_helucid";
 }
 bool IsApostleGroup(const string &GroupFileFormat)
 {//applies to both apostle and helucid; 
