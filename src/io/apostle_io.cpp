@@ -111,7 +111,7 @@ void ApostleHeader_t::ReadFileHeader(int ifile)
   }
   else//default to apostle; not used by illustris
   {
-      NullGroupId=1<<30; //1073741824
+      NullGroupId=((HBTInt)1)<<30; //1073741824
       MinGroupId=0;
   }
   
