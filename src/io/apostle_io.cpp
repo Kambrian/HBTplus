@@ -429,7 +429,7 @@ void ApostleReader_t::LoadSnapshot(int snapshotId, vector <Particle_t> &Particle
   Cosmology.Set(SnapHeader.ScaleFactor, SnapHeader.OmegaM0, SnapHeader.OmegaLambda0);
   
   Particles.resize(SnapHeader.NumPartAll);
-#pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+// #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO) //this is useless, as hdf5 thread-safe version simply serializes the concurrent operations
   for(int iFile=0; iFile<SnapHeader.NumberOfFiles; iFile++)
   {
 	ReadSnapshot(iFile, Particles.data());
@@ -456,7 +456,7 @@ HBTInt ApostleReader_t::LoadApostleGroups(int snapshotId, vector< Halo_t >& Halo
   bool FlagReadId=!HBTConfig.GroupLoadedIndex;
 
   cout<<"reading group files: ";
-  #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+//   #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int iFile=0; iFile<SnapHeader.NumberOfFiles; iFile++)
   {
 	ReadGroupId(iFile, Particles.data(), FlagReadId);
@@ -526,7 +526,7 @@ HBTInt ApostleReader_t::LoadIllustrisGroups(int snapshotId, vector< Halo_t >& Ha
   GroupLenType.resize(GroupHeader.NumGroupsTotal);
   GroupOffsetType.resize(GroupHeader.NumGroupsTotal);
   
-  #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+//   #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
   for(int ifile=0;ifile<GroupHeader.NumFiles;ifile++)
   {
     if(GroupHeader.GroupFileLen[ifile]==0) continue; //skip empty files
@@ -586,7 +586,7 @@ HBTInt ApostleReader_t::LoadIllustrisGroups(int snapshotId, vector< Halo_t >& Ha
   if(FlagReadId)
   {
     vector <HBTInt> ParticleIDs(SnapHeader.NumPartAll);
-    #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
+//     #pragma omp parallel for num_threads(HBTConfig.MaxConcurrentIO)
     for(int iFile=0; iFile<SnapHeader.NumberOfFiles; iFile++)
         ReadParticleIDs(iFile, ParticleIDs.data());
         
