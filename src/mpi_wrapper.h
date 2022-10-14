@@ -11,6 +11,11 @@
 #include "datatypes.h"
 #include "mymath.h"
 
+//fix deprecated MPI_Address function
+#if defined MPI_VERSION && MPI_VERSION >= 2 
+    #define MPI_Address(a,b) MPI_Get_address(a,b)
+#endif
+
 class MpiWorker_t
 { 
 public:
