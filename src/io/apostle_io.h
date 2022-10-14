@@ -6,7 +6,7 @@
  *   SnapshotFormat: apostle, illustris
  *   GroupFileFormat: apostle, apostle_particle_index,  //for eagle or apostle data
  *                    illustris, illustris_particle_index //for illustris or illustrisTNG data.
- *                    apostle_helucid, apostle_helucid_particle_index//for helucid data. the halo_id of helucid starts from 1; we will shift the halo_id so that it starts from 0 in HBT+.
+ *                    apostle_helucid, apostle_helucid_particle_index//for helucid data. the halo_id of helucid starts from 1
  * 
  *          the *_particle_index format means the halos will be filled with particle indices in the snapshot, instead of particle ids, upon loading.
  * 

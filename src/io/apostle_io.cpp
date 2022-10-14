@@ -384,10 +384,7 @@ void ApostleReader_t::ReadGroupId(int ifile, ParticleHost_t *Particles, bool Fla
       else
           ReadDataset(particle_data, "HaloID", H5T_HBTInt, id.data());
 	  for(int i=0;i<np;i++)
-      {
-          HBTInt id_fixed=id[i]-SnapHeader.MinGroupId;//shift the HaloId to start from 0 if not.
-          ParticlesThisType[i].HostId=(id_fixed<0?SnapHeader.NullGroupId:id_fixed);//negative means particles inside virial radius but outside fof.
-      }
+          ParticlesThisType[i].HostId=(id[i]<SnapHeader.MinGroupId?SnapHeader.NullGroupId:id[i]);//negative means particles inside virial radius but outside fof.
 	}
 
 	H5Gclose(particle_data);
@@ -473,7 +470,7 @@ HBTInt ApostleReader_t::LoadApostleGroups(int snapshotId, vector< Halo_t >& Halo
 
   MYSORT(Particles.begin(), Particles.end(), CompParticleHost);
   assert(Particles.back().HostId==SnapHeader.NullGroupId);//max haloid==NullGroupId
-  assert(Particles.front().HostId>=0);//min haloid>=0
+  assert(Particles.front().HostId>=SnapHeader.MinGroupId);
 
   HBTInt NumGroups=0;
   HBTInt imax=lower_bound(Particles.begin(), Particles.end(), Particles.back(), CompParticleHost)-Particles.begin();
@@ -481,7 +478,7 @@ HBTInt ApostleReader_t::LoadApostleGroups(int snapshotId, vector< Halo_t >& Halo
 	NumGroups=Particles[imax-1].HostId+1;
   Halos.resize(NumGroups);
 
-  vector <HBTInt> HaloOffset(NumGroups+1, 0);
+  vector <HBTInt> HaloOffset(NumGroups+1, 0); //groups below MinGroupId will be empty but are still listed.
   HaloOffset.back()=imax;//offset of NullGroup
   #pragma omp parallel
   {
