@@ -8,6 +8,6 @@ include $(HBTDIR)/Makefile.inc
 $(EXE): $(OBJS_COMM)
 $(EXE): CXXFLAGS+=-I.. -DHBT_INT8 #-DHBT_REAL8
 
-
+-include .Makefile_sync.inc
 
 
