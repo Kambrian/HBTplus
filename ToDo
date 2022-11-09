@@ -1,3 +1,3 @@
 Add HostTrackId to Subhalo struct.
-Check duplicate particle issue: consider switch back to core-tracking, at least for small subs, to minimize most-bound fluctuations.
-switch away from hdf5 format, which lacks (unbelievable) multi-threading support (it's thread-safe mode only serializes concurrency with no gain)
+Check duplicate particle issue: consider switch back to core-tracking (optional), at least for small subs, to minimize most-bound fluctuations.
+switch away from hdf5 format, which lacks (unbelievable) multi-threading support (it's thread-safe mode only serializes concurrency with no gain). or use mpi/pthreads to read multiple hdf5 files in parallel.
