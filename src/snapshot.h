@@ -19,20 +19,20 @@ struct Cosmology_t
   HBTReal OmegaM0;
   HBTReal OmegaLambda0;
   HBTReal ScaleFactor;
-  
+
   //derived parameters:
   HBTReal Hz; //current Hubble param in internal units
   HBTReal OmegaZ;
-  
+
   void Set(double scalefactor, double omega0, double omegaLambda0)
   {
 	OmegaM0=omega0;
 	OmegaLambda0=omegaLambda0;
 	ScaleFactor=scalefactor;
-	double Hratio=sqrt(omega0 / (scalefactor * scalefactor * scalefactor) 
+	double Hratio=sqrt(omega0 / (scalefactor * scalefactor * scalefactor)
 		+ (1 - omega0 - omegaLambda0) / (scalefactor * scalefactor)
 		+ omegaLambda0);//Hubble param for the current catalogue;
-	
+
 	Hz=Hratio*PhysicalConst::H0;
 	OmegaZ=omega0/(scalefactor*scalefactor*scalefactor)/Hratio/Hratio;
   }
@@ -40,14 +40,14 @@ struct Cosmology_t
 
 struct RadMassVel_t
 {
-  HBTReal r, m, v; 
+  HBTReal r, m, v;
   RadMassVel_t(){};
   RadMassVel_t(HBTReal r, HBTReal m):r(r), m(m)
   {}
   RadMassVel_t(HBTReal r, HBTReal m, HBTReal v):r(r),m(m),v(v)
   {}
 };
-  
+
 struct Particle_t
 {
   HBTInt Id;
@@ -66,7 +66,7 @@ struct Particle_t
   {
   }
   bool operator==(const Particle_t &other) const
-  { 
+  {
     return Id==other.Id;
   }
 };
@@ -154,12 +154,11 @@ public:
 class ParticleSnapshot_t: public Snapshot_t
 {
   typedef vector <HBTInt> IndexList_t;
-   
+
   FlatIndexTable_t<HBTInt, HBTInt> FlatHash;
   MappedIndexTable_t<HBTInt, HBTInt> MappedHash;
   IndexTable_t<HBTInt, HBTInt> *ParticleHash;
-  
-  void ExchangeParticles(MpiWorker_t &world);
+
   void PartitionParticles(MpiWorker_t &world, vector <int> &offset);
   bool IsContiguousId(MpiWorker_t &world, HBTInt &GlobalIdMin);
   HBTInt IdMin, IdMax;
@@ -167,7 +166,7 @@ public:
   vector <Particle_t> Particles;
   HBTInt NumberOfParticlesOnAllNodes;
   vector <HBTInt> ProcessIdRanges; //IdRange on each processor is [ProcessIdRanges[i], ProcessIdRanges[i+1]).
-  
+
   ParticleSnapshot_t(): Snapshot_t(), Particles(), ParticleHash(), MappedHash(), FlatHash(), NumberOfParticlesOnAllNodes(0)
   {
 	if(HBTConfig.ParticleIdNeedHash)
@@ -183,9 +182,10 @@ public:
   {
 	Clear();//not necessary
   }
+  void ExchangeParticles(MpiWorker_t &world);//distribute particles according to ID range, onto different processors
   void FillParticleHash();
   void ClearParticleHash();
-  
+
   HBTInt size() const;
   HBTInt GetId(HBTInt index) const;
   HBTInt GetIndex(HBTInt particle_id) const;
@@ -197,13 +197,13 @@ public:
   HBTReal GetMass(HBTInt index) const;
   HBTReal GetInternalEnergy(HBTInt index) const;
   ParticleType_t GetParticleType(HBTInt index) const;
-  
+
   void Load(MpiWorker_t &world, int snapshot_index, bool fill_particle_hash=true);
   void Clear();
-  
-  void AveragePosition(HBTxyz & CoM, const HBTInt Particles[], HBTInt NumPart) const; 
+
+  void AveragePosition(HBTxyz & CoM, const HBTInt Particles[], HBTInt NumPart) const;
   void AverageVelocity(HBTxyz & CoV, const HBTInt Particles[], HBTInt NumPart) const;
-  
+
   template <class Halo_T>
   void ExchangeHalos(MpiWorker_t &world, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, MPI_Datatype MPI_Halo_Shell_Type) const;
 };
@@ -237,7 +237,7 @@ inline HBTReal ParticleSnapshot_t::GetMass(HBTInt index) const
 }
 inline HBTReal ParticleSnapshot_t::GetInternalEnergy(HBTInt index) const
 {
-#if !defined(DM_ONLY) && defined(HAS_THERMAL_ENERGY) 
+#if !defined(DM_ONLY) && defined(HAS_THERMAL_ENERGY)
   return Particles[index].InternalEnergy;
 #else
   return 0.;
@@ -249,7 +249,7 @@ inline ParticleType_t ParticleSnapshot_t::GetParticleType(HBTInt index) const
   return TypeDM;
 #else
   return Particles[index].Type;
-#endif  
+#endif
 }
 
 extern double AveragePosition(HBTxyz& CoM, const Particle_t Particles[], HBTInt NumPart);

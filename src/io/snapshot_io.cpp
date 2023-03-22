@@ -6,7 +6,7 @@ using namespace std;
 #include <typeinfo>
 #include <assert.h>
 #include <chrono>
-#include <numeric> 
+#include <numeric>
 #include <cstdlib>
 #include <cstdio>
 
@@ -17,10 +17,10 @@ using namespace std;
 #include "apostle_io.h"
 
 void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill_particle_hash)
-{ 
+{
   Clear();
   SetSnapshotIndex(snapshot_index);
-  
+
   if(HBTConfig.SnapshotFormat=="gadget")
   {
 	GadgetReader_t(world, SnapshotId, Particles, Cosmology);
@@ -32,23 +32,24 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
   else if(HBTConfig.SnapshotFormat=="mysnapshot")
   {/*insert your snapshot reader here, and include relevant header in the header if necessary
 	you need to fill up Particles vector, and set the cosmology, e.g.,
-	
+
 	LoadMySnapshot(SnapshotId, Particles, Cosmology);
-	
+
 	*/
   }
   else
 	throw(runtime_error("unknown SnapshotFormat "+HBTConfig.SnapshotFormat));
-  
+
 #ifdef DM_ONLY
 //   assert(Cosmology.ParticleMass>0);
 #endif
-  
-  ExchangeParticles(world);
-  
+
   if(fill_particle_hash)
+  {
+    ExchangeParticles(world);
 	FillParticleHash();
-  
+  }
+
   if(world.rank()==0) cout<<NumberOfParticlesOnAllNodes<<" particles loaded at Snapshot "<<snapshot_index<<"("<<SnapshotId<<")"<<endl;
 }
 
