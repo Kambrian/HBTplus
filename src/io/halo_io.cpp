@@ -19,23 +19,23 @@
 void HaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index)
 {
   SetSnapshotIndex(snapshot_index);
-  
+
   string GroupFileFormat=HBTConfig.GroupFileFormat;
-  
+
   if(GadgetGroup::IsGadgetGroup(GroupFileFormat))
 	GadgetGroup::Load(world, SnapshotId, Halos);
   else if(IsApostleGroup(GroupFileFormat))
 	ApostleReader_t().LoadGroups(world, SnapshotId, Halos);
   else if(GroupFileFormat=="my_group_format")
   {/*extend your own group reader here, input SnapshotId and output filled Halo list, e.g.:
-	
+
 	MyGroupReader(world, SnapshotId, Halos)
-	
+
 	*/
   }
   else
 	throw(runtime_error("unknown GroupFileFormat "+GroupFileFormat));
-  
+
   NumPartOfLargestHalo=0;
   TotNumberOfParticles=0;
   for(auto && h: Halos)
@@ -44,7 +44,33 @@ void HaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index)
     TotNumberOfParticles+=np;
     if(np>NumPartOfLargestHalo) NumPartOfLargestHalo=np;
   }
-  
+
+  HBTInt NumHalos=Halos.size(), NumHalosAll=0;
+  MPI_Reduce(&NumHalos, &NumHalosAll, 1, MPI_HBT_INT, MPI_SUM, 0, world.Communicator);
+  if(world.rank()==0)
+    cout<<NumHalosAll<<" groups loaded at snapshot "<<snapshot_index<<"("<<SnapshotId<<")"<<endl;
+}
+
+void HaloSnapshot_t::LoadWithSnap(MpiWorker_t &world, int snapshot_index, ParticleSnapshot_t &partsnap)
+{
+  SetSnapshotIndex(snapshot_index);
+
+  string GroupFileFormat=HBTConfig.GroupFileFormat;
+
+  if(Gadget4Group::IsGadget4Group(GroupFileFormat))
+	Gadget4Group::Load(world, SnapshotId, Halos, partsnap);
+  else
+	throw(runtime_error("unknown GroupFileFormat to LoadWithSnap: "+GroupFileFormat));
+
+  NumPartOfLargestHalo=0;
+  TotNumberOfParticles=0;
+  for(auto && h: Halos)
+  {
+    auto np=h.Particles.size();
+    TotNumberOfParticles+=np;
+    if(np>NumPartOfLargestHalo) NumPartOfLargestHalo=np;
+  }
+
   HBTInt NumHalos=Halos.size(), NumHalosAll=0;
   MPI_Reduce(&NumHalos, &NumHalosAll, 1, MPI_HBT_INT, MPI_SUM, 0, world.Communicator);
   if(world.rank()==0)
@@ -58,7 +84,7 @@ int main(int argc, char **argv)
 {
   MPI_Init(&argc, &argv);
   MpiWorker_t world(MPI_COMM_WORLD);
-   
+
   int snapshot_start, snapshot_end;
   if(0==world.rank())
 	ParseHBTParams(argc, argv, HBTConfig, snapshot_start, snapshot_end);
@@ -75,7 +101,7 @@ int main(int argc, char **argv)
 	auto & h=halo.Halos[1];
 	cout<<" Halo 1 from thread "<<world.rank()<<":"<<"id="<<h.HaloId<<","<<h.Particles.size()<<", "<<h.Particles[5]<<endl;
   }
-  
+
   MPI_Finalize();
   return 0;
 }

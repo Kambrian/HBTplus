@@ -205,7 +205,7 @@ public:
   void AverageVelocity(HBTxyz & CoV, const HBTInt Particles[], HBTInt NumPart) const;
 
   template <class Halo_T>
-  void ExchangeHalos(MpiWorker_t &world, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, MPI_Datatype MPI_Halo_Shell_Type) const;
+  void ExchangeHalos(MpiWorker_t &world, vector <Halo_T> & InHalos, vector <Halo_T> & OutHalos, MPI_Datatype MPI_Halo_Shell_Type, bool NeedParticleQuery=true) const;
 };
 inline HBTInt ParticleSnapshot_t::size() const
 {

@@ -69,7 +69,7 @@ public:
     My_Type_free(&MPI_Gadget4Header_t);
   }
   void LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology);
-  void LoadGroups(MpiWorker_t &world, int snapshotId, vector <Halo_t> &Halos);
+  void LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &partsnap, vector <Halo_t> &Halos);
   void LoadSnapshotAndHalo(MpiWorker_t &world, int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology, vector <Halo_t> &Halos);//load particle and halos together
 };
 

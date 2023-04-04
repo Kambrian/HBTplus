@@ -64,11 +64,11 @@ namespace ParticleExchangeComp
 
 	if(a_type>b_type)
 	  return true;
-	
+
 	if(a_type&&b_type)
-	  return a.Order<b.Order; 
+	  return a.Order<b.Order;
   }
-  
+
   template <class OrderedParticleList_T>
   void RestoreParticleOrder(OrderedParticleList_T &P)
   {
@@ -93,9 +93,9 @@ class ParticleExchanger_t
   MpiWorker_t &world;
   const ParticleSnapshot_t &snap;
   vector <Halo_T> &InHalos;
-  
+
   vector <HBTInt> HaloSizes, HaloOffsets;
-  
+
   vector <RemoteParticle_t> LocalParticles;
   vector <OrderedParticle_t> RoamParticles;
   typedef vector <RemoteParticle_t>::iterator LocalParticleIterator_t;
@@ -130,7 +130,7 @@ void ParticleExchanger_t<Halo_T>::CollectParticles()
   HaloSizes.reserve(InHalos.size());
 //   HaloOffsets.reserve(InHalos.size());
   HBTInt np=0;
-  for(auto &&h: InHalos) 
+  for(auto &&h: InHalos)
   {
 // 	HaloOffsets.push_back(np);
 	HBTInt n=h.Particles.size();
@@ -153,7 +153,7 @@ template <class Halo_T>
 void ParticleExchanger_t<Halo_T>::SendParticles()
 {//order the particles and send them to the corresponding processing according to ProcessIdRange
   sort(LocalParticles.begin(), LocalParticles.end(), ParticleExchangeComp::CompParticleId);
-  
+
   LocalSizes.resize(world.size());
   LocalIterators.resize(world.size());
   int rank=0;
@@ -162,7 +162,7 @@ void ParticleExchanger_t<Halo_T>::SendParticles()
 	while(it->Id>=snap.ProcessIdRanges[rank])
 	{
 	  if(rank==world.size()) //no particle id should exceed ProcessIdRange.back()
-	  {    
+	  {
 	    cerr<<"Error: invalid particle id: "<<it->Id<<endl;
 	    exit(1);
 	  }
@@ -174,7 +174,7 @@ void ParticleExchanger_t<Halo_T>::SendParticles()
   for(rank=0;rank<world.size()-1;rank++)
 	LocalSizes[rank]=LocalIterators[rank+1]-LocalIterators[rank];
   LocalSizes[rank]=LocalParticles.end()-LocalIterators.back();
-  
+
   RoamSizes.resize(world.size());
   MPI_Alltoall(LocalSizes.data(), 1, MPI_HBT_INT, RoamSizes.data(), 1, MPI_HBT_INT, world.Communicator);
   HBTInt np=accumulate(RoamSizes.begin(), RoamSizes.end(), (HBTInt)0);
@@ -186,7 +186,7 @@ void ParticleExchanger_t<Halo_T>::SendParticles()
 	RoamIterators[i]=it;
 	it+=RoamSizes[i];
   }
-  
+
   MyAllToAll<Particle_t, LocalParticleIterator_t, RoamParticleIterator_t>(world, LocalIterators, LocalSizes, RoamIterators, MPI_HBTParticle_t);
 }
 
@@ -196,14 +196,14 @@ void ParticleExchanger_t<Halo_T>::QueryParticles()
   HBTInt order=0;
   for(auto &&p: RoamParticles)	p.Order=order++;
   sort(RoamParticles.begin(), RoamParticles.end(), ParticleExchangeComp::CompParticleId);
-  
+
   snap.GetIndices(RoamParticles);
   for(auto &&p: RoamParticles)
   {
     if(p.Id!=SpecialConst::NullParticleId)
       p=snap.Particles[p.Id];//query the particle property; may need to spawn particles due to star formation here.
   }
-  
+
   ParticleExchangeComp::RestoreParticleOrder(RoamParticles);
 }
 
@@ -212,14 +212,14 @@ void ParticleExchanger_t<Halo_T>::RecvParticles()
 {
   MyAllToAll<Particle_t, RoamParticleIterator_t, LocalParticleIterator_t>(world, RoamIterators, RoamSizes, LocalIterators, MPI_HBTParticle_t);
   vector <OrderedParticle_t>().swap(RoamParticles);
-  
+
   for(int rank=0;rank<world.size();rank++)
   {
 	auto it_end=LocalIterators[rank]+LocalSizes[rank];
 	for(auto it=LocalIterators[rank];it!=it_end;++it)
 	  it->ProcessorId=rank;
   }
-  
+
   ParticleExchangeComp::RestoreParticleOrder(LocalParticles);
 }
 
@@ -257,7 +257,7 @@ void DecideTargetProcessor(int NumProc, vector <Halo_T> &InHalos, vector <IdRank
   HBTxyz step;
   for(int i=0;i<3;i++)
 	step[i]=HBTConfig.BoxSize/dims[i];
-  
+
 #pragma omp parallel for
   for(HBTInt i=0;i<InHalos.size();i++)
   {
@@ -268,17 +268,18 @@ void DecideTargetProcessor(int NumProc, vector <Halo_T> &InHalos, vector <IdRank
 }
 
 template <class Halo_T>
-void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHalos, vector<Halo_T>& OutHalos, MPI_Datatype MPI_Halo_Shell_Type) const
+void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHalos, vector<Halo_T>& OutHalos, MPI_Datatype MPI_Halo_Shell_Type, bool NeedParticleQuery=true) const
 {
   typedef typename vector <Halo_T>::iterator HaloIterator_t;
   typedef HaloParticleIterator_t<HaloIterator_t> ParticleIterator_t;
-  
+
 //   cout<<"Query particle..."<<flush;
+  if(NeedParticleQuery)
   {//query particles
 	ParticleExchanger_t <Halo_T>Exchanger(world, *this, InHalos);
 	Exchanger.Exchange();
   }
-  
+
   vector <IdRank_t>TargetRank(InHalos.size());
   DecideTargetProcessor(world.size(), InHalos, TargetRank);
 
@@ -304,7 +305,7 @@ void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHa
 	MPI_Alltoallv(InHaloSizes.data(), SendHaloCounts.data(), SendHaloDisps.data(), MPI_HBT_INT, OutHaloSizes.data(), RecvHaloCounts.data(), RecvHaloDisps.data(), MPI_HBT_INT, world.Communicator);
 	for(HBTInt i=0;i<NumNewHalos;i++)
 	  NewHalos[i].Particles.resize(OutHaloSizes[i]);
-	
+
 	{
 	//distribute halo particles
 	MPI_Datatype MPI_HBT_Particle;
@@ -320,9 +321,9 @@ void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHa
 	vector <HBTInt> InParticleCount(world.size(),0);
 	for(HBTInt i=0;i<InHalosSorted.size();i++)
 	  InParticleCount[TargetRank[i].Rank]+=InHalosSorted[i].Particles.size();
-	
+
 	MyAllToAll<Particle_t, ParticleIterator_t, ParticleIterator_t>(world, InParticleIterator, InParticleCount, OutParticleIterator, MPI_HBT_Particle);
-	
+
 	MPI_Type_free(&MPI_HBT_Particle);
 	}
 }
