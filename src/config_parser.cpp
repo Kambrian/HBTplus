@@ -23,7 +23,7 @@ void Parameter_t::SetParameterValue(const string &line)
   else TrySetPar(MaxSnapshotIndex,4)
   else TrySetPar(BoxSize,5)
   else TrySetPar(SofteningHalo,6)
-#undef TrySetPar		
+#undef TrySetPar
 #define TrySetPar(var) if(name==#var) ss>>var;
   else TrySetPar(SnapshotFormat)
   else TrySetPar(GroupFileFormat)
@@ -82,9 +82,9 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   }
   vector <string> lines;
   string line;
-  
+
   cout<<"Reading configuration file "<<param_file<<endl;
-  
+
   while(getline(ifs,line))
   {
 	trim_trailing_garbage(line, "#[");
@@ -94,17 +94,17 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   CheckUnsetParameters();
   PhysicalConst::G=43.0071*(MassInMsunh/1e10)/VelInKmS/VelInKmS/LengthInMpch;
   PhysicalConst::H0=100.*(1./VelInKmS)/(1./LengthInMpch);
-  
+
   if(ParticleIdRankStyle) ParticleIdNeedHash=false;
-  
+
   BoxHalf=BoxSize/2.;
   TreeNodeResolution=SofteningHalo*0.1;
   TreeNodeResolutionHalf=TreeNodeResolution/2.;
   TreeNodeOpenAngleSquare=TreeNodeOpenAngle*TreeNodeOpenAngle;
-  
-  if(GroupFileFormat=="apostle_particle_index")
+
+  if(GroupFileFormat=="apostle_particle_index"||GroupFileFormat=="gadget4hdf")
 	GroupLoadedFullParticle=true;
-  
+
   ReadSnapshotNameList();
 }
 void Parameter_t::ReadSnapshotNameList()
@@ -115,8 +115,8 @@ void Parameter_t::ReadSnapshotNameList()
   if(ifs.is_open())
   {
 	cout<<"Found SnapshotNameList file "<<snaplist_filename<<endl;
-	
-	string line;	
+
+	string line;
 	while(getline(ifs,line))
 	{
 	  trim_trailing_garbage(line, "#");
@@ -182,12 +182,12 @@ void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snapshot_st
 void Parameter_t::BroadCast(MpiWorker_t &world, int root)
 /*sync parameters and physical consts across*/
 {
-  #define _SyncVec(x,t) world.SyncContainer(x,t,root)	
+  #define _SyncVec(x,t) world.SyncContainer(x,t,root)
   #define _SyncAtom(x,t) world.SyncAtom(x,t,root)
   #define _SyncBool(x) world.SyncAtomBool(x, root)
   #define _SyncVecBool(x) world.SyncVectorBool(x, root)
   #define _SyncReal(x) _SyncAtom(x, MPI_HBT_REAL)
-  
+
   _SyncVec(SnapshotPath, MPI_CHAR);
   _SyncVec(HaloPath, MPI_CHAR);
   _SyncVec(SubhaloPath, MPI_CHAR);
@@ -196,7 +196,7 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   _SyncReal(BoxSize);
   _SyncReal(SofteningHalo);
   _SyncVecBool(IsSet);
-  
+
   _SyncVec(SnapshotFormat, MPI_CHAR);
   _SyncVec(GroupFileFormat, MPI_CHAR);
   _SyncAtom(MaxConcurrentIO, MPI_INT);
@@ -215,7 +215,7 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   _SyncBool(MergeTrappedSubhalos);
   _SyncVec(SnapshotIdList, MPI_INT);
   world.SyncVectorString(SnapshotNameList, root);
-  
+
   _SyncReal(MajorProgenitorMassRatio);
   #ifdef ALLOW_BINARY_SYSTEM
   _SyncReal(BinaryMassRatioLimit);
@@ -224,30 +224,30 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
   _SyncReal(SourceSubRelaxFactor);
   _SyncReal(SubCoreSizeFactor);
   _SyncAtom(SubCoreSizeMin, MPI_HBT_INT);
-  
+
   _SyncReal(TreeAllocFactor);
   _SyncReal(TreeNodeOpenAngle);
   _SyncAtom(TreeMinNumOfCells, MPI_HBT_INT);
-  
+
   _SyncAtom(MaxSampleSizeOfPotentialEstimate, MPI_HBT_INT);
   _SyncBool(RefineMostboundParticle);
-  
+
   _SyncReal(TreeNodeOpenAngleSquare);
   _SyncReal(TreeNodeResolution);
   _SyncReal(TreeNodeResolutionHalf);
   _SyncReal(BoxHalf);
-  
+
   _SyncBool(GroupLoadedFullParticle);
-  //---------------end sync params-------------------------//	
-  
+  //---------------end sync params-------------------------//
+
   _SyncReal(PhysicalConst::G);
   _SyncReal(PhysicalConst::H0);
-  
+
   #undef _SyncVec
-  #undef _SyncAtom 
-  #undef _SyncBool 
-  #undef _SyncVecBool 
-  #undef _SyncReal 
+  #undef _SyncAtom
+  #undef _SyncBool
+  #undef _SyncVecBool
+  #undef _SyncReal
 }
 void Parameter_t::DumpParameters()
 {
@@ -272,7 +272,7 @@ void Parameter_t::DumpParameters()
   DumpPar(MaxSnapshotIndex)
   DumpPar(BoxSize)
   DumpPar(SofteningHalo)
-  
+
   /*optional*/
   DumpPar(SnapshotFormat)
   DumpPar(GroupFileFormat)
@@ -305,22 +305,22 @@ void Parameter_t::DumpParameters()
 	version_file<<" "<<i;
   version_file<<endl;
   }
-  
-  DumpPar(MajorProgenitorMassRatio) 
+
+  DumpPar(MajorProgenitorMassRatio)
   DumpPar(BoundMassPrecision)
   DumpPar(SourceSubRelaxFactor)
-  DumpPar(SubCoreSizeFactor) 
+  DumpPar(SubCoreSizeFactor)
   DumpPar(SubCoreSizeMin)
-  
+
   DumpPar(TreeAllocFactor)
   DumpPar(TreeNodeOpenAngle)
   DumpPar(TreeMinNumOfCells)
-  
+
   DumpPar(MaxSampleSizeOfPotentialEstimate)
   DumpPar(RefineMostboundParticle)
-  
+
   DumpComment(GroupLoadedFullParticle)
 #undef DumpPar
-#undef DumpComment  
+#undef DumpComment
   version_file.close();
 }

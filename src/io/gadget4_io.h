@@ -43,6 +43,16 @@ class Gadget4Reader_t
   vector <HBTInt> offset_file;
   vector <HBTInt> nhalo_per_groupfile;
   vector <HBTInt> offsethalo_per_groupfile;
+
+  const int root_node=0;
+  //snap tab:
+  vector <HBTInt> ProcLen;
+  void CollectProcSizes(MpiWorker_t &world);
+  //group tab:
+  vector <HBTInt> HaloSizesLocal;//halosizes read into this proc
+  vector <HBTInt> HaloSizesAll;//only significant on root proc
+  void LoadGroupTab(MpiWorker_t &world);
+
   Gadget4Header_t Header;
   void ReadHeader(int ifile, Gadget4Header_t &header);
   int ReadGroupFileCounts(int ifile);
@@ -57,6 +67,9 @@ class Gadget4Reader_t
   void GetParticleCountInFile(hid_t file, int np[]);
   void ExchangeAndMerge(MpiWorker_t &world, vector< Halo_t >& Halos);
 
+  void LoadLeadingGroups(MpiWorker_t &world, const vector<Particle_t> &Particles, vector <Halo_t> &Halos);
+  void LoadLocalGroups(MpiWorker_t &world, const vector<Particle_t> &Particles, vector <Halo_t> &Halos);
+
   MPI_Datatype MPI_Gadget4Header_t;
 
 public:
@@ -68,9 +81,9 @@ public:
   {
     My_Type_free(&MPI_Gadget4Header_t);
   }
+
   void LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology);
   void LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &partsnap, vector <Halo_t> &Halos);
-  void LoadSnapshotAndHalo(MpiWorker_t &world, int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology, vector <Halo_t> &Halos);//load particle and halos together
 };
 
 extern bool IsGadget4Group(const string &GroupFileFormat);
