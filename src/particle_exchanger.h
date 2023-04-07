@@ -268,7 +268,7 @@ void DecideTargetProcessor(int NumProc, vector <Halo_T> &InHalos, vector <IdRank
 }
 
 template <class Halo_T>
-void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHalos, vector<Halo_T>& OutHalos, MPI_Datatype MPI_Halo_Shell_Type, bool NeedParticleQuery=true) const
+void ParticleSnapshot_t::ExchangeHalos(MpiWorker_t& world, vector <Halo_T>& InHalos, vector<Halo_T>& OutHalos, MPI_Datatype MPI_Halo_Shell_Type, bool NeedParticleQuery) const
 {
   typedef typename vector <Halo_T>::iterator HaloIterator_t;
   typedef HaloParticleIterator_t<HaloIterator_t> ParticleIterator_t;

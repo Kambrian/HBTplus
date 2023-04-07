@@ -15,14 +15,29 @@
 #include "../halo.h"
 #include "gadget_group_io.h"
 #include "apostle_io.h"
+#include "gadget4_io.h"
 
-void HaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index)
+void HaloSnapshot_t::Load ( MpiWorker_t& world, int snapshot_index )
+{//compatibility interface
+  if(Gadget4Reader::IsGadget4Group(HBTConfig.GroupFileFormat))
+  {
+    throw(runtime_error("reading gadget4 group requires preloaded snapshot\n"));
+    exit(1);
+  }
+
+  ParticleSnapshot_t partsnap;
+  Load(world, snapshot_index, partsnap);
+}
+
+void HaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const ParticleSnapshot_t &partsnap)
 {
   SetSnapshotIndex(snapshot_index);
 
   string GroupFileFormat=HBTConfig.GroupFileFormat;
 
-  if(GadgetGroup::IsGadgetGroup(GroupFileFormat))
+  if(Gadget4Reader::IsGadget4Group(GroupFileFormat))
+	Gadget4Reader::Gadget4Reader_t().LoadGroups(world, partsnap, Halos);//only this needs partsnap
+  else if(GadgetGroup::IsGadgetGroup(GroupFileFormat))
 	GadgetGroup::Load(world, SnapshotId, Halos);
   else if(IsApostleGroup(GroupFileFormat))
 	ApostleReader_t().LoadGroups(world, SnapshotId, Halos);
@@ -35,32 +50,6 @@ void HaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index)
   }
   else
 	throw(runtime_error("unknown GroupFileFormat "+GroupFileFormat));
-
-  NumPartOfLargestHalo=0;
-  TotNumberOfParticles=0;
-  for(auto && h: Halos)
-  {
-    auto np=h.Particles.size();
-    TotNumberOfParticles+=np;
-    if(np>NumPartOfLargestHalo) NumPartOfLargestHalo=np;
-  }
-
-  HBTInt NumHalos=Halos.size(), NumHalosAll=0;
-  MPI_Reduce(&NumHalos, &NumHalosAll, 1, MPI_HBT_INT, MPI_SUM, 0, world.Communicator);
-  if(world.rank()==0)
-    cout<<NumHalosAll<<" groups loaded at snapshot "<<snapshot_index<<"("<<SnapshotId<<")"<<endl;
-}
-
-void HaloSnapshot_t::LoadWithSnap(MpiWorker_t &world, int snapshot_index, ParticleSnapshot_t &partsnap)
-{
-  SetSnapshotIndex(snapshot_index);
-
-  string GroupFileFormat=HBTConfig.GroupFileFormat;
-
-  if(Gadget4Group::IsGadget4Group(GroupFileFormat))
-	Gadget4Group::Load(world, SnapshotId, Halos, partsnap);
-  else
-	throw(runtime_error("unknown GroupFileFormat to LoadWithSnap: "+GroupFileFormat));
 
   NumPartOfLargestHalo=0;
   TotNumberOfParticles=0;
