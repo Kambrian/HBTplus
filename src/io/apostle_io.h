@@ -1,9 +1,9 @@
 /* IO for Apostle (EAGLE local group) data.
- * 
- * To specify a list of snapshot, list the snapshot directories (one per line) in snapshotlist.txt and place it under your subhalo output directory. 
- * 
+ *
+ * To specify a list of snapshot, list the snapshot directories (one per line) in snapshotlist.txt and place it under your subhalo output directory.
+ *
  * To use this IO, in the config file, set SnapshotFormat to apostle,  and set GroupFileFormat to apostle or apostle_particle_index.
- * 
+ *
  * The groups loaded are already filled with particle properties, and the halos are distributed to processors according to the CoM of each halo.
  */
 
@@ -21,8 +21,8 @@ struct ApostleHeader_t
   double   OmegaM0;
   double   OmegaLambda0;
   double   mass[TypeMax];
-  int      npart[TypeMax];  
-  HBTInt npartTotal[TypeMax]; 
+  int      npart[TypeMax];
+  HBTInt npartTotal[TypeMax];
 };
 
 void create_ApostleHeader_MPI_type(MPI_Datatype &dtype);
@@ -36,7 +36,7 @@ class ApostleReader_t
 {
   const int NullGroupId=1<<30; //1073741824
   string SnapshotName;
-    
+
   vector <HBTInt> np_file;
   vector <HBTInt> offset_file;
   ApostleHeader_t Header;
@@ -47,10 +47,9 @@ class ApostleReader_t
   void GetFileName(int ifile, string &filename);
   void SetSnapshot(int snapshotId);
   void GetParticleCountInFile(hid_t file, int np[]);
-  void ExchangeAndMerge(MpiWorker_t &world, vector< Halo_t >& Halos);
-  
+
   MPI_Datatype MPI_ApostleHeader_t;
-  
+
 public:
   ApostleReader_t()
   {
