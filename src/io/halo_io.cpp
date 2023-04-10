@@ -26,11 +26,13 @@ void HaloSnapshot_t::Load ( MpiWorker_t& world, int snapshot_index )
   }
 
   ParticleSnapshot_t partsnap;
-  Load(world, snapshot_index, partsnap);
+  partsnap.SetSnapshotIndex(snapshot_index);
+  Load(world, partsnap);
 }
 
-void HaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const ParticleSnapshot_t &partsnap)
+void HaloSnapshot_t::Load(MpiWorker_t &world, const ParticleSnapshot_t &partsnap)
 {
+  int snapshot_index=partsnap.GetSnapshotIndex();
   SetSnapshotIndex(snapshot_index);
 
   string GroupFileFormat=HBTConfig.GroupFileFormat;
