@@ -90,8 +90,8 @@ void Gadget4Reader_t::ReadHeader(int ifile, Gadget4Header_t &header)
   ReadAttribute(file, "Header", "BoxSize", H5T_NATIVE_DOUBLE, &header.BoxSize);
   assert((HBTReal)header.BoxSize==HBTConfig.BoxSize);
   ReadAttribute(file, "Header", "Time", H5T_NATIVE_DOUBLE, &header.ScaleFactor);
-  ReadAttribute(file, "Header", "Omega0", H5T_NATIVE_DOUBLE, &header.OmegaM0);
-  ReadAttribute(file, "Header", "OmegaLambda", H5T_NATIVE_DOUBLE, &header.OmegaLambda0);
+  ReadAttribute(file, "Parameters", "Omega0", H5T_NATIVE_DOUBLE, &header.OmegaM0);
+  ReadAttribute(file, "Parameters", "OmegaLambda", H5T_NATIVE_DOUBLE, &header.OmegaLambda0);
   ReadAttribute(file, "Header", "MassTable", H5T_NATIVE_DOUBLE, header.mass);
   cout<<"mass table: "<<header.mass[0]<<","<<header.mass[1]<<","<<header.mass[2]<<endl;
   ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, header.npart);
@@ -858,7 +858,8 @@ void Gadget4Reader_t::LoadLocalGroups(MpiWorker_t &world, const vector<Particle_
     HaloPartitioner.Fill(HaloSizesAll, ProcLen);
 
   //distribute the partition info
-  HBTInt first_halo, last_halo, nhalos;
+  HBTInt first_halo, last_halo;
+  int nhalos;
   vector <HBTInt> local_halo_sizes;
   MPI_Scatter(HaloPartitioner.ProcFirstHalo.data(), 1, MPI_HBT_INT, &first_halo, 1, MPI_HBT_INT, root_node, world.Communicator);
   MPI_Scatter(HaloPartitioner.ProcLastHalo.data(), 1, MPI_HBT_INT, &last_halo, 1, MPI_HBT_INT, root_node, world.Communicator);
@@ -933,6 +934,6 @@ void Gadget4Reader_t::LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &p
 
 bool IsGadget4Group(const string &GroupFileFormat)
 {
-  return GroupFileFormat.substr(0, 10)=="gadget4hdf";
+  return GroupFileFormat.substr(0, 10)=="gadget4_hdf";
 }
 }

@@ -15,6 +15,7 @@ using namespace std;
 #include "../mymath.h"
 #include "gadget_io.h"
 #include "apostle_io.h"
+#include "gadget4_io.h"
 
 void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill_particle_hash)
 {
@@ -28,6 +29,10 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
   else if(HBTConfig.SnapshotFormat=="apostle")
   {
 	ApostleReader_t().LoadSnapshot(world, SnapshotId, Particles, Cosmology);
+  }
+  else if(HBTConfig.SnapshotFormat=="gadget4_hdf")
+  {
+    Gadget4Reader::Gadget4Reader_t().LoadSnapshot(world, SnapshotId, Particles, Cosmology);
   }
   else if(HBTConfig.SnapshotFormat=="mysnapshot")
   {/*insert your snapshot reader here, and include relevant header in the header if necessary

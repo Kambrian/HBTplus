@@ -102,7 +102,7 @@ void Parameter_t::ParseConfigFile(const char * param_file)
   TreeNodeResolutionHalf=TreeNodeResolution/2.;
   TreeNodeOpenAngleSquare=TreeNodeOpenAngle*TreeNodeOpenAngle;
 
-  if(GroupFileFormat=="apostle_particle_index"||GroupFileFormat=="gadget4hdf")
+  if(GroupFileFormat=="apostle_particle_index"||GroupFileFormat=="gadget4_hdf"||GroupFileFormat=="gadget4_hdf2")
 	GroupLoadedFullParticle=true;
 
   ReadSnapshotNameList();

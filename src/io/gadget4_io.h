@@ -5,7 +5,7 @@
  *
  * To specify a list of snapshot, list the snapshot directories (one per line) in snapshotlist.txt and place it under your subhalo output directory.
  *
- * To use this IO, in the config file, set SnapshotFormat to gadget4hdf,  and set GroupFileFormat to gadget4hdf or gadget4hdf2 (equivalent but uses a different algorithm for reading groups internally).
+ * To use this IO, in the config file, set SnapshotFormat to gadget4_hdf,  and set GroupFileFormat to gadget4_hdf or gadget4_hdf2 (equivalent but uses a different algorithm for reading groups internally).
  *
  * The groups loaded are already filled with particle properties, and the halos are distributed to processors according to the CoM of each halo.
  */

@@ -37,10 +37,14 @@ void HaloSnapshot_t::Load(MpiWorker_t &world, const ParticleSnapshot_t &partsnap
 
   string GroupFileFormat=HBTConfig.GroupFileFormat;
 
-  if(Gadget4Reader::IsGadget4Group(GroupFileFormat))
-	Gadget4Reader::Gadget4Reader_t().LoadGroups(world, partsnap, Halos);//only this needs partsnap
-  else if(GadgetGroup::IsGadgetGroup(GroupFileFormat))
-	GadgetGroup::Load(world, SnapshotId, Halos);
+
+  if(GadgetGroup::IsGadgetGroup(GroupFileFormat))
+  {
+    if(Gadget4Reader::IsGadget4Group(GroupFileFormat))
+      Gadget4Reader::Gadget4Reader_t().LoadGroups(world, partsnap, Halos);//only this needs partsnap
+    else
+      GadgetGroup::Load(world, SnapshotId, Halos);
+  }
   else if(IsApostleGroup(GroupFileFormat))
 	ApostleReader_t().LoadGroups(world, SnapshotId, Halos);
   else if(GroupFileFormat=="my_group_format")
