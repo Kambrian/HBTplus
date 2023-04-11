@@ -16,17 +16,17 @@ using namespace std;
 
 void GadgetHeader_t::create_MPI_type(MPI_Datatype& dtype)
 {
-  /*to create the struct data type for communication*/	
+  /*to create the struct data type for communication*/
   GadgetHeader_t &p=*this;
   #define NumAttr 13
   MPI_Datatype oldtypes[NumAttr];
   int blockcounts[NumAttr];
   MPI_Aint   offsets[NumAttr], origin,extent;
-  
+
   MPI_Get_address(&p,&origin);
   MPI_Get_address((&p)+1,&extent);//to get the extent of s
   extent-=origin;
-  
+
   int i=0;
   #define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
   RegisterAttr(npart, MPI_INT, TypeMax)
@@ -35,7 +35,7 @@ void GadgetHeader_t::create_MPI_type(MPI_Datatype& dtype)
   RegisterAttr(redshift, MPI_DOUBLE, 1)
   RegisterAttr(flag_sfr, MPI_INT, 1)
   RegisterAttr(flag_feedback, MPI_INT, 1)
-  RegisterAttr(npartTotal, MPI_UNSIGNED, 1)
+  RegisterAttr(npartTotal, MPI_UNSIGNED, TypeMax) //bugfix 2023/04/11
   RegisterAttr(flag_cooling, MPI_INT, 1)
   RegisterAttr(num_files, MPI_INT, 1)
   RegisterAttr(BoxSize, MPI_DOUBLE, 1)
@@ -44,7 +44,7 @@ void GadgetHeader_t::create_MPI_type(MPI_Datatype& dtype)
   RegisterAttr(HubbleParam, MPI_DOUBLE, 1)
   #undef RegisterAttr
   assert(i==NumAttr);
-  
+
   MPI_Type_create_struct(NumAttr,blockcounts,offsets,oldtypes, &dtype);
   MPI_Type_create_resized(dtype,(MPI_Aint)0, extent, &dtype);
   MPI_Type_commit(&dtype);
@@ -61,14 +61,14 @@ GadgetReader_t::GadgetReader_t(MpiWorker_t &world, int snapshot_id, vector< Part
 
 #define myfread(buf,size,count,fp) fread_swap(buf,size,count,fp,NeedByteSwap)
 #define SkipPositionBlock(fp) SkipFortranBlock(fp, NeedByteSwap)
-#define SkipVelocityBlock(fp) SkipFortranBlock(fp, NeedByteSwap)	 
+#define SkipVelocityBlock(fp) SkipFortranBlock(fp, NeedByteSwap)
 #define SkipIdBlock(fp) SkipFortranBlock(fp, NeedByteSwap)
 #define ReadBlockSize(a) myfread(&a,sizeof(a),1,fp)
 void GadgetReader_t::GetGadgetFileName(int ifile, string &filename)
 {
   FILE *fp;
   char buf[1024];
-  
+
   sprintf(buf,"%s/snapdir_%03d/%s_%03d.%d",HBTConfig.SnapshotPath.c_str(),SnapshotId,HBTConfig.SnapshotFileBase.c_str(),SnapshotId,ifile);
   if(ifile==0)
 	if(!file_exist(buf)) sprintf(buf,"%s/%s_%03d",HBTConfig.SnapshotPath.c_str(),HBTConfig.SnapshotFileBase.c_str(),SnapshotId); //try the other convention
@@ -100,7 +100,7 @@ bool GadgetReader_t::ReadGadgetFileHeader(FILE *fp, GadgetHeader_t &header)
 	exit(1);
   }
   dummy=headersize;
-  
+
   myfread(header.npart,sizeof(int),TypeMax,fp);
   myfread(header.mass,sizeof(double),TypeMax,fp);
   myfread(&header.ScaleFactor,sizeof(double),1,fp);
@@ -120,14 +120,14 @@ bool GadgetReader_t::ReadGadgetFileHeader(FILE *fp, GadgetHeader_t &header)
   {
 	fprintf(stderr,"error!record brackets not match for header!\t%d,%d\n",dummy,dummy2);
 	exit(1);
-  } 
-  
+  }
+
 #ifdef MAJOR_MERGER_PATCH
-/*work around for the buggy non-conforming major-merger snapshot*/ 
+/*work around for the buggy non-conforming major-merger snapshot*/
   header.num_files=1;
   header.BoxSize=250.;
-#endif  
-  
+#endif
+
   return NeedByteSwap;
 }
 
@@ -154,23 +154,23 @@ void GadgetReader_t::LoadGadgetHeader(int ifile)
 {
   //read the header part, assign header extensions, and check byteorder
 
-  FILE *fp; 
+  FILE *fp;
   string filename;
   GetGadgetFileName( ifile, filename);
-  
+
   myfopen(fp, filename.c_str(), "r");
   NeedByteSwap=ReadGadgetFileHeader(fp, Header);
-  
+
   if((HBTReal)Header.BoxSize!=HBTConfig.BoxSize)
   {
 	cerr<<"BoxSize not match input: read "<<Header.BoxSize<<"; expect "<<HBTConfig.BoxSize<<endl;
 	cerr<<"Maybe the length unit differ? Expected unit: "<<HBTConfig.LengthInMpch<<" Mpc/h\n";
 	exit(1);
   }
-  
+
   //set datatypes
   HBTInt NumPartInFile=0;
-  for(int i=0;i<TypeMax;i++) 
+  for(int i=0;i<TypeMax;i++)
 	NumPartInFile+=Header.npart[i];
   int blocksize=SkipPositionBlock(fp);
   RealTypeSize=blocksize/NumPartInFile/3;
@@ -179,7 +179,7 @@ void GadgetReader_t::LoadGadgetHeader(int ifile)
   assert(blocksize==RealTypeSize*NumPartInFile*3);
   if(sizeof(HBTReal)<RealTypeSize)
 	cerr<<"WARNING: loading size "<<RealTypeSize<<" float in snapshot with size "<<sizeof(HBTReal)<<" float in HBT. possible loss of accuracy.\n Please use ./HBTdouble unless you know what you are doing.";
-  
+
   if(HBTConfig.SnapshotHasIdBlock)
   {
 	blocksize=SkipIdBlock(fp);
@@ -189,9 +189,9 @@ void GadgetReader_t::LoadGadgetHeader(int ifile)
 // 	if(sizeof(HBTInt)<IntTypeSize)
 // 	  cerr<<"WARNING: loading size "<<IntTypeSize<<" integer in snapshot with size "<<sizeof(HBTInt)<<" int in HBT. possible data overflow.\n Please use ./HBTdouble unless you know what you are doing.";
   }
-  
+
   fclose(fp);
-  
+
   //npartTotal is not reliable
   HBTInt np=0;
   for(int iFile=0;iFile<Header.num_files;iFile++)
@@ -204,7 +204,7 @@ void GadgetReader_t::LoadGadgetHeader(int ifile)
 }
 
 void GadgetReader_t::Load(MpiWorker_t &world)
-{ 
+{
   const int root=0;
   if(world.rank()==root)
     LoadGadgetHeader();
@@ -218,11 +218,11 @@ void GadgetReader_t::Load(MpiWorker_t &world)
   world.SyncContainer(NumberOfParticleInFiles, MPI_HBT_INT, root);
   world.SyncContainer(OffsetOfParticleInFiles, MPI_HBT_INT, root);
 
-  Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);  
+  Cosmology.Set(Header.ScaleFactor, Header.OmegaM0, Header.OmegaLambda0);
 #ifdef DM_ONLY
 //   Cosmology.ParticleMass=Header.mass[TypeDM];
 #endif
-  
+
   HBTInt nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), Header.num_files, nfiles_skip, nfiles_end);
   {
@@ -230,10 +230,10 @@ void GadgetReader_t::Load(MpiWorker_t &world)
   np=accumulate(NumberOfParticleInFiles.begin()+nfiles_skip, NumberOfParticleInFiles.begin()+nfiles_end, np);
   Particles.reserve(np);
   }
-  
+
   for(int i=0, ireader=0;i<world.size();i++, ireader++)
   {
-	if(ireader==HBTConfig.MaxConcurrentIO) 
+	if(ireader==HBTConfig.MaxConcurrentIO)
 	{
 	  ireader=0;//reset reader count
 	  MPI_Barrier(world.Communicator);//wait for every thread to arrive.
@@ -244,7 +244,7 @@ void GadgetReader_t::Load(MpiWorker_t &world)
 		ReadGadgetFile(iFile);
 	}
   }
-  
+
 //   cout<<" ( "<<Header.num_files<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 }
 
@@ -315,8 +315,8 @@ FortranBlock <dtype> block(fp, header.npart[0], 0, NeedByteSwap);\
 }
 
 void GadgetReader_t::ReadGadgetFile(int iFile)
-{ 
-  FILE *fp; 
+{
+  FILE *fp;
   string filename;
   GetGadgetFileName( iFile, filename);
   myfopen(fp, filename.c_str(), "r");
@@ -329,10 +329,10 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 #endif
   vector <HBTInt> offset(TypeMax);
   CompileOffsets(begin(header.npart), end(header.npart), offset.begin());
-  
+
   Particles.resize(Particles.size()+n_read);
   const auto NewParticles=Particles.end()-n_read;
-  
+
 	if(RealTypeSize==4)
 	{
 	  ReadXYZBlock(float, ComovingPosition)
@@ -351,12 +351,12 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 		for(int j=0;j<3;j++)
 		  NewParticles[i].ComovingPosition[j]=position_modulus(NewParticles[i].ComovingPosition[j], boxsize);
 	}
-  
+
 	HBTReal velocity_scale=sqrt(Header.ScaleFactor);
 	for(HBTInt i=0;i<n_read;i++)
 	  for(int j=0;j<3;j++)
 		NewParticles[i].PhysicalVelocity[j]*=velocity_scale;
-	
+
 	if(HBTConfig.SnapshotHasIdBlock)
 	{
 	  if(HBTConfig.ParticleIdRankStyle)
@@ -364,7 +364,7 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 		cout<<"Error: ParticleIdRankStyle not implemented yet\n";
 		exit(1);
 	  }
-	
+
 	  if(IntTypeSize==4)
 	  {
 		if(HBTConfig.SnapshotIdUnsigned)//unsigned int
@@ -381,7 +381,7 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 	  for(HBTInt i=0;i<n_read;i++)
 		NewParticles[i].Id=id_now+i;
 	}
- 
+
 #define MassDataPresent(i) ((0==header.mass[i])&&(header.npartTotal[i]))
   if(RealTypeSize==4)
 	ReadMassBlock(float)
@@ -396,7 +396,7 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
   else
 	ReadEnergyBlock(double)
 #endif
-	
+
   for(int itype=0;itype<TypeMax;++itype)
   {
 	auto p=NewParticles+offset[itype];
@@ -410,6 +410,6 @@ void GadgetReader_t::ReadGadgetFile(int iFile)
 	cout<<"Error: End-of-File when reading "<<filename<<endl;
 	exit(1);
   }
-  
+
   fclose(fp);
 }
