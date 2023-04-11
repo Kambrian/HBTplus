@@ -5,7 +5,7 @@
  *
  * To specify a list of snapshot, list the snapshot directories (one per line) in snapshotlist.txt and place it under your subhalo output directory.
  *
- * To use this IO, in the config file, set SnapshotFormat to gadget4_hdf,  and set GroupFileFormat to gadget4_hdf or gadget4_hdf2 (equivalent but uses a different algorithm for reading groups internally).
+ * To use this IO, in the config file, set SnapshotFormat to gadget4_hdf,  and set GroupFileFormat to gadget4_hdf (or gadget4_hdf2, which is equivalent but uses a different algorithm for reading groups internally, and may be slower).
  *
  * The groups loaded are already filled with particle properties, and the halos are distributed to processors according to the CoM of each halo.
  */
@@ -39,7 +39,6 @@ struct ParticleHost_t: public Particle_t
 
 class Gadget4Reader_t
 {
-  const int NullGroupId=1<<30; //1073741824
   string SnapshotName;
 
   vector <HBTInt> np_file;
@@ -56,14 +55,13 @@ class Gadget4Reader_t
   vector <HBTInt> HaloSizesAll;//only significant on root proc
   void LoadGroupTab(MpiWorker_t &world);
 
-  Gadget4Header_t Header;
+  Gadget4Header_t Header; //this is snapshot header, not necessarily filled when loading groups
   void ReadHeader(int ifile, Gadget4Header_t &header);
   int ReadGroupFileCounts(int ifile);
   HBTInt CompileFileOffsets(int nfiles);
   HBTInt CompileGroupFileOffsets(int nfiles);
   void ReadSnapshot(int ifile, Particle_t * ParticlesInFile);
   void ReadGroupLen(int ifile, HBTInt *buf);
-  void ReadGroupParticles(int ifile, ParticleHost_t * ParticlesInFile, bool FlagReadParticleId);
   void GetFileName(int ifile, string &filename);
   void GetGroupFileName(int ifile, string &filename);
   void SetSnapshot(int snapshotId);

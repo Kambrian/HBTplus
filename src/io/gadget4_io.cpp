@@ -38,7 +38,6 @@ void create_Gadget4Header_MPI_type(MPI_Datatype& dtype)
   RegisterAttr(NumberOfFiles, MPI_INT, 1)
   RegisterAttr(BoxSize, MPI_DOUBLE, 1)
   RegisterAttr(ScaleFactor, MPI_DOUBLE, 1)
-  RegisterAttr(BoxSize, MPI_DOUBLE, 1)
   RegisterAttr(OmegaM0, MPI_DOUBLE, 1)
   RegisterAttr(OmegaLambda0, MPI_DOUBLE, 1)
   RegisterAttr(mass, MPI_DOUBLE, TypeMax)
@@ -101,6 +100,7 @@ void Gadget4Reader_t::ReadHeader(int ifile, Gadget4Header_t &header)
 //   ReadAttribute(file, "Header", "NumPart_Total_HighWord", H5T_NATIVE_UINT, np_high);
 //   for(int i=0;i<TypeMax;i++)
 // 	header.npartTotal[i]=(((unsigned long)np_high[i])<<32)|np[i];
+//   cout<<"NumPart_Total: "<<header.npartTotal[0]<<","<<header.npartTotal[1]<<endl;
   H5Fclose(file);
 }
 
@@ -296,117 +296,6 @@ void Gadget4Reader_t::ReadGroupLen(int ifile, HBTInt *buf)
   H5Fclose(file);
 }
 
-void Gadget4Reader_t::ReadGroupParticles(int ifile, ParticleHost_t *ParticlesInFile, bool FlagReadParticleId)
-{
-  string filename;
-  GetGroupFileName(ifile, filename);
-  hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  vector <int> np_this(TypeMax);
-  vector <HBTInt> offset_this(TypeMax);
-  GetParticleCountInFile(file, np_this.data());
-  CompileOffsets(np_this, offset_this);
-
-  HBTReal vunit=sqrt(Header.ScaleFactor);
-  HBTReal boxsize=Header.BoxSize;
-  for(int itype=0;itype<TypeMax;itype++)
-  {
-	int np=np_this[itype];
-	if(np==0) continue;
-	auto ParticlesThisType=ParticlesInFile+offset_this[itype];
-	stringstream grpname;
-	grpname<<"PartType"<<itype;
-	if(!H5Lexists(file, grpname.str().c_str(), H5P_DEFAULT)) continue;
-	hid_t particle_data=H5Gopen2(file, grpname.str().c_str(), H5P_DEFAULT);
-
-	if(FlagReadParticleId)
-	{
-	{//read position
-	  vector <HBTxyz> x(np);
-	  ReadDataset(particle_data, "Coordinates", H5T_HBTReal, x.data());
-	  if(HBTConfig.PeriodicBoundaryOn)
-	  {
-		for(int i=0;i<np;i++)
-		for(int j=0;j<3;j++)
-		  x[i][j]=position_modulus(x[i][j], boxsize);
-	  }
-	  for(int i=0;i<np;i++)
-		copyHBTxyz(ParticlesThisType[i].ComovingPosition, x[i]);
-	}
-
-	{//velocity
-	  vector <HBTxyz> v(np);
-	  if(H5Lexists(particle_data, "Velocities", H5P_DEFAULT))
-	    ReadDataset(particle_data, "Velocities", H5T_HBTReal, v.data());
-	  else
-	    ReadDataset(particle_data, "Velocity", H5T_HBTReal, v.data());
-	  for(int i=0;i<np;i++)
-		for(int j=0;j<3;j++)
-		  ParticlesThisType[i].PhysicalVelocity[j]=v[i][j]*vunit;
-	}
-
-	{//id
-	  vector <HBTInt> id(np);
-	  ReadDataset(particle_data, "ParticleIDs", H5T_HBTInt, id.data());
-	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].Id=id[i];
-	}
-
-
-	//mass
-	if(Header.mass[itype]==0)
-	{
-	  vector <HBTReal> m(np);
-	  if(H5Lexists(particle_data, "Masses", H5P_DEFAULT))
-	    ReadDataset(particle_data, "Masses", H5T_HBTReal, m.data());
-	  else
-	    ReadDataset(particle_data, "Mass", H5T_HBTReal, m.data());
-	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].Mass=m[i];
-	}
-	else
-	{
-	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].Mass=Header.mass[itype];
-	}
-
-#ifndef DM_ONLY
-	//internal energy
-#ifdef HAS_THERMAL_ENERGY
-	if(itype==0)
-	{
-	  vector <HBTReal> u(np);
-	  ReadDataset(particle_data, "InternalEnergy", H5T_HBTReal, u.data());
-	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].InternalEnergy=u[i];
-	}
-/*	else
-	{
-	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].InternalEnergy=0; //necessary? maybe default initialized?
-	}*/
-#endif
-
-	{//type
-	  ParticleType_t t=static_cast<ParticleType_t>(itype);
-	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].Type=t;
-	}
-#endif
-	}
-
-	{//Hostid
-	  vector <HBTInt> id(np);
-	  ReadDataset(particle_data, "GroupNumber", H5T_HBTInt, id.data());
-	  for(int i=0;i<np;i++)
-		ParticlesThisType[i].HostId=(id[i]<0?NullGroupId:id[i]);//negative means outside fof but within Rv
-	}
-
-	H5Gclose(particle_data);
-  }
-
-  H5Fclose(file);
-}
-
 void Gadget4Reader_t::LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <Particle_t> &Particles, Cosmology_t &Cosmology)
 {
   SetSnapshot(snapshotId);
@@ -415,6 +304,7 @@ void Gadget4Reader_t::LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <P
   {
     ReadHeader(0, Header);
     CompileFileOffsets(Header.NumberOfFiles);
+//     cout<<"header loaded: "<<Header.npartTotal[0]<<","<<Header.npartTotal[1]<<endl;
   }
   MPI_Bcast(&Header, 1, MPI_Gadget4Header_t, root_node, world.Communicator);
   world.SyncContainer(np_file, MPI_HBT_INT, root_node);
@@ -601,7 +491,6 @@ void Gadget4Reader_t::LoadLeadingGroups(MpiWorker_t &world, const vector<Particl
     HaloOffsetAll.push_back(NumPartAllHalos);
     HBTInt NumPartAllProc=CompileOffsets(ProcLen, ProcOffset);
     ProcOffset.push_back(NumPartAllProc);
-    assert(NumPartAllProc==Header.npartTotal[TypeDM]);
     cout<<"Fraction of Particles in halos: "<<NumPartAllHalos*1./NumPartAllProc;
     int iproc=0;
     for(HBTInt ihalo=0;ihalo<HaloOffsetAll.size();ihalo++)
@@ -642,8 +531,11 @@ void Gadget4Reader_t::LoadLeadingGroups(MpiWorker_t &world, const vector<Particl
     MPI_Type_free(&MPI_HaloMapper_Shell_t);
     int LastHaloSpan=0;
     vector <int> LastHaloSpanArr(world.size());
-    for(int rank=0; rank<world.size(); rank++)
-      LastHaloSpanArr[rank]=HaloMapperArr[rank].LastHaloProcLen.size();
+    if(world.rank()==root_node)
+    {
+      for(int rank=0; rank<world.size(); rank++)
+        LastHaloSpanArr[rank]=HaloMapperArr[rank].LastHaloProcLen.size();
+    }
     MPI_Scatter(LastHaloSpanArr.data(), 1, MPI_INT, &LastHaloSpan, 1, MPI_INT, root_node, world.Communicator);
     HaloMapperLocal.LastHaloProcLen.resize(LastHaloSpan);
     HaloMapperLocal.HaloLen.resize(HaloMapperLocal.Nhalos);
@@ -665,8 +557,8 @@ void Gadget4Reader_t::LoadLeadingGroups(MpiWorker_t &world, const vector<Particl
     }
     else
     {
-      MPI_Recv(HaloMapperLocal.LastHaloProcLen.data(), LastHaloSpan, MPI_INT, root_node, 0, world.Communicator, MPI_STATUS_IGNORE);
-      MPI_Recv(HaloMapperLocal.HaloLen.data(), HaloMapperLocal.Nhalos, MPI_INT, root_node, 1, world.Communicator, MPI_STATUS_IGNORE);
+      MPI_Recv(HaloMapperLocal.LastHaloProcLen.data(), LastHaloSpan, MPI_HBT_INT, root_node, 0, world.Communicator, MPI_STATUS_IGNORE);
+      MPI_Recv(HaloMapperLocal.HaloLen.data(), HaloMapperLocal.Nhalos, MPI_HBT_INT, root_node, 1, world.Communicator, MPI_STATUS_IGNORE);
     }
   }
 
@@ -681,7 +573,8 @@ void Gadget4Reader_t::LoadLeadingGroups(MpiWorker_t &world, const vector<Particl
   auto it_part=Particles.begin()+HaloMapperLocal.UpcomingHaloPartOffset;
   vector <HBTInt> HaloOffsetsLocal;
   CompileOffsets(HaloMapperLocal.HaloLen, HaloOffsetsLocal);
-  for(HBTInt i=0;i<Halos.size()-1;i++)
+#pragma omp parallel for
+  for(HBTInt i=0;i<HaloMapperLocal.Nhalos-1;i++)
     Halos[i].Particles.assign(it_part+HaloOffsetsLocal[i], it_part+HaloOffsetsLocal[i+1]);
 
 //send out remote particles
@@ -707,7 +600,8 @@ void Gadget4Reader_t::LoadLeadingGroups(MpiWorker_t &world, const vector<Particl
       MPI_Recv(h.Particles.data()+LastHaloProcOffset[iproc], HaloMapperLocal.LastHaloProcLen[iproc], MPI_HBT_Particle, world.rank()+iproc, 2, world.Communicator, MPI_STATUS_IGNORE);
     }
   }
-  MPI_Wait(&req_to_prev, MPI_STATUS_IGNORE);
+  if(HaloMapperLocal.PrevHaloLocalLen)
+    MPI_Wait(&req_to_prev, MPI_STATUS_IGNORE);
   MPI_Type_free(&MPI_HBT_Particle);
 }
 
@@ -755,6 +649,7 @@ struct HaloPartitioner_t
     }
 
     //fill local halo sizes
+#pragma omp parallel for
     for(iproc=0;iproc<nproc;iproc++)
     {
 
@@ -836,7 +731,7 @@ void Gadget4Reader_t::LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &p
   LoadGroupTab(world);
   CollectProcSizes(world, partsnap);
 
-  if(HBTConfig.GroupFileFormat=="gadget4_hdf")
+  if(HBTConfig.GroupFileFormat=="gadget4_hdf2")
   {
     LoadLeadingGroups(world, partsnap.Particles, Halos);
 
@@ -848,8 +743,8 @@ void Gadget4Reader_t::LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &p
     Halos.swap(LocalHalos);
     My_Type_free(&MPI_HaloShell_t);
   }
-  else if(HBTConfig.GroupFileFormat=="gadget4_hdf2")
-  {
+  else if(HBTConfig.GroupFileFormat=="gadget4_hdf")
+  {//this might have a smaller memory requirement
     LoadLocalGroups(world, partsnap.Particles, Halos);
     HaloPatchExchanger::ExchangeAndMerge(world, Halos);
   }
