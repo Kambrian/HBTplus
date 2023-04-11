@@ -46,16 +46,17 @@ int main(int argc, char **argv)
   partsnap.Load(world, isnap, false);
   timer.Tick(world.Communicator);
   if(world.rank()==0)
-    cout<<"Snapshot loaded in "<<timer.GetSeconds()<<" secs\n";
+    cout<<"\nTiming:>>>\n\tSnapshot loaded in "<<timer.GetSeconds()<<" secs\n\n";
   stringstream ss;
   ss<<"rank "<<world.rank()<<": "<<partsnap.Particles.size()<<" particles, 0,100,end are: "<<partsnap.Particles[0]<<endl<<partsnap.Particles[100]<<endl<<partsnap.Particles.back()<<endl;
-  cout<<ss.str();
+  cout<<ss.str()<<flush;
+  MPI_Barrier(world.Communicator);
 
   timer.Tick(world.Communicator);
   halosnap.Load(world, partsnap);
   timer.Tick(world.Communicator);
   if(world.rank()==0)
-    cout<<"Halos loaded in "<<timer.GetSeconds()<<" secs\n";
+    cout<<"\nTiming:>>>\n\tHalos loaded in "<<timer.GetSeconds()<<" secs\n\n";
 
   ss<<"rank "<<world.rank()<<": "<<halosnap.Halos.size()<<" halos. \n";
   if(halosnap.Halos.size()>0)
@@ -64,7 +65,8 @@ int main(int argc, char **argv)
   ss<<"Halo 1: Id="<<halosnap.Halos[1].HaloId<<", "<<halosnap.Halos[1].Particles.size()<<" particles: "<<halosnap.Halos[1].Particles[0]<<"; "<<halosnap.Halos[1].Particles[1]<<";... "<<halosnap.Halos[1].Particles.back()<<endl;
   if(halosnap.Halos.size()>1)
   ss<<"Halo -1: Id="<<halosnap.Halos.back().HaloId<<", "<<halosnap.Halos.back().Particles.size()<<" particles: "<<halosnap.Halos.back().Particles[0]<<"; "<<halosnap.Halos.back().Particles[1]<<";... "<<halosnap.Halos[1].Particles.back()<<endl;
-  cout<<ss.str();
+  cout<<ss.str()<<flush;
+  MPI_Barrier(world.Communicator);
 
   halosnap.Clear();
   HBTConfig.GroupFileFormat="gadget4_hdf2";
@@ -72,7 +74,7 @@ int main(int argc, char **argv)
   halosnap.Load(world, partsnap);
   timer.Tick(world.Communicator);
   if(world.rank()==0)
-    cout<<" halosnap loaded with hdf2 in "<<timer.GetSeconds()<<" secs\n";
+    cout<<"\nTiming:>>>\n\t halosnap loaded with hdf2 in "<<timer.GetSeconds()<<" secs\n\n";
 
   ss<<"rank "<<world.rank()<<": "<<halosnap.Halos.size()<<" halos. \n";
   if(halosnap.Halos.size()>0)

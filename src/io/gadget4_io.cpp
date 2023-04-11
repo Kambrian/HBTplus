@@ -108,7 +108,7 @@ int Gadget4Reader_t::ReadGroupFileCounts(int ifile)
 {
   int nfiles;
   string filename;
-  GetFileName(ifile, filename);
+  GetGroupFileName(ifile, filename);
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   ReadAttribute(file, "Header", "NumFiles", H5T_NATIVE_INT, &nfiles);
   H5Fclose(file);
@@ -287,7 +287,7 @@ void Gadget4Reader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 void Gadget4Reader_t::ReadGroupLen(int ifile, HBTInt *buf)
 {
   string filename;
-  GetFileName(ifile, filename);
+  GetGroupFileName(ifile, filename);
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   HBTInt ngroups;
   ReadAttribute(file, "Header", "Ngroups_ThisFile", H5T_HBTInt, &ngroups);
@@ -299,7 +299,7 @@ void Gadget4Reader_t::ReadGroupLen(int ifile, HBTInt *buf)
 void Gadget4Reader_t::ReadGroupParticles(int ifile, ParticleHost_t *ParticlesInFile, bool FlagReadParticleId)
 {
   string filename;
-  GetFileName(ifile, filename);
+  GetGroupFileName(ifile, filename);
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   vector <int> np_this(TypeMax);
   vector <HBTInt> offset_this(TypeMax);
@@ -458,78 +458,6 @@ void Gadget4Reader_t::LoadSnapshot(MpiWorker_t &world, int snapshotId, vector <P
 }
 
 typedef vector <HBTInt> CountBuffer_t;
-
-struct FileAssignment_t
-{
-  int ifile_begin, ifile_end;
-  HBTInt firstfile_begin_part, lastfile_end_part, npart;
-  HBTInt haloid_begin, nhalo;
-  FileAssignment_t()
-  {
-	ifile_begin=0;
-	ifile_end=0;
-	firstfile_begin_part=0;
-	lastfile_end_part=-1;
-	npart=0;
-	haloid_begin=0;
-	nhalo=0;
-  }
-  void create_MPI_type(MPI_Datatype &dtype)
-  /*to create the struct data type for communication*/
-  {
-	FileAssignment_t &p=*this;
-	#define NumAttr 7
-	MPI_Datatype oldtypes[NumAttr];
-	int blockcounts[NumAttr];
-	MPI_Aint   offsets[NumAttr], origin,extent;
-
-	MPI_Get_address(&p,&origin);
-	MPI_Get_address((&p)+1,&extent);//to get the extent of s
-	extent-=origin;
-
-	int i=0;
-	#define RegisterAttr(x, type, count) {MPI_Get_address(&(p.x), offsets+i); offsets[i]-=origin; oldtypes[i]=type; blockcounts[i]=count; i++;}
-	RegisterAttr(ifile_begin, MPI_INT, 1)
-	RegisterAttr(ifile_end, MPI_INT, 1)
-	RegisterAttr(firstfile_begin_part, MPI_HBT_INT, 1)
-	RegisterAttr(lastfile_end_part, MPI_HBT_INT, 1)
-	RegisterAttr(npart, MPI_HBT_INT, 1)
-	RegisterAttr(haloid_begin, MPI_HBT_INT, 1)
-	RegisterAttr(nhalo, MPI_HBT_INT, 1)
-	#undef RegisterAttr
-	assert(i==NumAttr);
-
-	MPI_Type_create_struct(NumAttr,blockcounts,offsets,oldtypes, &dtype);
-	MPI_Type_create_resized(dtype,(MPI_Aint)0, extent, &dtype);
-	MPI_Type_commit(&dtype);
-	#undef NumAttr
-  }
-};
-typedef vector <HBTInt> ParticleIdBuffer_t;
-typedef vector <HBTInt> CountBuffer_t;
-void AssignHaloTasks(int nworkers, HBTInt npart_tot, const CountBuffer_t & HaloOffsets, const CountBuffer_t &FileOffsets, HBTInt & npart_begin, FileAssignment_t &task)
-{
-  if(0==npart_tot) return;
-
-  HBTInt npart_this=(npart_tot-npart_begin)/nworkers;
-  HBTInt npart_end=npart_begin+npart_this;
-
-  task.haloid_begin=lower_bound(HaloOffsets.begin(), HaloOffsets.end()-1, npart_begin)-HaloOffsets.begin();
-  HBTInt endhalo=lower_bound(HaloOffsets.begin(), HaloOffsets.end()-1, npart_end)-HaloOffsets.begin();
-  task.nhalo=endhalo-task.haloid_begin;
-
-  npart_end=HaloOffsets.at(endhalo);//need to append np to HaloOffsets to avoid overflow.
-  task.npart=npart_end-npart_begin;
-
-  task.ifile_begin=upper_bound(FileOffsets.begin(), FileOffsets.end(), npart_begin)-1-FileOffsets.begin();
-  task.ifile_end=lower_bound(FileOffsets.begin(), FileOffsets.end(), npart_end)-FileOffsets.begin();
-
-  task.firstfile_begin_part=npart_begin-FileOffsets[task.ifile_begin];
-  task.lastfile_end_part=npart_end-FileOffsets[task.ifile_end-1];
-
-  npart_begin=npart_end;
-}
-
 struct HaloProcMapper_t
 {//metadata to facilitate the reading of local halo particles from the local snapshot on each process
     HBTInt Nhalos=0;
@@ -908,7 +836,7 @@ void Gadget4Reader_t::LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &p
   LoadGroupTab(world);
   CollectProcSizes(world, partsnap);
 
-  if(HBTConfig.GroupFileFormat=="gadget4hdf")
+  if(HBTConfig.GroupFileFormat=="gadget4_hdf")
   {
     LoadLeadingGroups(world, partsnap.Particles, Halos);
 
@@ -920,11 +848,12 @@ void Gadget4Reader_t::LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &p
     Halos.swap(LocalHalos);
     My_Type_free(&MPI_HaloShell_t);
   }
-  else if(HBTConfig.GroupFileFormat=="gadget4hdf2")
+  else if(HBTConfig.GroupFileFormat=="gadget4_hdf2")
   {
     LoadLocalGroups(world, partsnap.Particles, Halos);
     HaloPatchExchanger::ExchangeAndMerge(world, Halos);
   }
+  HBTConfig.GroupLoadedFullParticle=true;
 //   cout<<endl;
 //   cout<<" ( "<<Header.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 //   cout<<" Particle[0]: x="<<Particles[0].ComovingPosition<<", v="<<Particles[0].PhysicalVelocity<<", m="<<Particles[0].Mass<<endl;
@@ -934,6 +863,6 @@ void Gadget4Reader_t::LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &p
 
 bool IsGadget4Group(const string &GroupFileFormat)
 {
-  return GroupFileFormat.substr(0, 10)=="gadget4_hdf";
+  return GroupFileFormat.substr(0, 11)=="gadget4_hdf";
 }
 }

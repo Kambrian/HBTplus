@@ -49,6 +49,11 @@ void ParticleSnapshot_t::Load(MpiWorker_t & world, int snapshot_index, bool fill
 //   assert(Cosmology.ParticleMass>0);
 #endif
 
+  {
+    HBTInt np=Particles.size();
+    MPI_Allreduce(&np, &NumberOfParticlesOnAllNodes, 1, MPI_HBT_INT, MPI_SUM, world.Communicator);
+  }
+
   if(fill_particle_hash)
   {
     ExchangeParticles(world);

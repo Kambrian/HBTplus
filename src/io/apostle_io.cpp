@@ -491,6 +491,7 @@ void ApostleReader_t::LoadGroups(MpiWorker_t &world, int snapshotId, vector< Hal
 
   HaloPatchExchanger::ExchangeAndMerge(world, Halos);
 
+  HBTConfig.GroupLoadedFullParticle=true;
 //   cout<<Halos.size()<<" groups loaded";
 //   if(Halos.size()) cout<<" : "<<Halos[0].Particles.size();
 //   if(Halos.size()>1) cout<<","<<Halos[1].Particles.size()<<"...";

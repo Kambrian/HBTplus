@@ -149,12 +149,6 @@ inline bool CompParticleId(const Particle_t &a, const Particle_t &b)
 }
 void ParticleSnapshot_t::ExchangeParticles(MpiWorker_t &world)
 {
-
-  {
-    HBTInt np=Particles.size();
-    MPI_Allreduce(&np, &NumberOfParticlesOnAllNodes, 1, MPI_HBT_INT, MPI_SUM, world.Communicator);
-  }
-
   sort(Particles.begin(), Particles.end(), CompParticleId);
 
   vector <int> SendOffsets(world.size()+1), SendSizes(world.size(), 0);
