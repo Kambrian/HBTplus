@@ -55,9 +55,11 @@ int main(int argc, char **argv)
 	ParticleSnapshot_t partsnap;
 	partsnap.Load(world, isnap, false);//we do not fill hash now, so that halosnap may use the raw particle order to speed up reading halos
 	subsnap.SetSnapshotIndex(isnap);
+	timer.Tick(world.Communicator);
 	HaloSnapshot_t halosnap;
 	halosnap.Load(world, partsnap);
 
+	timer.Tick(world.Communicator);
 	//fill hash manually
 	partsnap.ExchangeParticles(world);
 	partsnap.FillParticleHash();
