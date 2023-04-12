@@ -12,7 +12,7 @@ HDFLIB=-L/public/software/mathlib/hdf5/1.12.0/gnu-7.3.1/lib -lhdf5_hl -lhdf5
 ###comment up to here to disable GSL.
 
 #CC=mpicc
-CXX=mpiCC
+CXX=mpicxx
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g
 
 ###for Dark Matter only simulations
@@ -45,9 +45,9 @@ BASECXX=$(CXX)
 endif
 
 ifeq ($(BASECXX), g++)
-#OMPFLAG=-fopenmp
+OMPFLAG=-fopenmp
 else
-#OMPFLAG=-qopenmp
+OMPFLAG=-qopenmp
 CXXFLAGS+=-diag-disable 3180  #to disable omp warnings by icc when not using omp; comment this out if you enabled OMPFLAG
 endif
 

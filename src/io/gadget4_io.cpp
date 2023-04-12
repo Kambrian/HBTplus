@@ -211,10 +211,12 @@ void Gadget4Reader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	  ReadDataset(particle_data, "Coordinates", H5T_HBTReal, x.data());
 	  if(HBTConfig.PeriodicBoundaryOn)
 	  {
+#pragma omp parallel for
 		for(int i=0;i<np;i++)
 		for(int j=0;j<3;j++)
 		  x[i][j]=position_modulus(x[i][j], boxsize);
 	  }
+	  #pragma omp parallel for
 	  for(int i=0;i<np;i++)
 		copyHBTxyz(ParticlesThisType[i].ComovingPosition, x[i]);
 	}
@@ -225,6 +227,7 @@ void Gadget4Reader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	    ReadDataset(particle_data, "Velocities", H5T_HBTReal, v.data());
 	  else
 	    ReadDataset(particle_data, "Velocity", H5T_HBTReal, v.data());
+      #pragma omp parallel for
 	  for(int i=0;i<np;i++)
 		for(int j=0;j<3;j++)
 		  ParticlesThisType[i].PhysicalVelocity[j]=v[i][j]*vunit;
@@ -233,6 +236,7 @@ void Gadget4Reader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	{//id
 	  vector <HBTInt> id(np);
 	  ReadDataset(particle_data, "ParticleIDs", H5T_HBTInt, id.data());
+      #pragma omp parallel for
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].Id=id[i];
 	}
@@ -245,11 +249,13 @@ void Gadget4Reader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	    ReadDataset(particle_data, "Masses", H5T_HBTReal, m.data());
 	  else
 	    ReadDataset(particle_data, "Mass", H5T_HBTReal, m.data());
+      #pragma omp parallel for
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].Mass=m[i];
 	}
 	else
 	{
+      #pragma omp parallel for
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].Mass=Header.mass[itype];
 	}
@@ -261,6 +267,7 @@ void Gadget4Reader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 	{
 	  vector <HBTReal> u(np);
 	  ReadDataset(particle_data, "InternalEnergy", H5T_HBTReal, u.data());
+      #pragma omp parallel for
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].InternalEnergy=u[i];
 	}
@@ -273,6 +280,7 @@ void Gadget4Reader_t::ReadSnapshot(int ifile, Particle_t *ParticlesInFile)
 
 	{//type
 	  ParticleType_t t=static_cast<ParticleType_t>(itype);
+      #pragma omp parallel for
 	  for(int i=0;i<np;i++)
 		ParticlesThisType[i].Type=t;
 	}
