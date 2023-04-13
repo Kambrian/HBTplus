@@ -10,7 +10,7 @@
 #include "datatypes.h"
 #include "mpi_wrapper.h"
 
-#define HBT_VERSION "1.16.1.MPI"
+#define HBT_VERSION "1.17.MPI-G4"
 
 namespace PhysicalConst
 {//initialized after reading parameter file.
@@ -32,7 +32,7 @@ public:
   HBTReal BoxSize; //to check the unit of snapshot according to the BoxSize in header
   HBTReal SofteningHalo;
   vector <bool> IsSet;
-  
+
   /*optional*/
   string SnapshotFormat;
   string GroupFileFormat;
@@ -53,27 +53,27 @@ public:
   bool MergeTrappedSubhalos;//whether to MergeTrappedSubhalos, see code paper for more info.
   vector <int> SnapshotIdList;
   vector <string> SnapshotNameList;
-  
-  HBTReal MajorProgenitorMassRatio; 
+
+  HBTReal MajorProgenitorMassRatio;
   HBTReal BoundMassPrecision;
   HBTReal SourceSubRelaxFactor;
   HBTReal SubCoreSizeFactor; //coresize=Nbound*CoreSizeFactor, to get center coordinates for the KineticDistance test.
   HBTInt SubCoreSizeMin; //Minimum coresize
-  
+
   HBTReal TreeAllocFactor;
   HBTReal TreeNodeOpenAngle;
   HBTInt TreeMinNumOfCells;
-  
+
   HBTInt MaxSampleSizeOfPotentialEstimate;
   bool RefineMostboundParticle; //whether to further improve mostbound particle accuracy in case a MaxSampleSizeOfPotentialEstimate is used. this introduces some overhead if true, but leads to more accuracy mostbound particle
-  
+
   /*derived parameters; do not require user input*/
   HBTReal TreeNodeOpenAngleSquare;
   HBTReal TreeNodeResolution;
   HBTReal TreeNodeResolutionHalf;
-  HBTReal BoxHalf; 
+  HBTReal BoxHalf;
   bool GroupLoadedFullParticle;//whether group particles are loaded with full particle properties or just ids.
-  
+
   Parameter_t(): IsSet(NumberOfCompulsaryConfigEntries, false),SnapshotIdList(), SnapshotNameList()
   {
 	SnapshotFormat="gadget"; //see example config file for alternative formats
@@ -127,7 +127,7 @@ extern void ParseHBTParams(int argc, char **argv, Parameter_t &config, int &snap
 inline void trim_leading_garbage(string &s, const string &garbage_list)
 {
   int pos= s.find_first_not_of(garbage_list);//look for any good staff
-  if( string::npos!=pos) 
+  if( string::npos!=pos)
 	s.erase(0, pos);//s=s.substr(pos);
   else //no good staff, clear everything
 	s.clear();
@@ -135,7 +135,7 @@ inline void trim_leading_garbage(string &s, const string &garbage_list)
 inline void trim_trailing_garbage(string &s, const string &garbage_list)
 {
   int pos=s.find_first_of(garbage_list);
-  if(string::npos!=pos)  
+  if(string::npos!=pos)
 	s.erase(pos);
 }
 
