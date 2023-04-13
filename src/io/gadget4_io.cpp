@@ -499,7 +499,7 @@ void Gadget4Reader_t::LoadLeadingGroups(MpiWorker_t &world, const vector<Particl
     HaloOffsetAll.push_back(NumPartAllHalos);
     HBTInt NumPartAllProc=CompileOffsets(ProcLen, ProcOffset);
     ProcOffset.push_back(NumPartAllProc);
-    cout<<"Fraction of Particles in halos: "<<NumPartAllHalos*1./NumPartAllProc;
+    cout<<"Fraction of Particles in halos: "<<NumPartAllHalos*1./NumPartAllProc<<endl;
     int iproc=0;
     for(HBTInt ihalo=0;ihalo<HaloOffsetAll.size();ihalo++)
     {
