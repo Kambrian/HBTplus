@@ -41,25 +41,23 @@ class Gadget4Reader_t
 {
   string SnapshotName;
 
-  vector <HBTInt> np_file;
-  vector <HBTInt> offset_file;
-  vector <HBTInt> nhalo_per_groupfile;
-  vector <HBTInt> offsethalo_per_groupfile;
-
   const int root_node=0;
   //snap tab:
+  vector <HBTInt> np_file;
+  vector <HBTInt> offset_file;
   vector <HBTInt> ProcLen;
   void CollectProcSizes(MpiWorker_t &world, const ParticleSnapshot_t &PartSnap);
   //group tab:
-  vector <HBTInt> HaloSizesLocal;//halosizes read into this proc
+  HBTInt TotNumPartInGroups;
   vector <HBTInt> HaloSizesAll;//only significant on root proc
-  void LoadGroupTab(MpiWorker_t &world);
+  void LoadHaloSizes(MpiWorker_t &world);
 
   Gadget4Header_t Header; //this is snapshot header, not necessarily filled when loading groups
   void ReadHeader(int ifile, Gadget4Header_t &header);
   int ReadGroupFileCounts(int ifile);
+  HBTInt ReadGroupFileTotParticles(int ifile);
   HBTInt CompileFileOffsets(int nfiles);
-  HBTInt CompileGroupFileOffsets(int nfiles);
+  HBTInt CompileGroupFileOffsets(vector <HBTInt> &nhalo_per_groupfile, vector <HBTInt> &offsethalo_per_groupfile);
   void ReadSnapshot(int ifile, Particle_t * ParticlesInFile);
   void ReadGroupLen(int ifile, HBTInt *buf);
   void GetFileName(int ifile, string &filename);
@@ -68,7 +66,7 @@ class Gadget4Reader_t
   void GetParticleCountInFile(hid_t file, int np[]);
 
   void LoadLeadingGroups(MpiWorker_t &world, const vector<Particle_t> &Particles, vector <Halo_t> &Halos);
-  void LoadLocalGroups(MpiWorker_t &world, const vector<Particle_t> &Particles, vector <Halo_t> &Halos);
+  HBTInt LoadLocalGroups(MpiWorker_t &world, const vector<Particle_t> &Particles, vector <Halo_t> &Halos);
 
   MPI_Datatype MPI_Gadget4Header_t;
 

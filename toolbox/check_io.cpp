@@ -48,32 +48,33 @@ int main(int argc, char **argv)
   if(world.rank()==0)
     cout<<"\nTiming:>>>\n\tSnapshot loaded in "<<timer.GetSeconds()<<" secs\n\n";
 
-  HBTInt nfiles_skip, nfiles_end;
-  AssignTasks(world.rank(), world.size(), 1024, nfiles_skip, nfiles_end);
+//   HBTInt nfiles_skip, nfiles_end;
+//   AssignTasks(world.rank(), world.size(), 1024, nfiles_skip, nfiles_end);
   stringstream ss;
-  ss<<"\t#####rank "<<world.rank()<<", file range "<<nfiles_skip<<"-"<<nfiles_end<<": "<<partsnap.Particles.size()<<" particles, 0,100,end are: "<<partsnap.Particles[0]<<endl<<partsnap.Particles[100]<<endl<<partsnap.Particles.back()<<endl;
+//   ss<<"\t#####rank "<<world.rank()<<", file range "<<nfiles_skip<<"-"<<nfiles_end<<": "<<partsnap.Particles.size()<<" particles, 0,100,end are: "<<partsnap.Particles[0]<<endl<<partsnap.Particles[100]<<endl<<partsnap.Particles.back()<<endl;
   //cout<<ss.str()<<flush;
   MPI_Barrier(world.Communicator);
 
   timer.Tick(world.Communicator);
-  HBTConfig.GroupFileFormat="gadget4_hdf2";
+  HBTConfig.GroupFileFormat="gadget4_hdf";
   halosnap.Load(world, partsnap);
   timer.Tick(world.Communicator);
   if(world.rank()==0)
     cout<<"\nTiming:>>>\n\tHalos loaded in "<<timer.GetSeconds()<<" secs\n\n";
 
   ss<<"\t###rank "<<world.rank()<<": "<<halosnap.Halos.size()<<" halos with "<<halosnap.TotNumberOfParticles<<" particles, biggest is "<<halosnap.NumPartOfLargestHalo<<" particles\n";
-  if(halosnap.Halos.size()>0)
+/*  if(halosnap.Halos.size()>0)
   ss<<"Halo 0: Id="<<halosnap.Halos[0].HaloId<<", "<<halosnap.Halos[0].Particles.size()<<" particles: "<<halosnap.Halos[0].Particles[0]<<"; "<<halosnap.Halos[0].Particles[1]<<";... "<<halosnap.Halos[0].Particles.back()<<endl;
   if(halosnap.Halos.size()>1)
   ss<<"Halo 1: Id="<<halosnap.Halos[1].HaloId<<", "<<halosnap.Halos[1].Particles.size()<<" particles: "<<halosnap.Halos[1].Particles[0]<<"; "<<halosnap.Halos[1].Particles[1]<<";... "<<halosnap.Halos[1].Particles.back()<<endl;
   if(halosnap.Halos.size()>1)
   ss<<"Halo -1: Id="<<halosnap.Halos.back().HaloId<<", "<<halosnap.Halos.back().Particles.size()<<" particles: "<<halosnap.Halos.back().Particles[0]<<"; "<<halosnap.Halos.back().Particles[1]<<";... "<<halosnap.Halos.back().Particles.back()<<endl;
+  */
 //   cout<<ss.str()<<flush;
   MPI_Barrier(world.Communicator);
 
   halosnap.Clear();
-  HBTConfig.GroupFileFormat="gadget4_hdf";
+  HBTConfig.GroupFileFormat="gadget4_hdf2";
   timer.Tick(world.Communicator);
   halosnap.Load(world, partsnap);
   timer.Tick(world.Communicator);
@@ -81,12 +82,13 @@ int main(int argc, char **argv)
     cout<<"\nTiming:>>>\n\t halosnap loaded with hdf2 in "<<timer.GetSeconds()<<" secs\n\n";
 
   ss<<"\t###rank "<<world.rank()<<": "<<halosnap.Halos.size()<<" halos with "<<halosnap.TotNumberOfParticles<<" particles, biggest is "<<halosnap.NumPartOfLargestHalo<<" particles\n";
-  if(halosnap.Halos.size()>0)
+ /* if(halosnap.Halos.size()>0)
   ss<<"Halo 0: Id="<<halosnap.Halos[0].HaloId<<", "<<halosnap.Halos[0].Particles.size()<<" particles: "<<halosnap.Halos[0].Particles[0]<<"; "<<halosnap.Halos[0].Particles[1]<<";... "<<halosnap.Halos[0].Particles.back()<<endl;
   if(halosnap.Halos.size()>1)
   ss<<"Halo 1: Id="<<halosnap.Halos[1].HaloId<<", "<<halosnap.Halos[1].Particles.size()<<" particles: "<<halosnap.Halos[1].Particles[0]<<"; "<<halosnap.Halos[1].Particles[1]<<";... "<<halosnap.Halos[1].Particles.back()<<endl;
   if(halosnap.Halos.size()>1)
   ss<<"Halo -1: Id="<<halosnap.Halos.back().HaloId<<", "<<halosnap.Halos.back().Particles.size()<<" particles: "<<halosnap.Halos.back().Particles[0]<<"; "<<halosnap.Halos.back().Particles[1]<<";... "<<halosnap.Halos.back().Particles.back()<<endl;
+  */
   if(world.rank()==0||world.rank()==10||world.rank()==world.size()-1)
     cout<<ss.str();
 

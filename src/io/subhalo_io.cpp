@@ -19,7 +19,7 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(TrackId, H5T_HBTInt);
   InsertMember(Nbound, H5T_HBTInt);
   InsertMember(Mbound, H5T_NATIVE_FLOAT);
-  
+
   dims[0]=TypeMax;
   hid_t H5T_HBTIntArray_TypeMax=H5Tarray_create2(H5T_HBTInt, 1, dims);
   hid_t H5T_FloatArray_TypeMax=H5Tarray_create2(H5T_NATIVE_FLOAT, 1, dims);
@@ -29,11 +29,11 @@ void SubhaloSnapshot_t::BuildHDFDataType()
 #endif
   H5Tclose(H5T_HBTIntArray_TypeMax);
   H5Tclose(H5T_FloatArray_TypeMax);
-  
+
   InsertMember(HostHaloId, H5T_HBTInt);
   InsertMember(Rank, H5T_HBTInt);
   InsertMember(Depth, H5T_NATIVE_INT);
-  InsertMember(LastMaxMass, H5T_NATIVE_FLOAT);  
+  InsertMember(LastMaxMass, H5T_NATIVE_FLOAT);
   InsertMember(SnapshotIndexOfLastMaxMass, H5T_NATIVE_INT);
   InsertMember(SnapshotIndexOfLastIsolation, H5T_NATIVE_INT);
   InsertMember(SnapshotIndexOfBirth, H5T_NATIVE_INT);
@@ -75,23 +75,23 @@ void SubhaloSnapshot_t::BuildHDFDataType()
   InsertMember(ComovingMostBoundPosition, H5T_HBTxyz);
   InsertMember(PhysicalMostBoundVelocity, H5T_HBTxyz);
   InsertMember(MostBoundParticleId, H5T_HBTInt);
-  
+
   InsertMember(SinkTrackId, H5T_HBTInt);
-  #undef InsertMember	
+  #undef InsertMember
   H5T_SubhaloInDisk=H5Tcopy(H5T_SubhaloInMem);
   H5Tpack(H5T_SubhaloInDisk); //clear fields not added.
 //   Subhalo_t s;
 //   cout<<(char *)&s.TrackId-(char *)&s<<","<<(char *)&s.Nbound-(char *)&s<<","<<(char *)&s.ComovingPosition-(char *)&s<<","<<(char *)&s.Particles-(char *)&s<<endl;
 
-  /*  
+  /*
   #define InsertMember(x,t) H5T_ParticleInMem.insertMember(#x, HOFFSET(Subhalo_t, x), t)//;cout<<#x<<": "<<HOFFSET(Subhalo_t, x)<<endl
   InsertMember(Id, H5T_HBTInt);
 //   InsertMember(Mass, H5T_HBTReal);
 //   InsertMember(ComovingPosition, H5T_HBTxyz);
 //   InsertMember(PhysicalVelocity, H5T_HBTxyz);
-  #undef InsertMember	
+  #undef InsertMember
   H5T_ParticleInDisk.copy(H5T_ParticleInMem);
-  H5T_ParticleInDisk.pack(); //clear fields not added.  
+  H5T_ParticleInDisk.pack(); //clear fields not added.
 */
   H5Tclose(H5T_FloatVec3);
   H5Tclose(H5T_HBTxyz);
@@ -124,7 +124,7 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const SubRe
 	return;
   }
   SetSnapshotIndex(snapshot_index);
-  
+
   int NumberOfFiles;
   HBTInt TotNumberOfSubs;
   if(world.rank()==0)
@@ -132,19 +132,19 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const SubRe
   string filename;
   GetSubFileName(filename, 0);
   hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  
+
   ReadDataset(file, "NumberOfFiles", H5T_NATIVE_INT, &NumberOfFiles);
   ReadDataset(file, "NumberOfSubhalosInAllFiles", H5T_HBTInt, &TotNumberOfSubs);
   }
   MPI_Bcast(&NumberOfFiles, 1, MPI_INT, 0, world.Communicator);
-  
+
   Subhalos.clear();
   HBTInt nfiles_skip, nfiles_end;
   AssignTasks(world.rank(), world.size(), NumberOfFiles, nfiles_skip, nfiles_end);
-  
+
   for(int i=0, ireader=0;i<world.size();i++, ireader++)
   {
-	if(ireader==HBTConfig.MaxConcurrentIO) 
+	if(ireader==HBTConfig.MaxConcurrentIO)
 	{
 	  ireader=0;//reset reader count
 	  MPI_Barrier(world.Communicator);//wait for every thread to arrive.
@@ -157,7 +157,7 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const SubRe
   }
 
 //   cout<<Subhalos.size()<<" subhaloes loaded at snapshot "<<SnapshotIndex<<"("<<SnapshotId<<")\n";
-  
+
   HBTInt NumSubs=Subhalos.size(), NumSubsAll_loaded=0;
   MPI_Reduce(&NumSubs, &NumSubsAll_loaded, 1, MPI_HBT_INT, MPI_SUM, 0, world.Communicator);
   if(world.rank()==0)
@@ -172,24 +172,24 @@ void SubhaloSnapshot_t::Load(MpiWorker_t &world, int snapshot_index, const SubRe
   }
 }
 void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
-{//Read iFile for current snapshot. 
-  
+{//Read iFile for current snapshot.
+
   string filename;
   GetSubFileName(filename, iFile);
   hid_t dset, file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   HBTInt snapshot_id;
   ReadDataset(file, "SnapshotId", H5T_HBTInt, &snapshot_id);
   assert(snapshot_id==SnapshotId);
-  
+
   ReadDataset(file, "/Cosmology/OmegaM0", H5T_HBTReal, &Cosmology.OmegaM0);
   ReadDataset(file, "/Cosmology/OmegaLambda0", H5T_HBTReal, &Cosmology.OmegaLambda0);
   ReadDataset(file, "/Cosmology/HubbleParam", H5T_HBTReal, &Cosmology.Hz);
   ReadDataset(file, "/Cosmology/ScaleFactor", H5T_HBTReal, &Cosmology.ScaleFactor);
   Cosmology.Set(Cosmology.ScaleFactor, Cosmology.OmegaM0, Cosmology.OmegaLambda0);
-  
+
 //   ReadDataset(file, "NumberOfNewSubhalos", H5T_HBTInt, &MemberTable.NBirth);
 //   ReadDataset(file, "NumberOfFakeHalos", H5T_HBTInt, &MemberTable.NFake);
-  
+
   hsize_t dims[1];
   dset=H5Dopen2(file, "Subhalos", H5P_DEFAULT);
   GetDatasetDims(dset, dims);
@@ -197,7 +197,7 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
   Subhalos.resize(nsubhalos+nsubhalos_old);
   if(nsubhalos)	H5Dread(dset, H5T_SubhaloInMem, H5S_ALL, H5S_ALL, H5P_DEFAULT, &Subhalos[nsubhalos_old]);
   H5Dclose(dset);
- 
+
   if(nsubhalos)
   {
     Subhalo_t * NewSubhalos=&Subhalos[nsubhalos_old];
@@ -233,7 +233,7 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
       if(depth==SubReaderDepth_t::SrcParticles)
 	H5Fclose(file2);
     }
-    
+
     {//read nested subhalos
       dset=H5Dopen2(file, "NestedSubhalos", H5P_DEFAULT);
       GetDatasetDims(dset, dims);
@@ -247,7 +247,7 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
       ReclaimVlenData(dset, H5T_HBTIntArr, vl.data());
       H5Dclose(dset);
     }
-    
+
   #ifdef SAVE_BINDING_ENERGY
     {//read binding energies
 	  dset=H5Dopen2(file, "BindingEnergies", H5P_DEFAULT);
@@ -265,10 +265,10 @@ void SubhaloSnapshot_t::ReadFile(int iFile, const SubReaderDepth_t depth)
       H5Dclose(dset);
     }
   #endif
-  
+
     H5Tclose(H5T_HBTIntArr);
   }
-  
+
   H5Fclose(file);
 }
 
@@ -276,14 +276,23 @@ void SubhaloSnapshot_t::Save(MpiWorker_t &world)
 {
   string subdir=GetSubDir();
   mkdir(subdir.c_str(), 0755);
-    
+
   HBTInt NumSubsAll=0, NumSubs=Subhalos.size();
   MPI_Allreduce(&NumSubs, &NumSubsAll, 1, MPI_HBT_INT, MPI_SUM, world.Communicator);
-  
+
+  HBTInt MaxSize=0, MaxSizeAll=0;
+  for(HBTInt i=0;i<Subhalos.size();i++)
+  {
+    if(MaxSize<Subhalos[i].Nbound)
+      MaxSize=Subhalos[i].Nbound;
+  }
+  MPI_Reduce(&MaxSize, &MaxSizeAll, 1, MPI_HBT_INT, MPI_MAX, 0, world.Communicator);
+  if(world.rank()==0) cout<<"Max subhalo size="<<MaxSizeAll<<endl;
+
   if(world.rank()==0) cout<<"saving "<<NumSubsAll<<" subhalos to "<<subdir<<endl;
   for(int i=0, ireader=0;i<world.size();i++, ireader++)
   {
-	if(ireader==HBTConfig.MaxConcurrentIO) 
+	if(ireader==HBTConfig.MaxConcurrentIO)
 	{
 	  ireader=0;//reset reader count
 	  MPI_Barrier(world.Communicator);//wait for every thread to arrive.
@@ -313,7 +322,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
   writeHDFmatrix(file, &MemberTable.NBirth, "NumberOfNewSubhalos", ndim, dim_atom, H5T_HBTInt);
   writeHDFmatrix(file, &MemberTable.NFake, "NumberOfFakeHalos", ndim, dim_atom, H5T_HBTInt);
   writeHDFmatrix(file, &NumSubsAll, "NumberOfSubhalosInAllFiles", ndim, dim_atom, H5T_HBTInt);//for data verification
-  
+
   vector <hvl_t> vl(Subhalos.size());
   hsize_t dim_sub[]={Subhalos.size()};
     //now write the particle list for each subhalo
@@ -326,7 +335,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	InsertMember(ComovingPosition, H5T_HBTxyz);
 	InsertMember(PhysicalVelocity, H5T_HBTxyz);
 	InsertMember(Mass, H5T_HBTReal);
-#ifndef DM_ONLY	
+#ifndef DM_ONLY
 	#ifdef HAS_THERMAL_ENERGY
 	InsertMember(InternalEnergy, H5T_HBTReal);
 	#endif
@@ -351,13 +360,13 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	H5Tclose(H5T_ParticleInMem);
 	H5Tclose(H5T_ParticleInDisk);
   }
-  
-#ifdef UNSIGNED_LONG_ID_OUTPUT  
+
+#ifdef UNSIGNED_LONG_ID_OUTPUT
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_NATIVE_ULONG);//this does not affect anything inside the code, but the presentation in the hdf file
 #else
   hid_t H5T_HBTIntArr=H5Tvlen_create(H5T_HBTInt);
 #endif
-  
+
   for(HBTInt i=0;i<vl.size();i++)
   {
 	vl[i].len=Subhalos[i].NestedSubhalos.size();
@@ -365,7 +374,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
   }
   writeHDFmatrix(file, vl.data(), "NestedSubhalos", ndim, dim_sub, H5T_HBTIntArr);
   H5LTset_attribute_string(file,"/NestedSubhalos","Comment","List of the TrackIds of first-level sub-subhaloes within each subhalo.");
-  
+
   #ifdef SAVE_BINDING_ENERGY
   hid_t H5T_FloatArr=H5Tvlen_create(H5T_NATIVE_FLOAT);
   for(HBTInt i=0;i<vl.size();i++)
@@ -376,7 +385,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
   writeHDFmatrix(file, vl.data(), "BindingEnergies", ndim, dim_sub, H5T_FloatArr);
   H5Tclose(H5T_FloatArr);
   #endif
-  
+
   vector <HBTInt> IdBuffer;
   {
 	HBTInt NumberOfParticles=0;
@@ -395,11 +404,11 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	}
   }
   writeHDFmatrix(file, vl.data(), "SubhaloParticles", ndim, dim_sub, H5T_HBTIntArr);
-  
-  writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk); 
+
+  writeHDFmatrix(file, Subhalos.data(), "Subhalos", ndim, dim_sub, H5T_SubhaloInMem, H5T_SubhaloInDisk);
 
   H5Fclose(file);
-  
+
   GetSubFileName(filename, iFile, "Src");
 //   cout<<"Saving "<<Subhalos.size()<<" subhaloes to "<<filename<<"..."<<endl;
   file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);

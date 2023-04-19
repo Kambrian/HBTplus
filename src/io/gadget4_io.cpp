@@ -91,6 +91,12 @@ void Gadget4Reader_t::ReadHeader(int ifile, Gadget4Header_t &header)
   ReadAttribute(file, "Header", "Time", H5T_NATIVE_DOUBLE, &header.ScaleFactor);
   ReadAttribute(file, "Parameters", "Omega0", H5T_NATIVE_DOUBLE, &header.OmegaM0);
   ReadAttribute(file, "Parameters", "OmegaLambda", H5T_NATIVE_DOUBLE, &header.OmegaLambda0);
+  for(int i=0;i<TypeMax;i++)//initialize
+  {
+    header.mass[i]=0.;
+    header.npart[i]=0;
+    header.npartTotal[i]=0;
+  }
   ReadAttribute(file, "Header", "MassTable", H5T_NATIVE_DOUBLE, header.mass);
   cout<<"mass table: "<<header.mass[0]<<","<<header.mass[1]<<","<<header.mass[2]<<endl;
   ReadAttribute(file, "Header", "NumPart_ThisFile", H5T_NATIVE_INT, header.npart);
@@ -114,6 +120,18 @@ int Gadget4Reader_t::ReadGroupFileCounts(int ifile)
   H5Fclose(file);
 
   return nfiles;
+}
+
+HBTInt Gadget4Reader_t::ReadGroupFileTotParticles(int ifile)
+{//total np in groups from all files
+  HBTInt np_tot;
+  string filename;
+  GetGroupFileName(ifile, filename);
+  hid_t file=H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  ReadAttribute(file, "Header", "Nids_Total", H5T_HBTInt, &np_tot);
+  H5Fclose(file);
+
+  return np_tot;
 }
 
 void Gadget4Reader_t::GetParticleCountInFile(hid_t file, int np[])
@@ -147,14 +165,13 @@ HBTInt Gadget4Reader_t::CompileFileOffsets(int nfiles)
   return offset;
 }
 
-HBTInt Gadget4Reader_t::CompileGroupFileOffsets(int nfiles)
+HBTInt Gadget4Reader_t::CompileGroupFileOffsets(vector <HBTInt> &nhalo_per_groupfile, vector <HBTInt> &offsethalo_per_groupfile)
 {
   HBTInt offset=0, nhalo_total;
-  nhalo_per_groupfile.reserve(nfiles);
-  offsethalo_per_groupfile.reserve(nfiles);
+  int nfiles=nhalo_per_groupfile.size();
   for(int ifile=0;ifile<nfiles;ifile++)
   {
-	offsethalo_per_groupfile.push_back(offset);
+	offsethalo_per_groupfile[ifile]=offset;
 
 	HBTInt nhalo_this;
 	string filename;
@@ -165,7 +182,7 @@ HBTInt Gadget4Reader_t::CompileGroupFileOffsets(int nfiles)
       ReadAttribute(file, "Header", "Ngroups_Total", H5T_HBTInt, &nhalo_total);
 	H5Fclose(file);
 
-	nhalo_per_groupfile.push_back(nhalo_this);
+	nhalo_per_groupfile[ifile]=nhalo_this;
 	offset+=nhalo_this;
   }
   assert(nhalo_total==offset);
@@ -422,21 +439,27 @@ struct HaloProcMapper_t
   }
 };
 
-void Gadget4Reader_t::LoadGroupTab(MpiWorker_t &world)
+void Gadget4Reader_t::LoadHaloSizes(MpiWorker_t &world)
 {//load group sizes from all files in parallel, and gather to root.
 
   /* read file metadata */
   int FileCounts;
+  vector <HBTInt> nhalo_per_groupfile;
+  vector <HBTInt> offsethalo_per_groupfile;
   HBTInt NhaloTotal;
   if(world.rank()==root_node)
   {
     FileCounts=ReadGroupFileCounts(0);
-    NhaloTotal=CompileGroupFileOffsets(FileCounts);
+    nhalo_per_groupfile.resize(FileCounts);
+    offsethalo_per_groupfile.resize(FileCounts);
+    NhaloTotal=CompileGroupFileOffsets(nhalo_per_groupfile, offsethalo_per_groupfile);
+    TotNumPartInGroups=ReadGroupFileTotParticles(0);
   }
   world.SyncAtom(FileCounts, MPI_INT, root_node);
   world.SyncAtom(NhaloTotal, MPI_HBT_INT, root_node);
   world.SyncContainer(nhalo_per_groupfile, MPI_HBT_INT, root_node);
   world.SyncContainer(offsethalo_per_groupfile, MPI_HBT_INT, root_node);
+  world.SyncAtom(TotNumPartInGroups, MPI_HBT_INT, root_node);
 
   /* read halolen in parallel*/
   HBTInt nfiles_skip, nfiles_end;
@@ -444,6 +467,8 @@ void Gadget4Reader_t::LoadGroupTab(MpiWorker_t &world)
   {
     int nhalo_local=0;
     nhalo_local=accumulate(nhalo_per_groupfile.begin()+nfiles_skip, nhalo_per_groupfile.begin()+nfiles_end, nhalo_local);
+
+    vector <HBTInt> HaloSizesLocal;
     HaloSizesLocal.resize(nhalo_local);
 
     for(int i=0, ireader=0;i<world.size();i++, ireader++)
@@ -473,6 +498,13 @@ void Gadget4Reader_t::LoadGroupTab(MpiWorker_t &world)
     if(world.rank()==root_node)
       CompileOffsets(buffersizes, bufferoffsets);
     MPI_Gatherv(HaloSizesLocal.data(), HaloSizesLocal.size(), MPI_HBT_INT, HaloSizesAll.data(), buffersizes.data(), bufferoffsets.data(), MPI_HBT_INT, root_node, world.Communicator);
+
+    //sanity check
+    HBTInt np_local=accumulate(HaloSizesLocal.begin(), HaloSizesLocal.end(), (HBTInt)0);
+    HBTInt np_allproc=0;
+    MPI_Reduce(&np_local, &np_allproc, 1, MPI_HBT_INT, MPI_SUM, root_node, world.Communicator);
+    if(world.rank()==root_node)
+      assert(np_allproc==TotNumPartInGroups);
   }
 }
 
@@ -678,7 +710,7 @@ struct HaloPartitioner_t
   }
 };
 
-void Gadget4Reader_t::LoadLocalGroups(MpiWorker_t &world, const vector<Particle_t> &Particles, vector <Halo_t> &Halos)
+HBTInt Gadget4Reader_t::LoadLocalGroups(MpiWorker_t &world, const vector<Particle_t> &Particles, vector <Halo_t> &Halos)
 //load group segments residing on the current proc
 {
   //distribute read tasks
@@ -690,7 +722,6 @@ void Gadget4Reader_t::LoadLocalGroups(MpiWorker_t &world, const vector<Particle_
 
   //distribute the partition info
   HBTInt first_halo, last_halo;
-  int nhalos;
   vector <HBTInt> local_halo_sizes;
   MPI_Scatter(HaloPartitioner.ProcFirstHalo.data(), 1, MPI_HBT_INT, &first_halo, 1, MPI_HBT_INT, root_node, world.Communicator);
   MPI_Scatter(HaloPartitioner.ProcLastHalo.data(), 1, MPI_HBT_INT, &last_halo, 1, MPI_HBT_INT, root_node, world.Communicator);
@@ -711,18 +742,35 @@ void Gadget4Reader_t::LoadLocalGroups(MpiWorker_t &world, const vector<Particle_
   {
     MPI_Status stat;
 	MPI_Probe(root_node, 0, world.Communicator, &stat);
+    int nhalos;
 	MPI_Get_count(&stat, MPI_HBT_INT, &nhalos);
     local_halo_sizes.resize(nhalos);
     MPI_Recv(local_halo_sizes.data(), nhalos, MPI_HBT_INT, root_node, 0, world.Communicator, MPI_STATUS_IGNORE);
   }
 
   //read halo from processors
-  Halos.resize(nhalos);
+  Halos.resize(local_halo_sizes.size());
   for(HBTInt i=0;i<Halos.size();i++)
   {
     Halos[i].HaloId=i+first_halo;
     Halos[i].Particles.resize(local_halo_sizes[i]);
   }
+
+  if(Halos.size())
+    assert(Halos.back().HaloId==last_halo);
+
+/*
+  stringstream ss;
+  ss<<"rank "<<world.rank()<<":"<<Halos.size()<<" Local halos: "<<first_halo<<",...,"<<last_halo;
+  if(Halos.size())  ss<<"=="<<Halos.back().HaloId;
+  ss<<endl;
+  cout<<ss.str();
+
+  HBTInt max_halo_id=0;
+  MPI_Reduce(&last_halo, &max_halo_id, 1, MPI_HBT_INT, MPI_MAX, root_node, world.Communicator);
+  if(world.rank()==root_node)
+    cout<<"MaxHaloId="<<max_halo_id<<endl;
+*/
   //copy local particles to halo
   vector <HBTInt> local_halo_offsets;
   HBTInt np=CompileOffsets(local_halo_sizes, local_halo_offsets);
@@ -730,13 +778,21 @@ void Gadget4Reader_t::LoadLocalGroups(MpiWorker_t &world, const vector<Particle_
 #pragma omp parallel for default(shared)
   for(HBTInt i=0;i<Halos.size();i++)
     Halos[i].Particles.assign(Particles.begin()+local_halo_offsets[i], Particles.begin()+local_halo_offsets[i+1]);
+
+  //sanity check
+  HBTInt np_tot=0;
+  MPI_Reduce(&np, &np_tot, 1, MPI_HBT_INT, MPI_SUM, root_node, world.Communicator);
+  if(world.rank()==root_node)
+    assert(np_tot==TotNumPartInGroups);
+
+  return np;
 }
 
 void Gadget4Reader_t::LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &partsnap, vector <Halo_t> &Halos)
 {
   SetSnapshot(partsnap.GetSnapshotId());
 
-  LoadGroupTab(world);
+  LoadHaloSizes(world);
   CollectProcSizes(world, partsnap);
 
   if(HBTConfig.GroupFileFormat=="gadget4_hdf2")
@@ -757,6 +813,18 @@ void Gadget4Reader_t::LoadGroups(MpiWorker_t &world, const ParticleSnapshot_t &p
     HaloPatchExchanger::ExchangeAndMerge(world, Halos);
   }
   HBTConfig.GroupLoadedFullParticle=true;
+
+
+    HBTInt np_allproc=0, np=0;
+#pragma omp parallel for reduction(+:np)
+    for(HBTInt i=0;i<Halos.size();i++)
+      np+=Halos[i].Particles.size();
+    MPI_Reduce(&np, &np_allproc, 1, MPI_HBT_INT, MPI_SUM, root_node, world.Communicator);
+    if(world.rank()==root_node)
+    {
+      assert(np_allproc==TotNumPartInGroups);
+      cout<<TotNumPartInGroups<<" total group particles loaded"<<endl;
+    }
 //   cout<<endl;
 //   cout<<" ( "<<Header.NumberOfFiles<<" total files ) : "<<Particles.size()<<" particles loaded."<<endl;
 //   cout<<" Particle[0]: x="<<Particles[0].ComovingPosition<<", v="<<Particles[0].PhysicalVelocity<<", m="<<Particles[0].Mass<<endl;

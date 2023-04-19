@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstdio>
+#include <cmath>
 
 #include "../mymath.h"
 #include "../halo.h"
@@ -59,9 +60,10 @@ void HaloSnapshot_t::Load(MpiWorker_t &world, const ParticleSnapshot_t &partsnap
 
   NumPartOfLargestHalo=0;
   TotNumberOfParticles=0;
-  for(auto && h: Halos)
+ #pragma omp parallel for reduction(max:NumPartOfLargestHalo) reduction(+:TotNumberOfParticles)
+  for(HBTInt i=0;i<Halos.size();i++)
   {
-    auto np=h.Particles.size();
+    HBTInt np=Halos[i].Particles.size();
     TotNumberOfParticles+=np;
     if(np>NumPartOfLargestHalo) NumPartOfLargestHalo=np;
   }
@@ -70,6 +72,10 @@ void HaloSnapshot_t::Load(MpiWorker_t &world, const ParticleSnapshot_t &partsnap
   MPI_Reduce(&NumHalos, &NumHalosAll, 1, MPI_HBT_INT, MPI_SUM, 0, world.Communicator);
   if(world.rank()==0)
     cout<<NumHalosAll<<" groups loaded at snapshot "<<snapshot_index<<"("<<SnapshotId<<")"<<endl;
+
+  HBTInt MaxSizeAll=0;
+  MPI_Reduce(&NumPartOfLargestHalo, &MaxSizeAll, 1, MPI_HBT_INT, MPI_MAX, 0, world.Communicator);
+  if(world.rank()==0) cout<<"Max halo size="<<MaxSizeAll<<endl;
 }
 
 #ifdef TEST_halo_io
