@@ -1,11 +1,11 @@
 - There could be significant performance degradation on an overloaded system. (OpenMP version)
 
-  This is probably caused by the compiler (g++) failing to optimize the code well in case of system overload. Have to rely on resource allocation from a batch job scheduler (e.g., LSF). Or make sure the cpus are not overloaded if you are running on an interactive machine. 
-  
+  This is probably caused by the compiler (g++) failing to optimize the code well in case of system overload. Have to rely on resource allocation from a batch job scheduler (e.g., LSF). Or make sure the cpus are not overloaded if you are running on an interactive machine.
+
 - Very poor parallel performance of jing_io when compiled with gfortran on uv35. The IO was almost serial or even worse.
 
   Using intel fortran instead of gfortran solves the problem. The old intel c++ compiler (2013) was not built with full c++11 support while the newest intel c++ compiler (2017) seems to have a bug in parallelizing the IO. Fortunately we can use ifort together with g++. The solution is to create a Makefile.local with the following content:
-  
+
      CXX=g++
      FC=ifort
      OMPCFLAG=-fopenmp
@@ -17,9 +17,13 @@
 - Fortran file format error when run on 6113 on a4700, compiled with gfortran
 
   Again intel fortran solves the problem. However, the current intel fortran can not be used together with gcc when openmp is enabled. The solution is to create Makefile.local under HBT directory with the following content:
-  
+
       FC=ifort
       OMPFFLAG=
       OMPLIB=-fopenmp
       FTNLIB=-lifport -lifcore
       $(OBJS_Jing): OMPCFLAG=
+
+- error "H5C_insert_entry: Assertion `entry_ptr->size > 0 && entry_ptr->size < ((size_t)(32 * 1024 * 1024))' failed"
+
+  When the number of particles in a subhalo (or src subhalo) is very large, one may encounter the above error when saving the particles to hdf5 file. This is probably due to a bug in hdf5-1.12.0. The error goes away when using other versions of hdf5 including 1.8 and 1.12.1.
