@@ -307,7 +307,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 {
   string filename;
   GetSubFileName(filename, iFile);
-//   cout<<"Saving "<<Subhalos.size()<<" subhaloes to "<<filename<<"..."<<endl;
+
   hid_t file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   hsize_t ndim=1, dim_atom[]={1};
@@ -391,15 +391,17 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
 	HBTInt NumberOfParticles=0;
 	for(HBTInt i=0;i<Subhalos.size();i++)
 	  NumberOfParticles+=Subhalos[i].Particles.size();
-	IdBuffer.reserve(NumberOfParticles);
+	IdBuffer.resize(NumberOfParticles);
 	HBTInt offset=0;
 	for(HBTInt i=0;i<Subhalos.size();i++)
 	{
+      HBTInt *id_now=&IdBuffer[offset];
+      auto &subpart=Subhalos[i].Particles;
 	  vl[i].len=Subhalos[i].Nbound;
-	  vl[i].p=&IdBuffer[offset];
-	  offset+=Subhalos[i].Particles.size();
-	  for(auto && p: Subhalos[i].Particles)
-		IdBuffer.push_back(p.Id);
+	  vl[i].p=id_now;
+	  for(HBTInt j=0;j<subpart.size();j++)
+		id_now[j]=subpart[j].Id;
+      offset+=subpart.size();
 	  Subhalos[i].DuplicateMostBoundParticleId();//dump for galform
 	}
   }
@@ -410,7 +412,7 @@ void SubhaloSnapshot_t::WriteFile(int iFile, int nfiles, HBTInt NumSubsAll)
   H5Fclose(file);
 
   GetSubFileName(filename, iFile, "Src");
-//   cout<<"Saving "<<Subhalos.size()<<" subhaloes to "<<filename<<"..."<<endl;
+//   cout<<"Saving "<<Subhalos.size()<<" src subhaloes to "<<filename<<"..."<<endl;
   file=H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   writeHDFmatrix(file, &SnapshotId, "SnapshotId", ndim, dim_atom, H5T_NATIVE_INT);
   for(HBTInt i=0;i<vl.size();i++)

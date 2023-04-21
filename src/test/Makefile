@@ -6,6 +6,8 @@ default: $(EXE)
 test_parse:  ../config_parser.o #../mymath.o
 test_closestfactor: ../mymath.o
 
+test_h5ptr_size: ../hdf_wrapper.o
+
 OUTPUTS=$(wildcard *.hdf5)
 
 # BOOSTLIB=-lboost_serialization -lboost_mpi

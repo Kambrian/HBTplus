@@ -1,15 +1,19 @@
 - There could be significant performance degradation on an overloaded system. (OpenMP version)
 
-  This is probably caused by the compiler (g++) failing to optimize the code well in case of system overload. Have to rely on resource allocation from a batch job scheduler (e.g., LSF). Or make sure the cpus are not overloaded if you are running on an interactive machine. 
-  
+  This is probably caused by the compiler (g++) failing to optimize the code well in case of system overload. Have to rely on resource allocation from a batch job scheduler (e.g., LSF). Or make sure the cpus are not overloaded if you are running on an interactive machine.
+
 - intel compiler 14.0.0 bug: "stl_vector.h(904): internal error: bad pointer emplace_back(_Args&&... __args);"
 
   This is a bug in intel compiler 14.0.0 (https://software.intel.com/en-us/forums/intel-c-compiler/topic/472385). You can either upgrade your compiler, or use g++ instead. To use `g++`, change `CXX` in `Makefile.inc` to
 
 	CXX=mpicxx -cxx=g++
-  
+
 -  error "SEEK_SET is #defined but must not be for the C++ binding of MPI"
 
   This could happen if your (intel) mpi compiler is not up to date. It is known as a [bug](https://software.intel.com/en-us/articles/intel-cluster-toolkit-for-linux-error-when-compiling-c-aps-using-intel-mpi-library-compilation-driver-mpiicpc) in the MPI-2 standard. Uncomment this line in Makefile.inc to work around it if you cannot upgrade your compiler:
-  
+
 	#CXXFLAGS+=-DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX  -idirafter /usr/include/linux #to work around intel compiler bugs
+
+- error "H5C_insert_entry: Assertion `entry_ptr->size > 0 && entry_ptr->size < ((size_t)(32 * 1024 * 1024))' failed"
+
+  When the number of particles in a subhalo (or src subhalo) is very large, one may encounter the above error when saving the particles to hdf5 file. This is probably due to a bug in hdf5-1.12.0. The error goes away when using other versions of hdf5 including 1.8 and 1.12.1.
