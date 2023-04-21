@@ -1,14 +1,14 @@
-HDFINC=-I/public/software/mathlib/hdf5/1.12.0/gnu-7.3.1/include
-HDFLIB=-L/public/software/mathlib/hdf5/1.12.0/gnu-7.3.1/lib -lhdf5_hl -lhdf5
+#HDFINC=-I/public/software/mathlib/hdf5/1.12.0/gnu-7.3.1/include
+#HDFLIB=-L/public/software/mathlib/hdf5/1.12.0/gnu-7.3.1/lib -lhdf5_hl -lhdf5
 #or set CPATH and LIBRARY_PATH variable locally
-#HDFINC=
-#HDFLIB=-lhdf5_hl -lhdf5
+HDFINC=
+HDFLIB=-lhdf5_hl -lhdf5
 #HDFINC+=-Wno-literal-suffix #to disable the annoying literal-suffix warning with the hdf header
 
 ###comment out the following lines if you do not have GSL (for eigenvalue decomposition of inertial tensors)
-#GSLINC=
-#GSLINC+=-DHAS_GSL
-#GSLLIB=-lgsl -lgslcblas
+GSLINC=
+GSLINC+=-DHAS_GSL
+GSLLIB=-lgsl -lgslcblas
 ###comment up to here to disable GSL.
 
 #CC=mpicc
