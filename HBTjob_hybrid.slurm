@@ -7,6 +7,8 @@
 #SBATCH --cpus-per-task=4      #threads; each node 32cpus
 #SBATCH --output=logs/%x.%j
 #SBATCH --error=logs/%x.%j
+##SBATCH --mail-user=
+##SBATCH --mail-type=ALL
 
 ulimit -s unlimited
 source addmodule
