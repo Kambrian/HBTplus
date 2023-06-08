@@ -61,6 +61,7 @@ int main(int argc, char **argv)
 
 	timer.Tick(world.Communicator);
 	//fill hash manually
+	if(world.rank()==0) cout<<"filling hash...\n";
 	partsnap.ExchangeParticles(world);
 	partsnap.FillParticleHash();
 
@@ -68,11 +69,14 @@ int main(int argc, char **argv)
 // 	cout<<"updating halo particles...\n";
 	halosnap.UpdateParticles(world, partsnap);
 	timer.Tick(world.Communicator);
-// 	if(world.rank()==0) cout<<"updateing subsnap particles...\n";
+ 	if(world.rank()==0) cout<<"updating subsnap particles...\n";
 	subsnap.UpdateParticles(world, partsnap);
 
 	timer.Tick(world.Communicator);
+	if(world.rank()==0) cout<<"assigning hosts...\n";
 	subsnap.AssignHosts(world, halosnap, partsnap);
+	timer.Tick(world.Communicator);
+ 	if(world.rank()==0) cout<<"preparing centrals...\n";
 	subsnap.PrepareCentrals(world, halosnap);
 
 	timer.Tick(world.Communicator);

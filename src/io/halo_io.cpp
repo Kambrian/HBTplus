@@ -58,15 +58,17 @@ void HaloSnapshot_t::Load(MpiWorker_t &world, const ParticleSnapshot_t &partsnap
   else
 	throw(runtime_error("unknown GroupFileFormat "+GroupFileFormat));
 
-  NumPartOfLargestHalo=0;
-  TotNumberOfParticles=0;
- #pragma omp parallel for reduction(max:NumPartOfLargestHalo) reduction(+:TotNumberOfParticles)
+  HBTInt iNumPartOfLargestHalo=0;
+  HBTInt iTotNumberOfParticles=0;
+ #pragma omp parallel for reduction(max:iNumPartOfLargestHalo) reduction(+:iTotNumberOfParticles)
   for(HBTInt i=0;i<Halos.size();i++)
   {
     HBTInt np=Halos[i].Particles.size();
-    TotNumberOfParticles+=np;
-    if(np>NumPartOfLargestHalo) NumPartOfLargestHalo=np;
+    iTotNumberOfParticles+=np;
+    if(np>NumPartOfLargestHalo) iNumPartOfLargestHalo=np;
   }
+  NumPartOfLargestHalo=iNumPartOfLargestHalo; //copy from a temporary variable to work around the omp reduction issue with member variable when using intel compiler
+  TotNumberOfParticles=iTotNumberOfParticles;
 
   HBTInt NumHalos=Halos.size(), NumHalosAll=0;
   MPI_Reduce(&NumHalos, &NumHalosAll, 1, MPI_HBT_INT, MPI_SUM, 0, world.Communicator);
