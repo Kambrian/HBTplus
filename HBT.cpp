@@ -18,7 +18,8 @@ int main(int argc, char **argv)
  MPI_Init(&argc, &argv);
  MpiWorker_t world(MPI_COMM_WORLD);
 #ifdef _OPENMP
- omp_set_nested(0);
+ //omp_set_nested(0);
+ omp_set_max_active_levels(1); //max_active_level 0: no para; 1: single layer; >1: nest enabled
 #endif
 
   int snapshot_start, snapshot_end;
