@@ -86,6 +86,38 @@ namespace ParticleExchangeComp
 
 extern void create_Mpi_RemoteParticleType(MPI_Datatype& dtype);
 
+struct HaloSlicer_t
+{
+    HBTInt ihalo_begin, ihalo_end, ipart_begin, ipart_end, np;//range of exchanging halos and particles in halos
+    HaloSlicer_t():ihalo_begin(0), ihalo_end(0), ipart_begin(0), ipart_end(0)
+    {
+    }
+    template <class Halo_T>
+    int Next(vector <Halo_T> &InHalos, vector <HBTInt> &HaloSizes)
+    {//FIXME
+        HaloSizes.clear();
+        ihalo_begin=ihalo_end;
+        ipart_begin=ipart_end;
+        HBTInt ntot=0, ihalo;
+        for(ihalo=ihalo_begin; ihalo<InHalos.size();ihalo++)
+        {
+            HBTInt n_this=InHalos[ihalo].Particles.size();
+            if(ihalo==ihalo_begin) n_this-=ipart_begin;
+            ntot+=n_this;
+            if(ntot>HBTConfig.ParticleExchangerBufferSize)
+            {
+                HBTInt np_excess=ntot-HBTConfig.ParticleExchangerBufferSize;
+                ipart_end=InHalos[ihalo].Particles.size()-np_excess;
+                ntot=HBTConfig.ParticleExchangerBufferSize;
+                HaloSizes.push_back(n_this-np_excess);
+                break;
+            }
+            else
+                HaloSizes.push_back(n_this);
+        }
+    }
+};
+
 template <class Halo_T>
 class ParticleExchanger_t
 {
@@ -94,7 +126,8 @@ class ParticleExchanger_t
   const ParticleSnapshot_t &snap;
   vector <Halo_T> &InHalos;
 
-  vector <HBTInt> HaloSizes, HaloOffsets;
+
+  vector <HBTInt> HaloSizes;
 
   vector <RemoteParticle_t> LocalParticles;
   vector <OrderedParticle_t> RoamParticles;
@@ -119,7 +152,7 @@ public:
 };
 
 template <class Halo_T>
-ParticleExchanger_t<Halo_T>::ParticleExchanger_t(MpiWorker_t &world, const ParticleSnapshot_t &snap, vector <Halo_T> &InHalos): world(world),snap(snap), InHalos(InHalos), LocalParticles(), RoamParticles()
+ParticleExchanger_t<Halo_T>::ParticleExchanger_t(MpiWorker_t &world, const ParticleSnapshot_t &snap, vector <Halo_T> &InHalos): world(world),snap(snap), InHalos(InHalos), LocalParticles(), RoamParticles(), ihalo_begin(0), ihalo_end(0), ipart_begin(0), ipart_end(0)
 {
   Particle_t().create_MPI_type(MPI_HBTParticle_t);
 }
@@ -243,11 +276,17 @@ void ParticleExchanger_t<Halo_T>::RestoreParticles()
 template <class Halo_T>
 void ParticleExchanger_t<Halo_T>::Exchange()
 {
+if(world.rank()==0) cout<<"collect particles\n"<<flush;
   CollectParticles();
+if(world.rank()==0) cout<<"send particles\n"<<flush;
   SendParticles();
+if(world.rank()==0) cout<<"query particles\n"<<flush;
   QueryParticles();
+if(world.rank()==0) cout<<"recv particles\n"<<flush;
   RecvParticles();
+if(world.rank()==0) cout<<"restore particles\n"<<flush;
   RestoreParticles();
+if(world.rank()==0) cout<<"done particles\n"<<flush;
 }
 
 template <class Halo_T>

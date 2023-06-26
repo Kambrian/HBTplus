@@ -27,6 +27,7 @@ void Parameter_t::SetParameterValue(const string &line)
 #define TrySetPar(var) if(name==#var) ss>>var;
   else TrySetPar(SnapshotFormat)
   else TrySetPar(GroupFileFormat)
+  else TrySetPar(ParticleExchangerBufferSize)
   else TrySetPar(MaxConcurrentIO)
   else TrySetPar(MinSnapshotIndex)
   else TrySetPar(MinNumPartOfSub)
@@ -199,6 +200,7 @@ void Parameter_t::BroadCast(MpiWorker_t &world, int root)
 
   _SyncVec(SnapshotFormat, MPI_CHAR);
   _SyncVec(GroupFileFormat, MPI_CHAR);
+  _SyncAtom(ParticleExchangerBufferSize, MPI_INT);
   _SyncAtom(MaxConcurrentIO, MPI_INT);
   _SyncAtom(MinSnapshotIndex, MPI_INT);
   _SyncAtom(MinNumPartOfSub, MPI_INT);
@@ -276,6 +278,7 @@ void Parameter_t::DumpParameters()
   /*optional*/
   DumpPar(SnapshotFormat)
   DumpPar(GroupFileFormat)
+  DumpPar(ParticleExchangerBufferSize)
   DumpPar(MaxConcurrentIO)
   DumpPar(MinSnapshotIndex)
   DumpPar(MinNumPartOfSub)
