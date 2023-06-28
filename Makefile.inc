@@ -12,7 +12,7 @@ GSLLIB=-lgsl -lgslcblas
 ###comment up to here to disable GSL.
 
 #CC=mpicc
-CXX=mpicxx
+CXX=mpiicpc
 CXXFLAGS+=-std=c++0x $(HDFINC) $(GSLINC) $(OMPFLAG) -O3 -Wno-deprecated -g
 
 ###for Dark Matter only simulations

@@ -190,6 +190,7 @@ int ParticleExchanger_t<Halo_T>::CollectParticles()
   int np=Slicer.NextBuffer(InHalos);
   if(0==np)
     return 0;
+  LocalParticles.clear();//not necessary since LocalParticles has been cleared during RestoreParticles.
   LocalParticles.reserve(np);
   int n=0;
   for(HBTInt ihalo=Slicer.ihalo_begin;ihalo<=Slicer.ihalo_back;ihalo++)
@@ -199,7 +200,7 @@ int ParticleExchanger_t<Halo_T>::CollectParticles()
     Slicer.GetPartRange(InHalos, ihalo, ipart, ipart_end);
     for(;ipart<ipart_end;ipart++)
       LocalParticles.emplace_back(move(h.Particles[ipart]), n++);
-    h.Particles.clear();//or hard clear to save memory?
+//     h.Particles.clear();//do not clear since we will need to know the particle sizes later
   }
   assert(n==np);
   return np;
@@ -287,9 +288,8 @@ void ParticleExchanger_t<Halo_T>::RestoreParticles()
   {
     HBTInt ipart, ipart_end;
     Slicer.GetPartRange(InHalos, ihalo, ipart, ipart_end);
-	auto it_end=it+ipart_end-ipart;
-	InHalos[ihalo].Particles.assign(it, it_end);
-	it=it_end;
+    for(;ipart<ipart_end;ipart++)
+      InHalos[ihalo].Particles[ipart]=*it++;
   }
   assert(it==LocalParticles.end());
   vector <RemoteParticle_t>().swap(LocalParticles);
@@ -298,21 +298,23 @@ void ParticleExchanger_t<Halo_T>::RestoreParticles()
 template <class Halo_T>
 void ParticleExchanger_t<Halo_T>::Exchange()
 {
+/*  HBTInt ntot=0, ntot2=0;
+#pragma omp parallel for reduction(+:ntot)
+  for(HBTInt i=0;i<InHalos.size();i++)
+    ntot+=InHalos[i].Particles.size();
+*/
   while(true)
   {
-// if(world.rank()==0) cout<<"collect particles\n"<<flush;
-  int np=CollectParticles();
-  if(0==np) break; //loop till no particles to collect
-// if(world.rank()==0) cout<<"send particles\n"<<flush;
-  SendParticles();
-// if(world.rank()==0) cout<<"query particles\n"<<flush;
-  QueryParticles();
-// if(world.rank()==0) cout<<"recv particles\n"<<flush;
-  RecvParticles();
-// if(world.rank()==0) cout<<"restore particles\n"<<flush;
-  RestoreParticles();
-// if(world.rank()==0) cout<<"done particles\n"<<flush;
+    int npmax, np=CollectParticles();
+//     ntot2+=np;
+    MPI_Allreduce(&np, &npmax, 1, MPI_INT, MPI_MAX, world.Communicator);
+    if(0==npmax) break; //loop till no particles to collect in all threads.
+    SendParticles();
+    QueryParticles();
+    RecvParticles();
+    RestoreParticles();
   }
+//   assert(ntot==ntot2);
 
   for(auto &&h: InHalos)
     h.KickNullParticles();

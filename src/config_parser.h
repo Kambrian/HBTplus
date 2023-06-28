@@ -79,7 +79,7 @@ public:
   {
 	SnapshotFormat="gadget"; //see example config file for alternative formats
 	GroupFileFormat="gadget3_int";
-    ParticleExchangerBufferSize=1000000;
+    ParticleExchangerBufferSize=10000000;
 	MaxConcurrentIO=10;
 	MinSnapshotIndex=0;
 	MinNumPartOfSub=20;
