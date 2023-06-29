@@ -65,7 +65,7 @@ void HaloSnapshot_t::Load(MpiWorker_t &world, const ParticleSnapshot_t &partsnap
   {
     HBTInt np=Halos[i].Particles.size();
     iTotNumberOfParticles+=np;
-    if(np>NumPartOfLargestHalo) iNumPartOfLargestHalo=np;
+    if(np>iNumPartOfLargestHalo) iNumPartOfLargestHalo=np;
   }
   NumPartOfLargestHalo=iNumPartOfLargestHalo; //copy from a temporary variable to work around the omp reduction issue with member variable when using intel compiler
   TotNumberOfParticles=iTotNumberOfParticles;
