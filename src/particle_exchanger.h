@@ -139,9 +139,14 @@ struct HaloSlicer_t
       i_begin=0;
       if(ihalo==ihalo_begin)
         i_begin=ipart_begin;
-      i_end=InHalos[ihalo].Particles.size();
-      if(ihalo==ihalo_back)
-        i_end=ipart_end;
+      if(ihalo>=InHalos.size())
+        i_end=0;
+      else
+      {
+        i_end=InHalos[ihalo].Particles.size();
+        if(ihalo==ihalo_back)
+          i_end=ipart_end;
+      }
     }
 };
 
@@ -197,7 +202,7 @@ int ParticleExchanger_t<Halo_T>::CollectParticles()
     HBTInt ipart, ipart_end;
     Slicer.GetPartRange(InHalos, ihalo, ipart, ipart_end);
     for(;ipart<ipart_end;ipart++)
-      LocalParticles.emplace_back(move(h.Particles[ipart]), n++);
+      LocalParticles.emplace_back(h.Particles[ipart], n++);
 //     h.Particles.clear();//do not clear since we will need to know the particle sizes later
   }
   assert(n==np);
@@ -281,6 +286,7 @@ void ParticleExchanger_t<Halo_T>::RecvParticles()
 template <class Halo_T>
 void ParticleExchanger_t<Halo_T>::RestoreParticles()
 {
+  assert(LocalParticles.size()==Slicer.np);
   auto it=LocalParticles.begin();
   for(HBTInt ihalo=Slicer.ihalo_begin;ihalo<=Slicer.ihalo_back;ihalo++)
   {
@@ -290,7 +296,8 @@ void ParticleExchanger_t<Halo_T>::RestoreParticles()
       InHalos[ihalo].Particles[ipart]=*it++;
   }
   assert(it==LocalParticles.end());
-  vector <RemoteParticle_t>().swap(LocalParticles);
+  //vector <RemoteParticle_t>().swap(LocalParticles);
+  LocalParticles.clear();
 }
 
 template <class Halo_T>
@@ -303,7 +310,7 @@ void ParticleExchanger_t<Halo_T>::Exchange()
 */
   while(true)
   {
-    int npmax, np=CollectParticles();
+    int npmax=0, np=CollectParticles();
 //     ntot2+=np;
     MPI_Allreduce(&np, &npmax, 1, MPI_INT, MPI_MAX, world.Communicator);
     if(0==npmax) break; //loop till no particles to collect in all threads.
