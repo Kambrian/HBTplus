@@ -153,8 +153,6 @@ class ParticleExchanger_t
   const ParticleSnapshot_t &snap;
   vector <Halo_T> &InHalos;
   HaloSlicer_t Slicer;
-  vector <HBTInt> HaloSizes;
-
 
   vector <RemoteParticle_t> LocalParticles;
   vector <OrderedParticle_t> RoamParticles;
@@ -179,7 +177,7 @@ public:
 };
 
 template <class Halo_T>
-ParticleExchanger_t<Halo_T>::ParticleExchanger_t(MpiWorker_t &world, const ParticleSnapshot_t &snap, vector <Halo_T> &InHalos, int buffer_size): world(world),snap(snap), InHalos(InHalos), Slicer(buffer_size), HaloSizes(),  LocalParticles(), RoamParticles()
+ParticleExchanger_t<Halo_T>::ParticleExchanger_t(MpiWorker_t &world, const ParticleSnapshot_t &snap, vector <Halo_T> &InHalos, int buffer_size): world(world),snap(snap), InHalos(InHalos), Slicer(buffer_size), LocalParticles(), RoamParticles()
 {
   Particle_t().create_MPI_type(MPI_HBTParticle_t);
 }
