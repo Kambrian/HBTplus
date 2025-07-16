@@ -26,13 +26,13 @@ void ExchangeSubHalos(MpiWorker_t& world, vector <Subhalo_t>& InHalos, vector<Su
   typedef typename vector <Subhalo_t>::iterator HaloIterator_t;
   typedef HaloParticleIterator_t<HaloIterator_t> ParticleIterator_t;
   typedef HaloNestIterator_t<HaloIterator_t> NestIterator_t;
-  
+
 //   cout<<"Query particle..."<<flush;
   {//query particles
 	ParticleExchanger_t <Subhalo_t>Exchanger(world, snap, InHalos);
 	Exchanger.Exchange();
   }
-  
+
   {//do not need to distribute subhalos now. will do it during host-finding anyway.
   #pragma omp parallel for
   for(HBTInt i=0;i<InHalos.size();i++)
@@ -70,7 +70,7 @@ void ExchangeSubHalos(MpiWorker_t& world, vector <Subhalo_t>& InHalos, vector<Su
 	  NewHalos[i].Particles.resize(OutHaloSizes[i]);
 	  NewHalos[i].NestedSubhalos.resize(OutHaloNestSizes[i]);
 	}
-	
+
 	{
 	//distribute halo particles
 	MPI_Datatype MPI_HBT_Particle;
@@ -86,12 +86,12 @@ void ExchangeSubHalos(MpiWorker_t& world, vector <Subhalo_t>& InHalos, vector<Su
 	vector <HBTInt> InParticleCount(world.size(),0);
 	for(HBTInt i=0;i<InHalosSorted.size();i++)
 	  InParticleCount[TargetRank[i].Rank]+=InHalosSorted[i].Particles.size();
-	
+
 	MyAllToAll<Particle_t, ParticleIterator_t, ParticleIterator_t>(world, InParticleIterator, InParticleCount, OutParticleIterator, MPI_HBT_Particle);
-	
+
 	MPI_Type_free(&MPI_HBT_Particle);
 	}
-	
+
 	{
 	//distribute nests
 	//create combined iterator for each bunch of haloes
@@ -105,15 +105,15 @@ void ExchangeSubHalos(MpiWorker_t& world, vector <Subhalo_t>& InHalos, vector<Su
 	vector <HBTInt> InNestCount(world.size(),0);
 	for(HBTInt i=0;i<InHalosSorted.size();i++)
 	  InNestCount[TargetRank[i].Rank]+=InHalosSorted[i].NestedSubhalos.size();
-	
+
 	MyAllToAll<HBTInt, NestIterator_t, NestIterator_t>(world, InNestIterator, InNestCount, OutNestIterator, MPI_HBT_INT);
 	}
 	*/
 }
-  
+
 void SubhaloSnapshot_t::BuildMPIDataType()
 {
-/*to create the struct data type for communication*/	
+/*to create the struct data type for communication*/
 Subhalo_t p;
 const int MaxNumAttr=50;
 MPI_Datatype oldtypes[MaxNumAttr];
@@ -242,15 +242,15 @@ inline bool CompProfVel(const RadMassVel_t &a, const RadMassVel_t &b)
 void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
 {
   /* to calculate the following density-profile related properties
-   * 
+   *
   HBTReal RmaxComoving;
   HBTReal VmaxPhysical;
   HBTReal LastMaxVmax;
   HBTInt SnapshotIndexOfLastMaxVmax; //the snapshot when it has the maximum Vmax, only considering past snapshots.
-  
+
   HBTReal R2SigmaComoving;
   HBTReal RHalfComoving;
-  
+
   HBTReal R200CritComoving;
   HBTReal R200MeanComoving;
   HBTReal RVirComoving;
@@ -280,9 +280,9 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
 	return;
   }
   HBTReal VelocityUnit=PhysicalConst::G/epoch.Cosmology.ScaleFactor;
-  
+
   const HBTxyz &cen=ComovingMostBoundPosition; //most-bound particle as center.
-  
+
   vector <RadMassVel_t> prof(Nbound);
   #pragma omp parallel if(Nbound>100)
   {
@@ -310,13 +310,13 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
   VmaxPhysical=sqrt(maxprof->v*VelocityUnit);
   RHalfComoving=prof[Nbound/2].r;
   R2SigmaComoving=prof[(HBTInt)(Nbound*0.955)].r;
-  
+
   HBTReal virialF_tophat, virialF_b200, virialF_c200;
   epoch.HaloVirialFactors(virialF_tophat, virialF_b200, virialF_c200);
 //   epoch.SphericalOverdensitySize(MVir, RVirComoving, virialF_tophat, prof);
   epoch.SphericalOverdensitySize(BoundM200Crit, BoundR200CritComoving, virialF_c200, prof);
 //   epoch.SphericalOverdensitySize(M200Mean, R200MeanComoving, virialF_b200, prof);
-  
+
   if(VmaxPhysical>=LastMaxVmaxPhysical)
   {
 	SnapshotIndexOfLastMaxVmax=epoch.GetSnapshotIndex();
@@ -328,7 +328,7 @@ void Subhalo_t::CalculateProfileProperties(const Snapshot_t &epoch)
   for(int i=0;i<3;i++)
   {
 	SpinPeebles[i]=SpecificAngularMomentum[i]*
-	  sqrt(fabs(SpecificSelfPotentialEnergy+0.5*SpecificSelfKineticEnergy))/PhysicalConst::G/Mbound;
+	  sqrt(fabs(0.5*SpecificSelfPotentialEnergy+SpecificSelfKineticEnergy))/PhysicalConst::G/Mbound;
 	SpinBullock[i]=SpecificAngularMomentum[i]/sqrt(2.*PhysicalConst::G*Mbound*R2SigmaComoving);
   }
   */
@@ -351,7 +351,7 @@ void Subhalo_t::CalculateShape()
 	return;
   }
   const HBTxyz &cen=ComovingMostBoundPosition; //most-bound particle as center.
-  
+
   double Ixx=0,Iyy=0, Izz=0, Ixy=0, Ixz=0, Iyz=0;
   double Ixxw=0,Iyyw=0, Izzw=0, Ixyw=0, Ixzw=0, Iyzw=0;
   #pragma omp parallel for reduction(+:Ixx,Iyy,Izz,Ixy,Ixz,Iyz,Ixxw,Iyyw,Izzw,Ixyw,Ixzw,Iyzw) if(Nbound>100)
@@ -377,7 +377,7 @@ void Subhalo_t::CalculateShape()
 	  Ixy+=dx*dy*m;
 	  Ixz+=dx*dz*m;
 	  Iyz+=dy*dz*m;
-	  
+
 	  HBTReal dr2=dx2+dy2+dz2;
 	  dr2/=m; //for mass weighting
 	  Ixxw+=dx2/dr2;
@@ -391,7 +391,7 @@ void Subhalo_t::CalculateShape()
   InertialTensorWeighted[0]=Ixxw; InertialTensorWeighted[1]=Ixyw; InertialTensorWeighted[2]=Ixzw; InertialTensorWeighted[3]=Iyyw; InertialTensorWeighted[4]=Iyzw; InertialTensorWeighted[5]=Izzw;
   for(auto && I: InertialTensor) I/=Mbound;
   for(auto && I: InertialTensorWeighted) I/=Mbound;
-#ifdef HAS_GSL  
+#ifdef HAS_GSL
   EigenAxis(Ixx, Ixy, Ixz, Iyy, Iyz, Izz, InertialEigenVector);
   EigenAxis(Ixxw, Ixyw, Ixzw, Iyyw, Iyzw, Izzw, InertialEigenVectorWeighted);
 #endif
@@ -399,7 +399,7 @@ void Subhalo_t::CalculateShape()
 
 void Subhalo_t::CountParticleTypes()
 {
-#ifndef DM_ONLY  
+#ifndef DM_ONLY
   for(int itype=0;itype<TypeMax;itype++)
   {
 	NboundType[itype]=0;
@@ -440,7 +440,7 @@ void Subhalo_t::CountParticleTypes()
 	  MboundType[itype]+=p.Mass;
 	}
   }
-#endif  
+#endif
 }
 
 HBTInt Subhalo_t::KickNullParticles()
@@ -459,7 +459,7 @@ HBTInt Subhalo_t::KickNullParticles()
 	}
   }
   Nbound=it_save-it_begin;
- 
+
   it_end=Particles.end();
   for(;it!=it_end;++it)//unbound particles
   {
@@ -470,7 +470,7 @@ HBTInt Subhalo_t::KickNullParticles()
 	}
   }
   Particles.resize(it_save-it_begin);
-  
+
   if(it!=it_save) cout<<it-it_save<<" outof "<<np_old<<" particles consumed for track "<<TrackId<<"\n";
   return it-it_save;
 #endif
