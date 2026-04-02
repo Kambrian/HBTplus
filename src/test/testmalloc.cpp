@@ -1,3 +1,6 @@
+// Copyright (C) 2007-2026 Jiaxin Han and contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 //to compute the virial sizes, rmax and vmax of the host halos, using the ComovingMostBoundPosition of central subhalos as reference center
 #include <cmath>
 #include <iostream>

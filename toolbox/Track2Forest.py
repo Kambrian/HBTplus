@@ -1,3 +1,6 @@
+# Copyright (C) 2007-2026 Jiaxin Han and contributors
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 '''group tracks into forests of connected trees. 
 useful for decomposing the dataset into indepedent domains for semi-analytical galaxy formation models.
 

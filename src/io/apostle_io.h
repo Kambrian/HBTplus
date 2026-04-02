@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2026 Jiaxin Han and contributors
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 /* IO for Apostle (EAGLE local group) data.
  *
  * To specify a list of snapshot, list the snapshot directories (one per line) in snapshotlist.txt and place it under your subhalo output directory.

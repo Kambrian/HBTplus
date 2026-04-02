@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2026 Jiaxin Han and contributors
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 #ifndef JING_IO_INCLUDED
 #define JING_IO_INCLUDED
 

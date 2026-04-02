@@ -1,0 +1,58 @@
+name: Add License Headers
+
+on:
+  workflow_dispatch: # Allows you to run it manually from the Actions tab
+  push:
+    branches: [ Hydro, MPI-Hydro ] # Runs automatically when you push code
+
+jobs:
+  apply-license:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to push the changes back to your repo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history for all branches
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Install addlicense tool
+        run: go install github.com/google/addlicense@latest
+
+      - name: Apply License to all layers
+        run: |
+          # We use 'find' because it is 100% reliable for deep subfolders and 
+          # handles the root directory correctly, unlike shell globbing (**/*.cpp)
+          
+          find . -type f \( \
+            -name "*.cpp" -o \
+            -name "*.h" -o \
+            -name "*.c" -o \
+            -name "*.py" -o \
+            -name "*.f90" -o \
+            -name "*.F90" \
+          \) \
+          -not -path "*/.git/*" \
+          | xargs $(go env GOPATH)/bin/addlicense -v -f .github/license-header.txt
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add all modified files
+          git add .
+          
+          # Only commit if there are actual changes to avoid workflow errors
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: add LGPLv3 SPDX headers to source files (2007-2026)"
+            git push
+          else
+            echo "No license headers needed updating."
+          fi

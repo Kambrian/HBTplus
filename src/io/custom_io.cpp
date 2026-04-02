@@ -1,3 +1,6 @@
+// Copyright (C) 2007-2026 Jiaxin Han and contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 /* example file demonstrating the creation of a custom halo reader. 
  * The reader will be called in halo_io.cpp under "my_group_format".
  

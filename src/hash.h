@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2026 Jiaxin Han and contributors
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 /*hash table data for ID2Index*/
 #ifndef HASH_HEADER_INCLUDED
 #define HASH_HEADER_INCLUDED

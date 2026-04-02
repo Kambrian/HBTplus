@@ -1,3 +1,6 @@
+// Copyright (C) 2007-2026 Jiaxin Han and contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 /* IO for groups created by HBT's own FoF code.
  * The reader will be called in halo_io.cpp under "my_group_format".
  * 

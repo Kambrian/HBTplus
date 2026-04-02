@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2026 Jiaxin Han and contributors
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 //ToDo: separate GravityTree and SpatialTree class; add searching and density functions; neareast neighbour search by inserting into the nodes?
 #ifndef FOF_BUILDER_H_INCLUDED
 #define FOF_BUILDER_H_INCLUDED

@@ -1,3 +1,6 @@
+// Copyright (C) 2007-2026 Jiaxin Han and contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 #ifdef OLD_HEADER_FILENAME
 #include <iostream.h>
 #else

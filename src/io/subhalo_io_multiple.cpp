@@ -1,3 +1,6 @@
+// Copyright (C) 2007-2026 Jiaxin Han and contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 /*read subhalo snapshot from MPI output (multiple files per snapshot)
  * this file requires HDF5 library with multi-thread support; otherwise please comment out the #pragma omp... near line 76.
  */

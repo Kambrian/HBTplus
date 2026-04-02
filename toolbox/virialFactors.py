@@ -1,3 +1,6 @@
+# Copyright (C) 2007-2026 Jiaxin Han and contributors
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 import numpy as np
 import matplotlib.pyplot as plt
 plt.ion()

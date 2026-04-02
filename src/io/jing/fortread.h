@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2026 Jiaxin Han and contributors
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 #ifndef FORTREAD_HEADER_INCLUDED
 #define FORTREAD_HEADER_INCLUDED
 

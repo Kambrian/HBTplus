@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2026 Jiaxin Han and contributors
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 /* Each track records the life of a subhalo from birth time to final snapshot of the simulation */
 #ifndef TRACKS_H_INCLUDED
 #define TRACKS_H_INCLUDED

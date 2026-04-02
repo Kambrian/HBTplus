@@ -1,3 +1,6 @@
+# Copyright (C) 2007-2026 Jiaxin Han and contributors
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 """ These utility functions may or may not be related to the oPDF method. Some of them are just general-purpose plotting or monitoring functions.
 """
 import sys

@@ -1,3 +1,6 @@
+# Copyright (C) 2007-2026 Jiaxin Han and contributors
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 """HBTReader module.
 
 Python module containing ``HBTReader`` class, used for analysis of  HBT+ halo

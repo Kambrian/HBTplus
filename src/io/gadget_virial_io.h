@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2026 Jiaxin Han and contributors
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 /*utility function for reading gadget output of halo virial mass and radius. 
  *This file is not used by main program of HBT+, and is provided for convenience of analysing gadget group data*/
 #ifndef GADGET_VIRIAL_IO_HEADER_INCLUDED

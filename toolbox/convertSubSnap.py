@@ -1,3 +1,6 @@
+# Copyright (C) 2007-2026 Jiaxin Han and contributors
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 '''to convert subhalo files from (the more advanced) structured array to plain array datasets for each property separately.
 will also convert the particle list into separate arrays of particles (or a combined single array of particles if combine_particlelist=True).
 input: 

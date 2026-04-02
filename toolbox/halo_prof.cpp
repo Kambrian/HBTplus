@@ -1,3 +1,6 @@
+// Copyright (C) 2007-2026 Jiaxin Han and contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 /*to compute the density profile of each halo (or halo-matter correlation) out to RMAX in logrithmic bins. 
  * the bin edges are [0, r1, r2, ...rn) where (r1, ...rn) are generated as logspace(RMIN, RMAX, NBIN).
  * output the count in each bin for each halo.
