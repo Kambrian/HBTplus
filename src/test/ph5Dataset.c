@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2026 Jiaxin Han and contributors
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 /*  
  *  This example writes data to the HDF5 file.
  *  Number of processes is assumed to be 1 or multiples of 2 (up to 8)
