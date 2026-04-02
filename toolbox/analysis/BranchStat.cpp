@@ -1,3 +1,6 @@
+// Copyright (C) 2007-2026 Jiaxin Han and contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 /*to count the number of particles in each direct infall branch, for Wenting's oPDF analysis*/
 using namespace std;
 #include <iostream>

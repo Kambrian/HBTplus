@@ -1,3 +1,6 @@
+# Copyright (C) 2007-2026 Jiaxin Han and contributors
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 ''' print snapshot list for apostle/EAGLE data
 
 input snapshot path and the type to list: snap, snip or all (=snap+snip)

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2007-2026 Jiaxin Han and contributors
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
 #ifndef TREE_H_INCLUDED
 #define TREE_H_INCLUDED
 /* template for OctTree; specialize into GravityTree_t and GeometricTree_t, depending on whether the center of mass or geometric center is recorded.*/
